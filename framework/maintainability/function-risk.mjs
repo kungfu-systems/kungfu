@@ -180,8 +180,9 @@ function buildReport(options = {}) {
         ownership,
         options,
       );
+      const currentInputs = trackedCurrentFiles();
       const current = functionSnapshot(
-        trackedCurrentFiles(),
+        currentInputs,
         policy,
         layers,
         ownership,
@@ -196,6 +197,11 @@ function buildReport(options = {}) {
           current.files,
           baseline.files,
           policy,
+          {
+            movementScope: 'same-owner',
+            movementIdentity: 'body-root',
+            sourceFiles: currentInputs,
+          },
         ),
       };
     },

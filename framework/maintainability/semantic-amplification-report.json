@@ -2,19 +2,23 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
-  "sourceRevision": "9eac977d0fd69fed29cd2744df0a8ffd644dcde9",
+  "sourceRevision": "d7740bd0906f3654a1b2ace75bd841efeeab60e8",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:db46439a29c9619e7966f24d2b64fb9a86e52cba76b8eff45442fa18df90e939",
-  "generatorRoot": "sha256:a62c635839b1d7f32dccdaa770ba424b2858be41f2ae017561dbf2c83ee760ec",
+  "manifestRoot": "sha256:92564ac2a28d3f0d118806b2d82bba82bc8d286d34c58062d0117f2461535ab5",
+  "generatorRoot": "sha256:473f398966b541cb027c30db9c1499a731899a515aa0a8ef9962f7472715b40f",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "baselineRoot": "sha256:a6e7ee9aeea7213807abdf830f8b4e60aede2352289539ddc31ad0fa67b1da50",
-  "sourceRoot": "sha256:c6304c32c7b143bc7fa1f5b3f831a90f74e0956ec91842034c8d839b662d482e",
+  "sourceRoot": "sha256:27a332e3faa6eb204c68899f052fbc9acdaa782eb840fd9dcd5cabc461661b98",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
       "generated-projection",
       "thin-binding",
       "compatibility-reader",
+      "required-gate",
+      "read-only-analysis-kernel",
+      "diagnostic-projection",
+      "advisory-report",
       "conformance-oracle",
       "test",
       "documentation",
@@ -25,10 +29,10 @@
     "unmappedChangedSemanticSurface": "blocking"
   },
   "summary": {
-    "families": 6,
-    "authorities": 6,
-    "mappedSurfaces": 88,
-    "changedMappedSurfaces": 62,
+    "families": 7,
+    "authorities": 7,
+    "mappedSurfaces": 103,
+    "changedMappedSurfaces": 82,
     "blockingIssues": 0
   },
   "families": [
@@ -125,25 +129,25 @@
       "measurements": [
         {
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
-          "currentLines": 152,
+          "currentLines": 133,
           "baselineLines": 155,
-          "currentRoot": "sha256:8e6a056689c778080d91f0673d0a5a116ea12e07bb7d2fc6dad50ddaafac98d0",
+          "currentRoot": "sha256:94fdf0d94a82fceb25292698d1773c57f2c267df786da72c2a17ce0a6e0b5290",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/cli/commands/__registry__.py",
-          "currentLines": 97,
+          "currentLines": 93,
           "baselineLines": 91,
-          "currentRoot": "sha256:61a0fb9458ea6cc7a765d5f8e609ed3453c6f6d4873b3a8940625d34589fe25a",
+          "currentRoot": "sha256:743f875f933b2fd77e259d3adadd44f65b3a3456f2ad79887b5c12dccc59b02c",
           "baselineRoot": "sha256:21ddfd68e29827a81d099362cd40c8bdef4731cddecf964633bcdea4e4a8c817",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-          "currentLines": 2548,
+          "currentLines": 2481,
           "baselineLines": 2505,
-          "currentRoot": "sha256:d149a5be246d5919782d943ebb0f24596818a443781aa932e731b833539ea2f9",
+          "currentRoot": "sha256:2f265c8ea298f293f56f416c9a5886470374a7f5561dd34f9b9d7f3a3eb7c385",
           "baselineRoot": "sha256:947a0cca02a357d4185dd4e945567549a57f1cbf37fb67e0539d1bfd6ce950d8",
           "changedSinceBaseline": true
         },
@@ -157,17 +161,17 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 1044,
+          "currentLines": 1058,
           "baselineLines": 33927,
-          "currentRoot": "sha256:d0250d404858028acaea3c0456bedd882cd0c49b58755aeafa89697ef588bdcc",
+          "currentRoot": "sha256:0d56aaaf0da32203b1e0f73caf000ef088ef76658b41f3db858dad7044075253",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "currentLines": 1147,
+          "currentLines": 1154,
           "baselineLines": 1117,
-          "currentRoot": "sha256:993a36d2c41dd70a1d611292c49f9e0a80d6c5bbcd8004e38cfc3954dbd07167",
+          "currentRoot": "sha256:7b54b0c450764369c3c39db17d0398550d18135b395852985dfc9021a7dbfbcc",
           "baselineRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
           "changedSinceBaseline": true
         },
@@ -189,17 +193,17 @@
         },
         {
           "path": "scripts/verify-agent-pack.mjs",
-          "currentLines": 570,
+          "currentLines": 665,
           "baselineLines": 396,
-          "currentRoot": "sha256:c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c",
+          "currentRoot": "sha256:7c234331b93fe3f082560ea125d5ae55a6f54068a376aea72fc55e95a2553b46",
           "baselineRoot": "sha256:3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/tests/python/test_cli_surface_contract.py",
-          "currentLines": 468,
+          "currentLines": 465,
           "baselineLines": 466,
-          "currentRoot": "sha256:6551bf4ccae5af977e76a2d68f4c71ad7e609be845860ffa4c98ec7ab63d7d03",
+          "currentRoot": "sha256:c9e47403c6656e82fa6cdec5caa6a5e3371b8953ca7c932ffd7480e534aa91d8",
           "baselineRoot": "sha256:3e377b96b194c7a12d8240caa42fa3c4ca243cb50019d1a1b096e5dffa4c829f",
           "changedSinceBaseline": true
         },
@@ -207,23 +211,23 @@
           "path": "product/scripts/cli-surface-qualification.mjs",
           "currentLines": 605,
           "baselineLines": 498,
-          "currentRoot": "sha256:6eefbc69dacdc4ea9777a5ec1499b09ebfa5d11a764fa2fd5744c5121b7f03f5",
+          "currentRoot": "sha256:3bc3d9cf1d2bfa139c40092d85439dba6f546a7bfc9548dc0a46d7495a43c67d",
           "baselineRoot": "sha256:7533c7b772a961fd8e1ae97acc474b7c9f0fbe6626322f1e98f0e30ee163f551",
           "changedSinceBaseline": true
         },
         {
           "path": "product/scripts/verify-cli-surface-qualification.mjs",
-          "currentLines": 166,
+          "currentLines": 845,
           "baselineLines": null,
-          "currentRoot": "sha256:8b81de537cece7188e4a32645429f5dbc9d9b18cd8ed9b50ef10cfdfd13146dc",
+          "currentRoot": "sha256:519c03a12f3111106234250a7f3c2719eae1b1ad7a9aed9d1f287b0ac6c6cf3d",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
         {
           "path": "product/scripts/cli-surface-qualification.test.mjs",
-          "currentLines": 370,
+          "currentLines": 426,
           "baselineLines": 206,
-          "currentRoot": "sha256:ef038171e96f3e8c8d3e6334dff15ffb73f530946bdb7ea32e58c86d14ea28c8",
+          "currentRoot": "sha256:0878b9d81ac6b3a70412cc1183c308c8ba598183903bd1fce697cc40cd4bb655",
           "baselineRoot": "sha256:8d4eea48d9b1af101eebb1e45349f22f7604067be87a3db5d4a0586d0b88f934",
           "changedSinceBaseline": true
         },
@@ -334,7 +338,7 @@
           "path": "framework/work-lifecycle/work-lifecycle-native.contract.json",
           "currentLines": 1112,
           "baselineLines": 1112,
-          "currentRoot": "sha256:89e1f9789a288c1ae0ad00808d2bb535473c24a813d176c6a3602a267b747b26",
+          "currentRoot": "sha256:588d4e45f735e42048d94a4c827f746badf112695f766c98f6b3d5fd337fb88d",
           "baselineRoot": "sha256:0d908729e89a3ac6aaaf642304c55436be5130d53fca1c5e77ba1a4e3e239238",
           "changedSinceBaseline": true
         },
@@ -342,7 +346,7 @@
           "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
           "currentLines": 2553,
           "baselineLines": 2553,
-          "currentRoot": "sha256:bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6",
+          "currentRoot": "sha256:3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063",
           "baselineRoot": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
           "changedSinceBaseline": true
         },
@@ -356,9 +360,9 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
-          "currentLines": 1211,
+          "currentLines": 1334,
           "baselineLines": 1084,
-          "currentRoot": "sha256:6fbd448925cb8fdf80e57f86576f6d3bd2f4ebadb9637e9ed9d6eaa9e20914ce",
+          "currentRoot": "sha256:cfaace4238fb3f0146c649db0bc7c908852bda02b92aaa16eaa762293a89abeb",
           "baselineRoot": "sha256:fd1371c3544de910030b6e59f9ac9d2c8ed8e753af2f2429c1c02577cef61fc7",
           "changedSinceBaseline": true
         },
@@ -404,17 +408,17 @@
         },
         {
           "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-          "currentLines": 1588,
+          "currentLines": 1470,
           "baselineLines": 1014,
-          "currentRoot": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
+          "currentRoot": "sha256:2f746cd0531fadad6893bb3c89aec3f7ef420f951f44d08cb864861911b99fc7",
           "baselineRoot": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 2089,
+          "currentLines": 2016,
           "baselineLines": 3138,
-          "currentRoot": "sha256:bf08cb858e48ae62160bdf8d822da986174efb2106dabf47d0f3a1420c9f6ee9",
+          "currentRoot": "sha256:efe8fb0e283406f64a444510427df8b73b34822740656683310997d9288fc5b9",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -605,9 +609,9 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
-          "currentLines": 2433,
+          "currentLines": 244,
           "baselineLines": 912,
-          "currentRoot": "sha256:98881b2110239f54706b05da88d8a847442b82782a32805aaa6d65faa9b21808",
+          "currentRoot": "sha256:4dd36277fa3394c0be12d772382d56e66580f4570ad6950651e047c1a700b1ef",
           "baselineRoot": "sha256:9d1ca07b479450341e5c33d4740cea0835257e0b73991faf166bfc54d77ccb68",
           "changedSinceBaseline": true
         },
@@ -637,9 +641,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 2089,
+          "currentLines": 2016,
           "baselineLines": 3138,
-          "currentRoot": "sha256:bf08cb858e48ae62160bdf8d822da986174efb2106dabf47d0f3a1420c9f6ee9",
+          "currentRoot": "sha256:efe8fb0e283406f64a444510427df8b73b34822740656683310997d9288fc5b9",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -661,17 +665,17 @@
         },
         {
           "path": "framework/core/src/python/kungfu/kfx_authoring/__init__.py",
-          "currentLines": 623,
+          "currentLines": 663,
           "baselineLines": null,
-          "currentRoot": "sha256:7298616a7a6e7e04814e0ac22f91b849fa99631c05c8a357d5295264c93d3573",
+          "currentRoot": "sha256:a756a88af84c7f144c3e9554e123d504c93c4f2d120f218732fad8c4221b4d49",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
         {
           "path": "scripts/generate-kfx-authoring-kit.mjs",
-          "currentLines": 267,
+          "currentLines": 349,
           "baselineLines": null,
-          "currentRoot": "sha256:7ac9daa2b3bf85d7aae1901f5cf28814efa84d2712b4b5d723f346340ad318e1",
+          "currentRoot": "sha256:241dd910e357fd12dbada83437c62266eb2ac97f3037bee98d08d494868ed9b6",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
@@ -679,23 +683,23 @@
           "path": "framework/core/src/python/kungfu/kfx_authoring_assets/contract.json",
           "currentLines": 162,
           "baselineLines": null,
-          "currentRoot": "sha256:c141511ac146b49806153859730df6d4e9be7729867d99b135df4ec46957adac",
+          "currentRoot": "sha256:61c23bfdd5f0f344e0dd7c6f6f78265a49e7ff3808f94bb7aa67cdd067adb8ec",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/service-webhook-host.mjs",
-          "currentLines": 516,
+          "currentLines": 572,
           "baselineLines": null,
-          "currentRoot": "sha256:943b09093729b7484a41b175ce9a9a589d8bd2c6ce10a27ea3fd11b0128378fb",
+          "currentRoot": "sha256:460cb9938c8c0596d160fbcd61eb42bcfd9838cf8d154553b2544321af340a11",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/tests/python/test_kfx_authoring.py",
-          "currentLines": 177,
+          "currentLines": 228,
           "baselineLines": null,
-          "currentRoot": "sha256:144b647d3385e7730c8baaaea4aa450e5132b6b3cc50a5461af6422eb41fceb4",
+          "currentRoot": "sha256:4e09f63513650449b3a65742a0ac175c905a4aa24e0734845fefa24e9caa79dd",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
@@ -709,9 +713,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/intent-map.json",
-          "currentLines": 24,
+          "currentLines": 113,
           "baselineLines": null,
-          "currentRoot": "sha256:9a9c5d78ba651c34df9d4d2b341e829d0243848a45ba4449d96475cfe84f526a",
+          "currentRoot": "sha256:fd7299e04d07ea961205112811fac932499ccd987a619de7a383e4f253864d69",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
@@ -725,9 +729,9 @@
         },
         {
           "path": "scripts/run-kfx-profile-suite-tests.mjs",
-          "currentLines": 254,
+          "currentLines": 270,
           "baselineLines": 89,
-          "currentRoot": "sha256:0cecf52b818d127f2468635752094d8c1aedafca5164c7838e166fadcc28b209",
+          "currentRoot": "sha256:8687954b533b955f6c12dcf23dec7b391dcf2db77f0297e43c938f86b1f2e89d",
           "baselineRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
           "changedSinceBaseline": true
         },
@@ -749,9 +753,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2072,
+          "currentLines": 2190,
           "baselineLines": 2514,
-          "currentRoot": "sha256:580fab1e8d19af718cd4a710a54078ec223a7e31f6286cba3758e1ca75494e24",
+          "currentRoot": "sha256:31d890811df59dc95c8a5757c0e88232083cb0611a1c8e92c286ccb54d41a57f",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -795,9 +799,13 @@
       "amplification": {
         "mappedSurfaces": 11,
         "nonAuthoritySurfaces": 7,
-        "changedSurfaces": 1,
+        "changedSurfaces": 5,
         "changedPaths": [
-          "scripts/check-fact-cut-kernel-contract.test.mjs"
+          "framework/fact/kungfu-fact-cut-kernel.contract.json",
+          "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+          "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+          "scripts/check-fact-cut-kernel-contract.test.mjs",
+          "framework/core/tests/python/test_episode_control.py"
         ]
       },
       "surfaces": [
@@ -833,11 +841,11 @@
       "measurements": [
         {
           "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-          "currentLines": 1020,
+          "currentLines": 1090,
           "baselineLines": 1020,
-          "currentRoot": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+          "currentRoot": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd",
           "baselineRoot": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/episode/kungfu-episode-invariants.contract.json",
@@ -873,19 +881,19 @@
         },
         {
           "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
-          "currentLines": 228,
+          "currentLines": 792,
           "baselineLines": 228,
-          "currentRoot": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f",
+          "currentRoot": "sha256:4c4835ad95aa70c76dbdcaaa3caf2548de862bb5d430392fdd7a16bd96fc48f0",
           "baselineRoot": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
-          "currentLines": 1030,
+          "currentLines": 1101,
           "baselineLines": 1030,
-          "currentRoot": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31",
+          "currentRoot": "sha256:0615902664bb15b647e4d2f8db9309b32e9b93e95f0e204b6733348c48e5f050",
           "baselineRoot": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "scripts/check-fact-cut-kernel-contract.test.mjs",
@@ -897,11 +905,11 @@
         },
         {
           "path": "framework/core/tests/python/test_episode_control.py",
-          "currentLines": 330,
+          "currentLines": 438,
           "baselineLines": 330,
-          "currentRoot": "sha256:f5b68ed3bc58db9d4d916839d52aac0194d028dac685a0cfd2714d09b2746cce",
+          "currentRoot": "sha256:2288709b474491e7057b84b23645e49327e63d45ffe6907dc61e22f9ef2e06e0",
           "baselineRoot": "sha256:f5b68ed3bc58db9d4d916839d52aac0194d028dac685a0cfd2714d09b2746cce",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "docs/architecture/fact-episode-action-runtime.md",
@@ -950,14 +958,15 @@
       "amplification": {
         "mappedSurfaces": 13,
         "nonAuthoritySurfaces": 10,
-        "changedSurfaces": 6,
+        "changedSurfaces": 7,
         "changedPaths": [
           "framework/core/src/libkungfu/src/runtime/storage/service.cpp",
           "framework/core/src/python/kungfu/storage/service.py",
           "framework/storage/generated/work-lifecycle-v1.js",
           "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
           "scripts/check-work-lifecycle-operation-matrix.test.mjs",
-          "framework/core/tests/storage-node-binding.test.js"
+          "framework/core/tests/storage-node-binding.test.js",
+          "docs/qualification/fact-storage-authority.md"
         ]
       },
       "surfaces": [
@@ -1023,9 +1032,9 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/storage/service.cpp",
-          "currentLines": 2404,
+          "currentLines": 1114,
           "baselineLines": 2789,
-          "currentRoot": "sha256:82e868f060d5ba3dbe492478b3072de3a541da731a58b154c09ea031fadf3678",
+          "currentRoot": "sha256:e98ee387a4f60d9a63940eafe2d9d2e680800bd55ae466b649c6350d472c4a40",
           "baselineRoot": "sha256:01d1c02cf918c98ffef460d01cfc2c86a642d5a29ae4b066eda7a7c24d88651f",
           "changedSinceBaseline": true
         },
@@ -1039,9 +1048,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/storage/service.py",
-          "currentLines": 1747,
+          "currentLines": 1611,
           "baselineLines": 1737,
-          "currentRoot": "sha256:0dd3ceeb5e6aef4dcd72e793df8e8384ca6a3159aa9eee2ec1d86429bce0e1a1",
+          "currentRoot": "sha256:761f0e7a519e6e02cf96107be697a7d797c41bfe1f734497743df7c7e776bfe6",
           "baselineRoot": "sha256:41cf5713cf4db1b65cdb192bf2b34160fe1e981aa2fd52833eed3cc9f76797a7",
           "changedSinceBaseline": true
         },
@@ -1095,11 +1104,11 @@
         },
         {
           "path": "docs/qualification/fact-storage-authority.md",
-          "currentLines": 175,
+          "currentLines": 182,
           "baselineLines": 175,
-          "currentRoot": "sha256:956f31427dc25d86ad3a81298fa50911e54055319e11e1bb52f500f22602546f",
+          "currentRoot": "sha256:fc9db8d1906b72f07df6db18e672a08107546f1cfbb0e98ad9d397622c695d6b",
           "baselineRoot": "sha256:956f31427dc25d86ad3a81298fa50911e54055319e11e1bb52f500f22602546f",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/evidence/durability/production-candidate-v1/README.md",
@@ -1218,17 +1227,17 @@
         },
         {
           "path": "docs/qualification/gates/release-admission-policy.json",
-          "currentLines": 51,
+          "currentLines": 93,
           "baselineLines": 41,
-          "currentRoot": "sha256:7320d0970ecba6430362d0d36a4f25f7ead5abe12fad087f95c443811e8c53c7",
+          "currentRoot": "sha256:bb19a5e38f68783bae3f1bdb4435e94a005978e546620db24a81ae230087631a",
           "baselineRoot": "sha256:e8a0f7037f2331610f3b9c07e7cdf5e47ea701045c73d0f67bf909372e77e0ac",
           "changedSinceBaseline": true
         },
         {
           "path": "scripts/verify-kungfu-release-admission.mjs",
-          "currentLines": 384,
+          "currentLines": 643,
           "baselineLines": 325,
-          "currentRoot": "sha256:a7214a617782ab8494826249234f238e3a2296689a1e9c418d47fa046a9079cd",
+          "currentRoot": "sha256:df098db042e4c197c0a8d08e6194468acfefdcd3a10de791beb47aa54fb49b34",
           "baselineRoot": "sha256:e77a02ecf79651ef1dbfbbf57d494a334fd863ae81de5d7ccd8264922a216403",
           "changedSinceBaseline": true
         },
@@ -1242,49 +1251,49 @@
         },
         {
           "path": "scripts/release-promotion-rehearsal.mjs",
-          "currentLines": 988,
+          "currentLines": 1005,
           "baselineLines": 713,
-          "currentRoot": "sha256:7678ba3ef692d939cfbfb9f81353c30361686d06f750840ef2e1eb3011b89c8f",
+          "currentRoot": "sha256:bd26186621305b5a35f516c0a8da13e9fa7e03f9602911edeca7db2435185643",
           "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "changedSinceBaseline": true
         },
         {
           "path": "scripts/kungfu-release-qualification.mjs",
-          "currentLines": 277,
+          "currentLines": 353,
           "baselineLines": 272,
-          "currentRoot": "sha256:2db7e19d23334d730173431e0b83650e091dccbf6f3d6239a05a2d15f5e6f788",
+          "currentRoot": "sha256:dd71d7a8b3963e3208084e49d8d701f675aafdcb3886fb60124b12e87883ae81",
           "baselineRoot": "sha256:9b894df2a5f9ecb2f08f937d9d59747b5d8005d6948b6b853228fc45921ed552",
           "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 721,
+          "currentLines": 763,
           "baselineLines": 580,
-          "currentRoot": "sha256:e293363c3f97e82bf9c694d4d089aad6ed6802229a5d28b9f778623481a65fe1",
+          "currentRoot": "sha256:56f9775a74a420abf60ede8dfd74f200cf52e5e7e39e39e992a375f415148743",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
         {
           "path": ".github/workflows/release-new-version.yml",
-          "currentLines": 674,
+          "currentLines": 722,
           "baselineLines": 362,
-          "currentRoot": "sha256:6dee3b3c4840885f22868652aac4ad45eba0d8cc2dc44034cc8c42a94c90d617",
+          "currentRoot": "sha256:efaf8463f1dae8adb237b95ce5330f87f1d0155e8809fcd08e6546a6001ce249",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/gates/release-and-promotion.md",
-          "currentLines": 227,
+          "currentLines": 292,
           "baselineLines": 141,
-          "currentRoot": "sha256:523dea94e67beba9820f62ad15e2b0be6ce6b6d1a30c78020c19d8fd5f619a40",
+          "currentRoot": "sha256:b4758e78c926f65cf6ba4cc0a79551c431bd2eb95373eacf28d753941128f313",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
           "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/gates/release-admission.md",
-          "currentLines": 82,
+          "currentLines": 134,
           "baselineLines": 75,
-          "currentRoot": "sha256:a6bcdab742b050dc70013a3e09643327a1e4e34a0c1b92da0632222d1ca30d9b",
+          "currentRoot": "sha256:b9a1de472c95e8d41146993c1ff9a80c3e5d4bed59059d5f81f00b4acba49f94",
           "baselineRoot": "sha256:69f293fefb3c94df44051dc86ba4435416f5ea4348f2ffb245bef19bb494a280",
           "changedSinceBaseline": true
         },
@@ -1301,6 +1310,227 @@
         "docs/qualification/known-limits.md"
       ],
       "recovery": "Recompute source-bound release admission and exact platform passports; preparation, dry-run, or one-platform evidence never becomes a public release claim."
+    },
+    {
+      "id": "quality-governance",
+      "owner": "framework/maintainability",
+      "authority": {
+        "id": "quality-governance-policy-set",
+        "sources": [
+          "framework/maintainability/function-risk-policy.json",
+          "framework/maintainability/function-risk-ratchet-policy.json",
+          "framework/maintainability/semantic-amplification.manifest.json"
+        ]
+      },
+      "authorityCount": 1,
+      "roles": {
+        "authority": 3,
+        "required-gate": 3,
+        "read-only-analysis-kernel": 2,
+        "thin-binding": 1,
+        "compatibility-reader": 1,
+        "advisory-report": 1,
+        "diagnostic-projection": 2,
+        "test": 2
+      },
+      "amplification": {
+        "mappedSurfaces": 15,
+        "nonAuthoritySurfaces": 12,
+        "changedSurfaces": 15,
+        "changedPaths": [
+          "framework/maintainability/function-risk-policy.json",
+          "framework/maintainability/function-risk-ratchet-policy.json",
+          "framework/maintainability/semantic-amplification.manifest.json",
+          "scripts/source-acceptance.mjs",
+          "shifu.gates.json",
+          "framework/maintainability/function-risk-ratchet.mjs",
+          "framework/maintainability/source-analysis-kernel.mjs",
+          "framework/maintainability/source-analysis-session.mjs",
+          "framework/maintainability/function-risk-transition.mjs",
+          "framework/maintainability/fixtures/function-risk-legacy-shadow.mjs",
+          "framework/maintainability/function-risk.mjs",
+          "framework/maintainability/quality-governance-responsibility-map.json",
+          "framework/maintainability/semantic-amplification.mjs",
+          "framework/maintainability/function-risk.test.mjs",
+          "framework/maintainability/semantic-amplification.test.mjs"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "scripts/source-acceptance.mjs",
+          "role": "required-gate"
+        },
+        {
+          "path": "shifu.gates.json",
+          "role": "required-gate"
+        },
+        {
+          "path": "framework/maintainability/function-risk-ratchet.mjs",
+          "role": "required-gate"
+        },
+        {
+          "path": "framework/maintainability/source-analysis-kernel.mjs",
+          "role": "read-only-analysis-kernel"
+        },
+        {
+          "path": "framework/maintainability/source-analysis-session.mjs",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/maintainability/function-risk-transition.mjs",
+          "role": "read-only-analysis-kernel"
+        },
+        {
+          "path": "framework/maintainability/fixtures/function-risk-legacy-shadow.mjs",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/maintainability/function-risk.mjs",
+          "role": "advisory-report"
+        },
+        {
+          "path": "framework/maintainability/quality-governance-responsibility-map.json",
+          "role": "diagnostic-projection"
+        },
+        {
+          "path": "framework/maintainability/semantic-amplification.mjs",
+          "role": "diagnostic-projection"
+        },
+        {
+          "path": "framework/maintainability/function-risk.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "framework/maintainability/semantic-amplification.test.mjs",
+          "role": "test"
+        }
+      ],
+      "measurements": [
+        {
+          "path": "framework/maintainability/function-risk-policy.json",
+          "currentLines": 215,
+          "baselineLines": null,
+          "currentRoot": "sha256:aea24e8f107792eb30082de5abdf13d5c3245e9b9265fb4203f91d83370c8c7f",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/function-risk-ratchet-policy.json",
+          "currentLines": 17,
+          "baselineLines": null,
+          "currentRoot": "sha256:ccee2db9e8df9763d01839807b8d33da2d49ecc1b56473ac7aaff37ddeb2dea4",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/semantic-amplification.manifest.json",
+          "currentLines": 1437,
+          "baselineLines": null,
+          "currentRoot": "sha256:51aee24ef29050cc8300fec738912b0dd6a09a245cd8f7df86f88229fa609f0d",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "scripts/source-acceptance.mjs",
+          "currentLines": 1309,
+          "baselineLines": 583,
+          "currentRoot": "sha256:4d3778362da4ed3e6ae25adb9246cca963de935066c2f5ab59beae86a7ba9589",
+          "baselineRoot": "sha256:52eb4924ea3f2500ccdb03714cd63cc00735f2a0ce526f683711e0b771478540",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "shifu.gates.json",
+          "currentLines": 2240,
+          "baselineLines": 2196,
+          "currentRoot": "sha256:e5c9b540c6f5287809022af7bfcbcb2de490a213207c767ee0c330673d8686ca",
+          "baselineRoot": "sha256:dc351c7747dc7005f899524caf61a63cb5edc294924aa958db6bd6aec563cb93",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/function-risk-ratchet.mjs",
+          "currentLines": 333,
+          "baselineLines": null,
+          "currentRoot": "sha256:025de1a1a93b6e651a43faab1fdb7f2e5ecd5e246448762045eb859a2873a059",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/source-analysis-kernel.mjs",
+          "currentLines": 768,
+          "baselineLines": null,
+          "currentRoot": "sha256:24db19307ec696175f050a43b8cb4617fe890cbd823e5c9a2fc628fa73fec309",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/source-analysis-session.mjs",
+          "currentLines": 96,
+          "baselineLines": null,
+          "currentRoot": "sha256:5f45f0e6271d0c6a12473bc0301328b3c2efccb4ed5548b960956b0d4ff99952",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/function-risk-transition.mjs",
+          "currentLines": 195,
+          "baselineLines": null,
+          "currentRoot": "sha256:a173ab1c9b963f7444a8b492b1bc0a5ea15ccfe136ea2411a2837d56ff32fb5d",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/fixtures/function-risk-legacy-shadow.mjs",
+          "currentLines": 587,
+          "baselineLines": null,
+          "currentRoot": "sha256:f815e2cd07465fea5d957270661ae485f4aa7c8e8e5f88a19effe5a47a7449d4",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/function-risk.mjs",
+          "currentLines": 327,
+          "baselineLines": null,
+          "currentRoot": "sha256:3408a7fff935ff9f274fbc1dd3209a1fe377bcb297da0dd93f6f0b84e7a96a7e",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/quality-governance-responsibility-map.json",
+          "currentLines": 86,
+          "baselineLines": null,
+          "currentRoot": "sha256:c93c62d4d19a6bb07a120274f0c24f40dcc59c876f540694abf413815ee70aec",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/semantic-amplification.mjs",
+          "currentLines": 1143,
+          "baselineLines": null,
+          "currentRoot": "sha256:473f398966b541cb027c30db9c1499a731899a515aa0a8ef9962f7472715b40f",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/function-risk.test.mjs",
+          "currentLines": 627,
+          "baselineLines": null,
+          "currentRoot": "sha256:a1858954073ca1e48bf7ca5ee80ed0f8e45ae387321af489aa76c43ccf8e9bd3",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/maintainability/semantic-amplification.test.mjs",
+          "currentLines": 352,
+          "baselineLines": null,
+          "currentRoot": "sha256:ac9932128fa3b7ccc594e0a7b1d35cd044a30a897dbf80e57ed4ff189729d51d",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Follow the responsibility map to the existing policy authority, run the required changed-code ratchet first, then compare the shared kernel and frozen compatibility shadow before inspecting advisory projections."
     }
   ],
   "productionBoundaries": [
@@ -1408,7 +1638,7 @@
   ],
   "terminalEvidenceProjection": {
     "matrixPath": "framework/maintainability/terminal-evidence-matrix.json",
-    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v3",
+    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v4",
     "predecessorAssignmentId": "2026-07-27-kungfu-maintainability-terminal-closure",
     "predecessorSealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c"
   },
@@ -1518,11 +1748,11 @@
       "evidence"
     ],
     "metrics": {
-      "topologies": 5,
-      "legalAxes": 8,
-      "adapters": 14,
-      "projections": 9,
-      "qualificationRoutes": 11,
+      "topologies": 6,
+      "legalAxes": 9,
+      "adapters": 19,
+      "projections": 11,
+      "qualificationRoutes": 13,
       "exceptionDebt": 2,
       "findings": 0,
       "weightedDebt": 0
@@ -2037,6 +2267,113 @@
         ],
         "exceptions": [],
         "recovery": "Run the build-free report or task query, inspect exact findings and baseline delta, then edit the declared business authority or adapter rather than the report."
+      },
+      {
+        "id": "quality-governance",
+        "owner": "framework/maintainability",
+        "dimensions": [
+          "language",
+          "execution-topology",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "quality-governance-policy-set",
+          "kind": "repository-policy-set",
+          "sources": [
+            "framework/maintainability/function-risk-policy.json",
+            "framework/maintainability/function-risk-ratchet-policy.json",
+            "framework/maintainability/semantic-amplification.manifest.json"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "required-gate",
+            "read-only-kernel",
+            "compatibility-shadow",
+            "diagnostic-projection",
+            "advisory-report"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "quality-required-gate",
+            "axes": {
+              "surface": "required-gate"
+            },
+            "paths": [
+              "scripts/source-acceptance.mjs",
+              "framework/maintainability/function-risk-ratchet.mjs",
+              "shifu.gates.json"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-read-only-kernel",
+            "axes": {
+              "surface": "read-only-kernel"
+            },
+            "paths": [
+              "framework/maintainability/source-analysis-kernel.mjs",
+              "framework/maintainability/source-analysis-session.mjs",
+              "framework/maintainability/function-risk-transition.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-compatibility-shadow",
+            "axes": {
+              "surface": "compatibility-shadow"
+            },
+            "paths": [
+              "framework/maintainability/fixtures/function-risk-legacy-shadow.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-diagnostic-projection",
+            "axes": {
+              "surface": "diagnostic-projection"
+            },
+            "paths": [
+              "framework/maintainability/quality-governance-responsibility-map.json",
+              "framework/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-advisory-report",
+            "axes": {
+              "surface": "advisory-report"
+            },
+            "paths": [
+              "framework/maintainability/function-risk.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          }
+        ],
+        "projections": [
+          {
+            "path": "framework/maintainability/semantic-amplification-report.json",
+            "role": "generated-report"
+          },
+          {
+            "path": "framework/maintainability/quality-governance-responsibility-map.json",
+            "role": "navigation-only-responsibility-map"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "framework/maintainability/function-risk.test.mjs",
+            "role": "legacy-shadow-and-self-ratchet"
+          },
+          {
+            "path": "framework/maintainability/semantic-amplification.test.mjs",
+            "role": "topology-and-role-conformance"
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Run the required changed-code ratchet before the full advisory report, compare the shared kernel with the frozen legacy oracle, and repair the implementation without changing policy thresholds, exclusions, waivers, required contexts, or public contracts."
       }
     ],
     "detectorOutcomes": [
@@ -2045,7 +2382,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 2072,
+        "metric": 2190,
         "threshold": 2450,
         "finding": null
       },
@@ -2071,5 +2408,5 @@
     "findings": []
   },
   "issues": [],
-  "reportRoot": "sha256:79227887eabf3abc08a6793cddd38c3c8fbf2e7c90dfe6a686a4cbc4376c4a70"
+  "reportRoot": "sha256:953844eb26ea391625e8150138180165453381143c61f347e0d1a6f559094035"
 }

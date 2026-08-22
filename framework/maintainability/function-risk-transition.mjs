@@ -15,6 +15,36 @@ function uniqueBy(items, key) {
   );
 }
 
+function referencedNewFunctions(sourceFiles, functions, baselineById) {
+  const sourceByPath = new Map(
+    sourceFiles.map((file) => [file.path, file.bytes.toString('utf8')]),
+  );
+  const newByOwner = new Map();
+  for (const item of functions.filter(({ previousId }) => !previousId)) {
+    if (!newByOwner.has(item.owner)) newByOwner.set(item.owner, []);
+    newByOwner.get(item.owner).push(item);
+  }
+  const references = new Map();
+  for (const item of functions) {
+    const previous = item.previousId ? baselineById.get(item.previousId) : null;
+    if (!previous || item.baseRisk >= previous.baseRisk) continue;
+    const body = (sourceByPath.get(item.path) || '')
+      .split('\n')
+      .slice(item.startLine - 1, item.endLine)
+      .join('\n');
+    const helperIds = (newByOwner.get(item.owner) || [])
+      .filter(({ symbol }) =>
+        new RegExp(
+          `\\b${symbol.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}\\b`,
+          'u',
+        ).test(body),
+      )
+      .map(({ id }) => id);
+    if (helperIds.length) references.set(item.previousId, new Set(helperIds));
+  }
+  return references;
+}
+
 function analyzeTransition(
   current,
   baseline,
@@ -30,6 +60,10 @@ function analyzeTransition(
     baseline.filter(({ owner }) => owner),
     (item) => `${item.owner}\0${item.symbol}`,
   );
+  const uniqueOwnerBodies = uniqueBy(
+    baseline.filter(({ owner }) => owner),
+    (item) => `${item.owner}\0${item.symbol}\0${item.bodyRoot}`,
+  );
   const uniqueSymbols = uniqueBy(baseline, (item) => item.symbol);
   const matchedBaseline = new Set();
   const transitions = [];
@@ -37,7 +71,11 @@ function analyzeTransition(
     const previous =
       exact.get(`${item.path}\0${item.symbol}`) ||
       (options.movementScope === 'same-owner'
-        ? uniqueOwnerSymbols.get(`${item.owner}\0${item.symbol}`)
+        ? options.movementIdentity === 'body-root'
+          ? uniqueOwnerBodies.get(
+              `${item.owner}\0${item.symbol}\0${item.bodyRoot}`,
+            )
+          : uniqueOwnerSymbols.get(`${item.owner}\0${item.symbol}`)
         : uniqueSymbols.get(item.symbol)) ||
       null;
     if (previous) matchedBaseline.add(previous.id);
@@ -70,13 +108,12 @@ function analyzeTransition(
       });
     return { ...item, changeRisk, movement, previousId: previous?.id || null };
   });
-  const findings = [];
-  const newByOwner = new Map();
-  for (const item of functions.filter(({ movement }) => movement === 'new')) {
-    if (!newByOwner.has(item.owner)) newByOwner.set(item.owner, []);
-    newByOwner.get(item.owner).push(item);
-  }
   const baselineById = new Map(baseline.map((item) => [item.id, item]));
+  const functionsById = new Map(functions.map((item) => [item.id, item]));
+  const references =
+    options.referencedNewIdsByPreviousId ||
+    referencedNewFunctions(options.sourceFiles || [], functions, baselineById);
+  const findings = [];
   for (const item of functions) {
     if (!item.previousId) continue;
     const previous = baselineById.get(item.previousId);
@@ -84,7 +121,10 @@ function analyzeTransition(
       previous.cyclomatic +
       previous.cognitive -
       (item.cyclomatic + item.cognitive);
-    const helperTotal = (newByOwner.get(item.owner) || []).reduce(
+    const helpers = [...(references.get(item.previousId) || [])]
+      .map((id) => functionsById.get(id))
+      .filter(Boolean);
+    const helperTotal = helpers.reduce(
       (sum, helper) => sum + helper.cyclomatic + helper.cognitive,
       0,
     );
@@ -97,9 +137,7 @@ function analyzeTransition(
         severity: 'advisory',
         paths: [
           item.path,
-          ...(newByOwner.get(item.owner) || []).map(
-            ({ path: pathname }) => pathname,
-          ),
+          ...helpers.map(({ path: pathname }) => pathname),
         ].sort(),
         message:
           'complexity moved to new same-owner helpers without reducing aggregate responsibility',
@@ -154,4 +192,4 @@ function analyzeTransition(
   };
 }
 
-export { analyzeTransition };
+export { analyzeTransition, referencedNewFunctions };

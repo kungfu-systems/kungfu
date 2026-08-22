@@ -57,14 +57,22 @@ function command(program, args, cwd = ROOT) {
 }
 
 function terminalJson(output, label) {
-  const starts = [...output.matchAll(/(?:^|\n)\s*([\[{])/gu)];
-  for (const match of starts.reverse()) {
-    const start = (match.index || 0) + match[0].lastIndexOf(match[1]);
+  const lines = output.split('\n');
+  let lineStart = output.length;
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    lineStart -= lines[index].length;
+    const indentation = lines[index].length - lines[index].trimStart().length;
+    const marker = lines[index][indentation];
+    if (marker !== '{' && marker !== '[') {
+      lineStart -= 1;
+      continue;
+    }
     try {
-      return JSON.parse(output.slice(start).trim());
+      return JSON.parse(output.slice(lineStart + indentation).trim());
     } catch {
       // Earlier command output may contain bracketed log prefixes.
     }
+    lineStart -= 1;
   }
   throw new Error(`${label} did not return terminal JSON`);
 }

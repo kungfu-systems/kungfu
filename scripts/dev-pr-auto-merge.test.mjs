@@ -241,6 +241,14 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
     bridge,
     /gh api --method POST[\s\S]*actions\/runs\/\$SOURCE_RUN_ID\/rerun-failed-jobs[\s\S]*expected_attempt="\$\(\(prior_attempt \+ 1\)\)"/u,
   );
+  assert.match(
+    bridge,
+    /if \[ "\$prior_attempt" != "1" \]; then[\s\S]*qualified Warrant source bridge permits exactly one retry from the initial source attempt[\s\S]*exit 1[\s\S]*gh api --method POST/u,
+  );
+  assert.doesNotMatch(
+    bridge,
+    /gh api --method POST[\s\S]*if \[ "\$prior_attempt" != "1" \]; then/u,
+  );
   assert.doesNotMatch(bridge, /check-runs\/\$[A-Za-z_]/u);
   assert.match(
     bridge,
@@ -550,6 +558,30 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
   assert.match(
     sourceWorkflow,
     /merge_group\)[\s\S]*allowed_phase='\^qualified\$'/u,
+  );
+});
+
+test('non-native source-only candidates do not acquire or require a Delivery Warrant', () => {
+  const sourceWorkflow = fs.readFileSync(
+    '.github/workflows/affected-native-pr.yml',
+    'utf8',
+  );
+  const warrantStart = sourceWorkflow.indexOf('  warrant_admission:\n');
+  const warrantEnd = sourceWorkflow.indexOf(
+    '\n  affected_native_shards:\n',
+    warrantStart,
+  );
+  const warrantJob = sourceWorkflow.slice(warrantStart, warrantEnd);
+  assert.match(
+    warrantJob,
+    /needs\.candidate_preflight\.outputs\.native-required == 'true'[\s\S]*needs\.candidate_preflight\.outputs\.sdk-required == 'true'[\s\S]*needs\.candidate_preflight\.outputs\.shifu-required == 'true'[\s\S]*needs\.candidate_preflight\.outputs\.kfd-required == 'true'/u,
+  );
+
+  const aggregateStart = sourceWorkflow.indexOf('  affected_native:\n');
+  const aggregateJob = sourceWorkflow.slice(aggregateStart);
+  assert.match(
+    aggregateJob,
+    /Fail closed without the exact active Warrant[\s\S]*needs\.warrant_admission\.result != 'success'[\s\S]*needs\.candidate_preflight\.outputs\.native-required == 'true'[\s\S]*needs\.candidate_preflight\.outputs\.sdk-required == 'true'[\s\S]*needs\.candidate_preflight\.outputs\.shifu-required == 'true'[\s\S]*needs\.candidate_preflight\.outputs\.kfd-required == 'true'/u,
   );
 });
 

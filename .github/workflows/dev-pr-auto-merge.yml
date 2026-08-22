@@ -736,6 +736,10 @@ jobs:
               echo "failed source run does not expose the expected failed native CheckRun" >&2
               exit 1
             fi
+            if [ "$prior_attempt" != "1" ]; then
+              echo "qualified Warrant source bridge permits exactly one retry from the initial source attempt; observed attempt: $prior_attempt" >&2
+              exit 1
+            fi
             gh api --method POST \
               "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/rerun-failed-jobs" \
               >/dev/null

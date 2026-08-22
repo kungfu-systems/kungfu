@@ -65,20 +65,79 @@ test('baseline changed paths conserve tree, worktree, and untracked inputs witho
 test('current semantic amplification projection has one route per family', () => {
   const report = buildReport(manifest, layers);
   assert.equal(report.verdict, 'pass');
-  assert.equal(report.summary.families, 6);
-  assert.equal(report.summary.authorities, 6);
-  assert.equal(report.summary.mappedSurfaces, 88);
+  assert.equal(report.summary.families, 7);
+  assert.equal(report.summary.authorities, 7);
+  assert.equal(report.summary.mappedSurfaces, 103);
   assert.equal(
     report.integrity.schema,
     'kungfu.abstraction-integrity-report/v1',
   );
-  assert.equal(report.integrity.metrics.topologies, 5);
+  assert.equal(report.integrity.metrics.topologies, 6);
   assert.equal(report.integrity.metrics.findings, 0);
   assert.equal(report.integrity.metrics.weightedDebt, 0);
   assert.equal(report.integrity.baselineComparison.findingDelta, -3);
   assert.equal(report.integrity.baselineComparison.weightedDebtDelta, -18);
   assert.equal(report.integrity.baselineComparison.ratchet, 'pass');
   assert.deepEqual(report.issues, []);
+  const qualityFamily = report.families.find(
+    ({ id }) => id === 'quality-governance',
+  );
+  assert.deepEqual(qualityFamily.roles, {
+    authority: 3,
+    'required-gate': 3,
+    'read-only-analysis-kernel': 2,
+    'thin-binding': 1,
+    'compatibility-reader': 1,
+    'advisory-report': 1,
+    'diagnostic-projection': 2,
+    test: 2,
+  });
+  const qualityTopology = report.integrity.topologies.find(
+    ({ id }) => id === 'quality-governance',
+  );
+  assert.deepEqual(
+    qualityTopology.adapters.map(({ axes }) => axes.surface),
+    [
+      'required-gate',
+      'read-only-kernel',
+      'compatibility-shadow',
+      'diagnostic-projection',
+      'advisory-report',
+    ],
+  );
+});
+
+test('quality-governance topology fails closed on missing or parallel ownership', () => {
+  const missing = clone(manifest);
+  const family = missing.families.find(({ id }) => id === 'quality-governance');
+  family.surfaces = family.surfaces.filter(
+    ({ path }) =>
+      path !== 'framework/maintainability/source-analysis-kernel.mjs',
+  );
+  const missingIssues = validateManifest(
+    missing,
+    layers,
+    new Set(['framework/maintainability/source-analysis-kernel.mjs']),
+  );
+  assert.ok(
+    missingIssues.some(
+      ({ code, family: id }) =>
+        code === 'unmapped-semantic-surface' && id === 'quality-governance',
+    ),
+  );
+
+  const duplicated = clone(manifest);
+  const topology = duplicated.integrityPolicy.topologies.find(
+    ({ id }) => id === 'quality-governance',
+  );
+  topology.additionalAuthorities = [{ id: 'shadow-quality-authority' }];
+  const duplicatedIssues = validateManifest(duplicated, layers, new Set());
+  assert.ok(
+    duplicatedIssues.some(
+      ({ code, family: id }) =>
+        code === 'parallel-authority' && id === 'quality-governance',
+    ),
+  );
 });
 
 test('missing authority and unknown projection role fail closed', () => {

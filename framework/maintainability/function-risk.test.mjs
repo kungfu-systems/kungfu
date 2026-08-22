@@ -37,6 +37,12 @@ import { functionSnapshot } from './source-analysis-session.mjs';
 
 const layers = { components: [] };
 const ownership = [];
+const responsibilityMap = JSON.parse(
+  fs.readFileSync(
+    new URL('./quality-governance-responsibility-map.json', import.meta.url),
+    'utf8',
+  ),
+);
 const policy = {
   includedClasses: ['first-party-handwritten-implementation'],
   antiGaming: { complexityDropForWrapperSignal: 3 },
@@ -119,14 +125,16 @@ test('shared kernel shadows the legacy exact-repository analysis', () => {
     'framework/maintainability/abstraction-integrity.manifest.json',
   ).ownership;
   const report = buildReport();
+  const legacyBaselineInputs = legacyTrackedFilesAt(report.baseline.revision);
+  const legacyCurrentInputs = legacyTrackedCurrentFiles();
   const legacyBaseline = legacySnapshot(
-    legacyTrackedFilesAt(report.baseline.revision),
+    legacyBaselineInputs,
     policy,
     repositoryLayers,
     repositoryOwnership,
   );
   const legacyCurrent = legacySnapshot(
-    legacyTrackedCurrentFiles(),
+    legacyCurrentInputs,
     policy,
     repositoryLayers,
     repositoryOwnership,
@@ -151,6 +159,11 @@ test('shared kernel shadows the legacy exact-repository analysis', () => {
     legacyCurrent.files,
     legacyBaseline.files,
     policy,
+    {
+      movementScope: 'same-owner',
+      movementIdentity: 'body-root',
+      sourceFiles: legacyCurrentInputs,
+    },
   );
   const successorTransition = analyzeTransition(
     successorCurrent.functions,
@@ -158,6 +171,11 @@ test('shared kernel shadows the legacy exact-repository analysis', () => {
     successorCurrent.files,
     successorBaseline.files,
     policy,
+    {
+      movementScope: 'same-owner',
+      movementIdentity: 'body-root',
+      sourceFiles: legacyCurrentInputs,
+    },
   );
   assert.deepEqual(successorTransition, legacyTransition);
   assert.equal(successorCurrent.sourceRoot, report.sourceRoot);
@@ -227,7 +245,18 @@ test('wrapper-only extraction remains visible as an advisory signal', () => {
       bodyRoot: digest('helper'),
     }),
   ];
-  const result = analyzeTransition(current, baseline, [], [], policy);
+  const result = analyzeTransition(current, baseline, [], [], policy, {
+    sourceFiles: [
+      {
+        path: 'scripts/a.mjs',
+        bytes: Buffer.from('function work() { return helper(); }\n'),
+      },
+      {
+        path: 'scripts/helper.mjs',
+        bytes: Buffer.from('function helper() { return 1; }\n'),
+      },
+    ],
+  });
   assert.ok(
     result.findings.some(({ code }) => code === 'wrapper-only-extraction'),
   );
@@ -268,6 +297,21 @@ test('required matching never carries risk across an owner boundary', () => {
   const current = metric({ owner: 'owner/current', path: 'scripts/b.mjs' });
   const result = analyzeTransition([current], [previous], [], [], policy, {
     movementScope: 'same-owner',
+  });
+  assert.equal(result.functions[0].movement, 'new');
+  assert.equal(result.functions[0].previousId, null);
+});
+
+test('advisory movement requires the same owner and exact function body', () => {
+  const previous = metric({ owner: 'owner/shared' });
+  const unrelated = metric({
+    owner: 'owner/shared',
+    path: 'scripts/b.mjs',
+    bodyRoot: digest('different implementation'),
+  });
+  const result = analyzeTransition([unrelated], [previous], [], [], policy, {
+    movementScope: 'same-owner',
+    movementIdentity: 'body-root',
   });
   assert.equal(result.functions[0].movement, 'new');
   assert.equal(result.functions[0].previousId, null);
@@ -329,6 +373,38 @@ test('new-function envelopes have positive and negative fixtures', () => {
     language: 'python',
     owner: 'framework/a',
     baseRisk: 57,
+  });
+  const transition = analyzeTransition([allowed, blocked], [], [], [], policy, {
+    movementScope: 'same-owner',
+  });
+  const findings = evaluateFunctionRiskRatchet(
+    { functions: [allowed, blocked], files: [] },
+    { functions: [], files: [] },
+    transition,
+    ratchetPolicy,
+  );
+  assert.deepEqual(
+    findings
+      .filter(({ code }) => code === 'new-function-risk-envelope-exceeded')
+      .map(({ symbol }) => symbol),
+    ['blocked'],
+  );
+});
+
+test('quality-governance changed functions inherit the protected ratchet', () => {
+  const allowed = metric({
+    id: 'javascript-typescript:framework/maintainability/a.mjs:allowed:1',
+    path: 'framework/maintainability/a.mjs',
+    symbol: 'allowed',
+    owner: 'framework/maintainability',
+    baseRisk: 87,
+  });
+  const blocked = metric({
+    id: 'javascript-typescript:framework/maintainability/a.mjs:blocked:10',
+    path: 'framework/maintainability/a.mjs',
+    symbol: 'blocked',
+    owner: 'framework/maintainability',
+    baseRisk: 88,
   });
   const transition = analyzeTransition([allowed, blocked], [], [], [], policy, {
     movementScope: 'same-owner',
@@ -498,6 +574,40 @@ test('live report is rooted, advisory, four-language, and maps every entrypoint'
     report.entrypointGraph.workflows['.github/workflows/report-projection.yml']
       .disposition,
     'retained-exception',
+  );
+  const selfFunctions = report.functions.filter(
+    ({ owner }) => owner === responsibilityMap.protectedBaseline.owner,
+  );
+  const current = {
+    aggregateBaseRisk: selfFunctions.reduce(
+      (sum, item) => sum + item.baseRisk,
+      0,
+    ),
+    maxBaseRisk: Math.max(...selfFunctions.map(({ baseRisk }) => baseRisk)),
+    above50: selfFunctions.filter(({ baseRisk }) => baseRisk > 50).length,
+    above100: selfFunctions.filter(({ baseRisk }) => baseRisk > 100).length,
+    wrapperOnlyFindings: report.findings.filter(
+      ({ code, paths }) =>
+        code === 'wrapper-only-extraction' &&
+        paths.some((relative) =>
+          relative.startsWith('framework/maintainability/'),
+        ),
+    ).length,
+  };
+  for (const metricName of [
+    'aggregateBaseRisk',
+    'maxBaseRisk',
+    'above50',
+    'above100',
+  ])
+    assert.ok(
+      current[metricName] < responsibilityMap.protectedBaseline[metricName],
+      `${metricName} must improve against the exact protected baseline`,
+    );
+  assert.equal(current.wrapperOnlyFindings, 0);
+  assert.equal(
+    responsibilityMap.frozenPublicContract.requiredGateNames,
+    'unchanged',
   );
 });
 

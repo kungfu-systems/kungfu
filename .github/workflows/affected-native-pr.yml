@@ -466,7 +466,11 @@ jobs:
     if: >-
       ${{
         needs.candidate_preflight.result == 'success' &&
-        needs.proof_probe.result == 'success'
+        needs.proof_probe.result == 'success' &&
+        (needs.candidate_preflight.outputs.native-required == 'true' ||
+         needs.candidate_preflight.outputs.sdk-required == 'true' ||
+         needs.candidate_preflight.outputs.shifu-required == 'true' ||
+         needs.candidate_preflight.outputs.kfd-required == 'true')
       }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -1001,7 +1005,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Fail closed without the exact active Warrant
-        if: ${{ needs.warrant_admission.result != 'success' }}
+        if: >-
+          ${{
+            needs.warrant_admission.result != 'success' &&
+            (needs.candidate_preflight.outputs.native-required == 'true' ||
+             needs.candidate_preflight.outputs.sdk-required == 'true' ||
+             needs.candidate_preflight.outputs.shifu-required == 'true' ||
+             needs.candidate_preflight.outputs.kfd-required == 'true')
+          }}
         shell: bash
         run: |
           echo "Expensive native qualification requires the exact active Delivery Warrant." >&2

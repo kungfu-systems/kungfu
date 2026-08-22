@@ -578,6 +578,113 @@
         ],
         "exceptions": [],
         "recovery": "Run the build-free report or task query, inspect exact findings and baseline delta, then edit the declared business authority or adapter rather than the report."
+      },
+      {
+        "id": "quality-governance",
+        "owner": "framework/maintainability",
+        "dimensions": [
+          "language",
+          "execution-topology",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "quality-governance-policy-set",
+          "kind": "repository-policy-set",
+          "sources": [
+            "framework/maintainability/function-risk-policy.json",
+            "framework/maintainability/function-risk-ratchet-policy.json",
+            "framework/maintainability/semantic-amplification.manifest.json"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "required-gate",
+            "read-only-kernel",
+            "compatibility-shadow",
+            "diagnostic-projection",
+            "advisory-report"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "quality-required-gate",
+            "axes": {
+              "surface": "required-gate"
+            },
+            "paths": [
+              "scripts/source-acceptance.mjs",
+              "framework/maintainability/function-risk-ratchet.mjs",
+              "shifu.gates.json"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-read-only-kernel",
+            "axes": {
+              "surface": "read-only-kernel"
+            },
+            "paths": [
+              "framework/maintainability/source-analysis-kernel.mjs",
+              "framework/maintainability/source-analysis-session.mjs",
+              "framework/maintainability/function-risk-transition.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-compatibility-shadow",
+            "axes": {
+              "surface": "compatibility-shadow"
+            },
+            "paths": [
+              "framework/maintainability/fixtures/function-risk-legacy-shadow.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-diagnostic-projection",
+            "axes": {
+              "surface": "diagnostic-projection"
+            },
+            "paths": [
+              "framework/maintainability/quality-governance-responsibility-map.json",
+              "framework/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-advisory-report",
+            "axes": {
+              "surface": "advisory-report"
+            },
+            "paths": [
+              "framework/maintainability/function-risk.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          }
+        ],
+        "projections": [
+          {
+            "path": "framework/maintainability/semantic-amplification-report.json",
+            "role": "generated-report"
+          },
+          {
+            "path": "framework/maintainability/quality-governance-responsibility-map.json",
+            "role": "navigation-only-responsibility-map"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "framework/maintainability/function-risk.test.mjs",
+            "role": "legacy-shadow-and-self-ratchet"
+          },
+          {
+            "path": "framework/maintainability/semantic-amplification.test.mjs",
+            "role": "topology-and-role-conformance"
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Run the required changed-code ratchet before the full advisory report, compare the shared kernel with the frozen legacy oracle, and repair the implementation without changing policy thresholds, exclusions, waivers, required contexts, or public contracts."
       }
     ]
   },
@@ -587,6 +694,10 @@
       "generated-projection",
       "thin-binding",
       "compatibility-reader",
+      "required-gate",
+      "read-only-analysis-kernel",
+      "diagnostic-projection",
+      "advisory-report",
       "conformance-oracle",
       "test",
       "documentation",
@@ -1050,6 +1161,83 @@
         "docs/qualification/known-limits.md"
       ],
       "recovery": "Recompute source-bound release admission and exact platform passports; preparation, dry-run, or one-platform evidence never becomes a public release claim."
+    },
+    {
+      "id": "quality-governance",
+      "owner": "framework/maintainability",
+      "identityTokens": [
+        "kungfu.function-risk-report/v1",
+        "kungfu.function-risk-ratchet/v1",
+        "kungfu.source-analysis-cache/v1",
+        "kungfu.quality-governance-responsibility-map/v1"
+      ],
+      "discoveryRoots": [
+        "framework/maintainability/",
+        "scripts/",
+        "shifu.gates.json"
+      ],
+      "authority": {
+        "id": "quality-governance-policy-set",
+        "sources": [
+          "framework/maintainability/function-risk-policy.json",
+          "framework/maintainability/function-risk-ratchet-policy.json",
+          "framework/maintainability/semantic-amplification.manifest.json"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "scripts/source-acceptance.mjs",
+          "role": "required-gate"
+        },
+        {
+          "path": "shifu.gates.json",
+          "role": "required-gate"
+        },
+        {
+          "path": "framework/maintainability/function-risk-ratchet.mjs",
+          "role": "required-gate"
+        },
+        {
+          "path": "framework/maintainability/source-analysis-kernel.mjs",
+          "role": "read-only-analysis-kernel"
+        },
+        {
+          "path": "framework/maintainability/source-analysis-session.mjs",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/maintainability/function-risk-transition.mjs",
+          "role": "read-only-analysis-kernel"
+        },
+        {
+          "path": "framework/maintainability/fixtures/function-risk-legacy-shadow.mjs",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/maintainability/function-risk.mjs",
+          "role": "advisory-report"
+        },
+        {
+          "path": "framework/maintainability/quality-governance-responsibility-map.json",
+          "role": "diagnostic-projection"
+        },
+        {
+          "path": "framework/maintainability/semantic-amplification.mjs",
+          "role": "diagnostic-projection"
+        },
+        {
+          "path": "framework/maintainability/function-risk.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "framework/maintainability/semantic-amplification.test.mjs",
+          "role": "test"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Follow the responsibility map to the existing policy authority, run the required changed-code ratchet first, then compare the shared kernel and frozen compatibility shadow before inspecting advisory projections."
     }
   ],
   "productionBoundaries": [

@@ -6,7 +6,10 @@ import { performance } from 'node:perf_hooks';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { analyzeTransition } from './function-risk-transition.mjs';
+import {
+  analyzeTransition,
+  referencedNewFunctions,
+} from './function-risk-transition.mjs';
 import { buildReport } from './function-risk.mjs';
 import {
   baselineChangedPaths,
@@ -29,38 +32,6 @@ const RATCHET_POLICY_PATH =
 
 function sumRisk(functions) {
   return functions.reduce((sum, item) => sum + item.baseRisk, 0);
-}
-
-function referencedNewFunctions(currentFiles, transition, baselineById) {
-  const sourceByPath = new Map(
-    currentFiles.map((file) => [file.path, file.bytes.toString('utf8')]),
-  );
-  const newByOwner = new Map();
-  for (const item of transition.functions.filter(
-    ({ previousId }) => !previousId,
-  )) {
-    if (!newByOwner.has(item.owner)) newByOwner.set(item.owner, []);
-    newByOwner.get(item.owner).push(item);
-  }
-  const references = new Map();
-  for (const item of transition.functions) {
-    const previous = item.previousId ? baselineById.get(item.previousId) : null;
-    if (!previous || item.baseRisk >= previous.baseRisk) continue;
-    const body = (sourceByPath.get(item.path) || '')
-      .split('\n')
-      .slice(item.startLine - 1, item.endLine)
-      .join('\n');
-    const helperIds = (newByOwner.get(item.owner) || [])
-      .filter(({ symbol }) =>
-        new RegExp(
-          `\\b${symbol.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}\\b`,
-          'u',
-        ).test(body),
-      )
-      .map(({ id }) => id);
-    if (helperIds.length) references.set(item.previousId, new Set(helperIds));
-  }
-  return references;
 }
 
 function evaluateFunctionRiskRatchet(
@@ -219,7 +190,7 @@ function buildFunctionRiskRatchet(options = {}) {
         current.files,
         baseline.files,
         publicPolicy,
-        { movementScope: 'same-owner' },
+        { movementScope: 'same-owner', sourceFiles: currentInputs },
       );
       const baselineById = new Map(
         baseline.functions.map((item) => [item.id, item]),
@@ -236,7 +207,7 @@ function buildFunctionRiskRatchet(options = {}) {
           {
             referencedNewIdsByPreviousId: referencedNewFunctions(
               currentInputs,
-              transition,
+              transition.functions,
               baselineById,
             ),
           },

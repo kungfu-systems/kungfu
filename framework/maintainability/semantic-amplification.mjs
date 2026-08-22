@@ -798,6 +798,19 @@ function validateManifest(
             ),
           );
     }
+    for (const finding of integrity.findings)
+      if (
+        manifest.integrityPolicy.findingClasses?.[finding.class]?.severity ===
+        'blocking'
+      )
+        issues.push(
+          issue(
+            finding.class,
+            finding.topology,
+            finding.target,
+            finding.message,
+          ),
+        );
     if (integrity.baselineComparison.ratchet !== 'pass')
       issues.push(
         issue(

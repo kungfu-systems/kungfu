@@ -18,6 +18,35 @@ const DEFAULT_GIT_TIMEOUT_MS = Number(
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const REVISION_PATTERN = /^[0-9a-f]{40}$/u;
 const CACHE_SCHEMA = 'kungfu.source-analysis-cache/v1';
+const DECISION_TOKENS = {
+  python: /\b(?:if|elif|for|while|except|case|and|or)\b/gu,
+  rust: /\b(?:if|for|while|match)\b|&&|\|\||=>/gu,
+  'c-cpp': /\b(?:if|for|while|case|catch)\b|&&|\|\||\?(?![?.])/gu,
+  'javascript-typescript':
+    /\b(?:if|for|while|case|catch)\b|&&|\|\||\?(?![?.])/gu,
+};
+const BRACED_FUNCTION_PATTERNS = {
+  'javascript-typescript': [
+    /\b(?:async[ \t]+)?function[ \t]*\*?[ \t]*([A-Za-z_$][\w$]*)[ \t]*\([^\n)]*\)[ \t]*\{/gu,
+    /\b(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]*)?(?:\([^\n)]*\)|[A-Za-z_$][\w$]*)[ \t]*=>[ \t]*\{/gu,
+    /(?:^|\n)[ \t]*(?:async[ \t]+)?(?:static[ \t]+)?([A-Za-z_$][\w$]*)[ \t]*\([^;{}\n]*\)[ \t]*(?::[ \t]*[^={\n]+)?\{/gu,
+  ],
+  rust: [
+    /\bfn[ \t]+([A-Za-z_]\w*)[ \t]*(?:<[^>{}\n]*>)?[ \t]*\([^\n)]*\)[^{;\n]*\{/gu,
+  ],
+  'c-cpp': [
+    /(?:^|\n)[ \t]*(?:template[ \t]*<[^;{}\n]*>[ \t]*)?(?:[\w:&*<>~,\[\]][\w:&*<>~,\[\] \t]*[ \t]+)?([~A-Za-z_]\w*(?:::\w+)*)[ \t]*\([^;{}\n]*\)[ \t]*(?:const[ \t]*)?(?:noexcept[ \t]*)?(?:->[ \t]*[^{}\n]+)?\{/gu,
+  ],
+};
+const EXCLUDED_BRACED_SYMBOLS = new Set([
+  'if',
+  'for',
+  'while',
+  'switch',
+  'catch',
+  'return',
+  'sizeof',
+]);
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -467,10 +496,7 @@ function matchingBrace(source, open) {
 }
 
 function decisionTokens(family) {
-  if (family === 'python')
-    return /\b(?:if|elif|for|while|except|case|and|or)\b/gu;
-  if (family === 'rust') return /\b(?:if|for|while|match)\b|&&|\|\||=>/gu;
-  return /\b(?:if|for|while|case|catch)\b|&&|\|\||\?(?![?.])/gu;
+  return DECISION_TOKENS[family];
 }
 
 function metricsFor(source, family) {
@@ -538,35 +564,12 @@ function pythonFunctions(source, stripped) {
 
 function bracedFunctions(source, stripped, family) {
   const starts = lineStarts(stripped);
-  const patterns =
-    family === 'javascript-typescript'
-      ? [
-          /\b(?:async[ \t]+)?function[ \t]*\*?[ \t]*([A-Za-z_$][\w$]*)[ \t]*\([^\n)]*\)[ \t]*\{/gu,
-          /\b(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]*)?(?:\([^\n)]*\)|[A-Za-z_$][\w$]*)[ \t]*=>[ \t]*\{/gu,
-          /(?:^|\n)[ \t]*(?:async[ \t]+)?(?:static[ \t]+)?([A-Za-z_$][\w$]*)[ \t]*\([^;{}\n]*\)[ \t]*(?::[ \t]*[^={\n]+)?\{/gu,
-        ]
-      : family === 'rust'
-        ? [
-            /\bfn[ \t]+([A-Za-z_]\w*)[ \t]*(?:<[^>{}\n]*>)?[ \t]*\([^\n)]*\)[^{;\n]*\{/gu,
-          ]
-        : [
-            /(?:^|\n)[ \t]*(?:template[ \t]*<[^;{}\n]*>[ \t]*)?(?:[\w:&*<>~,\[\]][\w:&*<>~,\[\] \t]*[ \t]+)?([~A-Za-z_]\w*(?:::\w+)*)[ \t]*\([^;{}\n]*\)[ \t]*(?:const[ \t]*)?(?:noexcept[ \t]*)?(?:->[ \t]*[^{}\n]+)?\{/gu,
-          ];
-  const excluded = new Set([
-    'if',
-    'for',
-    'while',
-    'switch',
-    'catch',
-    'return',
-    'sizeof',
-  ]);
   const seen = new Set();
   const results = [];
-  for (const pattern of patterns) {
+  for (const pattern of BRACED_FUNCTION_PATTERNS[family]) {
     for (const match of stripped.matchAll(pattern)) {
       const symbol = match[1];
-      if (excluded.has(symbol)) continue;
+      if (EXCLUDED_BRACED_SYMBOLS.has(symbol)) continue;
       const open = match.index + match[0].lastIndexOf('{');
       if (seen.has(open)) continue;
       seen.add(open);

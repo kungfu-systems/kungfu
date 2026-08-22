@@ -1,0 +1,86 @@
+{
+  "schema": "kungfu.quality-governance-responsibility-map/v1",
+  "status": "navigation-only-non-authoritative",
+  "authoritySemantics": "This map names existing owners and never replaces policy files, required gates, or their fail-closed behavior.",
+  "frozenPublicContract": {
+    "cli": "unchanged",
+    "arguments": "unchanged",
+    "exitCodes": "unchanged",
+    "jsonSchemas": "unchanged",
+    "requiredGateNames": "unchanged",
+    "protectionRules": "unchanged",
+    "failureMode": "fail-closed"
+  },
+  "responsibilities": {
+    "policyAuthority": {
+      "role": "authority",
+      "sources": [
+        "framework/maintainability/function-risk-policy.json",
+        "framework/maintainability/function-risk-ratchet-policy.json",
+        "framework/maintainability/semantic-amplification.manifest.json"
+      ]
+    },
+    "requiredGate": {
+      "role": "required-gate",
+      "sources": [
+        "scripts/source-acceptance.mjs",
+        "shifu.gates.json",
+        "framework/maintainability/function-risk-ratchet.mjs"
+      ]
+    },
+    "analysisKernel": {
+      "role": "read-only-analysis-kernel",
+      "sources": [
+        "framework/maintainability/source-analysis-kernel.mjs",
+        "framework/maintainability/source-analysis-session.mjs",
+        "framework/maintainability/function-risk-transition.mjs"
+      ]
+    },
+    "compatibilityShadow": {
+      "role": "compatibility-reader",
+      "sources": [
+        "framework/maintainability/fixtures/function-risk-legacy-shadow.mjs"
+      ]
+    },
+    "diagnosticProjection": {
+      "role": "diagnostic-projection",
+      "sources": [
+        "framework/maintainability/quality-governance-responsibility-map.json",
+        "framework/maintainability/semantic-amplification.mjs",
+        "framework/maintainability/semantic-amplification-report.json"
+      ]
+    },
+    "advisoryReport": {
+      "role": "advisory-report",
+      "sources": [
+        "framework/maintainability/function-risk.mjs"
+      ]
+    },
+    "qualification": {
+      "role": "test",
+      "sources": [
+        "framework/maintainability/function-risk.test.mjs",
+        "framework/maintainability/semantic-amplification.test.mjs"
+      ]
+    }
+  },
+  "protectedBaseline": {
+    "revision": "6d4f27442574d0983f949bbea333b148fa3e31ff",
+    "reportRoot": "sha256:737f233cacc69162a3309d8087a79ccc849b95e449221e3951fd5538c0633433",
+    "owner": "framework/maintainability",
+    "functions": 99,
+    "aggregateBaseRisk": 4032,
+    "maxBaseRisk": 847,
+    "above50": 17,
+    "above100": 4,
+    "wrapperOnlyFindings": 1
+  },
+  "selfGovernanceRatchet": {
+    "aggregateBaseRisk": "strictly-lower-than-protected-baseline",
+    "maxBaseRisk": "strictly-lower-than-protected-baseline",
+    "above50": "strictly-lower-than-protected-baseline",
+    "above100": "strictly-lower-than-protected-baseline",
+    "wrapperOnlyFindings": 0,
+    "creditPolicy": "No credit for file-only movement, forwarding wrappers, symbol renames alone, exclusions, waivers, or threshold changes."
+  }
+}
