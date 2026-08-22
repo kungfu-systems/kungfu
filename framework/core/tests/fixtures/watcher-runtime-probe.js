@@ -13,6 +13,7 @@ const binding = require(path.join(coreDir, 'dist', 'kungfu', 'kungfu_node.node')
 const temporaryRoot = process.platform === 'win32' ? os.tmpdir() : '/tmp';
 const home = fs.mkdtempSync(path.join(temporaryRoot, 'kfwr.'));
 let watcher = null;
+let coordinatorRuntime = null;
 
 function createWatcher() {
   return new binding.Watcher(
@@ -68,24 +69,64 @@ function waitFor(predicate, timeoutMs, message, context = () => ({})) {
   });
 }
 
-function startCoordinator() {
-  const outputPath = path.join(home, 'coordinator.out');
-  const logOffset = fs.existsSync(outputPath) ? fs.statSync(outputPath).size : 0;
-  const output = fs.openSync(outputPath, 'a');
+function coordinatorEnvironment() {
   const environment = { ...process.env };
-  environment.PATH =
-    environment.SHIFU_UV_ORIGINAL_PATH || environment.PATH;
+  environment.PATH = environment.SHIFU_UV_ORIGINAL_PATH || environment.PATH || '';
   delete environment.SHIFU_UV_ADAPTER_MANIFEST;
   delete environment.UV_PROJECT_ENVIRONMENT;
   delete environment.UV_PROJECT;
   delete environment.UV_FROZEN;
   delete environment.VIRTUAL_ENV;
-  const child = spawn(
+  delete environment.PYTHONHOME;
+  delete environment.PYTHONPATH;
+  return environment;
+}
+
+function resolveCoordinatorRuntime(environment) {
+  if (coordinatorRuntime !== null) return coordinatorRuntime;
+  const resolved = spawnSync(
     'uv',
+    ['run', '--frozen', 'python', '-c', 'import sys; print(sys.executable)'],
+    {
+      cwd: coreDir,
+      env: environment,
+      encoding: 'utf8',
+      windowsHide: true,
+    },
+  );
+  if (resolved.error) {
+    throw new Error(`failed to resolve coordinator Python: ${resolved.error.message}`);
+  }
+  if (resolved.status !== 0) {
+    throw new Error(
+      `failed to resolve coordinator Python (${resolved.status}): ${resolved.stderr.trim()}`,
+    );
+  }
+  const python = resolved.stdout.trim().split(/\r?\n/).at(-1) || '';
+  if (!path.isAbsolute(python) || !fs.existsSync(python)) {
+    throw new Error(`resolved coordinator Python is invalid: ${python}`);
+  }
+  coordinatorRuntime = {
+    python,
+    pythonDirectory: path.dirname(python),
+    virtualEnvironment: path.dirname(path.dirname(python)),
+  };
+  return coordinatorRuntime;
+}
+
+function startCoordinator() {
+  const outputPath = path.join(home, 'coordinator.out');
+  const logOffset = fs.existsSync(outputPath) ? fs.statSync(outputPath).size : 0;
+  const environment = coordinatorEnvironment();
+  const runtime = resolveCoordinatorRuntime(environment);
+  environment.VIRTUAL_ENV = runtime.virtualEnvironment;
+  environment.PATH = environment.PATH
+    ? `${runtime.pythonDirectory}${path.delimiter}${environment.PATH}`
+    : runtime.pythonDirectory;
+  const output = fs.openSync(outputPath, 'a');
+  const child = spawn(
+    runtime.python,
     [
-      'run',
-      '--frozen',
-      'python',
       '.devtools/kungfu_cli.py',
       '-H',
       home,

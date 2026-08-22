@@ -30,6 +30,12 @@ static_assert(kungfu::yijinjing::PUBLISH_NONBLOCK == NNG_FLAG_NONBLOCK,
 namespace kungfu::runtime::nanomsg {
 enum class protocol : int { UNKNOWN = -1, REPLY, REQUEST, PUSH, PULL, PUBLISH, SUBSCRIBE };
 
+#if defined(_WIN32)
+inline constexpr int DEFAULT_QUIET_DIAL_FLAGS = NNG_FLAG_NONBLOCK;
+#else
+inline constexpr int DEFAULT_QUIET_DIAL_FLAGS = 0;
+#endif
+
 inline std::string get_protocol_name(protocol p) {
   switch (p) {
   case protocol::REPLY:
@@ -117,7 +123,9 @@ public:
 
   int dial(const std::string &path, int flags = 0);
 
-  int dial_quietly(const std::string &path, int flags = 0);
+  // Windows named pipes may still be inside the coordinator slow-joiner
+  // window. NNG owns the readiness-probe retry after an asynchronous attempt.
+  int dial_quietly(const std::string &path, int flags = DEFAULT_QUIET_DIAL_FLAGS);
 
   void close();
 

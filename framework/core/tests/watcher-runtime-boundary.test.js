@@ -42,6 +42,16 @@ const ioHeader = path.join(
   'runtime',
   'io.h',
 );
+const nanomsgSocketHeader = path.join(
+  coreDir,
+  'src',
+  'libkungfu',
+  'include',
+  'kungfu',
+  'runtime',
+  'nanomsg',
+  'socket.h',
+);
 const watcherProbeSource = fs.readFileSync(probe, 'utf8');
 const reconnectProbeSource = watcherProbeSource.slice(
   watcherProbeSource.indexOf('async function reconnectProbe()'),
@@ -143,6 +153,29 @@ test('watcher reconnect fixture sequences readiness, owns process trees, and bou
   );
   assert.match(
     watcherProbeSource,
+    /const resolved = spawnSync\(\s*'uv',[\s\S]*?'--frozen'[\s\S]*?'import sys; print\(sys\.executable\)'/,
+  );
+  assert.match(watcherProbeSource, /resolved\.status !== 0/);
+  assert.match(
+    watcherProbeSource,
+    /!path\.isAbsolute\(python\) \|\| !fs\.existsSync\(python\)/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /environment\.VIRTUAL_ENV = runtime\.virtualEnvironment/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /environment\.PATH = environment\.PATH[\s\S]*?runtime\.pythonDirectory/,
+  );
+  assert.match(watcherProbeSource, /const child = spawn\(\s*runtime\.python,/);
+  assert.doesNotMatch(
+    watcherProbeSource,
+    /const child = spawn\(\s*'uv'/,
+    'the owned child PID must be the coordinator, not the uv launcher',
+  );
+  assert.match(
+    watcherProbeSource,
     /signalPosixProcessTree\(child, 'SIGTERM'\)/,
   );
   assert.match(
@@ -215,6 +248,20 @@ test('peer usability persists one bounded handshake across slow-joiner retries',
     peerSetupSource,
     /std::lock_guard<std::mutex> call_guard\(usability_probe_call_mutex\);\s*\{\s*std::lock_guard<std::mutex> guard\(usability_probe_mutex_\)/,
     'setup must follow the same call-lock then state-lock order',
+  );
+  const socketHeader = fs.readFileSync(nanomsgSocketHeader, 'utf8');
+  assert.match(
+    socketHeader,
+    /#if defined\(_WIN32\)\s*inline constexpr int DEFAULT_QUIET_DIAL_FLAGS = NNG_FLAG_NONBLOCK;\s*#else\s*inline constexpr int DEFAULT_QUIET_DIAL_FLAGS = 0;/,
+  );
+  assert.match(
+    socketHeader,
+    /int dial\(const std::string &path, int flags = 0\)/,
+  );
+  assert.match(
+    socketHeader,
+    /int dial_quietly\(const std::string &path, int flags = DEFAULT_QUIET_DIAL_FLAGS\)/,
+    'Windows readiness probes must let NNG retain and retry an asynchronous dialer',
   );
   assert.doesNotMatch(
     peerCancellationSource,
