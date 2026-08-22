@@ -2107,7 +2107,7 @@ function App() {
   );
 
   React.useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onShellKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && (settingsOpen || workspaceOpen)) {
         event.preventDefault();
         setSettingsOpen(false);
@@ -2119,8 +2119,8 @@ function App() {
         setSettingsOpen((open) => !open);
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onShellKeyDown);
+    return () => window.removeEventListener('keydown', onShellKeyDown);
   }, [settingsOpen, workspaceOpen]);
 
   const workspaceOverlay = workspaceOpen ? (

@@ -237,6 +237,13 @@ test('Cmd or Ctrl K focuses the same search plane without executing CLI results'
   assert.doesNotMatch(source, /execFile\(result\.action/);
 });
 
+test('global keyboard callbacks keep unique semantic identities', () => {
+  assert.match(source, /const onShellKeyDown = \(event: KeyboardEvent\) =>/);
+  assert.match(source, /addEventListener\('keydown', onShellKeyDown\)/);
+  assert.match(source, /removeEventListener\('keydown', onShellKeyDown\)/);
+  assert.equal(source.match(/const onKeyDown =/g)?.length, 1);
+});
+
 test('Work activation reaches the declared Work view and selects the exact result', () => {
   assert.match(source, /productRoleEntry\(enabled, 'profile-view'\)/);
   assert.match(
