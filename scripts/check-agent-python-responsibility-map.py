@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -88,6 +89,26 @@ def top_level_symbols(source: str, pathname: str) -> set[str]:
     return symbols
 
 
+def class_method_node_counts(
+    source: str, pathname: str, class_name: str
+) -> dict[str, int]:
+    tree = ast.parse(source, filename=pathname)
+    owner = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == class_name
+    )
+    return {
+        node.name: sum(1 for child in ast.walk(node) if child is not node)
+        for node in owner.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+
+
+def sha256_text(source: str) -> str:
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
+
+
 def main() -> None:
     responsibility_map = json.loads(MAP_PATH.read_text(encoding="utf-8"))
     assert responsibility_map["schema"] == "kungfu.agent-python-responsibility-map/v1"
@@ -118,6 +139,70 @@ def main() -> None:
                 top_level_symbols(owner.read_text(encoding="utf-8"), owner_path)
             )
         assert set(row["ownedDefinitions"]) <= owner_symbols, pathname
+        contract = row.get("convergenceContract")
+        if contract is None:
+            continue
+        exact_base = contract["exactBase"]
+        subprocess.run(
+            ["git", "cat-file", "-e", f"{exact_base}^{{commit}}"],
+            cwd=ROOT,
+            check=True,
+        )
+        for source in contract["baselineSources"]:
+            assert (
+                sha256_text(source_at(exact_base, source["path"])) == source["sha256"]
+            )
+        cli = contract["cli"]
+        assert (
+            sha256_text((ROOT / cli["path"]).read_text(encoding="utf-8"))
+            == cli["sha256"]
+        )
+        assert set(contract["publicImports"]) <= top_level_symbols(
+            current_source, pathname
+        )
+        for source in contract.get("currentSources", []):
+            assert (
+                sha256_text((ROOT / source["path"]).read_text(encoding="utf-8"))
+                == source["sha256"]
+            )
+        aggregate = contract.get("ownerAggregate")
+        if aggregate is not None:
+            measured = sum(
+                source_measurement(
+                    (ROOT / owner_path).read_text(encoding="utf-8"), owner_path
+                )["responsibilities"]
+                for owner_path in aggregate["current"]["paths"]
+            )
+            assert measured == aggregate["current"]["responsibilities"]
+            assert measured < aggregate["baseline"]["responsibilities"]
+            for metric in ("baseRisk", "changeRisk", "maximum"):
+                assert (
+                    aggregate["current"]["functionRisk"][metric]
+                    < aggregate["baseline"]["functionRisk"][metric]
+                )
+        surface = contract.get("modificationSurface")
+        if surface is not None:
+            current_owner = surface["current"]
+            owner_measurement = source_measurement(
+                (ROOT / current_owner["outcomeOwnerPath"]).read_text(encoding="utf-8"),
+                current_owner["outcomeOwnerPath"],
+            )
+            assert owner_measurement == {
+                "physicalLines": current_owner["ownerPhysicalLines"],
+                "responsibilities": current_owner["ownerResponsibilities"],
+            }
+            assert (
+                current_owner["ownerPhysicalLines"]
+                < surface["baseline"]["ownerPhysicalLines"]
+            )
+            cohesive = surface["cohesiveExtraction"]
+            method_nodes = class_method_node_counts(
+                (ROOT / current_owner["outcomeOwnerPath"]).read_text(encoding="utf-8"),
+                current_owner["outcomeOwnerPath"],
+                cohesive["ownerClass"],
+            )
+            assert set(cohesive["ownedMethods"]) <= set(method_nodes)
+            assert all(method_nodes[name] > 10 for name in cohesive["ownedMethods"])
 
 
 if __name__ == "__main__":
