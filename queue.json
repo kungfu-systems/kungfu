@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5609,
+  "generation": 5610,
   "fencingCounter": 606,
   "policy": {
     "agingSeconds": 900,
@@ -43544,8 +43544,49 @@
         "framework/gui/resources/cli/kungfu",
         "product/scripts/cli-launcher.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3365,
+      "assignmentRoot": "sha256:50676f4e4be8faabb8e5e5b96fc6fcf4764a8de9c06f658c7142d0a6dbf3f607",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:667b8514f8fd6aedf96be431bbdcf2bd139e1b8d6ecb35f9c24b4c1d37b0e76a",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:46fa129bd4b578de84cd172a9ce80a472eb88ac47e72ece3daf1e374b956bace",
+      "sourceHead": "4b40e5b14beadc3023ae31d9611d31f918376e58",
+      "sourcePatchRoot": "sha256:0773d00cc3d2b8f67e9d22eb2b3bc5c31f94aa6ee63d5a6bb4361a518b606a35",
+      "sourceProofRoot": "sha256:0e2da17ed4fa28e6e9112a01975e1b7a863d81728ce6fdcf9703a1f525807ef9",
+      "planRoot": "sha256:0849e3d728b6d41749980998e6b7834d9dad9a319270e2488477870771dbedfc",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:a82956e9f5763bb048702c8ae46a16cddc94cfd34be274a42c9a8fa997aafde6",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32580393133,
+      "priority": "expedited",
+      "enqueuedAt": "2026-08-22T15:08:24.082Z",
+      "updatedAt": "2026-08-22T15:08:24.082Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
+        "docs/architecture/adr-map.json",
+        "docs/architecture/adr-map.md",
+        "framework/maintainability/function-risk-ratchet-policy.json",
+        "framework/maintainability/function-risk-ratchet.mjs",
+        "framework/maintainability/function-risk-transition.mjs",
+        "framework/maintainability/function-risk.mjs",
+        "framework/maintainability/function-risk.test.mjs",
+        "framework/maintainability/source-analysis-session.mjs",
+        "scripts/source-acceptance.mjs",
+        "scripts/source-acceptance.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-22T15:07:48.562Z",
-  "stateRoot": "sha256:fe32450b88eabba40fdad2abb8415a1467f7b1e7302e2de36a11c57b2d9d6698"
+  "updatedAt": "2026-08-22T15:08:24.082Z",
+  "stateRoot": "sha256:0027dad45c3c50a05fae126974b43d046db35e2d64f089d7d7a303457a854e33"
 }
