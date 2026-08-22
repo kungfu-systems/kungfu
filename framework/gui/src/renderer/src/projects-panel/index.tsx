@@ -929,36 +929,18 @@ export class KfxErrorBoundary extends React.Component<
 
 export type CoreSurfaceId = 'projects' | 'agent-work-lab' | 'core-work';
 
-export function useRetainedCoreSurfaces({
-  projectsOpen,
-  labOpen,
-  coreWorkOpen,
-}: {
-  projectsOpen: boolean;
-  labOpen: boolean;
-  coreWorkOpen: boolean;
-}): ReadonlySet<CoreSurfaceId> {
+export function useRetainedCoreSurfaces(
+  visible?: CoreSurfaceId,
+): ReadonlySet<CoreSurfaceId> {
   const [retained, setRetained] = React.useState<ReadonlySet<CoreSurfaceId>>(
-    () =>
-      new Set([
-        ...(projectsOpen ? (['projects'] as const) : []),
-        ...(labOpen ? (['agent-work-lab'] as const) : []),
-        ...(coreWorkOpen ? (['core-work'] as const) : []),
-      ]),
+    () => new Set(visible ? [visible] : []),
   );
   React.useEffect(() => {
-    const visible = projectsOpen
-      ? 'projects'
-      : labOpen
-        ? 'agent-work-lab'
-        : coreWorkOpen
-          ? 'core-work'
-          : undefined;
     if (!visible) return;
     setRetained((current) =>
       current.has(visible) ? current : new Set([...current, visible]),
     );
-  }, [coreWorkOpen, labOpen, projectsOpen]);
+  }, [visible]);
   return retained;
 }
 

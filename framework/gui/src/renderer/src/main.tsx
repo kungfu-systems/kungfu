@@ -44,10 +44,16 @@ import type { SessionWindowLaunchAuthorization } from '../../main/session-window
 import {
   accessibleEntries,
   availableProfiles,
+  createShellNavigationHandler,
   focusedProfile,
+  initialShellSurface,
   primaryNavigation,
   productRoleEntry,
   profileHomeId,
+  shellSurfaceActiveViewId,
+  shellSurfaceFlags,
+  shellSurfaceTitle,
+  visibleCoreSurface,
 } from '../../navigation';
 import {
   type RuntimeStatusResult,
@@ -246,6 +252,94 @@ function SandboxSlot({
     // stable for a given runtime
   }, [entry.id, entry.bundlePath]);
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
+}
+
+const WORKSPACE_RECOVERY_STATES = new Set([
+  'uninitialized',
+  'shadow-only',
+  'evidence-degraded',
+  'unavailable',
+]);
+
+function ActiveKfxSurface({
+  runtime,
+  activeKfx,
+  caps,
+  shell,
+  active,
+  entryCount,
+  discoveredKfxCount,
+  failures,
+}: {
+  runtime: Runtime;
+  activeKfx: KfxEntry | null;
+  caps: KfxCapabilities | null;
+  shell: Shell;
+  active: string;
+  entryCount: number;
+  discoveredKfxCount: number;
+  failures: Array<{ dir: string; error: string }>;
+}) {
+  if (!runtime.ok) {
+    const workspaceNeedsRecovery = WORKSPACE_RECOVERY_STATES.has(
+      window.process.env.KF_WORKSPACE_STATE,
+    );
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {workspaceNeedsRecovery ? (
+          <WorkspacePanel />
+        ) : (
+          <RuntimeFailurePanel message={runtime.message} />
+        )}
+      </div>
+    );
+  }
+
+  if (activeKfx?.tier === 'sandboxed-ipc') {
+    return (
+      <KfxErrorBoundary kfxId={activeKfx.id}>
+        <SandboxSlot
+          key={activeKfx.id}
+          entry={activeKfx}
+          caps={sandboxSubset(runtime, activeKfx)}
+        />
+      </KfxErrorBoundary>
+    );
+  }
+
+  if (activeKfx && caps) {
+    return (
+      <KfxErrorBoundary kfxId={activeKfx.id}>
+        <activeKfx.View caps={caps} shell={shell} />
+      </KfxErrorBoundary>
+    );
+  }
+
+  return (
+    <section style={panelStyle}>
+      <div style={{ ...mono, color: '#f48771' }}>
+        no kfx available
+        {entryCount === 0
+          ? ` — ${unavailableKfxMessage(discoveredKfxCount)}`
+          : ` for view "${active}"`}
+      </div>
+      {failures.map((failure) => (
+        <div
+          key={failure.dir}
+          style={{ ...mono, color: '#858585', marginTop: 4 }}
+        >
+          {failure.dir}: {failure.error}
+        </div>
+      ))}
+    </section>
+  );
 }
 
 type ElectronChromeStyle = React.CSSProperties & {
@@ -915,28 +1009,23 @@ function App() {
     () => actionableKfxFailures(loaded.failures, kfxDescriptor !== null),
     [kfxDescriptor, loaded.failures],
   );
-  const [labOpen, setLabOpen] = React.useState(() =>
+  const initialAgentWorkLabOpen =
     initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen
       ? false
-      : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length),
+      : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length);
+  const [shellSurface, setShellSurface] = React.useState(() =>
+    initialShellSurface({
+      onboardingOpen: initialOnboardingOpen,
+      projectsOpen: initialProjectsOpen,
+      focusedProjectPath: initialFocusedProjectPath,
+      agentWorkLabOpen: initialAgentWorkLabOpen,
+    }),
   );
-  const [onboardingOpen, setOnboardingOpen] = React.useState(
-    initialOnboardingOpen,
+  const { onboardingOpen, coreWorkOpen } = shellSurfaceFlags(shellSurface);
+  const visibleRetainedCoreSurface = visibleCoreSurface(shellSurface);
+  const retainedCoreSurfaces = useRetainedCoreSurfaces(
+    visibleRetainedCoreSurface,
   );
-  const [projectsOpen, setProjectsOpen] = React.useState(
-    !initialOnboardingOpen && initialProjectsOpen && !initialFocusedProjectPath,
-  );
-  const [coreWorkOpen, setCoreWorkOpen] = React.useState(
-    initialCoreWorkOpen ||
-      (!initialOnboardingOpen &&
-        initialProjectsOpen &&
-        Boolean(initialFocusedProjectPath)),
-  );
-  const retainedCoreSurfaces = useRetainedCoreSurfaces({
-    projectsOpen,
-    labOpen,
-    coreWorkOpen,
-  });
   const [focusedProjectPath, setFocusedProjectPath] = React.useState(
     initialFocusedProjectPath,
   );
@@ -1270,10 +1359,7 @@ function App() {
 
   const openKfx = React.useCallback(
     (kfxId: string, nextParams?: Record<string, string>) => {
-      setOnboardingOpen(false);
-      setLabOpen(false);
-      setProjectsOpen(false);
-      setCoreWorkOpen(false);
+      setShellSurface('kfx');
       setParams(nextParams ?? {});
       setActive(kfxId);
     },
@@ -1331,20 +1417,15 @@ function App() {
       ipc = null;
     }
     if (!ipc) return;
-    const navigate = (_event: unknown, request: ShellNavigateRequest) => {
-      if (request.target === 'settings') {
-        setSettingsOpen(true);
-      } else if (request.target === 'onboarding') {
-        setLabOpen(false);
-        setProjectsOpen(false);
-        setCoreWorkOpen(false);
-        setOnboardingOpen(true);
-      } else if (request.target === 'profile-home') {
-        openKfx(profileHomeId(profile, enabled));
-      } else if (request.target === 'view') {
-        openKfx(request.kfxId);
-      }
-    };
+    const navigate = createShellNavigationHandler({
+      settings: () => setSettingsOpen(true),
+      onboarding: () => setShellSurface('onboarding'),
+      'profile-home': () => openKfx(profileHomeId(profile, enabled)),
+      view: (request) =>
+        openKfx(
+          (request as Extract<ShellNavigateRequest, { target: 'view' }>).kfxId,
+        ),
+    });
     ipc.on(SHELL_NAVIGATE_CHANNEL, navigate);
     return () => ipc?.removeListener(SHELL_NAVIGATE_CHANNEL, navigate);
   }, [enabled, openKfx, profile]);
@@ -1624,11 +1705,8 @@ function App() {
     enabled.find((entry) => entry.id === profileHomeId(profile, enabled));
   const openCoreWork = React.useCallback(
     (nextParams: Record<string, string>) => {
-      setOnboardingOpen(false);
-      setLabOpen(false);
-      setProjectsOpen(false);
       setParams(nextParams);
-      setCoreWorkOpen(true);
+      setShellSurface('core-work');
     },
     [],
   );
@@ -1735,9 +1813,7 @@ function App() {
         openWorkSurface({ workId: result.action.workId });
       } else if (result.action.kind === 'open-project') {
         setFocusedProjectPath(result.action.projectPath);
-        setLabOpen(false);
-        setCoreWorkOpen(false);
-        setProjectsOpen(true);
+        setShellSurface('projects');
       } else {
         showNotification({
           level: 'info',
@@ -2183,36 +2259,22 @@ function App() {
     <div style={appStyle}>
       <ShellTitleBar
         chrome={windowChrome}
-        activeTitle={
-          onboardingOpen
-            ? 'Getting Started'
-            : labOpen
-              ? 'Agent Work Lab'
-              : projectsOpen
-                ? 'Projects'
-                : coreWorkOpen
-                  ? projectWorkOpen
-                    ? `Project · ${currentProjectDisplayName}`
-                    : 'All Work'
-                  : (activeKfx?.title ?? 'Kungfu Episodes')
-        }
+        activeTitle={shellSurfaceTitle({
+          surface: shellSurface,
+          projectWorkOpen,
+          currentProjectDisplayName,
+          activeKfxTitle: activeKfx?.title,
+        })}
         searchText={searchText}
         searchResults={searchResults}
         searchStatus={searchCatalogStatus}
         settingsOpen={settingsOpen}
-        activeViewId={
-          onboardingOpen
-            ? 'onboarding'
-            : labOpen
-              ? 'agent-work-lab'
-              : projectsOpen
-                ? 'projects'
-                : projectWorkOpen
-                  ? 'current-project'
-                  : coreWorkOpen || activeKfx?.id === workEntry?.id
-                    ? 'core-work'
-                    : activeKfx?.id
-        }
+        activeViewId={shellSurfaceActiveViewId({
+          surface: shellSurface,
+          projectWorkOpen,
+          activeKfxId: activeKfx?.id,
+          workEntryId: workEntry?.id,
+        })}
         advancedItems={advancedNav}
         failures={visibleKfxFailures}
         onSearchChange={setSearchText}
@@ -2230,18 +2292,10 @@ function App() {
             : undefined
         }
         onOpenProjects={() => {
-          setOnboardingOpen(false);
-          setLabOpen(false);
-          setCoreWorkOpen(false);
           setFocusedProjectPath('');
-          setProjectsOpen(true);
+          setShellSurface('projects');
         }}
-        onOpenLab={() => {
-          setOnboardingOpen(false);
-          setProjectsOpen(false);
-          setCoreWorkOpen(false);
-          setLabOpen(true);
-        }}
+        onOpenLab={() => setShellSurface('agent-work-lab')}
         onOpenView={(id) => shell.open(id)}
         onWindowControl={controlWindow}
       />
@@ -2261,13 +2315,9 @@ function App() {
                 entry={agentFirstEntry}
                 onPersist={persistOnboarding}
                 onInstallCli={installOnboardingCli}
-                onOpenLab={() => {
-                  setOnboardingOpen(false);
-                  setLabOpen(true);
-                }}
+                onOpenLab={() => setShellSurface('agent-work-lab')}
                 onOpenTour={() => {
-                  setOnboardingOpen(false);
-                  setLabOpen(true);
+                  setShellSurface('agent-work-lab');
                   showNotification({
                     level: 'info',
                     title: 'Guided Project Tour',
@@ -2276,29 +2326,20 @@ function App() {
                   });
                 }}
                 onContinue={() => {
-                  setOnboardingOpen(false);
                   if (initialFocusedProjectPath) {
                     openWorkSurface({
                       projectPath: initialFocusedProjectPath,
                       projectSection: 'files',
                     });
                   } else {
-                    setProjectsOpen(true);
+                    setShellSurface('projects');
                   }
                 }}
               />
             ) : (
               <>
                 <RetainedCoreSurfaceStack
-                  visible={
-                    projectsOpen
-                      ? 'projects'
-                      : labOpen
-                        ? 'agent-work-lab'
-                        : coreWorkOpen
-                          ? 'core-work'
-                          : undefined
-                  }
+                  visible={visibleRetainedCoreSurface}
                   retained={retainedCoreSurfaces}
                   projects={projects}
                   focusedPath={focusedProjectPath}
@@ -2309,11 +2350,7 @@ function App() {
                   lab={agentWorkLab}
                   startup={startup}
                   onOpenWork={() => openWorkSurface()}
-                  onOpenLabExistingProject={() => {
-                    setLabOpen(false);
-                    setCoreWorkOpen(false);
-                    setProjectsOpen(true);
-                  }}
+                  onOpenLabExistingProject={() => setShellSurface('projects')}
                   onLabComplete={labOnboarding.completeLab}
                   onOpenStarterProject={labOnboarding.openStarterProject}
                   work={
@@ -2326,61 +2363,17 @@ function App() {
                     ) : null
                   }
                 />
-                {!projectsOpen && !labOpen && !coreWorkOpen ? (
-                  runtime.ok ? (
-                    activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
-                      // isolated third-party view: embedded, not mounted here
-                      <KfxErrorBoundary kfxId={activeKfx.id}>
-                        <SandboxSlot
-                          key={activeKfx.id}
-                          entry={activeKfx}
-                          caps={sandboxSubset(runtime, activeKfx)}
-                        />
-                      </KfxErrorBoundary>
-                    ) : activeKfx && caps ? (
-                      <KfxErrorBoundary kfxId={activeKfx.id}>
-                        <activeKfx.View caps={caps} shell={shell} />
-                      </KfxErrorBoundary>
-                    ) : (
-                      <section style={panelStyle}>
-                        <div style={{ ...mono, color: '#f48771' }}>
-                          no kfx available
-                          {loaded.entries.length === 0
-                            ? ` — ${unavailableKfxMessage(loaded.discoveredKfxCount)}`
-                            : ` for view "${active}"`}
-                        </div>
-                        {visibleKfxFailures.map((failure) => (
-                          <div
-                            key={failure.dir}
-                            style={{ ...mono, color: '#858585', marginTop: 4 }}
-                          >
-                            {failure.dir}: {failure.error}
-                          </div>
-                        ))}
-                      </section>
-                    )
-                  ) : (
-                    <div
-                      style={{
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {window.process.env.KF_WORKSPACE_STATE ===
-                        'uninitialized' ||
-                      window.process.env.KF_WORKSPACE_STATE === 'shadow-only' ||
-                      window.process.env.KF_WORKSPACE_STATE ===
-                        'evidence-degraded' ||
-                      window.process.env.KF_WORKSPACE_STATE ===
-                        'unavailable' ? (
-                        <WorkspacePanel />
-                      ) : (
-                        <RuntimeFailurePanel message={runtime.message} />
-                      )}
-                    </div>
-                  )
+                {shellSurface === 'kfx' ? (
+                  <ActiveKfxSurface
+                    runtime={runtime}
+                    activeKfx={activeKfx}
+                    caps={caps}
+                    shell={shell}
+                    active={active}
+                    entryCount={loaded.entries.length}
+                    discoveredKfxCount={loaded.discoveredKfxCount}
+                    failures={visibleKfxFailures}
+                  />
                 ) : null}
               </>
             )}

@@ -7,6 +7,108 @@ import type {
   ProfileManifest,
   ShellState,
 } from '@kungfu-tech/kfx';
+import type { ShellNavigateRequest } from './sandbox/channels';
+
+export type ShellSurface =
+  | 'onboarding'
+  | 'projects'
+  | 'agent-work-lab'
+  | 'core-work'
+  | 'kfx';
+
+export type ShellSurfaceFlags = {
+  onboardingOpen: boolean;
+  projectsOpen: boolean;
+  labOpen: boolean;
+  coreWorkOpen: boolean;
+};
+
+export type CoreShellSurface = 'projects' | 'agent-work-lab' | 'core-work';
+
+export type ShellNavigationActions = Record<
+  ShellNavigateRequest['target'],
+  (request: ShellNavigateRequest) => void
+>;
+
+export function createShellNavigationHandler(actions: ShellNavigationActions) {
+  return (_event: unknown, request: ShellNavigateRequest) => {
+    const action = actions[request.target];
+    action?.(request);
+  };
+}
+
+export function initialShellSurface({
+  onboardingOpen,
+  projectsOpen,
+  focusedProjectPath,
+  agentWorkLabOpen,
+}: {
+  onboardingOpen: boolean;
+  projectsOpen: boolean;
+  focusedProjectPath: string;
+  agentWorkLabOpen: boolean;
+}): ShellSurface {
+  if (onboardingOpen) return 'onboarding';
+  if (projectsOpen) return focusedProjectPath ? 'core-work' : 'projects';
+  if (agentWorkLabOpen) return 'agent-work-lab';
+  return 'core-work';
+}
+
+export function shellSurfaceFlags(surface: ShellSurface): ShellSurfaceFlags {
+  return {
+    onboardingOpen: surface === 'onboarding',
+    projectsOpen: surface === 'projects',
+    labOpen: surface === 'agent-work-lab',
+    coreWorkOpen: surface === 'core-work',
+  };
+}
+
+export function visibleCoreSurface(
+  surface: ShellSurface,
+): CoreShellSurface | undefined {
+  if (surface === 'projects' || surface === 'agent-work-lab') return surface;
+  return surface === 'core-work' ? surface : undefined;
+}
+
+export function shellSurfaceTitle({
+  surface,
+  projectWorkOpen,
+  currentProjectDisplayName,
+  activeKfxTitle,
+}: {
+  surface: ShellSurface;
+  projectWorkOpen: boolean;
+  currentProjectDisplayName: string;
+  activeKfxTitle?: string;
+}): string {
+  if (surface === 'onboarding') return 'Getting Started';
+  if (surface === 'agent-work-lab') return 'Agent Work Lab';
+  if (surface === 'projects') return 'Projects';
+  if (surface !== 'core-work') return activeKfxTitle ?? 'Kungfu Episodes';
+  return projectWorkOpen
+    ? `Project · ${currentProjectDisplayName}`
+    : 'All Work';
+}
+
+export function shellSurfaceActiveViewId({
+  surface,
+  projectWorkOpen,
+  activeKfxId,
+  workEntryId,
+}: {
+  surface: ShellSurface;
+  projectWorkOpen: boolean;
+  activeKfxId?: string;
+  workEntryId?: string;
+}): string | undefined {
+  if (surface === 'onboarding') return 'onboarding';
+  if (surface === 'agent-work-lab') return 'agent-work-lab';
+  if (surface === 'projects') return 'projects';
+  if (projectWorkOpen) return 'current-project';
+  if (surface === 'core-work' || activeKfxId === workEntryId)
+    return 'core-work';
+  return activeKfxId;
+}
 
 export type NavigationEntry = {
   id: string;
