@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5481,
+  "generation": 5482,
   "fencingCounter": 599,
   "policy": {
     "agingSeconds": 900,
@@ -43028,8 +43028,42 @@
         "scripts/check-incubation-passport.mjs",
         "scripts/check-incubation-passport.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3357,
+      "assignmentRoot": "sha256:9dfef9611f3f83d64128bf739c86478a7c22f1fedc20ddb60ffa666bcdc58b00",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:951c36fe0fac5cea137639f820826f899dde6bcffb61d19688ab0ecc4ab677a7",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:d7b47b554c5ed7da56e5e9697b40574f61f5ac094f7adb4dd761966cb24f58e1",
+      "sourceHead": "961ceb128b8f2109decccad9c426a45926478ac0",
+      "sourcePatchRoot": "sha256:35fc8612c9336f827e6ec32b51767e7cd38150a7b0b68d67f997ef6dabe6b1e9",
+      "sourceProofRoot": "sha256:35fb5d5fb2ae87d557999661dcc34ec93935d69874e1c7db8711db9fb3338871",
+      "planRoot": "sha256:fe503b397606a890bab924e63a0ad208919cb1a4ccae6d00ba82243ff8c820e5",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:9bc86987279cc9ec849d931a927181298cdeeb7c88a19525118f802846a8257d",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32565509575,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-22T09:47:27.819Z",
+      "updatedAt": "2026-08-22T09:47:27.819Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/src/python/kungfu/profile_composition.py",
+        "framework/core/src/python/kungfu/profile_sdk_kfd3.py",
+        "framework/core/tests/python/test_profile_composition.py",
+        "framework/spec/generated/authority.json",
+        "framework/spec/generated/compatibility.json",
+        "framework/spec/generated/registry.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-22T09:43:07.810Z",
-  "stateRoot": "sha256:2b0e26c874062f4cab7cd1aff2c69906882ffe0f1a9c8943ef9daa971764acb7"
+  "updatedAt": "2026-08-22T09:47:27.819Z",
+  "stateRoot": "sha256:6c69d56d215592bf060df31071a8e2ff26229719338dae2a00cb67a0046b20e6"
 }
