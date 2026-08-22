@@ -23,45 +23,216 @@ import { createAgentSessionProxy } from '../agent-session-proxy';
 import { AgentWorkLabPanel } from '../agent-work-lab';
 import { guiKungfuCliArgs } from '../runtime';
 
-export function openRendererProjects() {
-  type ExecFile = (
+type ProcessOptions = {
+  env: Record<string, string | undefined>;
+  maxBuffer: number;
+};
+
+type RendererChild = {
+  stdin: {
+    end: (input: string) => void;
+    once: (event: 'error', listener: (reason: Error) => void) => void;
+  };
+  stdout: {
+    on: (event: 'data', listener: (chunk: unknown) => void) => void;
+  };
+  stderr: {
+    on: (event: 'data', listener: (chunk: unknown) => void) => void;
+  };
+  once: (
+    event: 'error' | 'close',
+    listener: (value: Error | number | null) => void,
+  ) => void;
+  kill: () => void;
+};
+
+type RendererChildProcess = {
+  execFile: (
     file: string,
     args: string[],
-    options: {
-      encoding: 'utf8';
-      env: Record<string, string | undefined>;
-      maxBuffer: number;
-    },
+    options: ProcessOptions & { encoding: 'utf8' },
     callback: (error: Error | null, stdout: string, stderr: string) => void,
   ) => void;
-  type Spawn = (
+  spawn: (
     file: string,
     args: string[],
     options: {
       env: Record<string, string | undefined>;
       stdio: ['ignore' | 'pipe', 'pipe', 'pipe'];
     },
-  ) => {
-    stdin: {
-      end: (input: string) => void;
-      once: (event: 'error', listener: (reason: Error) => void) => void;
-    };
-    stdout: {
-      on: (event: 'data', listener: (chunk: unknown) => void) => void;
-    };
-    stderr: {
-      on: (event: 'data', listener: (chunk: unknown) => void) => void;
-    };
-    once: (
-      event: 'error' | 'close',
-      listener: (value: Error | number | null) => void,
-    ) => void;
-    kill: () => void;
-  };
-  const childProcess = window.require('node:child_process') as {
-    execFile: ExecFile;
-    spawn: Spawn;
-  };
+  ) => RendererChild;
+};
+
+type RendererProcessContext = {
+  childProcess: RendererChildProcess;
+  args: (values: string[]) => string[];
+};
+
+type RendererProcessRequest = {
+  file: string;
+  values: string[];
+  options: ProcessOptions;
+};
+
+type RendererExecRequest = RendererProcessRequest & {
+  options: ProcessOptions & { encoding: 'utf8' };
+};
+
+type RendererInputRequest = RendererProcessRequest & { input: string };
+
+type RendererEventsRequest = RendererProcessRequest & {
+  onLine: (line: string) => void;
+};
+
+type RendererProcessRun<Request> = {
+  process: RendererProcessContext;
+  request: Request;
+};
+
+type RendererRunClose = {
+  code: number | null;
+  failureMessage: string;
+  resolve: (stdout: string) => void;
+};
+
+class RendererProjectRun {
+  stdout = '';
+  stderr = '';
+  size = 0;
+  settled = false;
+
+  constructor(
+    readonly child: RendererChild,
+    readonly maxBuffer: number,
+    readonly overflowMessage: string,
+    readonly reject: (reason: Error) => void,
+  ) {}
+
+  fail(reason: Error) {
+    if (this.settled) return;
+    this.settled = true;
+    this.child.kill();
+    this.reject(reason);
+  }
+
+  append(stream: 'stdout' | 'stderr', chunk: unknown) {
+    const text = String(chunk);
+    this.size += text.length;
+    if (this.size > this.maxBuffer) {
+      this.fail(new Error(this.overflowMessage));
+      return false;
+    }
+    this[stream] += text;
+    return true;
+  }
+
+  receiveLines(chunk: unknown, onLine: (line: string) => void) {
+    if (!this.append('stdout', chunk)) return;
+    const lines = this.stdout.split(/\r?\n/);
+    this.stdout = lines.pop() ?? '';
+    for (const line of lines) if (line.trim()) onLine(line);
+  }
+
+  receiveError(reason: unknown) {
+    this.fail(reason instanceof Error ? reason : new Error(String(reason)));
+  }
+
+  close({ code, failureMessage, resolve }: RendererRunClose) {
+    if (this.settled) return;
+    if (code !== 0) {
+      this.fail(new Error(this.stderr.trim() || failureMessage));
+      return;
+    }
+    this.settled = true;
+    resolve(this.stdout);
+  }
+}
+
+function runRendererExecFile(run: RendererProcessRun<RendererExecRequest>) {
+  const { childProcess, args } = run.process;
+  const { file, values, options } = run.request;
+  return new Promise<string>((resolve, reject) => {
+    childProcess.execFile(
+      file,
+      args(values),
+      options,
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(stderr.trim() || stdout.trim() || error.message));
+        } else resolve(stdout);
+      },
+    );
+  });
+}
+
+function runRendererInput(run: RendererProcessRun<RendererInputRequest>) {
+  const { childProcess, args } = run.process;
+  const { file, values, input, options } = run.request;
+  return new Promise<string>((resolve, reject) => {
+    const child = childProcess.spawn(file, args(values), {
+      env: options.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const processRun = new RendererProjectRun(
+      child,
+      options.maxBuffer,
+      'Project Work capture output exceeded maxBuffer',
+      reject,
+    );
+    child.stdout.on('data', (chunk) => {
+      processRun.append('stdout', chunk);
+    });
+    child.stderr.on('data', (chunk) => {
+      processRun.append('stderr', chunk);
+    });
+    child.stdin.once('error', (reason) => processRun.fail(reason));
+    child.once('error', (reason) => processRun.receiveError(reason));
+    child.once('close', (code) =>
+      processRun.close({
+        code: code as number | null,
+        failureMessage: `kungfu capture exited ${code}`,
+        resolve,
+      }),
+    );
+    child.stdin.end(input);
+  });
+}
+
+function runRendererEvents(run: RendererProcessRun<RendererEventsRequest>) {
+  const { childProcess, args } = run.process;
+  const { file, values, options, onLine } = run.request;
+  return new Promise<void>((resolve, reject) => {
+    const child = childProcess.spawn(file, args(values), {
+      env: options.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const processRun = new RendererProjectRun(
+      child,
+      options.maxBuffer,
+      'Work activity stream exceeded maxBuffer',
+      reject,
+    );
+    child.stdout.on('data', (chunk) => processRun.receiveLines(chunk, onLine));
+    child.stderr.on('data', (chunk) => {
+      processRun.stderr += String(chunk);
+    });
+    child.once('error', (reason) => processRun.receiveError(reason));
+    child.once('close', (code) => {
+      if (processRun.settled) return;
+      if (processRun.stdout.trim()) onLine(processRun.stdout);
+      processRun.close({
+        code: code as number | null,
+        failureMessage: `kungfu run exited ${code}`,
+        resolve: () => resolve(),
+      });
+    });
+  });
+}
+
+function createRendererProjects() {
+  const childProcess = window.require(
+    'node:child_process',
+  ) as RendererChildProcess;
   const electron = window.require('electron') as {
     ipcRenderer: {
       invoke: (channel: string, payload: unknown) => Promise<unknown>;
@@ -76,119 +247,28 @@ export function openRendererProjects() {
     env.KUNGFU_BIN ||
     (window.process.platform === 'win32' ? 'kungfu.exe' : 'kungfu');
   const args = (values: string[]) => guiKungfuCliArgs(env, values);
+  const process = { childProcess, args };
   return capability.openProjects({
     bin,
     env,
     agentSessionClient: 'gui',
     agentSession: createAgentSessionProxy(electron.ipcRenderer),
     execFile: (file, values, options) =>
-      new Promise<string>((resolve, reject) => {
-        childProcess.execFile(
-          file,
-          args(values),
-          options,
-          (error, stdout, stderr) => {
-            if (error) {
-              reject(
-                new Error(stderr.trim() || stdout.trim() || error.message),
-              );
-            } else resolve(stdout);
-          },
-        );
-      }),
+      runRendererExecFile({ process, request: { file, values, options } }),
     execFileInput: (file, values, input, options) =>
-      new Promise<string>((resolve, reject) => {
-        const child = childProcess.spawn(file, args(values), {
-          env: options.env,
-          stdio: ['pipe', 'pipe', 'pipe'],
-        });
-        let stdout = '';
-        let stderr = '';
-        let size = 0;
-        let settled = false;
-        const fail = (reason: Error) => {
-          if (settled) return;
-          settled = true;
-          child.kill();
-          reject(reason);
-        };
-        const append = (current: string, chunk: unknown) => {
-          const text = String(chunk);
-          size += text.length;
-          if (size > options.maxBuffer) {
-            fail(new Error('Project Work capture output exceeded maxBuffer'));
-            return current;
-          }
-          return current + text;
-        };
-        child.stdout.on('data', (chunk) => {
-          stdout = append(stdout, chunk);
-        });
-        child.stderr.on('data', (chunk) => {
-          stderr = append(stderr, chunk);
-        });
-        child.stdin.once('error', fail);
-        child.once('error', (reason) =>
-          fail(reason instanceof Error ? reason : new Error(String(reason))),
-        );
-        child.once('close', (code) => {
-          if (settled) return;
-          if (code !== 0) {
-            fail(new Error(stderr.trim() || `kungfu capture exited ${code}`));
-            return;
-          }
-          settled = true;
-          resolve(stdout);
-        });
-        child.stdin.end(input);
+      runRendererInput({
+        process,
+        request: { file, values, input, options },
       }),
     execFileEvents: (file, values, options, onLine) =>
-      new Promise<void>((resolve, reject) => {
-        const child = childProcess.spawn(file, args(values), {
-          env: options.env,
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        let stdout = '';
-        let stderr = '';
-        let size = 0;
-        let settled = false;
-        const fail = (reason: Error) => {
-          if (settled) return;
-          settled = true;
-          child.kill();
-          reject(reason);
-        };
-        child.stdout.on('data', (chunk) => {
-          const text = String(chunk);
-          size += text.length;
-          if (size > options.maxBuffer) {
-            fail(new Error('Work activity stream exceeded maxBuffer'));
-            return;
-          }
-          stdout += text;
-          const lines = stdout.split(/\r?\n/);
-          stdout = lines.pop() ?? '';
-          for (const line of lines) if (line.trim()) onLine(line);
-        });
-        child.stderr.on('data', (chunk) => {
-          stderr += String(chunk);
-        });
-        child.once('error', (reason) =>
-          fail(reason instanceof Error ? reason : new Error(String(reason))),
-        );
-        child.once('close', (code) => {
-          if (settled) return;
-          if (stdout.trim()) onLine(stdout);
-          if (code !== 0) {
-            fail(new Error(stderr.trim() || `kungfu run exited ${code}`));
-            return;
-          }
-          settled = true;
-          resolve();
-        });
+      runRendererEvents({
+        process,
+        request: { file, values, options, onLine },
       }),
   });
 }
+
+export const openRendererProjects = createRendererProjects;
 
 type WorkspaceSelection = {
   workspace_id: string;
@@ -212,6 +292,16 @@ type CreatePlan = {
   planRoot: string;
   effects: string[];
   skippedEffects: string[];
+};
+
+type RuntimeRecoveryResult = {
+  ok?: boolean;
+  canceled?: boolean;
+  error?: string;
+};
+
+type RuntimeRecoveryIpc = {
+  invoke: (channel: string, payload: unknown) => Promise<RuntimeRecoveryResult>;
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -833,33 +923,35 @@ export function WorkspacePanel() {
   );
 }
 
-export function RuntimeFailurePanel({ message }: { message: string }) {
+async function requestRuntimeRecovery(message: string) {
+  const ipcRenderer = (
+    window.require('electron') as { ipcRenderer: RuntimeRecoveryIpc }
+  ).ipcRenderer;
+  const result = await ipcRenderer.invoke(RUNTIME_BACKUP_RESET_CHANNEL, {
+    message,
+  });
+  if (!result.ok && !result.canceled)
+    return result.error || 'runtime recovery failed';
+  return '';
+}
+
+function useRuntimeRecovery(message: string) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState('');
-  const resettable = isResettableRuntimeFailure(message);
-  const backupAndReset = () => {
+  const backupAndReset = React.useCallback(() => {
     setBusy(true);
     setError('');
-    const ipcRenderer = (
-      window.require('electron') as {
-        ipcRenderer: {
-          invoke: (
-            channel: string,
-            payload: unknown,
-          ) => Promise<{ ok?: boolean; canceled?: boolean; error?: string }>;
-        };
-      }
-    ).ipcRenderer;
-    void ipcRenderer
-      .invoke(RUNTIME_BACKUP_RESET_CHANNEL, { message })
-      .then((result) => {
-        if (!result.ok && !result.canceled) {
-          setError(result.error || 'runtime recovery failed');
-        }
-      })
+    void requestRuntimeRecovery(message)
+      .then(setError)
       .catch((reason) => setError((reason as Error).message))
       .finally(() => setBusy(false));
-  };
+  }, [message]);
+  return { busy, error, backupAndReset };
+}
+
+function RuntimeFailureSurface({ message }: { message: string }) {
+  const { busy, error, backupAndReset } = useRuntimeRecovery(message);
+  const resettable = isResettableRuntimeFailure(message);
   return (
     <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
       <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>
@@ -896,6 +988,8 @@ export function RuntimeFailurePanel({ message }: { message: string }) {
   );
 }
 
+export const RuntimeFailurePanel = RuntimeFailureSurface;
+
 // One failing kfx renders its error panel; it never takes the shell down.
 export class KfxErrorBoundary extends React.Component<
   { kfxId: string; children: React.ReactNode },
@@ -929,36 +1023,18 @@ export class KfxErrorBoundary extends React.Component<
 
 export type CoreSurfaceId = 'projects' | 'agent-work-lab' | 'core-work';
 
-export function useRetainedCoreSurfaces({
-  projectsOpen,
-  labOpen,
-  coreWorkOpen,
-}: {
-  projectsOpen: boolean;
-  labOpen: boolean;
-  coreWorkOpen: boolean;
-}): ReadonlySet<CoreSurfaceId> {
+export function useRetainedCoreSurfaces(
+  visible?: CoreSurfaceId,
+): ReadonlySet<CoreSurfaceId> {
   const [retained, setRetained] = React.useState<ReadonlySet<CoreSurfaceId>>(
-    () =>
-      new Set([
-        ...(projectsOpen ? (['projects'] as const) : []),
-        ...(labOpen ? (['agent-work-lab'] as const) : []),
-        ...(coreWorkOpen ? (['core-work'] as const) : []),
-      ]),
+    () => new Set(visible ? [visible] : []),
   );
   React.useEffect(() => {
-    const visible = projectsOpen
-      ? 'projects'
-      : labOpen
-        ? 'agent-work-lab'
-        : coreWorkOpen
-          ? 'core-work'
-          : undefined;
     if (!visible) return;
     setRetained((current) =>
       current.has(visible) ? current : new Set([...current, visible]),
     );
-  }, [coreWorkOpen, labOpen, projectsOpen]);
+  }, [visible]);
   return retained;
 }
 

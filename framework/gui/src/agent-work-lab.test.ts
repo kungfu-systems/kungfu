@@ -359,7 +359,7 @@ test('the GUI shell uses the shared startup surface policy', () => {
   );
   assert.match(
     source,
-    /!initialOnboardingOpen && initialProjectsOpen && !initialFocusedProjectPath/,
+    /initialShellSurface\(\{[\s\S]*onboardingOpen: initialOnboardingOpen,[\s\S]*projectsOpen: initialProjectsOpen,[\s\S]*focusedProjectPath: initialFocusedProjectPath/,
   );
   assert.match(source, /projectPath: initialFocusedProjectPath/);
   assert.match(
