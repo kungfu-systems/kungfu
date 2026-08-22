@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5397,
+  "generation": 5398,
   "fencingCounter": 595,
   "policy": {
     "agingSeconds": 900,
@@ -42776,8 +42776,38 @@
         "framework/core/tests/python/test_runtime_upgrade.py",
         "framework/upgrade/kungfu-upgrade.contract.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3351,
+      "assignmentRoot": "sha256:c37f745178859f7f5cb7471f4afe2c4f1f5ac0580accdece4a6b54ceb3c3ae42",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:46cdc676d6f5dd961da2b2828351c493429326a1381e7a3056c6dc85131968f9",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:11e5b17778ef40bcaa16537f320dc78e5249b4f7738634fe1ac483186bcdecdd",
+      "sourceHead": "a036beac020ae91473c5d572abddd6862ea18ea1",
+      "sourcePatchRoot": "sha256:5064bc9c300cc45f08373fdd6f7f5ac16a2effae3482d30801a9675067a816de",
+      "sourceProofRoot": "sha256:20b074e1bd84c213e58c5391800567b46d20d4216d2873c22c446b915b99a53b",
+      "planRoot": "sha256:6c9c75fb83c32702de360e0dae3071df2c64651138973a2744f8f7192b0c7de6",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:7a32028fa77a3c5bd23550531b3ad373d4a368f392f05b0965a7d7b176c7b805",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32556578990,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-22T06:29:42.501Z",
+      "updatedAt": "2026-08-22T06:29:42.501Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/tui/src/projects-view.test.ts",
+        "framework/tui/src/projects-view/index.tsx"
+      ]
     }
   ],
-  "updatedAt": "2026-08-22T06:26:43.834Z",
-  "stateRoot": "sha256:72a59a71ed490e564b96ed62eee687404522c42bda4e7fd6889f6cb4aa7e8b82"
+  "updatedAt": "2026-08-22T06:29:42.501Z",
+  "stateRoot": "sha256:2d77226f71ae2003f1fa004f545bda7583ed18dd14962f9dc34197024be5c405"
 }
