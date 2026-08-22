@@ -255,7 +255,7 @@ function SandboxSlot({
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
 }
 
-const WORKSPACE_RECOVERY_STATES = new Set([
+const WORKSPACE_RECOVERY_STATES: ReadonlySet<string | undefined> = new Set([
   'uninitialized',
   'shadow-only',
   'evidence-degraded',
