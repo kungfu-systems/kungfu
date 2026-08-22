@@ -5,12 +5,14 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import kungfu
 import pytest
 
 from kungfu import assignment_graph
 from kungfu import workspace_federation as federation
 from kungfu import workspace_federation_projection as federation_projection
 from kungfu.workspace import (
+    WorkspaceIdentity,
     ensure_workspace_data_home,
     inspect_workspace,
     maintain_workspace_catalog,
@@ -75,6 +77,63 @@ def test_workspace_federation_preserves_extracted_read_model_exports():
         is federation_projection._retained_state_dominates
     )
     assert federation._compose_global_work is federation_projection._compose_global_work
+
+
+def test_default_component_reader_does_not_resolve_work_control_profile(monkeypatch):
+    identity = WorkspaceIdentity(
+        workspace_id="project:reader",
+        workspace_kind="project",
+        workspace_root="/missing-reader-fixture",
+        display_path="/missing-reader-fixture",
+        data_home="/missing-reader-fixture/.kungfu",
+        config_home="/missing-reader-fixture/.config",
+        identity_root=ROOT_A,
+        identity_state="qualified",
+        initialized=True,
+        resolution_reason="test",
+    )
+
+    original_getattr = kungfu.__getattr__
+
+    def fail_profile_resolution(name):
+        if name == "work_control":
+            raise AssertionError("federation reader resolved Work Control Profile")
+        return original_getattr(name)
+
+    monkeypatch.setattr(kungfu, "__getattr__", fail_profile_resolution)
+    component = federation._load_parallel_component(identity)
+
+    assert component["availability"] == "unavailable"
+    assert component["problems"] == [{"code": "workspace-unavailable", "locator": None}]
+
+
+def test_material_relation_verifies_without_work_control_profile():
+    relation = federation.build_relation(
+        "depends-on",
+        {
+            "schema": federation.WORK_REF_SCHEMA,
+            "workspace_identity_root": ROOT_A,
+            "object_kind": "assignment",
+            "subject": "kungfu:left",
+            "version_root": ROOT_B,
+            "cut_root": ROOT_C,
+        },
+        {
+            "schema": federation.WORK_REF_SCHEMA,
+            "workspace_identity_root": ROOT_A,
+            "object_kind": "assignment",
+            "subject": "kungfu:right",
+            "version_root": ROOT_C,
+            "cut_root": ROOT_D,
+        },
+    )
+
+    assert (
+        federation._material_relation(
+            {"claim_type": "assignment-relation-event", "relation": relation}
+        )
+        == relation
+    )
 
 
 @pytest.mark.parametrize(
