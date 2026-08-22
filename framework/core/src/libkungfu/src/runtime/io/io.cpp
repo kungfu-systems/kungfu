@@ -21,7 +21,8 @@ using namespace kungfu::runtime::nanomsg;
 namespace kungfu::runtime {
 namespace {
 constexpr int USABILITY_PROBE_ATTEMPTS = 5;
-}
+std::mutex usability_probe_call_mutex;
+} // namespace
 
 class ipc_url_factory : public url_factory {
 public:
@@ -258,6 +259,7 @@ io_device_peer::io_device_peer(data::location_ptr home, bool low_latency)
     : io_device(std::move(home), low_latency, io_mapping_policy::peer()) {}
 
 bool io_device_peer::is_usable() {
+  std::lock_guard<std::mutex> call_guard(usability_probe_call_mutex);
   std::unique_lock<std::mutex> guard(usability_probe_mutex_);
   if (usability_probe_cancelled_.load()) {
     return false;
@@ -301,6 +303,7 @@ void io_device_peer::cancel_usability_probe() {
 }
 
 bool io_device_peer::setup() {
+  std::lock_guard<std::mutex> call_guard(usability_probe_call_mutex);
   {
     std::lock_guard<std::mutex> guard(usability_probe_mutex_);
     usability_probe_observer_.reset();

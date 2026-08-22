@@ -187,10 +187,28 @@ test('peer usability persists one bounded handshake across slow-joiner retries',
     source.indexOf('bool io_device_peer::is_usable()'),
     source.indexOf('bool io_device_peer::setup()'),
   );
+  const peerCancellationSource = source.slice(
+    source.indexOf('void io_device_peer::cancel_usability_probe()'),
+    source.indexOf('bool io_device_peer::setup()'),
+  );
+  const peerSetupSource = source.slice(
+    source.indexOf('bool io_device_peer::setup()'),
+  );
   assert.match(source, /constexpr int USABILITY_PROBE_ATTEMPTS = 5;/);
   assert.match(
     peerUsabilitySource,
-    /std::unique_lock<std::mutex> guard\(usability_probe_mutex_\)/,
+    /std::lock_guard<std::mutex> call_guard\(usability_probe_call_mutex\);\s*std::unique_lock<std::mutex> guard\(usability_probe_mutex_\)/,
+    'one call-level lock must outlive waits that release the probe state lock',
+  );
+  assert.match(
+    peerSetupSource,
+    /std::lock_guard<std::mutex> call_guard\(usability_probe_call_mutex\);\s*\{\s*std::lock_guard<std::mutex> guard\(usability_probe_mutex_\)/,
+    'setup must follow the same call-lock then state-lock order',
+  );
+  assert.doesNotMatch(
+    peerCancellationSource,
+    /usability_probe_call_mutex/,
+    'cancellation must remain able to wake a probe while its call lock is held',
   );
   assert.match(
     peerUsabilitySource,
@@ -223,6 +241,7 @@ test('peer usability persists one bounded handshake across slow-joiner retries',
     /usability_probe_publisher_->is_usable\(\) and usability_probe_observer_->is_usable\(\)/,
   );
   assert.match(header, /std::mutex usability_probe_mutex_;/);
+  assert.match(source, /std::mutex usability_probe_call_mutex;/);
   assert.match(
     header,
     /std::atomic<bool> usability_probe_cancelled_\{false\};/,
