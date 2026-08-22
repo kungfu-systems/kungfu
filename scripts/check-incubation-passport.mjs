@@ -216,7 +216,10 @@ function git(root, args) {
   return spawnSync('git', args, { cwd: root, encoding: 'utf8' });
 }
 
-const MERGE_GROUP_PROTECTED_HISTORY_DEPTH = 64;
+// Admission receipts intentionally outlive short delivery bursts. Keep the
+// shallow merge-group checkout bounded, but retain enough protected history
+// for a receipt to survive more than 64 first-parent deliveries.
+const MERGE_GROUP_PROTECTED_HISTORY_DEPTH = 128;
 
 export function protectedSourceRetained({
   root = ROOT,

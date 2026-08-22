@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -274,6 +276,56 @@ test('protected source recovers ancestry from the exact merge-group base', () =>
     [sourceSha, baseSha],
   ]);
   assert.deepEqual(hydrated, [baseSha]);
+});
+
+test('protected source hydrates receipts beyond 64 protected deliveries', () => {
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-passport-history-'),
+  );
+  const source = path.join(temporaryRoot, 'source');
+  const checkout = path.join(temporaryRoot, 'checkout');
+  const git = (cwd, ...args) =>
+    execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+
+  try {
+    fs.mkdirSync(source);
+    git(source, 'init', '--initial-branch=main');
+    git(source, 'config', 'user.name', 'Kungfu Test');
+    git(source, 'config', 'user.email', 'test@kungfu.invalid');
+    fs.writeFileSync(path.join(source, 'history.txt'), '0\n');
+    git(source, 'add', 'history.txt');
+    git(source, 'commit', '-m', 'source receipt');
+    const sourceSha = git(source, 'rev-parse', 'HEAD');
+    for (let index = 1; index <= 67; index += 1) {
+      fs.appendFileSync(path.join(source, 'history.txt'), `${index}\n`);
+      git(source, 'add', 'history.txt');
+      git(source, 'commit', '-m', `delivery ${index}`);
+    }
+    const baseSha = git(source, 'rev-parse', 'HEAD');
+    execFileSync(
+      'git',
+      ['clone', '--depth=1', '--no-local', source, checkout],
+      { encoding: 'utf8' },
+    );
+
+    assert.equal(
+      protectedSourceRetained({
+        root: checkout,
+        sourceSha,
+        env: {
+          GITHUB_EVENT_NAME: 'merge_group',
+          GITHUB_EVENT_PATH: '/event.json',
+        },
+        readFile: () =>
+          JSON.stringify({
+            merge_group: { base_sha: baseSha, head_sha: baseSha },
+          }),
+      }),
+      true,
+    );
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 });
 
 test('protected source rejects mismatched or unretained merge-group evidence', () => {
