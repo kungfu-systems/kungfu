@@ -23,14 +23,17 @@ EXPECTED_TARGETS = {
 }
 
 
-def source_at(revision: str, pathname: str) -> str:
+def source_bytes_at(revision: str, pathname: str) -> bytes:
     return subprocess.run(
         ["git", "show", f"{revision}:{pathname}"],
         cwd=ROOT,
         check=True,
         capture_output=True,
-        text=True,
     ).stdout
+
+
+def source_at(revision: str, pathname: str) -> str:
+    return source_bytes_at(revision, pathname).decode("utf-8")
 
 
 def imported_modules(tree: ast.AST, module: str) -> set[str]:
@@ -105,8 +108,8 @@ def class_method_node_counts(
     }
 
 
-def sha256_text(source: str) -> str:
-    return hashlib.sha256(source.encode("utf-8")).hexdigest()
+def sha256_bytes(source: bytes) -> str:
+    return hashlib.sha256(source).hexdigest()
 
 
 def main() -> None:
@@ -150,20 +153,17 @@ def main() -> None:
         )
         for source in contract["baselineSources"]:
             assert (
-                sha256_text(source_at(exact_base, source["path"])) == source["sha256"]
+                sha256_bytes(source_bytes_at(exact_base, source["path"]))
+                == source["sha256"]
             )
         cli = contract["cli"]
-        assert (
-            sha256_text((ROOT / cli["path"]).read_text(encoding="utf-8"))
-            == cli["sha256"]
-        )
+        assert sha256_bytes((ROOT / cli["path"]).read_bytes()) == cli["sha256"]
         assert set(contract["publicImports"]) <= top_level_symbols(
             current_source, pathname
         )
         for source in contract.get("currentSources", []):
             assert (
-                sha256_text((ROOT / source["path"]).read_text(encoding="utf-8"))
-                == source["sha256"]
+                sha256_bytes((ROOT / source["path"]).read_bytes()) == source["sha256"]
             )
         aggregate = contract.get("ownerAggregate")
         if aggregate is not None:
