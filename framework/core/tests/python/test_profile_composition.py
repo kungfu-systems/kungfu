@@ -298,6 +298,28 @@ def _activate(source, runtime):
         profile_sdk.lifecycle_apply(runtime, plan, f"test:{action}")
 
 
+def _upgrade(source, runtime):
+    for action in ["upgrade", "qualify", "activate"]:
+        plan = profile_sdk.lifecycle_plan(runtime, action, source)["corePlan"]
+        profile_sdk.lifecycle_apply(runtime, plan, f"test:{action}")
+
+
+def _set_work_item_authorities(source, authorities):
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    world_path = source / "contracts" / "world.json"
+    world = json.loads(world_path.read_text())
+    world["factSurfaces"][0]["sourceAuthorities"] = authorities
+    _write_artifact(
+        source,
+        profile,
+        "contracts/world.json",
+        world,
+        profile["kfd1"]["contractWorld"],
+    )
+    profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n")
+
+
 def test_catalog_joins_exact_profile_artifacts_without_new_authority(tmp_path):
     source = _source(tmp_path)
     result = profile_composition.catalog(source, tmp_path / "runtime")
@@ -883,3 +905,75 @@ def test_installed_cli_assessment_plan_decide_and_run(tmp_path):
     assert json.loads(executed.output)["assessment"]["assessment_key"].startswith(
         "sha256:"
     )
+
+
+def test_contract_accepts_authority_narrowing_without_retired_source_facts(tmp_path):
+    source = _dynamic_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _set_work_item_authorities(source, ["retired-owner", "workspace-owner"])
+    _activate(source, runtime)
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+    written = storage_service.fact_material_put(
+        runtime,
+        {
+            "type_id": "work-item",
+            "type_version": "1",
+            "source_id": "workspace-owner",
+            "subject_key": "week-1",
+            "payload": {"status": "active"},
+            "observation_id": "week-1-active",
+            "action": "assert",
+            "valid_until": 0,
+        },
+    )
+    assert written["receipt"]["admission"]["outcome"] == "admitted"
+
+    _set_work_item_authorities(source, ["workspace-owner"])
+    _upgrade(source, runtime)
+
+    assert (
+        profile_composition.contract_materialization_plan(source, runtime)["operations"]
+        == []
+    )
+
+
+def test_contract_rejects_authority_narrowing_with_retired_source_facts(tmp_path):
+    source = _dynamic_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _set_work_item_authorities(source, ["retired-owner", "workspace-owner"])
+    _activate(source, runtime)
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+    written = storage_service.fact_material_put(
+        runtime,
+        {
+            "type_id": "work-item",
+            "type_version": "1",
+            "source_id": "retired-owner",
+            "subject_key": "week-1",
+            "payload": {"status": "active"},
+            "observation_id": "week-1-retired",
+            "action": "assert",
+            "valid_until": 0,
+        },
+    )
+    assert written["receipt"]["admission"]["outcome"] == "admitted"
+
+    _set_work_item_authorities(source, ["workspace-owner"])
+    _upgrade(source, runtime)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_composition.contract_materialization_plan(source, runtime)
+    assert raised.value.diagnosis["code"] == (
+        "fact-surface-authority-migration-required"
+    )
+    assert raised.value.diagnosis["admittedSourceAuthorities"] == ["retired-owner"]

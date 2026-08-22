@@ -788,6 +788,7 @@ def contract_operations(
     *,
     fail: Callable[..., NoReturn],
     root: Callable[[Any], str],
+    admitted_sources: Mapping[tuple[str, str, str], set[str]],
 ) -> list[dict[str, str]]:
     world = artifact["contractWorld"]
     same_world = [
@@ -854,10 +855,9 @@ def contract_operations(
         if same:
             row = same[0]
             contract = row.get("contract_world") or {}
+            schema_root = root(surface["schema"])
             if (
-                sorted(row.get("source_authorities") or [])
-                != sorted(surface["sourceAuthorities"])
-                or row.get("schema_owner_root") != root(surface["schema"])
+                row.get("schema_owner_root") != schema_root
                 or contract.get("id") != world["id"]
                 or contract.get("version") != world["version"]
             ):
@@ -865,6 +865,31 @@ def contract_operations(
                     "fact-surface-incompatible",
                     "existing fact surface differs from the Profile declaration",
                     factSurface=surface["id"],
+                )
+            declared_authorities = set(surface["sourceAuthorities"])
+            existing_authorities = set(row.get("source_authorities") or [])
+            if declared_authorities == existing_authorities:
+                continue
+            # Fact-surface declarations are immutable evidence. A later Profile may
+            # retire an unused writer, but it must not reinterpret facts that writer
+            # already admitted or widen the durable authority boundary in place.
+            if not declared_authorities < existing_authorities:
+                fail(
+                    "fact-surface-incompatible",
+                    "existing fact surface differs from the Profile declaration",
+                    factSurface=surface["id"],
+                )
+            observed_authorities = admitted_sources.get(
+                (surface["id"], schema_root, world["id"]),
+                set(),
+            )
+            retired_with_facts = sorted(observed_authorities - declared_authorities)
+            if retired_with_facts:
+                fail(
+                    "fact-surface-authority-migration-required",
+                    "removed source authorities retain admitted facts and require an explicit migration",
+                    factSurface=surface["id"],
+                    admittedSourceAuthorities=retired_with_facts,
                 )
         else:
             operations.append(
