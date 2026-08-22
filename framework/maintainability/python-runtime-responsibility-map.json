@@ -1,0 +1,159 @@
+{
+  "schema": "kungfu.python-runtime-responsibility-map/v1",
+  "baselineRevision": "c019142e10150ff472a509d319e24d17860be4b0",
+  "owner": "core/python-runtime-lifecycle",
+  "measurement": {
+    "functionRisk": "framework/maintainability/function-risk.mjs changeRisk over sourcePaths plus ownerFiles",
+    "physicalLines": "UTF-8 source splitlines over sourcePaths plus ownerFiles",
+    "responsibilities": "top-level classes/functions plus distinct kungfu imports over sourcePaths plus ownerFiles"
+  },
+  "sourcePaths": [
+    "framework/core/src/python/kungfu/runtime_service.py",
+    "framework/core/src/python/kungfu/cli/commands/runtime.py"
+  ],
+  "ownerFiles": [
+    "framework/core/src/python/kungfu/runtime_processes.py"
+  ],
+  "baseline": {
+    "physicalLines": 3023,
+    "responsibilities": 148,
+    "functionRisk": {
+      "functions": 157,
+      "baseTotal": 1454,
+      "total": 1518,
+      "maximum": 72
+    }
+  },
+  "current": {
+    "physicalLines": 3083,
+    "responsibilities": 145,
+    "functionRisk": {
+      "functions": 157,
+      "baseTotal": 1450,
+      "total": 1510,
+      "maximum": 72
+    }
+  },
+  "publicImports": [
+    "kungfu.runtime_service.RuntimeEngineRequest",
+    "kungfu.runtime_service.RuntimeEngineReceipt",
+    "kungfu.runtime_service.AssessmentExecutor",
+    "kungfu.runtime_service.CoordinatorProcess",
+    "kungfu.runtime_service.AdoptedCoordinatorProcess",
+    "kungfu.runtime_service.CoordinatorEngine",
+    "kungfu.runtime_service.Coordinator",
+    "kungfu.runtime_service.ProcessRuntimeHost",
+    "kungfu.runtime_service.run_coordinator",
+    "kungfu.runtime_service.status",
+    "kungfu.runtime_service.route_status",
+    "kungfu.runtime_service.run_supervisor",
+    "kungfu.runtime_service.ensure_coordinator",
+    "kungfu.runtime_service.stop_supervisor",
+    "kungfu.runtime_service.supervisor_status",
+    "kungfu.runtime_service.service_plan",
+    "kungfu.runtime_service.install_service",
+    "kungfu.runtime_service.uninstall_service",
+    "kungfu.runtime_service.service_status"
+  ],
+  "cliContract": {
+    "module": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+    "invariant": "Every Click command/group name, decorator, argument, option, default, and Python signature remains AST-identical to the exact baseline."
+  },
+  "persistenceContract": {
+    "constants": [
+      "SCHEMA_STATUS",
+      "SCHEMA_ROUTES",
+      "SCHEMA_ASSESSMENT_SUBSCRIPTION",
+      "SCHEMA_COORDINATOR_CONTINUITY",
+      "LEGACY_SCHEMA_ROUTES",
+      "COORDINATOR_WIRE_NAMESPACE",
+      "COORDINATOR_WIRE_NAME",
+      "LEGACY_STATE_DIR_NAME"
+    ],
+    "pathFunctions": [
+      "state_dir",
+      "legacy_state_dir",
+      "supervisor_pid_path",
+      "coordinator_pid_path",
+      "legacy_coordinator_pid_path",
+      "state_path",
+      "coordinator_continuity_path",
+      "legacy_state_path",
+      "supervisor_state_path",
+      "routes_path",
+      "coordinator_log_path",
+      "assessment_subscription_path"
+    ],
+    "invariant": "Schema strings, wire identity, legacy directory name, and path construction remain AST-identical to the exact baseline."
+  },
+  "sideEffectOrder": [
+    "_json_write",
+    "allocate_coordinator_authority",
+    "ProcessRuntimeHost.run_foreground",
+    "ProcessRuntimeHost.spawn_coordinator",
+    "ProcessRuntimeHost.spawn_supervisor",
+    "ProcessRuntimeHost.activate_with_generation",
+    "ProcessRuntimeHost.drain",
+    "run_supervisor",
+    "ensure_coordinator",
+    "_wait_for_coordinator"
+  ],
+  "nativeInterface": [
+    "CoordinatorEngine",
+    "Coordinator",
+    "ProcessRuntimeHost"
+  ],
+  "facadeAliases": {
+    "CoordinatorProcess": "_runtime_processes.CoordinatorProcess",
+    "_is_pid_running": "_runtime_processes.RuntimeProcessControl.is_pid_running",
+    "_process_start_identity": "_runtime_processes.RuntimeProcessControl.start_identity",
+    "_terminate_process_if_matches": "_runtime_processes.RuntimeProcessControl.terminate_if_matches",
+    "_terminate_process_tree_if_matches": "_runtime_processes.RuntimeProcessControl.terminate_tree_if_matches",
+    "_terminate_and_reap_child": "_runtime_processes.RuntimeProcessControl.terminate_and_reap_child"
+  },
+  "ownedDefinitions": {
+    "CoordinatorProcess": [
+      "poll",
+      "terminate",
+      "wait",
+      "kill"
+    ],
+    "RuntimeProcessControl": [
+      "is_pid_running",
+      "start_identity",
+      "terminate_if_matches",
+      "terminate_tree_if_matches",
+      "terminate_and_reap_child"
+    ]
+  },
+  "crossLanguageInterface": {
+    "invariant": "No C++, public C ABI, Node binding implementation, runtime protocol, or dependency file is changed by this responsibility split.",
+    "protectedSurfaces": [
+      "framework/core/src/libkungfu/",
+      "framework/core/src/libyijinjing/",
+      "framework/core/src/bindings/",
+      "framework/core/src/node/",
+      "framework/core/stubs/pykungfu/",
+      "pnpm-lock.yaml",
+      "package.json",
+      "framework/core/package.json",
+      "framework/core/pyproject.toml"
+    ]
+  },
+  "modificationSurface": {
+    "baselineProcessOwner": "framework/core/src/python/kungfu/runtime_service.py",
+    "baselineOwnerPhysicalLines": 2014,
+    "currentProcessOwner": "framework/core/src/python/kungfu/runtime_processes.py",
+    "currentOwnerPhysicalLines": 147,
+    "baselineOwnerKungfuImports": 13,
+    "currentOwnerKungfuImports": 0,
+    "semanticAmplificationInvariant": "maintainability:amplification remains pass with zero blocking issues and introduces no authority, projection, compatibility-reader, platform branch, or duplicate policy surface."
+  },
+  "responsibility": "runtime_service retains routing, leases, persisted state, coordinator policy, and orchestration; runtime_processes solely owns portable PID identity fences and bounded process-tree termination/reaping; the CLI retains the exact Click surface and rendering contract.",
+  "nonWrapperEvidence": [
+    "Six facade responsibilities become aliases to two cohesive owner definitions, reducing aggregate responsibilities from 148 to 145.",
+    "The extracted RuntimeProcessControl owns psutil exception policy, PID-reuse checks, descendant ordering, escalation, and reap completion rather than forwarding back to runtime_service.",
+    "The former 55-risk _plain_status branch is retired; render_plain_status preserves output while reducing its current changeRisk to 48.",
+    "Aggregate changeRisk falls from 1518 to 1510 across the identical facade-plus-owner scope."
+  ]
+}

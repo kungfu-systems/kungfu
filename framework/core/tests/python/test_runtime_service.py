@@ -68,7 +68,12 @@ def _install_fake_pykungfu():
 
 _install_fake_pykungfu()
 
-from kungfu import runtime_broker, runtime_service, runtime_service_config  # noqa: E402
+from kungfu import (  # noqa: E402
+    runtime_broker,
+    runtime_processes,
+    runtime_service,
+    runtime_service_config,
+)
 
 
 ROOT = Path(__file__).parents[4]
@@ -90,6 +95,30 @@ def test_runtime_service_config_preserves_compatibility_exports():
         "supervisor_log_path",
     ):
         assert getattr(runtime_service, name) is getattr(runtime_service_config, name)
+
+
+def test_runtime_process_control_preserves_the_runtime_service_facade():
+    assert runtime_service.CoordinatorProcess is runtime_processes.CoordinatorProcess
+    assert (
+        runtime_service._is_pid_running
+        is runtime_processes.RuntimeProcessControl.is_pid_running
+    )
+    assert (
+        runtime_service._process_start_identity
+        is runtime_processes.RuntimeProcessControl.start_identity
+    )
+    assert (
+        runtime_service._terminate_process_if_matches
+        is runtime_processes.RuntimeProcessControl.terminate_if_matches
+    )
+    assert (
+        runtime_service._terminate_process_tree_if_matches
+        is runtime_processes.RuntimeProcessControl.terminate_tree_if_matches
+    )
+    assert (
+        runtime_service._terminate_and_reap_child
+        is runtime_processes.RuntimeProcessControl.terminate_and_reap_child
+    )
 
 
 def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch):

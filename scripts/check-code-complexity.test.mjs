@@ -8,7 +8,10 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { extractFunctions } from '../framework/maintainability/function-risk.mjs';
+import {
+  buildReport,
+  extractFunctions,
+} from '../framework/maintainability/function-risk.mjs';
 import { checkerArgs, pythonCommand } from './check-code-complexity.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -115,4 +118,61 @@ test('Agent Python responsibility map conserves exact targets and reduced risk',
       target.sourcePath,
     );
   }
+});
+
+test('Python runtime facade plus process owner reduce aggregate responsibility and risk', () => {
+  const map = readJson(
+    'framework/maintainability/python-runtime-responsibility-map.json',
+  );
+  const structure = spawnSync(
+    pythonCommand(),
+    [path.join(ROOT, 'scripts/check-python-runtime-responsibility-map.py')],
+    { cwd: ROOT, encoding: 'utf8' },
+  );
+  assert.equal(structure.status, 0, structure.stderr || structure.stdout);
+
+  const currentPaths = new Set([...map.sourcePaths, ...map.ownerFiles]);
+  const report = buildReport({ languageFamily: 'python' });
+  const current = report.functions.filter(({ path: pathname }) =>
+    currentPaths.has(pathname),
+  );
+  const currentRisk = {
+    functions: current.length,
+    baseTotal: current.reduce((total, item) => total + item.baseRisk, 0),
+    total: current.reduce((total, item) => total + item.changeRisk, 0),
+    maximum: Math.max(...current.map((item) => item.changeRisk)),
+  };
+  assert.deepEqual(currentRisk, map.current.functionRisk);
+  assert.ok(currentRisk.total < map.baseline.functionRisk.total);
+
+  const layers = readJson('framework/core/architecture/layers.json');
+  const ownership = readJson(
+    'framework/maintainability/abstraction-integrity.manifest.json',
+  ).ownership;
+  const filesAt = (revision, paths) =>
+    paths.map((pathname) => {
+      const result = spawnSync('git', ['show', `${revision}:${pathname}`], {
+        cwd: ROOT,
+      });
+      assert.equal(result.status, 0, result.stderr.toString());
+      return { path: pathname, bytes: result.stdout };
+    });
+  const exactBaseFiles = filesAt(map.baselineRevision, map.sourcePaths);
+  const exactBaseFunctions = exactBaseFiles.flatMap((file) =>
+    extractFunctions(file, layers, ownership),
+  );
+  const baselineRisk = {
+    functions: exactBaseFunctions.length,
+    baseTotal: exactBaseFunctions.reduce(
+      (total, item) => total + item.baseRisk,
+      0,
+    ),
+    maximum: Math.max(...exactBaseFunctions.map((item) => item.baseRisk)),
+  };
+  assert.deepEqual(baselineRisk, {
+    functions: map.baseline.functionRisk.functions,
+    baseTotal: map.baseline.functionRisk.baseTotal,
+    maximum: map.baseline.functionRisk.maximum,
+  });
+  assert.ok(currentRisk.baseTotal < baselineRisk.baseTotal);
 });

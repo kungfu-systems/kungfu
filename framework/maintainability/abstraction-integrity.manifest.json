@@ -144,6 +144,7 @@
       "owner": "core/python-runtime-lifecycle",
       "paths": [
         "framework/core/src/python/kungfu/runtime_leases.py",
+        "framework/core/src/python/kungfu/runtime_processes.py",
         "framework/core/src/python/kungfu/runtime_state.py"
       ]
     },

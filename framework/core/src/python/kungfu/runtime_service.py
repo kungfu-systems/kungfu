@@ -17,8 +17,13 @@ from pathlib import Path
 from typing import Any, Mapping, Protocol
 
 import kungfu
-import psutil
-from kungfu import runtime_leases, runtime_paths, runtime_service_config, runtime_state
+from kungfu import (
+    runtime_leases,
+    runtime_paths,
+    runtime_processes as _runtime_processes,
+    runtime_service_config,
+    runtime_state,
+)
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
 from kungfu.coordination import locks as coordination_locks
 from kungfu.coordination.arbiter import (
@@ -36,6 +41,9 @@ from pykungfu.runtime import coordinator as NativeCoordinator
 
 lf = kungfu.__binding__.yijinjing
 yjj: Any = kungfu.__binding__.runtime
+# Preserve the historical module attribute used by process-control tests and
+# downstream diagnostics while the implementation owner lives in one module.
+psutil = _runtime_processes.psutil
 
 SCHEMA_STATUS = "kungfu.runtime.status/v2"
 SCHEMA_ROUTES = "kungfu.runtime.routes/v2"
@@ -97,16 +105,7 @@ class AssessmentExecutor(Protocol):
     def close(self) -> None: ...
 
 
-class CoordinatorProcess(Protocol):
-    pid: int
-
-    def poll(self) -> int | None: ...
-
-    def terminate(self) -> None: ...
-
-    def wait(self, timeout: float | None = None) -> int: ...
-
-    def kill(self) -> None: ...
+CoordinatorProcess = _runtime_processes.CoordinatorProcess
 
 
 class AdoptedCoordinatorProcess:
@@ -134,41 +133,9 @@ class AdoptedCoordinatorProcess:
         _terminate_process_if_matches(self.pid, self.start_identity, force=True)
 
 
-def _terminate_and_reap_child(
-    process_host: "ProcessRuntimeHost",
-    child: CoordinatorProcess,
-    timeout: float = 5.0,
-) -> None:
-    """Stop a coordinator tree and wait until its OS resources are released."""
-
-    descendants: list[psutil.Process] = []
-    try:
-        descendants = psutil.Process(child.pid).children(recursive=True)
-    except (psutil.Error, OSError, ValueError, AttributeError):
-        pass
-
-    for process in reversed(descendants):
-        try:
-            process.terminate()
-        except (psutil.Error, OSError, ValueError):
-            pass
-
-    process_host.terminate_child(child)
-    try:
-        child.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        child.kill()
-        child.wait(timeout=timeout)
-
-    if descendants:
-        _, alive = psutil.wait_procs(descendants, timeout=timeout)
-        for process in alive:
-            try:
-                process.kill()
-            except (psutil.Error, OSError, ValueError):
-                pass
-        if alive:
-            psutil.wait_procs(alive, timeout=timeout)
+_terminate_and_reap_child = (
+    _runtime_processes.RuntimeProcessControl.terminate_and_reap_child
+)
 
 
 def _now() -> float:
@@ -216,24 +183,8 @@ def _json_read(path: Path) -> dict[str, Any]:
         return {}
 
 
-def _is_pid_running(pid: int | None) -> bool:
-    if not pid or pid <= 0:
-        return False
-    try:
-        return psutil.pid_exists(pid)
-    except (psutil.Error, OSError, ValueError):
-        return False
-
-
-def _process_start_identity(pid: int | None) -> str | None:
-    """Return a portable PID-reuse fence, or None when identity is unknowable."""
-
-    if not pid or pid <= 0:
-        return None
-    try:
-        return format(psutil.Process(pid).create_time(), ".6f")
-    except (psutil.Error, OSError, ValueError):
-        return None
+_is_pid_running = _runtime_processes.RuntimeProcessControl.is_pid_running
+_process_start_identity = _runtime_processes.RuntimeProcessControl.start_identity
 
 
 def _process_matches(pid: int | None, start_identity: Any) -> bool:
@@ -242,58 +193,12 @@ def _process_matches(pid: int | None, start_identity: Any) -> bool:
     return _is_pid_running(pid) and _process_start_identity(pid) == start_identity
 
 
-def _terminate_process_if_matches(
-    pid: int, start_identity: str, *, force: bool = False
-) -> bool:
-    """Signal only the psutil process object bound to the recorded creation time."""
-
-    try:
-        process = psutil.Process(pid)
-        if format(process.create_time(), ".6f") != start_identity:
-            return False
-        if force:
-            process.kill()
-        else:
-            process.terminate()
-        return True
-    except (psutil.Error, OSError, ValueError):
-        return False
-
-
-def _terminate_process_tree_if_matches(
-    pid: int, start_identity: str, *, timeout: float = 5.0
-) -> bool:
-    """Terminate a recorded process and every descendant bound to its tree."""
-
-    try:
-        process = psutil.Process(pid)
-        if format(process.create_time(), ".6f") != start_identity:
-            return False
-        descendants = process.children(recursive=True)
-    except (psutil.Error, OSError, ValueError):
-        return False
-
-    for descendant in reversed(descendants):
-        try:
-            descendant.terminate()
-        except (psutil.Error, OSError, ValueError):
-            pass
-    try:
-        process.terminate()
-    except psutil.NoSuchProcess:
-        return True
-    except (psutil.Error, OSError, ValueError):
-        return False
-
-    _, alive = psutil.wait_procs([*descendants, process], timeout=timeout)
-    for remaining in alive:
-        try:
-            remaining.kill()
-        except (psutil.Error, OSError, ValueError):
-            pass
-    if alive:
-        psutil.wait_procs(alive, timeout=timeout)
-    return True
+_terminate_process_if_matches = (
+    _runtime_processes.RuntimeProcessControl.terminate_if_matches
+)
+_terminate_process_tree_if_matches = (
+    _runtime_processes.RuntimeProcessControl.terminate_tree_if_matches
+)
 
 
 def _pid_state(pid: int | None) -> str:

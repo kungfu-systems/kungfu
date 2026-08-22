@@ -44,45 +44,53 @@ def _load_array(path):
     return value
 
 
-def _plain_status(payload):
+def render_plain_status(payload):
+    """Render the stable human-readable status without changing its line contract."""
+
     product = payload.get("product") or {}
     click.echo(f"workspace: {product.get('availability', 'unknown')}")
     click.echo(f"live runtime: {product.get('liveState', 'unknown')}")
-    handle = product.get("handle") or {}
+    handle = product.get("handle")
     if handle:
-        click.echo(f"generation: {handle.get('generation', '-')}")
         readiness = handle.get("readiness") or {}
+        click.echo(f"generation: {handle.get('generation', '-')}")
         click.echo(f"readiness: {readiness.get('state', '-')}")
         click.echo(f"durable cut: {json.dumps(readiness.get('durableCut'))}")
         click.echo(f"projection cut: {json.dumps(readiness.get('projectionCut'))}")
         click.echo(f"active leases: {product.get('leases', {}).get('activeCount', 0)}")
-    error = product.get("error") or {}
+    error = product.get("error")
     if error:
+        code = error.get("code") or "runtime_not_ready"
+        technical_detail = error.get("message") or error
         translated = diagnostics.problem(
-            str(error.get("code") or "runtime_not_ready"),
+            str(code),
             area="runtime",
-            technical_detail=str(error.get("message") or error),
+            technical_detail=str(technical_detail),
         )
-        click.echo("runtime problem:")
-        for line in diagnostics.actionable_text(translated).splitlines():
-            click.echo(f"  {line}")
+        actionable = map(
+            "  ".__add__, diagnostics.actionable_text(translated).splitlines()
+        )
+        click.echo("\n".join(["runtime problem:", *actionable]))
     click.echo(f"config: {payload['configHome']}")
     click.echo(f"data root: {payload['dataRoot']}")
     click.echo(f"runtime: {payload['runtimeDir']}")
     click.echo("process diagnostics:")
     click.echo(f"  lifecycle: {payload.get('lifecycle', {}).get('state', '-')}")
+    supervisor = payload["supervisor"]
+    supervisor_pid = supervisor["pid"] or "-"
     click.echo(
         "  supervisor: "
-        f"{payload['supervisor']['pid'] or '-'} "
-        f"({'running' if payload['supervisor']['running'] else 'stopped'})"
+        f"{supervisor_pid} ({('stopped', 'running')[bool(supervisor['running'])]})"
     )
     if "coordinator" in payload:
+        coordinator = payload["coordinator"]
+        coordinator_pid = coordinator["pid"] or "-"
         click.echo(
             "  coordinator: "
-            f"{payload['coordinator']['pid'] or '-'} "
-            f"({'running' if payload['coordinator']['running'] else 'stopped'})"
+            f"{coordinator_pid} "
+            f"({('stopped', 'running')[bool(coordinator['running'])]})"
         )
-    warnings = payload.get("lifecycle", {}).get("warnings") or []
+    warnings = payload.get("lifecycle", {}).get("warnings")
     if warnings:
         click.echo(f"warnings: {', '.join(warnings)}")
 
@@ -639,7 +647,7 @@ def runtime_status(ctx, as_json):
     if as_json:
         _json(payload)
         return
-    _plain_status(payload)
+    render_plain_status(payload)
 
 
 @runtime.command(
