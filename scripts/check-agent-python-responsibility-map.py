@@ -9,6 +9,7 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_PATH = ROOT / "framework/maintainability/agent-python-responsibility-map.json"
@@ -85,7 +86,13 @@ def source_bytes_at(revision: str, pathname: str) -> bytes:
 
 
 def source_at(revision: str, pathname: str) -> str:
-    return source_bytes_at(revision, pathname).decode("utf-8")
+    return subprocess.run(
+        ["git", "show", f"{revision}:{pathname}"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
 
 
 def imported_modules(tree: ast.AST, module: str) -> set[str]:
@@ -226,9 +233,99 @@ def owner_function_risk(
         text=True,
         capture_output=True,
         check=True,
-        env=None,
     )
     return json.loads(completed.stdout)
+
+
+def validate_owner_aggregate(exact_base: str, aggregate: dict[str, Any]) -> None:
+    baseline = aggregate["baseline"]
+    current = aggregate["current"]
+    measured = sum(
+        source_measurement((ROOT / owner_path).read_text(encoding="utf-8"), owner_path)[
+            "responsibilities"
+        ]
+        for owner_path in current["paths"]
+    )
+    assert measured == current["responsibilities"]
+    assert measured < baseline["responsibilities"]
+    function_risk = owner_function_risk(exact_base, baseline["paths"], current["paths"])
+    assert function_risk["baseline"] == baseline["functionRisk"]
+    assert function_risk["current"] == current["functionRisk"]
+    for metric in ("baseRisk", "changeRisk", "maximum"):
+        assert current["functionRisk"][metric] < baseline["functionRisk"][metric]
+
+
+def validate_modification_surface(
+    surface: dict[str, Any],
+    current_source: str,
+    pathname: str,
+) -> None:
+    baseline = surface["baseline"]
+    current_owner = surface["current"]
+    cohesive = surface["cohesiveExtraction"]
+    owner_path = current_owner["outcomeOwnerPath"]
+    owner_source = (ROOT / owner_path).read_text(encoding="utf-8")
+    owner_measurement = source_measurement(owner_source, owner_path)
+    assert owner_measurement == {
+        "physicalLines": current_owner["ownerPhysicalLines"],
+        "responsibilities": current_owner["ownerResponsibilities"],
+    }
+    assert current_owner["ownerPhysicalLines"] < baseline["ownerPhysicalLines"]
+    owner_class = cohesive.get("ownerClass")
+    function_nodes = (
+        owner_method_node_counts(owner_source, owner_path, owner_class)
+        if owner_class
+        else function_node_counts(owner_source, owner_path)
+    )
+    owner_functions = cohesive["ownerFunctions"]
+    assert set(owner_functions) <= set(function_nodes)
+    assert all(function_nodes[name] > 10 for name in owner_functions)
+    facade_aliases = cohesive.get("facadeAliases", {})
+    assignments = qualified_assignment_targets(current_source, pathname)
+    for facade, owner_function in facade_aliases.items():
+        assert assignments.get(facade) == (
+            f"assignment_outcome.{owner_class}.{owner_function}"
+        ), (pathname, facade)
+
+
+def validate_convergence_contract(
+    contract: dict[str, Any],
+    current_source: str,
+    pathname: str,
+) -> None:
+    exact_base = contract["exactBase"]
+    subprocess.run(
+        ["git", "cat-file", "-e", f"{exact_base}^{{commit}}"],
+        cwd=ROOT,
+        check=True,
+    )
+    for source in contract["baselineSources"]:
+        assert (
+            sha256_bytes(source_bytes_at(exact_base, source["path"]))
+            == source["sha256"]
+        )
+    cli = contract["cli"]
+    assert sha256_bytes((ROOT / cli["path"]).read_bytes()) == cli["sha256"]
+    assert set(contract["publicImports"]) <= top_level_symbols(current_source, pathname)
+    for source in contract.get("currentSources", []):
+        assert sha256_bytes((ROOT / source["path"]).read_bytes()) == source["sha256"]
+    aggregate = contract.get("ownerAggregate")
+    if isinstance(aggregate, dict):
+        validate_owner_aggregate(exact_base, aggregate)
+    surface = contract.get("modificationSurface")
+    if isinstance(surface, dict):
+        validate_modification_surface(surface, current_source, pathname)
+
+
+def verify_convergence_contracts() -> None:
+    responsibility_map = json.loads(MAP_PATH.read_text(encoding="utf-8"))
+    for row in responsibility_map["targets"]:
+        contract = row.get("convergenceContract")
+        if not isinstance(contract, dict):
+            continue
+        pathname = row["sourcePath"]
+        current_source = (ROOT / pathname).read_text(encoding="utf-8")
+        validate_convergence_contract(contract, current_source, pathname)
 
 
 def main() -> None:
@@ -261,92 +358,8 @@ def main() -> None:
                 top_level_symbols(owner.read_text(encoding="utf-8"), owner_path)
             )
         assert set(row["ownedDefinitions"]) <= owner_symbols, pathname
-        contract = row.get("convergenceContract")
-        if contract is None:
-            continue
-        exact_base = contract["exactBase"]
-        subprocess.run(
-            ["git", "cat-file", "-e", f"{exact_base}^{{commit}}"],
-            cwd=ROOT,
-            check=True,
-        )
-        for source in contract["baselineSources"]:
-            assert (
-                sha256_bytes(source_bytes_at(exact_base, source["path"]))
-                == source["sha256"]
-            )
-        cli = contract["cli"]
-        assert sha256_bytes((ROOT / cli["path"]).read_bytes()) == cli["sha256"]
-        assert set(contract["publicImports"]) <= top_level_symbols(
-            current_source, pathname
-        )
-        for source in contract.get("currentSources", []):
-            assert (
-                sha256_bytes((ROOT / source["path"]).read_bytes()) == source["sha256"]
-            )
-        aggregate = contract.get("ownerAggregate")
-        if aggregate is not None:
-            measured = sum(
-                source_measurement(
-                    (ROOT / owner_path).read_text(encoding="utf-8"), owner_path
-                )["responsibilities"]
-                for owner_path in aggregate["current"]["paths"]
-            )
-            assert measured == aggregate["current"]["responsibilities"]
-            assert measured < aggregate["baseline"]["responsibilities"]
-            function_risk = owner_function_risk(
-                exact_base,
-                aggregate["baseline"]["paths"],
-                aggregate["current"]["paths"],
-            )
-            assert function_risk["baseline"] == aggregate["baseline"]["functionRisk"]
-            assert function_risk["current"] == aggregate["current"]["functionRisk"]
-            for metric in ("baseRisk", "changeRisk", "maximum"):
-                assert (
-                    aggregate["current"]["functionRisk"][metric]
-                    < aggregate["baseline"]["functionRisk"][metric]
-                )
-        surface = contract.get("modificationSurface")
-        if surface is not None:
-            current_owner = surface["current"]
-            owner_measurement = source_measurement(
-                (ROOT / current_owner["outcomeOwnerPath"]).read_text(encoding="utf-8"),
-                current_owner["outcomeOwnerPath"],
-            )
-            assert owner_measurement == {
-                "physicalLines": current_owner["ownerPhysicalLines"],
-                "responsibilities": current_owner["ownerResponsibilities"],
-            }
-            assert (
-                current_owner["ownerPhysicalLines"]
-                < surface["baseline"]["ownerPhysicalLines"]
-            )
-            cohesive = surface["cohesiveExtraction"]
-            owner_source = (ROOT / current_owner["outcomeOwnerPath"]).read_text(
-                encoding="utf-8"
-            )
-            owner_class = cohesive.get("ownerClass")
-            function_nodes = (
-                owner_method_node_counts(
-                    owner_source,
-                    current_owner["outcomeOwnerPath"],
-                    owner_class,
-                )
-                if owner_class
-                else function_node_counts(
-                    owner_source,
-                    current_owner["outcomeOwnerPath"],
-                )
-            )
-            assert set(cohesive["ownerFunctions"]) <= set(function_nodes)
-            assert all(function_nodes[name] > 10 for name in cohesive["ownerFunctions"])
-            facade_aliases = cohesive.get("facadeAliases", {})
-            assignments = qualified_assignment_targets(current_source, pathname)
-            for facade, owner_function in facade_aliases.items():
-                assert assignments.get(facade) == (
-                    f"assignment_outcome.{owner_class}.{owner_function}"
-                ), (pathname, facade)
 
 
 if __name__ == "__main__":
     main()
+    verify_convergence_contracts()

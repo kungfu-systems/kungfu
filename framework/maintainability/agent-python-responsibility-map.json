@@ -231,9 +231,9 @@
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
             "sha256": "3386fa2cb8f1b8ab2a0e1a1f3d9d17a3f2893b3e224703cbc9fda914fd92ab06"
           },
-          {
-            "path": "framework/core/src/python/kungfu/assignment_outcome.py",
-            "sha256": "031b0e78b80b62b3f8ca3a6a63d5c54fa043b4dae3e23ee0b6442d7db7a7b1d1"
+      {
+        "path": "framework/core/src/python/kungfu/assignment_outcome.py",
+        "sha256": "8a64a7a693f1359a49754e3adab408c941b19e87d2be0b06b12ca25055765fa1"
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -262,9 +262,9 @@
             ],
             "responsibilities": 97,
             "functionRisk": {
-              "functions": 112,
-              "baseRisk": 1887,
-              "changeRisk": 2248,
+          "functions": 113,
+          "baseRisk": 1889,
+          "changeRisk": 2253,
               "maximum": 254
             }
           }
@@ -277,7 +277,7 @@
           },
           "current": {
             "outcomeOwnerPath": "framework/core/src/python/kungfu/assignment_outcome.py",
-            "ownerPhysicalLines": 455,
+        "ownerPhysicalLines": 453,
             "ownerResponsibilities": 1
           },
           "cohesiveExtraction": {
@@ -300,7 +300,7 @@
               "assignment_canonical canonical-byte and schema validation",
               "the existing _sealed_state_storage resolver"
             ],
-        "evidence": "OutcomeBindings is the single cohesive owner of frozen schema field sets, validation rules and helpers, settled-coordinate binding, immutable collision checks, verification, and conflict-aware indexing. Every owner method is an explicit static method; the five public methods are the real algorithms and the facade aliases those same function objects after compatibility metadata normalization. There is no instance binding, wrapper function, duplicate implementation, or writer."
+      "evidence": "OutcomeBindings is the single cohesive owner of immutable schema declarations, validation rules and helpers, settled-coordinate binding, immutable collision checks, verification, and conflict-aware indexing. Every owner method is an explicit static method; the five public methods are the real algorithms and the facade aliases those same function objects after compatibility metadata normalization. There is no instance binding, wrapper function, duplicate implementation, or writer."
           },
           "semanticAmplification": "No new authority, topology, policy, persistence format, generated surface, or platform branch."
         }

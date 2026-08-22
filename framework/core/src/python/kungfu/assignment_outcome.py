@@ -18,40 +18,32 @@ class OutcomeBindings:
     INDEX_SCHEMA = "kungfu.assignment-orchestration.work-design-outcome-index/v1"
     BINDINGS_DIR = Path("work-design-outcomes", "sha256")
     ROOT_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
-    METRIC_NAMES = {"acceptanceFailure", "dependencyCorrection", "rework", "timeout"}
-    OUTCOME_BINDING_ROOT_FIELDS = {"workDefinitionRoot", "adviceRoot", "policyRoot"}
-    COVERAGE_FIELDS = set(
-        "qualifiedMetrics unknownMetrics complete coverageRoot".split()
+    METRIC_NAMES = "acceptanceFailure dependencyCorrection rework timeout"
+    OUTCOME_BINDING_ROOT_FIELDS = "workDefinitionRoot adviceRoot policyRoot"
+    BINDING_ROOT_FIELDS = (
+        "workspace_identity_root settled_state_root state_query_proof_root binding_root"
     )
-    WINDOW_FIELDS = set(
-        "admittedAt settledAt attributableActiveSeconds excludedWaitSeconds".split()
-    )
-    WAIT_FIELDS = set(
-        "ci-queue external-review human-decision platform-approval".split()
-    )
-    METRIC_FIELDS = {
-        "acceptanceFailure": set("status count assessmentRoots".split()),
-        "dependencyCorrection": set("status count revisionRoots".split()),
-        "rework": set("status count eventRoots".split()),
-        "timeout": set(
-            "status plannedBudgetSeconds attributableActiveSeconds overrunSeconds exceeded".split()
+    COVERAGE_FIELDS = "qualifiedMetrics unknownMetrics complete coverageRoot"
+    WINDOW_FIELDS = "admittedAt settledAt attributableActiveSeconds excludedWaitSeconds"
+    WAIT_FIELDS = "ci-queue external-review human-decision platform-approval"
+    METRIC_FIELD_ROWS = (
+        ("acceptanceFailure", "status count assessmentRoots"),
+        ("dependencyCorrection", "status count revisionRoots"),
+        ("rework", "status count eventRoots"),
+        (
+            "timeout",
+            "status plannedBudgetSeconds attributableActiveSeconds overrunSeconds exceeded",
         ),
-    }
-    EVIDENCE_FIELDS = set("settledStateRoot queryProofRoot sourceEvidenceRoots".split())
-    OUTCOME_FIELDS = set(
-        "schema assignmentId asOf bindings cohort window metrics coverage evidence authority outcomeRoot".split()
     )
-    COHORT_FIELDS = set("deliveryClass workClass repositoryClass cohortRoot".split())
-    COORDINATE_FIELDS = set(
-        "schema assignment_subject workspace_identity_root state_root query_proof_root phase settled storage_kind".split()
+    EVIDENCE_FIELDS = "settledStateRoot queryProofRoot sourceEvidenceRoots"
+    OUTCOME_FIELDS = "schema assignmentId asOf bindings cohort window metrics coverage evidence authority outcomeRoot"
+    COHORT_FIELDS = "deliveryClass workClass repositoryClass cohortRoot"
+    COORDINATE_FIELDS = "schema assignment_subject workspace_identity_root state_root query_proof_root phase settled storage_kind"
+    BINDING_DOCUMENT_FIELDS = "schema assignment_subject workspace_identity_root settled_state_root state_query_proof_root opening_estimate_root published_at outcome binding_root"
+    EXPECTED_AUTHORITY_ITEMS = (("mode", "settled-work-observation"),) + tuple(
+        (field, False)
+        for field in "factAuthority episodeAuthority assignmentAuthority workControlAuthority policyAuthority mayMutate".split()
     )
-    BINDING_DOCUMENT_FIELDS = set(
-        "schema assignment_subject workspace_identity_root settled_state_root state_query_proof_root opening_estimate_root published_at outcome binding_root".split()
-    )
-    EXPECTED_AUTHORITY: dict[str, Any] = dict.fromkeys(
-        "factAuthority episodeAuthority assignmentAuthority workControlAuthority policyAuthority mayMutate".split(),
-        False,
-    ) | {"mode": "settled-work-observation"}
 
     @staticmethod
     def _root(value: Any, label: str) -> str:
@@ -62,11 +54,11 @@ class OutcomeBindings:
     @staticmethod
     def _rooted_object(
         value: Any,
-        fields: set[str],
+        fields: str,
         label: str,
         root_field: str,
     ) -> dict[str, Any]:
-        document = _canonical._strict_object(value, fields, label)
+        document = _canonical._strict_object(value, set(fields.split()), label)
         if "schema" in document and document["schema"] != _Owner.OUTCOME_SCHEMA:
             raise ValueError("unsupported Work Design outcome schema")
         preimage = {key: item for key, item in document.items() if key != root_field}
@@ -78,11 +70,19 @@ class OutcomeBindings:
     def _validate_bindings(value: Any) -> None:
         bindings = _canonical._strict_object(
             value,
-            _Owner.OUTCOME_BINDING_ROOT_FIELDS,
+            set(_Owner.OUTCOME_BINDING_ROOT_FIELDS.split()),
             "Work Design outcome bindings",
         )
-        for field, root in bindings.items():
-            _Owner._root(root, f"Work Design outcome bindings.{field}")
+        _Owner._validate_roots(
+            bindings,
+            _Owner.OUTCOME_BINDING_ROOT_FIELDS,
+            "Work Design outcome bindings.",
+        )
+
+    @staticmethod
+    def _validate_roots(value: Mapping[str, Any], fields: str, label: str) -> None:
+        for field in fields.split():
+            _Owner._root(value.get(field), f"{label}{field}")
 
     @staticmethod
     def _validate_coverage(value: Any) -> tuple[set[str], set[str]]:
@@ -104,7 +104,10 @@ class OutcomeBindings:
             )
             for field in ("qualifiedMetrics", "unknownMetrics")
         )
-        if qualified | unknown != _Owner.METRIC_NAMES or qualified & unknown:
+        if (
+            qualified | unknown != set(_Owner.METRIC_NAMES.split())
+            or qualified & unknown
+        ):
             raise ValueError(
                 "Work Design outcome coverage must classify every metric once"
             )
@@ -118,7 +121,7 @@ class OutcomeBindings:
     def _validate_window(value: Any) -> None:
         window = _canonical._strict_object(
             value,
-            _Owner.WINDOW_FIELDS,
+            set(_Owner.WINDOW_FIELDS.split()),
             "Work Design outcome window",
         )
         admitted = _canonical._timestamp(
@@ -134,7 +137,7 @@ class OutcomeBindings:
             raise ValueError("Work Design outcome attributableActiveSeconds is invalid")
         waits = _canonical._strict_object(
             window.get("excludedWaitSeconds"),
-            _Owner.WAIT_FIELDS,
+            set(_Owner.WAIT_FIELDS.split()),
             "Work Design outcome excluded waits",
         )
         if any(
@@ -189,9 +192,10 @@ class OutcomeBindings:
     @staticmethod
     def _validate_metrics(value: Any, qualified: set[str]) -> None:
         metrics = _canonical._strict_object(
-            value, _Owner.METRIC_NAMES, "Work Design outcome metrics"
+            value, set(_Owner.METRIC_NAMES.split()), "Work Design outcome metrics"
         )
-        for name, fields in _Owner.METRIC_FIELDS.items():
+        for name, immutable_fields in _Owner.METRIC_FIELD_ROWS:
+            fields = set(immutable_fields.split())
             metric = _canonical._strict_object(
                 metrics.get(name), fields, f"Work Design outcome {name}"
             )
@@ -210,7 +214,7 @@ class OutcomeBindings:
     def _validate_evidence(value: Any) -> None:
         evidence = _canonical._strict_object(
             value,
-            _Owner.EVIDENCE_FIELDS,
+            set(_Owner.EVIDENCE_FIELDS.split()),
             "Work Design outcome evidence",
         )
         for field in ("settledStateRoot", "queryProofRoot"):
@@ -241,7 +245,7 @@ class OutcomeBindings:
         _Owner._validate_window(outcome.get("window"))
         _Owner._validate_metrics(outcome.get("metrics"), qualified)
         _Owner._validate_evidence(outcome.get("evidence"))
-        if outcome.get("authority") != _Owner.EXPECTED_AUTHORITY:
+        if outcome.get("authority") != dict(_Owner.EXPECTED_AUTHORITY_ITEMS):
             raise ValueError("Work Design outcome authority boundary is invalid")
         assignment_id = outcome.get("assignmentId")
         if not isinstance(assignment_id, str) or not assignment_id:
@@ -253,7 +257,7 @@ class OutcomeBindings:
     def _coordinate(sealed_state: Mapping[str, Any]) -> dict[str, Any]:
         coordinate = _canonical._strict_object(
             sealed_state,
-            _Owner.COORDINATE_FIELDS,
+            set(_Owner.COORDINATE_FIELDS.split()),
             "sealed Work coordinate",
         )
         if (
@@ -322,18 +326,12 @@ class OutcomeBindings:
     def _binding(value: Any) -> dict[str, Any]:
         binding = _canonical._strict_object(
             value,
-            _Owner.BINDING_DOCUMENT_FIELDS,
+            set(_Owner.BINDING_DOCUMENT_FIELDS.split()),
             "Work Design outcome binding",
         )
         if binding.get("schema") != _Owner.BINDING_SCHEMA:
             raise ValueError("unsupported Work Design outcome binding schema")
-        for field in (
-            "workspace_identity_root",
-            "settled_state_root",
-            "state_query_proof_root",
-            "binding_root",
-        ):
-            _Owner._root(binding.get(field), f"outcome binding {field}")
+        _Owner._validate_roots(binding, _Owner.BINDING_ROOT_FIELDS, "outcome binding ")
         if binding.get("opening_estimate_root") is not None:
             _Owner._root(
                 binding["opening_estimate_root"],

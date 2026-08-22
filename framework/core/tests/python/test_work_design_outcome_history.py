@@ -194,6 +194,20 @@ def test_outcome_facade_resolves_storage_after_monkeypatch(tmp_path, monkeypatch
     assert result["storage_kind"] == "late-bound-test"
 
 
+def test_outcome_validation_contract_constants_resist_runtime_mutation():
+    fields = assignment_outcome.OutcomeBindings.OUTCOME_FIELDS
+    metric_rows = assignment_outcome.OutcomeBindings.METRIC_FIELD_ROWS
+    authority = assignment_outcome.OutcomeBindings.EXPECTED_AUTHORITY_ITEMS
+    assert isinstance(fields, str) and all(
+        isinstance(row_fields, str) for _, row_fields in metric_rows
+    )
+    for immutable in (fields, metric_rows, authority):
+        with pytest.raises(AttributeError):
+            getattr(immutable, "add")("injected")
+    outcome = _work_design_outcome(_sha256("5"), _sha256("6"))
+    assert assignment_orchestration._validate_outcome_artifact(outcome) == outcome
+
+
 @pytest.mark.parametrize(
     ("mutate", "message"),
     [
