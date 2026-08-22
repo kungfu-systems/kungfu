@@ -34,6 +34,110 @@
     "preserveRiskAcrossLanguageMove": true,
     "rejectGeneratedOrVendorRelabeling": true
   },
+  "domainResponsibilityBaselines": {
+    "python-storage-responsibility-convergence": {
+      "assignmentId": "2026-08-22-kungfu-python-storage-responsibility-convergence",
+      "exactRevision": "c019142e10150ff472a509d319e24d17860be4b0",
+      "status": "baseline-frozen",
+      "ownerScope": {
+        "facades": [
+          "framework/core/src/python/kungfu/storage/service.py",
+          "framework/core/src/python/kungfu/cli/commands/storage.py"
+        ],
+        "extractedOwners": [
+          "framework/core/src/python/kungfu/cli/commands/storage_projection.py"
+        ]
+      },
+      "measurement": {
+        "physicalLines": 3105,
+        "responsibilities": 145,
+        "functionRisk": {"functions": 132, "total": 861, "maximum": 44}
+      },
+      "sourceRoots": {
+        "service": "sha256:0dd3ceeb5e6aef4dcd72e793df8e8384ca6a3159aa9eee2ec1d86429bce0e1a1",
+        "commands": "sha256:0e4497f6d11fd5bdcb6801e9048fe54f23d708b0f2b93ef94b8f3cd3cfad3308",
+        "publicPackage": "sha256:69c128552179b63871ae57fcb2572aedeb059c8d1c1f3577df64caeebaca9582",
+        "nodeContract": "sha256:187ca5846ef808eb41ab15e9b04f78c2c9db65840732a5db0e1d7868e02ba054"
+      },
+      "invariants": {
+        "publicImports": [
+          "kungfu.storage.build_range_filter",
+          "kungfu.storage.service"
+        ],
+        "cli": [
+          ["storage backend status", "--provider", "--json"],
+          ["storage backend switch", "--to", "--expected-generation", "--json"],
+          ["storage backend rollback", "--expected-generation", "--json"],
+          ["storage durability-reconcile", "--data-root", "--request-id", "--stream-id", "--container-epoch", "--sequence", "--frame-uid", "--requested-profile", "--writer-resource-id", "--qualification-profile"],
+          ["storage projection-candidate-status", "--data-root", "--stream-id", "--container-epoch", "--writer-resource-id", "--qualification-profile", "--projection-name", "--requirement"],
+          ["storage layout", "--provider", "--json", "--verify"],
+          ["storage status", "--scope", "--source", "--json"],
+          ["storage fsck", "--scope", "--source", "--episode-id", "--verify-frames", "--json"],
+          ["storage repair", "--scope", "--source", "--episode-id", "--plan", "--fetch", "--apply", "--from", "--out", "--dry-run", "--execute", "--json"],
+          ["storage export", "--scope", "--source", "--episode-id", "--since", "--from", "--until", "--format", "--thin", "--out", "--json"],
+          ["storage import", "--from", "--no-verify", "--execute", "--workspace", "--home-workspace", "--json"],
+          ["storage rebuild-index", "--scope", "--source", "--dry-run", "--json"],
+          ["storage query", "--table", "--scope", "--source", "--episode-id", "--kind", "--since", "--from", "--until", "--limit", "--json"],
+          ["storage episode begin", "--title", "--actor", "--source", "--episode-id", "--parent-episode-id", "--root-trigger-frame-uid", "--location-uid", "--json"],
+          ["storage episode heartbeat", "--episode-id", "--last-frame-uid", "--frame-count", "--note", "--location-uid", "--json"],
+          ["storage episode attach-frame", "--episode-id", "--frame-uid", "--trigger-frame-uid", "--stream-id", "--carrier-type", "--source", "--dest", "--data-length", "--location-uid", "--json"],
+          ["storage episode attach-ref", "--episode-id", "--ref-kind", "--ref-uid", "--ref-id", "--ref-hash", "--location-uid", "--json"],
+          ["storage episode attach-payload", "--episode-id", "--path", "--ref-id", "--content-hash", "--location-uid", "--json"],
+          ["storage episode end", "--episode-id", "--last-frame-uid", "--frame-count", "--reason", "--location-uid", "--json"],
+          ["storage episode abort", "--episode-id", "--last-frame-uid", "--frame-count", "--reason", "--location-uid", "--json"],
+          ["storage episode recover", "--episode-id", "--location-uid", "--stale-after-seconds", "--reason", "--plan", "--execute", "--json"],
+          ["storage episode list", "--location-uid", "--limit", "--json"],
+          ["storage episode inspect", "--episode-id", "--json"],
+          ["storage episode rebuild-projection", "--json"],
+          ["storage gc", "--scope", "--source", "--dry-run", "--json"],
+          ["storage compact", "--scope", "--source", "--dry-run", "--json"],
+          ["storage verify-sync", "--source", "--json"]
+        ],
+        "persistence": {
+          "authority": "libyijinjing journals and libkungfu runtime storage service",
+          "runtimeRoot": "<runtime>/storage",
+          "providerBinding": "<runtime>/storage/backend-binding.json",
+          "defaultProvider": "content-addressed-file",
+          "payloadPath": "<runtime>/storage/payloads/<digest-prefix>/<digest>",
+          "schemas": [
+            "kungfu.storage.source-registry/v1",
+            "kungfu.storage.manifest-catalog/v1",
+            "kungfu.runtime.storage-service/v1",
+            "kungfu.storage.episode-bundle/v1"
+          ],
+          "edgeFormats": ["jsonl", "bundle-json"],
+          "receiptPolicy": "Python projects native receipts without a second fold or taxonomy"
+        },
+        "crossLanguage": {
+          "cAbi": "kungfu_get_api",
+          "runtimeActionEncoding": "JSON request and exact native response bytes",
+          "python": "thin command, binding, and projection adapter only",
+          "node": "@kungfu-tech/storage runtimeActionV1 and raw/json standard-ABI adapters",
+          "unchanged": [
+            "C++ storage service and Python binding implementation",
+            "Node binding implementation",
+            "provider selection and migration",
+            "Fact KFR2 and FlatBuffers carrier bytes"
+          ]
+        }
+      },
+      "plannedSeam": {
+        "owner": "kungfu.cli.commands.storage_projection.StorageCommandProjection",
+        "responsibility": "Click-only JSON, text, error, and source-scope projection",
+        "nonAuthority": "Receives native results; never selects a provider, folds facts, or changes protocol bytes.",
+        "acceptance": "Facade plus owner aggregate responsibilities below 145 and function risk below 861 without wrapper-only extraction."
+      },
+      "excluded": [
+        "watcher",
+        "framework/gui and framework/tui",
+        "C++ runtime and storage",
+        "Node binding implementation",
+        "dependency and lockfile changes",
+        "backend migration",
+        "real user storage"
+      ]
+    }
+  },
   "entrypointMapping": {
     "packageScriptSelector": "^(?:check:python-structure|maintainability:|test:generated-report-authority$)",
     "packageScripts": {
