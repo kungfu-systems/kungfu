@@ -2,14 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { spawnSync } from 'node:child_process';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { ownerFor } from '../../scripts/code-complexity-budget.mjs';
+import {
+  baselineBytes,
+  baselineChangedPaths,
+  currentBytes,
+  digest,
+  git,
+  lineCount as lines,
+  ordered,
+  ownerFor,
+  readJson,
+} from './source-analysis-kernel.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -149,75 +157,6 @@ function writeElectronBuilderProjections() {
   )) {
     fs.writeFileSync(projectionPath, expected[name]);
   }
-}
-
-function git(args, binary = false) {
-  const result = spawnSync('git', args, {
-    cwd: ROOT,
-    encoding: binary ? null : 'utf8',
-    maxBuffer: 128 * 1024 * 1024,
-  });
-  if (result.status !== 0)
-    throw new Error(
-      `git ${args.join(' ')} failed: ${String(result.stderr || '').trim()}`,
-    );
-  return result.stdout;
-}
-
-function gitLines(args) {
-  return String(git(args))
-    .split('\n')
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function ordered(value) {
-  if (Array.isArray(value)) return value.map(ordered);
-  if (value && typeof value === 'object')
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .map((key) => [key, ordered(value[key])]),
-    );
-  return value;
-}
-
-function digest(value) {
-  return `sha256:${crypto
-    .createHash('sha256')
-    .update(
-      Buffer.isBuffer(value)
-        ? value
-        : Buffer.from(JSON.stringify(ordered(value))),
-    )
-    .digest('hex')}`;
-}
-
-function readJson(relative) {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
-}
-
-function lines(bytes) {
-  if (!bytes.length) return 0;
-  let count = 1;
-  for (const byte of bytes) if (byte === 10) count += 1;
-  return bytes[bytes.length - 1] === 10 ? count - 1 : count;
-}
-
-function baselineBytes(ref, relative) {
-  return Buffer.from(git(['show', `${ref}:${relative}`], true));
-}
-
-function currentBytes(relative) {
-  return fs.readFileSync(path.join(ROOT, relative));
-}
-
-function baselineChangedPaths(ref, readLines = gitLines) {
-  return new Set(
-    readLines(['diff', '--no-renames', '--name-only', ref, 'HEAD', '--'])
-      .concat(readLines(['diff', '--no-renames', '--name-only', 'HEAD', '--']))
-      .concat(readLines(['ls-files', '--others', '--exclude-standard'])),
-  );
 }
 
 function allFamilyPaths(family) {

@@ -2,31 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import crypto from 'node:crypto';
+import { digest, digestBytes, ordered } from './source-analysis-kernel.mjs';
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
-
-function ordered(value) {
-  if (Array.isArray(value)) return value.map(ordered);
-  if (value && typeof value === 'object')
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .map((key) => [key, ordered(value[key])]),
-    );
-  return value;
-}
-
-function digest(value) {
-  return `sha256:${crypto
-    .createHash('sha256')
-    .update(JSON.stringify(ordered(value)))
-    .digest('hex')}`;
-}
-
-function digestBytes(value) {
-  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
-}
 
 function sortedUnique(values) {
   return [...new Set(values.filter(Boolean))].sort((left, right) =>
