@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5704,
+  "generation": 5705,
   "fencingCounter": 612,
   "policy": {
     "agingSeconds": 900,
@@ -43761,8 +43761,41 @@
         "crates/shifu/src/promote_convergence.rs",
         "crates/shifu/src/promote_tests.rs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3372,
+      "assignmentRoot": "sha256:28436882aa847a1f83fb616d670d2ed7d5d52b9ace777bca75ccd49a53bf47df",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:d2730891a2feebf5dc4d2aeee5aa7054766aa120fd2ff6be4e8b32ca644d9514",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:6ea98d60bdac8fe1ddbf7c55bf054462f3ef39e529d7bb179034c38a2e51eefc",
+      "sourceHead": "097060ba0d86bd3dc81638a7144a6148b18790b4",
+      "sourcePatchRoot": "sha256:b6c5e339b03326b373e738d43a1d7d3f261afcdcfda87260328c01779bf4f638",
+      "sourceProofRoot": "sha256:711d4a52b5f6eb1cf0c3e82b52d6d7b04136b565cdd5ff2103c1438d6de53b82",
+      "planRoot": "sha256:5a0e84e3e6e7a0dc69c47ee9cd9468432f9f27b9d70994a98a4f3d91564f4a28",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:6c055da9a5d1867456325ae4baa28c393f65140dce6f76354495a4cd54298983",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32592023552,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-22T18:59:11.804Z",
+      "updatedAt": "2026-08-22T18:59:11.804Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/gui/src/agent-work-lab.test.ts",
+        "framework/gui/src/navigation.ts",
+        "framework/gui/src/product-search.test.ts",
+        "framework/gui/src/renderer/src/main.tsx",
+        "framework/gui/src/renderer/src/projects-panel/index.tsx"
+      ]
     }
   ],
-  "updatedAt": "2026-08-22T18:29:21.630Z",
-  "stateRoot": "sha256:d57aa03fb7bacde2b7d687a82b0c9a6bed29e2ef559745950594e1a274c21f00"
+  "updatedAt": "2026-08-22T18:59:11.804Z",
+  "stateRoot": "sha256:5f23e6ce86747fe38c97e1e006ba9e760dc536bb9b2dc3fac4ef29bdc9639255"
 }
