@@ -787,6 +787,9 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('core architecture contract'));
   assert.ok(labels.includes('core architecture negative fixtures'));
   assert.ok(labels.includes('core affected-native negative fixtures'));
+  assert.ok(
+    labels.some((label) => label.startsWith('changed-code function-risk')),
+  );
   assert.ok(labels.includes('runtime activation contract'));
   assert.ok(labels.includes('runtime upgrade contract'));
   assert.ok(labels.includes('product upgrade qualification'));

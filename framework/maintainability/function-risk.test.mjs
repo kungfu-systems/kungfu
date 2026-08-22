@@ -6,12 +6,18 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { sourceAcceptancePlan } from '../../scripts/source-acceptance.mjs';
+
 import {
   extractFunctions as extractLegacyFunctions,
   snapshot as legacySnapshot,
   trackedCurrentFiles as legacyTrackedCurrentFiles,
   trackedFilesAt as legacyTrackedFilesAt,
 } from './fixtures/function-risk-legacy-shadow.mjs';
+import {
+  evaluateFunctionRiskRatchet,
+  runFunctionRiskGate,
+} from './function-risk-ratchet.mjs';
 import {
   analyzeTransition,
   buildReport,
@@ -21,18 +27,27 @@ import {
 import {
   analysisCachePath,
   extractFunctions as extractKernelFunctions,
-  functionSnapshot,
+  functionSnapshot as kernelFunctionSnapshot,
   readJson,
   readThroughAnalysisCache,
   trackedCurrentFiles,
   trackedFilesAt,
 } from './source-analysis-kernel.mjs';
+import { functionSnapshot } from './source-analysis-session.mjs';
 
 const layers = { components: [] };
 const ownership = [];
 const policy = {
   includedClasses: ['first-party-handwritten-implementation'],
   antiGaming: { complexityDropForWrapperSignal: 3 },
+};
+const ratchetPolicy = {
+  newFunctionBaseRiskEnvelope: {
+    'c-cpp': 52,
+    'javascript-typescript': 87,
+    python: 56,
+    rust: 63,
+  },
 };
 
 function metric(overrides = {}) {
@@ -116,13 +131,13 @@ test('shared kernel shadows the legacy exact-repository analysis', () => {
     repositoryLayers,
     repositoryOwnership,
   );
-  const successorBaseline = functionSnapshot(
+  const successorBaseline = kernelFunctionSnapshot(
     trackedFilesAt(report.baseline.revision),
     policy,
     repositoryLayers,
     repositoryOwnership,
   );
-  const successorCurrent = functionSnapshot(
+  const successorCurrent = kernelFunctionSnapshot(
     trackedCurrentFiles(),
     policy,
     repositoryLayers,
@@ -246,6 +261,204 @@ test('file renames and cross-language moves preserve risk instead of resetting i
       ({ code }) => code === 'cross-language-risk-preserved',
     ),
   );
+});
+
+test('required matching never carries risk across an owner boundary', () => {
+  const previous = metric({ owner: 'owner/previous' });
+  const current = metric({ owner: 'owner/current', path: 'scripts/b.mjs' });
+  const result = analyzeTransition([current], [previous], [], [], policy, {
+    movementScope: 'same-owner',
+  });
+  assert.equal(result.functions[0].movement, 'new');
+  assert.equal(result.functions[0].previousId, null);
+});
+
+test('changed-code ratchet blocks increases but leaves unchanged historical debt non-blocking', () => {
+  const historical = metric({ baseRisk: 200 });
+  const unchangedTransition = analyzeTransition(
+    [historical],
+    [historical],
+    [],
+    [],
+    policy,
+    { movementScope: 'same-owner' },
+  );
+  assert.deepEqual(
+    evaluateFunctionRiskRatchet(
+      { functions: [historical], files: [] },
+      { functions: [historical], files: [] },
+      unchangedTransition,
+      ratchetPolicy,
+    ),
+    [],
+  );
+
+  const increased = metric({ baseRisk: 19, bodyRoot: digest('changed') });
+  const increasedTransition = analyzeTransition(
+    [increased],
+    [metric()],
+    [],
+    [],
+    policy,
+    { movementScope: 'same-owner' },
+  );
+  const findings = evaluateFunctionRiskRatchet(
+    { functions: [increased], files: [] },
+    { functions: [metric()], files: [] },
+    increasedTransition,
+    ratchetPolicy,
+  );
+  assert.ok(
+    findings.some(({ code }) => code === 'changed-function-risk-increase'),
+  );
+});
+
+test('new-function envelopes have positive and negative fixtures', () => {
+  const allowed = metric({
+    id: 'python:framework/a.py:allowed:1',
+    path: 'framework/a.py',
+    symbol: 'allowed',
+    language: 'python',
+    owner: 'framework/a',
+    baseRisk: 56,
+  });
+  const blocked = metric({
+    id: 'python:framework/a.py:blocked:10',
+    path: 'framework/a.py',
+    symbol: 'blocked',
+    language: 'python',
+    owner: 'framework/a',
+    baseRisk: 57,
+  });
+  const transition = analyzeTransition([allowed, blocked], [], [], [], policy, {
+    movementScope: 'same-owner',
+  });
+  const findings = evaluateFunctionRiskRatchet(
+    { functions: [allowed, blocked], files: [] },
+    { functions: [], files: [] },
+    transition,
+    ratchetPolicy,
+  );
+  assert.deepEqual(
+    findings
+      .filter(({ code }) => code === 'new-function-risk-envelope-exceeded')
+      .map(({ symbol }) => symbol),
+    ['blocked'],
+  );
+});
+
+test('same-owner wrapper extraction cannot reset aggregate responsibility', () => {
+  const previous = metric();
+  const wrapper = metric({ baseRisk: 4, bodyRoot: digest('wrapper') });
+  const helper = metric({
+    id: 'javascript-typescript:scripts/helper.mjs:helper:1',
+    path: 'scripts/helper.mjs',
+    symbol: 'helper',
+    baseRisk: 18,
+  });
+  const transition = analyzeTransition(
+    [wrapper, helper],
+    [previous],
+    [],
+    [],
+    policy,
+    { movementScope: 'same-owner' },
+  );
+  const findings = evaluateFunctionRiskRatchet(
+    { functions: [wrapper, helper], files: [] },
+    { functions: [previous], files: [] },
+    transition,
+    ratchetPolicy,
+    {
+      referencedNewIdsByPreviousId: new Map([
+        [previous.id, new Set([helper.id])],
+      ]),
+    },
+  );
+  assert.ok(findings.some(({ code }) => code === 'wrapper-only-risk-reset'));
+});
+
+test('same-owner rename and unrelated bounded additions remain non-blocking', () => {
+  const previous = metric();
+  const renamed = metric({
+    id: 'javascript-typescript:scripts/renamed.mjs:work:1',
+    path: 'scripts/renamed.mjs',
+  });
+  const unrelated = metric({
+    id: 'javascript-typescript:scripts/new.mjs:observe:1',
+    path: 'scripts/new.mjs',
+    symbol: 'observe',
+    baseRisk: 20,
+  });
+  const transition = analyzeTransition(
+    [renamed, unrelated],
+    [previous],
+    [],
+    [],
+    policy,
+    { movementScope: 'same-owner' },
+  );
+  assert.equal(transition.functions[0].movement, 'renamed-file');
+  assert.equal(transition.functions[1].movement, 'new');
+  assert.deepEqual(
+    evaluateFunctionRiskRatchet(
+      { functions: [renamed, unrelated], files: [] },
+      { functions: [previous], files: [] },
+      transition,
+      ratchetPolicy,
+    ),
+    [],
+  );
+});
+
+test('single-process analysis memo extracts an exact file only once', () => {
+  const memo = new Map();
+  const file = {
+    path: 'scripts/a.mjs',
+    bytes: Buffer.from('function work(value) { return value; }\n'),
+  };
+  let extractions = 0;
+  const options = {
+    analysisMemo: memo,
+    onExtract: () => {
+      extractions += 1;
+    },
+  };
+  const first = functionSnapshot([file], policy, layers, ownership, options);
+  const second = functionSnapshot([file], policy, layers, ownership, options);
+  assert.deepEqual(second, first);
+  assert.equal(extractions, 1);
+});
+
+test('required ratchet failure skips the full advisory phase', () => {
+  let advisoryRuns = 0;
+  const result = runFunctionRiskGate({
+    base: '1'.repeat(40),
+    buildRatchet: () => ({
+      verdict: 'fail',
+      summary: { blockingFindings: 1 },
+    }),
+    buildAdvisory: () => {
+      advisoryRuns += 1;
+      return {};
+    },
+  });
+  assert.equal(result.verdict, 'fail');
+  assert.equal(result.execution.failFast, true);
+  assert.equal(advisoryRuns, 0);
+});
+
+test('required fast phase is rooted in the exact evidence base', () => {
+  const base = 'a'.repeat(40);
+  const plan = sourceAcceptancePlan(['scripts/example.mjs'], base);
+  const ratchet = plan.find(({ label }) =>
+    label.startsWith('changed-code function-risk ratchet'),
+  );
+  assert.deepEqual(ratchet?.args, [
+    'framework/maintainability/function-risk-ratchet.mjs',
+    '--base',
+    base,
+  ]);
 });
 
 test('generated relabeling cannot hide first-party source', () => {

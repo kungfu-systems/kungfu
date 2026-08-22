@@ -657,9 +657,10 @@ export function sourceAcceptancePlan(
     ],
     ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
     [
-      'advisory function-level risk projection',
-      'framework/maintainability/function-risk.mjs',
-      '--check',
+      'changed-code function-risk ratchet and advisory projection',
+      'framework/maintainability/function-risk-ratchet.mjs',
+      '--base',
+      evidenceBaseCommit,
     ],
     ...(coldReadOnlySourceAcceptance
       ? []

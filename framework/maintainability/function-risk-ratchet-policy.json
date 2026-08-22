@@ -1,0 +1,17 @@
+{
+  "schema": "kungfu.function-risk-ratchet-policy/v1",
+  "status": "required-changed-code",
+  "matching": {
+    "primary": "exact-path-and-symbol",
+    "movementFallback": "unique-same-owner-and-symbol",
+    "globalSymbolFallback": false
+  },
+  "newFunctionBaseRiskEnvelope": {
+    "c-cpp": 52,
+    "javascript-typescript": 87,
+    "python": 56,
+    "rust": 63
+  },
+  "historicalDebt": "unchanged functions are non-blocking",
+  "sameOwnerExtraction": "aggregate baseRisk must decrease when responsibility moves into new same-owner functions"
+}
