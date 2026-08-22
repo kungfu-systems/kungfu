@@ -3,6 +3,16 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import {
+  createShellNavigationHandler,
+  initialShellSurface,
+  projectSearchSurface,
+  shellSurfaceActiveViewId,
+  shellSurfaceFlags,
+  shellSurfaceTitle,
+  visibleCoreSurface,
+} from './navigation.ts';
+import type { ShellNavigateRequest } from './sandbox/channels.ts';
 
 const source = readFileSync(
   new URL('./renderer/src/main.tsx', import.meta.url),
@@ -30,6 +40,146 @@ const profileManagerSource = readFileSync(
   ),
   'utf8',
 );
+
+test('one shell surface preserves startup priority and exclusive visibility', () => {
+  assert.equal(
+    initialShellSurface({
+      onboardingOpen: true,
+      projectsOpen: true,
+      focusedProjectPath: '/projects/current',
+      agentWorkLabOpen: true,
+    }),
+    'onboarding',
+  );
+  assert.equal(
+    initialShellSurface({
+      onboardingOpen: false,
+      projectsOpen: true,
+      focusedProjectPath: '',
+      agentWorkLabOpen: true,
+    }),
+    'projects',
+  );
+  assert.equal(
+    initialShellSurface({
+      onboardingOpen: false,
+      projectsOpen: true,
+      focusedProjectPath: '/projects/current',
+      agentWorkLabOpen: true,
+    }),
+    'core-work',
+  );
+  assert.equal(
+    initialShellSurface({
+      onboardingOpen: false,
+      projectsOpen: false,
+      focusedProjectPath: '',
+      agentWorkLabOpen: true,
+    }),
+    'agent-work-lab',
+  );
+  assert.equal(
+    initialShellSurface({
+      onboardingOpen: false,
+      projectsOpen: false,
+      focusedProjectPath: '',
+      agentWorkLabOpen: false,
+    }),
+    'core-work',
+  );
+  assert.deepEqual(shellSurfaceFlags('projects'), {
+    onboardingOpen: false,
+    projectsOpen: true,
+    labOpen: false,
+    coreWorkOpen: false,
+  });
+  assert.deepEqual(shellSurfaceFlags('kfx'), {
+    onboardingOpen: false,
+    projectsOpen: false,
+    labOpen: false,
+    coreWorkOpen: false,
+  });
+  assert.equal(visibleCoreSurface('agent-work-lab'), 'agent-work-lab');
+  assert.equal(visibleCoreSurface('core-work'), 'core-work');
+  assert.equal(visibleCoreSurface('onboarding'), undefined);
+  assert.equal(visibleCoreSurface('kfx'), undefined);
+});
+
+test('shell surface projection preserves title and active navigation semantics', () => {
+  assert.equal(
+    shellSurfaceTitle({
+      surface: 'core-work',
+      projectWorkOpen: true,
+      currentProjectDisplayName: 'Alpha',
+    }),
+    'Project · Alpha',
+  );
+  assert.equal(
+    shellSurfaceTitle({
+      surface: 'kfx',
+      projectWorkOpen: true,
+      currentProjectDisplayName: 'Alpha',
+      activeKfxTitle: 'Work',
+    }),
+    'Work',
+  );
+  assert.equal(
+    shellSurfaceActiveViewId({
+      surface: 'kfx',
+      projectWorkOpen: true,
+      activeKfxId: 'work',
+      workEntryId: 'work',
+    }),
+    'current-project',
+  );
+  assert.equal(
+    shellSurfaceActiveViewId({
+      surface: 'kfx',
+      projectWorkOpen: false,
+      activeKfxId: 'work',
+      workEntryId: 'work',
+    }),
+    'core-work',
+  );
+  assert.equal(
+    shellSurfaceActiveViewId({
+      surface: 'kfx',
+      projectWorkOpen: false,
+      activeKfxId: 'settings',
+      workEntryId: 'work',
+    }),
+    'settings',
+  );
+});
+
+test('shell navigation dispatches each request through one typed route', () => {
+  const calls: string[] = [];
+  const navigate = createShellNavigationHandler({
+    settings: () => calls.push('settings'),
+    onboarding: () => calls.push('onboarding'),
+    'profile-home': () => calls.push('profile-home'),
+    view: (request) =>
+      calls.push(
+        `view:${(request as Extract<ShellNavigateRequest, { target: 'view' }>).kfxId}`,
+      ),
+  });
+  navigate({}, { target: 'settings' });
+  navigate({}, { target: 'onboarding' });
+  navigate({}, { target: 'profile-home' });
+  navigate({}, { target: 'view', kfxId: 'work' });
+  navigate({}, { target: 'unknown' } as unknown as ShellNavigateRequest);
+  navigate({}, { target: '__proto__' } as unknown as ShellNavigateRequest);
+  navigate({}, { target: 'constructor' } as unknown as ShellNavigateRequest);
+  navigate({}, null as unknown as ShellNavigateRequest);
+  navigate({}, undefined as unknown as ShellNavigateRequest);
+  navigate({}, {} as ShellNavigateRequest);
+  assert.deepEqual(calls, [
+    'settings',
+    'onboarding',
+    'profile-home',
+    'view:work',
+  ]);
+});
 
 test('the title-bar search shares Help, Command, Work, and view sources', () => {
   assert.match(source, /SYSTEM_HELP_DOCUMENTS/);
@@ -105,7 +255,7 @@ test('Work activation reaches the declared Work view and selects the exact resul
 test('Core Work remains a first-class shell surface without an admitted Work KFX', () => {
   assert.match(
     source,
-    /coreWorkOpen \|\| activeKfx\?\.id === workEntry\?\.id[\s\S]*\? 'core-work'/,
+    /shellSurfaceActiveViewId\(\{[\s\S]*activeKfxId: activeKfx\?\.id,[\s\S]*workEntryId: workEntry\?\.id/,
   );
   assert.match(source, /onOpenAllWork=\{\(\) => openWorkSurface\(\)\}/);
   assert.match(
@@ -118,12 +268,15 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
   );
   assert.match(
     source,
-    /coreWorkOpen[\s\S]*currentProjectName[\s\S]*'All Work'/,
+    /shellSurfaceTitle\(\{[\s\S]*projectWorkOpen,[\s\S]*currentProjectDisplayName/,
   );
 });
 
 test('visited core product surfaces stay mounted while hidden', () => {
-  assert.match(source, /useRetainedCoreSurfaces\(\{/);
+  assert.match(
+    source,
+    /useRetainedCoreSurfaces\(\s*visibleRetainedCoreSurface/,
+  );
   assert.match(
     projectsPanelSource,
     /visible === 'projects' \|\| retained\.has\('projects'\)/,
@@ -164,14 +317,23 @@ test('Project navigation preserves the current Project while the catalog is expl
   assert.match(source, /title: 'All Projects'[\s\S]*id: 'current-project'/);
   assert.match(
     source,
-    /onOpenProjects=\{\(\) => \{[\s\S]*setFocusedProjectPath\(''\)[\s\S]*setProjectsOpen\(true\)/,
+    /onOpenProjects=\{\(\) => \{[\s\S]*setFocusedProjectPath\(''\)[\s\S]*setShellSurface\('projects'\)/,
   );
 });
 
-test('Lab and workspace transitions close Core Work explicitly', () => {
+test('cached Project search preserves onboarding priority', () => {
+  assert.equal(projectSearchSurface('onboarding'), 'onboarding');
+  assert.equal(projectSearchSurface('projects'), 'projects');
+  assert.equal(projectSearchSurface('core-work'), 'projects');
+  assert.equal(projectSearchSurface('agent-work-lab'), 'projects');
+  assert.equal(projectSearchSurface('kfx'), 'projects');
+  assert.match(source, /setShellSurface\(projectSearchSurface\)/);
+});
+
+test('Lab and workspace transitions select one shell surface explicitly', () => {
   assert.match(
     source,
-    /onOpenLab=\{\(\) => \{[\s\S]*setCoreWorkOpen\(false\)[\s\S]*setLabOpen\(true\)/,
+    /onOpenLab=\{\(\) => setShellSurface\('agent-work-lab'\)\}/,
   );
   assert.match(source, /onOpenWork=\{\(\) => openWorkSurface\(\)\}/);
 });

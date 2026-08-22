@@ -7,6 +7,141 @@ import type {
   ProfileManifest,
   ShellState,
 } from '@kungfu-tech/kfx';
+import type { ShellNavigateRequest } from './sandbox/channels';
+
+export type ShellSurface =
+  | 'onboarding'
+  | 'projects'
+  | 'agent-work-lab'
+  | 'core-work'
+  | 'kfx';
+
+export type ShellSurfaceFlags = {
+  onboardingOpen: boolean;
+  projectsOpen: boolean;
+  labOpen: boolean;
+  coreWorkOpen: boolean;
+};
+
+export type CoreShellSurface = 'projects' | 'agent-work-lab' | 'core-work';
+
+const CORE_SURFACE: Partial<Record<ShellSurface, CoreShellSurface>> = {
+  projects: 'projects',
+  'agent-work-lab': 'agent-work-lab',
+  'core-work': 'core-work',
+};
+
+const PROJECT_SEARCH_SURFACE: Record<ShellSurface, ShellSurface> = {
+  onboarding: 'onboarding',
+  projects: 'projects',
+  'agent-work-lab': 'projects',
+  'core-work': 'projects',
+  kfx: 'projects',
+};
+
+const FIXED_SURFACE_TITLE: Partial<Record<ShellSurface, string>> = {
+  onboarding: 'Getting Started',
+  projects: 'Projects',
+  'agent-work-lab': 'Agent Work Lab',
+};
+
+const FIXED_SURFACE_VIEW_ID: Partial<Record<ShellSurface, string>> = {
+  onboarding: 'onboarding',
+  projects: 'projects',
+  'agent-work-lab': 'agent-work-lab',
+};
+
+export type ShellNavigationActions = Record<
+  ShellNavigateRequest['target'],
+  (request: ShellNavigateRequest) => void
+>;
+
+export function createShellNavigationHandler(actions: ShellNavigationActions) {
+  const routes = Object.assign(
+    Object.create(null) as ShellNavigationActions,
+    actions,
+  );
+  return (_event: unknown, request: unknown) => {
+    const target = Reflect.get(Object(request), 'target');
+    if (typeof target !== 'string') return;
+    const action = routes[target as ShellNavigateRequest['target']];
+    if (typeof action === 'function') action(request as ShellNavigateRequest);
+  };
+}
+
+export function initialShellSurface({
+  onboardingOpen,
+  projectsOpen,
+  focusedProjectPath,
+  agentWorkLabOpen,
+}: {
+  onboardingOpen: boolean;
+  projectsOpen: boolean;
+  focusedProjectPath: string;
+  agentWorkLabOpen: boolean;
+}): ShellSurface {
+  if (onboardingOpen) return 'onboarding';
+  if (projectsOpen) return focusedProjectPath ? 'core-work' : 'projects';
+  if (agentWorkLabOpen) return 'agent-work-lab';
+  return 'core-work';
+}
+
+export function shellSurfaceFlags(surface: ShellSurface): ShellSurfaceFlags {
+  return {
+    onboardingOpen: surface === 'onboarding',
+    projectsOpen: surface === 'projects',
+    labOpen: surface === 'agent-work-lab',
+    coreWorkOpen: surface === 'core-work',
+  };
+}
+
+export function visibleCoreSurface(
+  surface: ShellSurface,
+): CoreShellSurface | undefined {
+  return CORE_SURFACE[surface];
+}
+
+export function projectSearchSurface(surface: ShellSurface): ShellSurface {
+  return PROJECT_SEARCH_SURFACE[surface];
+}
+
+export function shellSurfaceTitle({
+  surface,
+  projectWorkOpen,
+  currentProjectDisplayName,
+  activeKfxTitle,
+}: {
+  surface: ShellSurface;
+  projectWorkOpen: boolean;
+  currentProjectDisplayName: string;
+  activeKfxTitle?: string;
+}): string {
+  const fixedTitle = FIXED_SURFACE_TITLE[surface];
+  if (fixedTitle) return fixedTitle;
+  if (surface === 'kfx') return activeKfxTitle ?? 'Kungfu Episodes';
+  return projectWorkOpen
+    ? `Project · ${currentProjectDisplayName}`
+    : 'All Work';
+}
+
+export function shellSurfaceActiveViewId({
+  surface,
+  projectWorkOpen,
+  activeKfxId,
+  workEntryId,
+}: {
+  surface: ShellSurface;
+  projectWorkOpen: boolean;
+  activeKfxId?: string;
+  workEntryId?: string;
+}): string | undefined {
+  const fixedViewId = FIXED_SURFACE_VIEW_ID[surface];
+  if (fixedViewId) return fixedViewId;
+  if (projectWorkOpen) return 'current-project';
+  if (surface === 'core-work' || activeKfxId === workEntryId)
+    return 'core-work';
+  return activeKfxId;
+}
 
 export type NavigationEntry = {
   id: string;
