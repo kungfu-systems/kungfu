@@ -142,15 +142,23 @@ function waitForExitWithin(child, timeoutMs) {
     return Promise.resolve(true);
   }
   return new Promise((resolve) => {
+    let settled = false;
     const onExit = () => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
       resolve(true);
     };
     const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
       child.off('exit', onExit);
       resolve(false);
     }, timeoutMs);
     child.once('exit', onExit);
+    // Close the check/listener race: the process can exit after the caller's
+    // fast-path check but before this listener is installed.
+    if (child.exitCode !== null || child.signalCode !== null) onExit();
   });
 }
 

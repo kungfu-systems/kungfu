@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -19,13 +18,23 @@ import {
   validWaiverFor,
   waiverIssues,
 } from '../framework/maintainability/complexity-governance.mjs';
+import {
+  baselineBytes,
+  baselineChangedPaths,
+  classify,
+  git,
+  gitLines,
+  gitResult,
+  hasGeneratedProvenance,
+  isEligible,
+  language,
+  lineCount,
+  ownerFor,
+} from '../framework/maintainability/source-analysis-kernel.mjs';
 import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const POLICY_PATH = 'framework/maintainability/code-complexity-policy.json';
-const GIT_TIMEOUT_MS = Number(
-  process.env.KUNGFU_GIT_COMMAND_TIMEOUT_MS || 10_000,
-);
 const RETIRED_COMPLEXITY_SIGNING_MARKERS = [
   ['ed25519-6688', '12bf28659460'],
   ['ed25519-9ff2', '1f6e6f64c985'],
@@ -59,24 +68,6 @@ function readJson(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 }
 
-export function git(args, options = {}, runner = spawnSync) {
-  const result = runner('git', args, {
-    cwd: ROOT,
-    encoding: options.binary ? null : 'utf8',
-    maxBuffer: 128 * 1024 * 1024,
-    timeout: GIT_TIMEOUT_MS,
-  });
-  if (result.error?.code === 'ETIMEDOUT')
-    throw new Error(
-      `git ${args.join(' ')} timed out after ${GIT_TIMEOUT_MS}ms`,
-    );
-  if (result.status !== 0)
-    throw new Error(
-      `git ${args.join(' ')} failed: ${String(result.stderr || '').trim()}`,
-    );
-  return result.stdout;
-}
-
 function readJsonAt(ref, relative) {
   return JSON.parse(String(git(['show', `${ref}:${relative}`])));
 }
@@ -94,13 +85,6 @@ export function protectedBaselineCandidates(
     env,
     symbolicRemoteHead: options.symbolicRemoteHead,
   });
-}
-
-function gitLines(args) {
-  return String(git(args))
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 export function complexitySigningResidueAudit(entries) {
@@ -141,259 +125,6 @@ function trackedComplexitySigningResidueAudit() {
       bytes: fs.readFileSync(path.join(ROOT, pathname)),
     }));
   return complexitySigningResidueAudit(entries);
-}
-
-function lineCount(bytes) {
-  if (!bytes.length) return 0;
-  let lines = 1;
-  for (const byte of bytes) if (byte === 10) lines += 1;
-  if (bytes[bytes.length - 1] === 10) lines -= 1;
-  return lines;
-}
-
-function language(pathname) {
-  const extension = path.posix.extname(pathname).toLowerCase();
-  if (
-    ['.c', '.cc', '.cpp', '.cxx', '.h', '.hh', '.hpp', '.hxx'].includes(
-      extension,
-    )
-  )
-    return 'c-cpp';
-  if (extension === '.py') return 'python';
-  if (['.js', '.mjs', '.cjs', '.ts', '.tsx'].includes(extension))
-    return 'javascript-typescript';
-  if (extension === '.rs') return 'rust';
-  if (['.sh', '.cmd', '.ps1'].includes(extension) || pathname === 'shifu')
-    return 'shell';
-  if (
-    ['.cmake', '.gyp', '.gypi'].includes(extension) ||
-    path.posix.basename(pathname) === 'CMakeLists.txt'
-  )
-    return 'build-declaration';
-  return 'declarative';
-}
-
-function isEligible(pathname, policy) {
-  if (
-    pathname === '.kungfu/qualification' ||
-    pathname.startsWith('.kungfu/qualification/')
-  )
-    return false;
-  const metadataPaths = [policy.baselinePath];
-  const metadataPrefixes = [
-    policy.waiverDirectory,
-    policy.baselineGovernance?.transitionDirectory,
-  ].filter(Boolean);
-  if (
-    metadataPaths.includes(pathname) ||
-    metadataPrefixes.some(
-      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-    )
-  )
-    return false;
-  return (
-    policy.specialEligibleNames.includes(path.posix.basename(pathname)) ||
-    policy.eligibleExtensions.includes(
-      path.posix.extname(pathname).toLowerCase(),
-    )
-  );
-}
-
-function matchesAny(pathname, patterns) {
-  return patterns.some((pattern) => pathname.includes(pattern));
-}
-
-function generatedMarker(bytes) {
-  return bytes
-    .subarray(0, 2048)
-    .toString('utf8')
-    .split('\n')
-    .slice(0, 24)
-    .find((line) =>
-      /^\s*(?:\/\/|#|\/\*|\*)\s*(?:@generated|generated file|auto-generated|automatically generated|do not edit)\b/iu.test(
-        line,
-      ),
-    );
-}
-
-function classify(pathname, bytes) {
-  const basename = path.posix.basename(pathname);
-  const extension = path.posix.extname(pathname).toLowerCase();
-  if (
-    pathname.startsWith('.kungfu/') ||
-    matchesAny(pathname, [
-      'docs/qualification/evidence/',
-      '/evidence/',
-      '/qualification/reports/',
-      '/retained/',
-    ])
-  )
-    return 'retained-evidence';
-  if (
-    matchesAny(pathname, [
-      'framework/core/.deps/',
-      '/node_modules/',
-      '/third_party/',
-      '/third-party/',
-      '/vendor/',
-      '/vendored/',
-    ])
-  )
-    return 'vendored-source';
-  if (
-    /(?:^|[/_.-])generated(?:[/_.-]|$)/u.test(pathname) ||
-    generatedMarker(bytes)
-  )
-    return 'generated-projection';
-  if (
-    /(?:^|\/)(?:test|tests|fixtures?|__tests__)(?:\/|$)/u.test(pathname) ||
-    /(?:^|[._-])test(?:[._-]|$)/u.test(basename) ||
-    /(?:^|[._-])spec(?:[._-]|$)/u.test(basename) ||
-    /^test_/u.test(basename)
-  )
-    return 'test-or-fixture';
-  if (
-    [
-      '.fbs',
-      '.gyp',
-      '.gypi',
-      '.json',
-      '.jsonc',
-      '.lock',
-      '.proto',
-      '.toml',
-      '.yaml',
-      '.yml',
-    ].includes(extension) ||
-    extension === '.cmake' ||
-    basename === 'CMakeLists.txt'
-  )
-    return 'declarative-schema-or-table';
-  if (
-    (/\/include\//u.test(pathname) &&
-      ['.h', '.hh', '.hpp', '.hxx'].includes(extension)) ||
-    /(?:^|\/)(?:main|index|__init__)\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx|js|mjs|cjs|ts|tsx|py|rs)$/u.test(
-      pathname,
-    ) ||
-    pathname === 'shifu' ||
-    pathname === 'shifu.cmd'
-  )
-    return 'public-header-or-entrypoint';
-  if (
-    [
-      '.c',
-      '.cc',
-      '.cjs',
-      '.cmd',
-      '.cpp',
-      '.cxx',
-      '.h',
-      '.hh',
-      '.hpp',
-      '.hxx',
-      '.js',
-      '.mjs',
-      '.ps1',
-      '.py',
-      '.rs',
-      '.sh',
-      '.ts',
-      '.tsx',
-    ].includes(extension)
-  )
-    return 'first-party-handwritten-implementation';
-  return '';
-}
-
-function hasGeneratedProvenance(pathname, bytes) {
-  const marker = generatedMarker(bytes);
-  return Boolean(
-    marker &&
-      /(?:generated by|generator|source(?:_path)?)[\s:=]+[^\s]+/iu.test(marker),
-  );
-}
-
-function owns(rule, file) {
-  const included =
-    (rule.include_files || []).includes(file) ||
-    (rule.include_prefixes || []).some((prefix) => file.startsWith(prefix));
-  return (
-    included &&
-    !(rule.exclude_files || []).includes(file) &&
-    !(rule.exclude_prefixes || []).some((prefix) => file.startsWith(prefix))
-  );
-}
-
-function ownerFor(pathname, layers, ownership = []) {
-  const declared = ownership.filter((rule) =>
-    (rule.paths || []).includes(pathname),
-  );
-  if (declared.length === 1) return declared[0].owner;
-  if (declared.length > 1) return '';
-  if (pathname.startsWith('framework/core/')) {
-    const relative = pathname.slice('framework/core/'.length);
-    const owners = layers.components.filter((component) =>
-      owns(component, relative),
-    );
-    if (owners.length === 1) return owners[0].owner;
-    if (pathname.startsWith('framework/core/architecture/'))
-      return 'core/architecture';
-    if (pathname.startsWith('framework/core/tests/'))
-      return 'core/qualification';
-    if (
-      pathname.startsWith('framework/core/.gyp/') ||
-      pathname === 'framework/core/conanfile.py' ||
-      pathname === 'framework/core/CMakeLists.txt'
-    )
-      return 'core/build';
-    if (pathname.startsWith('framework/core/lib/')) return 'core/bindings';
-    return owners.length > 1 ? '' : 'core/package';
-  }
-  const segments = pathname.split('/');
-  const top = segments[0];
-  if (top === 'framework' && segments[1]) return `framework/${segments[1]}`;
-  if (top === 'extensions' && segments[1])
-    return `extension/${segments.slice(1, Math.min(3, segments.length - 1)).join('/') || segments[1]}`;
-  if (top === 'crates' && segments[1]) return `crate/${segments[1]}`;
-  if (top === 'developer' && segments[1]) return `developer/${segments[1]}`;
-  if (top === 'product') return 'product/assembly';
-  if (top === 'scripts' || pathname === 'shifu' || pathname === 'shifu.cmd')
-    return 'shifu/source-tooling';
-  if (top === 'docs') return 'kungfu/docs';
-  if (top === '.github') return 'kungfu/release-workflow';
-  if (top === 'config') return 'kungfu/config';
-  if (top === 'tests') return 'kungfu/qualification';
-  if (top === 'examples') return 'kungfu/examples';
-  if (top === 'types') return 'kungfu/public-types';
-  if (top === '.kungfu') return 'kungfu/retained-native-evidence';
-  if (
-    [
-      '.buildchain',
-      '.xinfa',
-      'package.json',
-      'pnpm-lock.yaml',
-      'Cargo.lock',
-      'Cargo.toml',
-    ].includes(top)
-  )
-    return 'kungfu/repository-contract';
-  if (!pathname.includes('/')) return 'kungfu/repository-contract';
-  return '';
-}
-
-function baselineBytes(ref, pathname, changed) {
-  const absolute = path.join(ROOT, pathname);
-  if (!changed.has(pathname) && fs.existsSync(absolute))
-    return fs.readFileSync(absolute);
-  return Buffer.from(git(['show', `${ref}:${pathname}`], { binary: true }));
-}
-
-function baselineChangedPaths(ref, readLines = gitLines) {
-  return new Set(
-    readLines(['diff', '--no-renames', '--name-only', ref, 'HEAD', '--'])
-      .concat(readLines(['diff', '--no-renames', '--name-only', 'HEAD', '--']))
-      .concat(readLines(['ls-files', '--others', '--exclude-standard'])),
-  );
 }
 
 function measureBaseline(policy, layers, ownership = []) {
@@ -865,8 +596,7 @@ export function composeRenameEvidence(statusLines) {
 }
 
 function currentRenameMap(policy) {
-  const result = spawnSync(
-    'git',
+  const result = gitResult(
     [
       'log',
       '--reverse',
@@ -877,7 +607,7 @@ function currentRenameMap(policy) {
       `${renameEvidenceBase(policy)}..HEAD`,
       '--',
     ],
-    { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+    { maxBuffer: 16 * 1024 * 1024 },
   );
   if (result.status !== 0) return new Map();
   return composeRenameEvidence(result.stdout);
@@ -891,14 +621,12 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
     : [];
   const protectedRef =
     protectedCandidates.find((candidate) => {
-      const result = spawnSync(
-        'git',
-        ['rev-parse', '--verify', '--quiet', `${candidate}^{commit}`],
-        {
-          cwd: ROOT,
-          encoding: 'utf8',
-        },
-      );
+      const result = gitResult([
+        'rev-parse',
+        '--verify',
+        '--quiet',
+        `${candidate}^{commit}`,
+      ]);
       return result.status === 0;
     }) || protectedCandidates[0];
   const protectedPaths = protectedRef
@@ -1126,6 +854,7 @@ export {
   buildBaseline,
   checkCurrent,
   classify,
+  git,
   hasGeneratedProvenance,
   isEligible,
   language,

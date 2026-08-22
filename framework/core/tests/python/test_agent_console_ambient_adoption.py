@@ -25,6 +25,27 @@ def process_identity():
     }
 
 
+def test_process_identity_row_uses_stable_locale(monkeypatch):
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append((argv, kwargs))
+        return SimpleNamespace(
+            returncode=0,
+            stdout=("40 Thu Aug 13 10:59:00 2026 /Users/example/.local/bin/codex\n"),
+        )
+
+    monkeypatch.setattr(session_surface.subprocess, "run", run)
+
+    assert session_surface._process_identity_row(50) == (
+        40,
+        "Thu Aug 13 10:59:00 2026",
+        "/Users/example/.local/bin/codex",
+    )
+    assert calls[0][1]["env"]["LC_ALL"] == "C"
+    assert calls[0][1]["env"]["LANG"] == "C"
+
+
 def console_envelope():
     body = {
         "schema": "kungfu.agent-console-envelope/v1",

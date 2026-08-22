@@ -479,6 +479,7 @@ def _process_identity_row(pid: int) -> tuple[int, str, str] | None:
         text=True,
         check=False,
         timeout=1,
+        env={**os.environ, "LC_ALL": "C", "LANG": "C"},
     )
     if completed.returncode != 0:
         return None

@@ -19,6 +19,10 @@ using namespace kungfu::runtime::journal;
 using namespace kungfu::runtime::nanomsg;
 
 namespace kungfu::runtime {
+namespace {
+constexpr int USABILITY_PROBE_ATTEMPTS = 5;
+}
+
 class ipc_url_factory : public url_factory {
 public:
   virtual ~ipc_url_factory() {}
@@ -250,10 +254,19 @@ io_device_peer::io_device_peer(data::location_ptr home, bool low_latency)
 bool io_device_peer::is_usable() {
   nanomsg_publisher_peer publisher(*this, false);
   nanomsg_observer_peer observer(*this, false);
-  publisher.setup();
-  observer.setup();
-  std::this_thread::sleep_for(std::chrono::milliseconds(TEST_USABLE_TIMEOUT));
-  return publisher.is_usable() and observer.is_usable();
+  if (not publisher.setup() or not observer.setup()) {
+    return false;
+  }
+  // Keep the same sockets across this bounded handshake. Recreating the SUB
+  // socket after every missed pong repeats the NNG slow-joiner window on
+  // Windows and can prevent a healthy coordinator from ever becoming usable.
+  for (int attempt = 0; attempt < USABILITY_PROBE_ATTEMPTS; ++attempt) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(TEST_USABLE_TIMEOUT));
+    if (publisher.is_usable() and observer.is_usable()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool io_device_peer::setup() {

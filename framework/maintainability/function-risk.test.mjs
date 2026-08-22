@@ -1,14 +1,32 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
+import {
+  extractFunctions as extractLegacyFunctions,
+  snapshot as legacySnapshot,
+  trackedCurrentFiles as legacyTrackedCurrentFiles,
+  trackedFilesAt as legacyTrackedFilesAt,
+} from './fixtures/function-risk-legacy-shadow.mjs';
 import {
   analyzeTransition,
   buildReport,
   digest,
   extractFunctions,
 } from './function-risk.mjs';
+import {
+  analysisCachePath,
+  extractFunctions as extractKernelFunctions,
+  functionSnapshot,
+  readJson,
+  readThroughAnalysisCache,
+  trackedCurrentFiles,
+  trackedFilesAt,
+} from './source-analysis-kernel.mjs';
 
 const layers = { components: [] };
 const ownership = [];
@@ -60,16 +78,119 @@ test('extracts rooted function metrics for all four declared language families',
     ],
   ];
   for (const [pathname, source, family] of fixtures) {
-    const functions = extractFunctions(
-      { path: pathname, bytes: Buffer.from(source) },
-      layers,
-      ownership,
+    const file = { path: pathname, bytes: Buffer.from(source) };
+    const legacyFunctions = extractLegacyFunctions(file, layers, ownership);
+    const functions = extractKernelFunctions(file, layers, ownership);
+    assert.deepEqual(
+      functions,
+      legacyFunctions,
+      `${pathname} kernel shadow parity`,
     );
+    assert.deepEqual(extractFunctions(file, layers, ownership), functions);
     assert.equal(functions.length, 1, pathname);
     assert.equal(functions[0].language, family);
     assert.equal(functions[0].symbol, 'work');
     assert.ok(functions[0].cyclomatic >= 2);
     assert.match(functions[0].bodyRoot, /^sha256:[0-9a-f]{64}$/u);
+  }
+});
+
+test('shared kernel shadows the legacy exact-repository analysis', () => {
+  const policy = readJson(
+    'framework/maintainability/function-risk-policy.json',
+  );
+  const repositoryLayers = readJson('framework/core/architecture/layers.json');
+  const repositoryOwnership = readJson(
+    'framework/maintainability/abstraction-integrity.manifest.json',
+  ).ownership;
+  const report = buildReport();
+  const legacyBaseline = legacySnapshot(
+    legacyTrackedFilesAt(report.baseline.revision),
+    policy,
+    repositoryLayers,
+    repositoryOwnership,
+  );
+  const legacyCurrent = legacySnapshot(
+    legacyTrackedCurrentFiles(),
+    policy,
+    repositoryLayers,
+    repositoryOwnership,
+  );
+  const successorBaseline = functionSnapshot(
+    trackedFilesAt(report.baseline.revision),
+    policy,
+    repositoryLayers,
+    repositoryOwnership,
+  );
+  const successorCurrent = functionSnapshot(
+    trackedCurrentFiles(),
+    policy,
+    repositoryLayers,
+    repositoryOwnership,
+  );
+  assert.deepEqual(successorBaseline, legacyBaseline);
+  assert.deepEqual(successorCurrent, legacyCurrent);
+  const legacyTransition = analyzeTransition(
+    legacyCurrent.functions,
+    legacyBaseline.functions,
+    legacyCurrent.files,
+    legacyBaseline.files,
+    policy,
+  );
+  const successorTransition = analyzeTransition(
+    successorCurrent.functions,
+    successorBaseline.functions,
+    successorCurrent.files,
+    successorBaseline.files,
+    policy,
+  );
+  assert.deepEqual(successorTransition, legacyTransition);
+  assert.equal(successorCurrent.sourceRoot, report.sourceRoot);
+  assert.equal(successorBaseline.sourceRoot, report.baseline.sourceRoot);
+  assert.deepEqual(successorTransition.functions, report.functions);
+  assert.deepEqual(successorTransition.transitions, report.transitions);
+  assert.deepEqual(
+    successorTransition.retiredFunctions,
+    report.retiredFunctions,
+  );
+  assert.deepEqual(successorTransition.findings, report.findings);
+});
+
+test('source analysis cache reuses only exact rooted inputs and fails closed', () => {
+  const runtimeRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-source-analysis-cache-'),
+  );
+  const identity = {
+    sourceCommit: '1'.repeat(40),
+    sourceTree: '2'.repeat(40),
+    sourceStatusRoot: `sha256:${'3'.repeat(64)}`,
+    baselineRevision: '4'.repeat(40),
+    policyRoot: `sha256:${'5'.repeat(64)}`,
+    inputContractRoot: `sha256:${'6'.repeat(64)}`,
+    implementationRoot: `sha256:${'7'.repeat(64)}`,
+  };
+  let builds = 0;
+  const produce = () => ({ findings: [], build: ++builds });
+  try {
+    const first = readThroughAnalysisCache('fixture', identity, produce, {
+      runtimeRoot,
+    });
+    const second = readThroughAnalysisCache('fixture', identity, produce, {
+      runtimeRoot,
+    });
+    assert.equal(first.hit, false);
+    assert.equal(second.hit, true);
+    assert.deepEqual(second.value, first.value);
+    assert.equal(builds, 1);
+    const cachePath = analysisCachePath('fixture', identity, { runtimeRoot });
+    fs.writeFileSync(cachePath, '{}\n');
+    assert.throws(
+      () =>
+        readThroughAnalysisCache('fixture', identity, produce, { runtimeRoot }),
+      /identity or payload root mismatch/u,
+    );
+  } finally {
+    fs.rmSync(runtimeRoot, { recursive: true, force: true });
   }
 });
 
