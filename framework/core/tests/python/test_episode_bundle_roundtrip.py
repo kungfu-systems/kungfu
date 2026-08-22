@@ -18,8 +18,24 @@ from pathlib import Path
 
 from kungfu.storage import service
 from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
+from kungfu.storage.transfer import StorageTransfer
 
 EPISODE_BUNDLE_SCHEMA = "kungfu.storage.episode-bundle/v1"
+
+
+def test_transfer_owner_preserves_public_facade_and_jsonl_format(tmp_path):
+    assert service.write_jsonl is StorageTransfer.write_jsonl
+    assert service.export_jsonl is StorageTransfer.export_jsonl
+    assert service.export_bundle_json is StorageTransfer.export_bundle_json
+    assert service.build_export_bundle is StorageTransfer.build_export_bundle
+    assert service.import_bundle is StorageTransfer.import_bundle
+
+    output = tmp_path / "nested" / "records.jsonl"
+    output.parent.mkdir()
+    service.write_jsonl([{"z": "保留", "a": 1}, {"payload_state": "redacted"}], output)
+    assert output.read_bytes() == (
+        b'{"a":1,"z":"\xe4\xbf\x9d\xe7\x95\x99"}\n{"payload_state":"redacted"}\n'
+    )
 
 
 def _lifecycle(
