@@ -7,6 +7,12 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  extractFunctions as extractLegacyFunctions,
+  snapshot as legacySnapshot,
+  trackedCurrentFiles as legacyTrackedCurrentFiles,
+  trackedFilesAt as legacyTrackedFilesAt,
+} from './fixtures/function-risk-legacy-shadow.mjs';
+import {
   analyzeTransition,
   buildReport,
   digest,
@@ -73,12 +79,14 @@ test('extracts rooted function metrics for all four declared language families',
   ];
   for (const [pathname, source, family] of fixtures) {
     const file = { path: pathname, bytes: Buffer.from(source) };
-    const functions = extractFunctions(file, layers, ownership);
+    const legacyFunctions = extractLegacyFunctions(file, layers, ownership);
+    const functions = extractKernelFunctions(file, layers, ownership);
     assert.deepEqual(
-      extractKernelFunctions(file, layers, ownership),
       functions,
+      legacyFunctions,
       `${pathname} kernel shadow parity`,
     );
+    assert.deepEqual(extractFunctions(file, layers, ownership), functions);
     assert.equal(functions.length, 1, pathname);
     assert.equal(functions[0].language, family);
     assert.equal(functions[0].symbol, 'work');
@@ -96,31 +104,56 @@ test('shared kernel shadows the legacy exact-repository analysis', () => {
     'framework/maintainability/abstraction-integrity.manifest.json',
   ).ownership;
   const report = buildReport();
-  const baseline = functionSnapshot(
+  const legacyBaseline = legacySnapshot(
+    legacyTrackedFilesAt(report.baseline.revision),
+    policy,
+    repositoryLayers,
+    repositoryOwnership,
+  );
+  const legacyCurrent = legacySnapshot(
+    legacyTrackedCurrentFiles(),
+    policy,
+    repositoryLayers,
+    repositoryOwnership,
+  );
+  const successorBaseline = functionSnapshot(
     trackedFilesAt(report.baseline.revision),
     policy,
     repositoryLayers,
     repositoryOwnership,
   );
-  const current = functionSnapshot(
+  const successorCurrent = functionSnapshot(
     trackedCurrentFiles(),
     policy,
     repositoryLayers,
     repositoryOwnership,
   );
-  const transition = analyzeTransition(
-    current.functions,
-    baseline.functions,
-    current.files,
-    baseline.files,
+  assert.deepEqual(successorBaseline, legacyBaseline);
+  assert.deepEqual(successorCurrent, legacyCurrent);
+  const legacyTransition = analyzeTransition(
+    legacyCurrent.functions,
+    legacyBaseline.functions,
+    legacyCurrent.files,
+    legacyBaseline.files,
     policy,
   );
-  assert.equal(current.sourceRoot, report.sourceRoot);
-  assert.equal(baseline.sourceRoot, report.baseline.sourceRoot);
-  assert.deepEqual(transition.functions, report.functions);
-  assert.deepEqual(transition.transitions, report.transitions);
-  assert.deepEqual(transition.retiredFunctions, report.retiredFunctions);
-  assert.deepEqual(transition.findings, report.findings);
+  const successorTransition = analyzeTransition(
+    successorCurrent.functions,
+    successorBaseline.functions,
+    successorCurrent.files,
+    successorBaseline.files,
+    policy,
+  );
+  assert.deepEqual(successorTransition, legacyTransition);
+  assert.equal(successorCurrent.sourceRoot, report.sourceRoot);
+  assert.equal(successorBaseline.sourceRoot, report.baseline.sourceRoot);
+  assert.deepEqual(successorTransition.functions, report.functions);
+  assert.deepEqual(successorTransition.transitions, report.transitions);
+  assert.deepEqual(
+    successorTransition.retiredFunctions,
+    report.retiredFunctions,
+  );
+  assert.deepEqual(successorTransition.findings, report.findings);
 });
 
 test('source analysis cache reuses only exact rooted inputs and fails closed', () => {
