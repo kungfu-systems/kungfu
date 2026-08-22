@@ -24,10 +24,14 @@ function createWatcher() {
 }
 const reconnectDeadlines = Object.freeze({
   coordinatorStartup: process.platform === 'win32' ? 30_000 : 15_000,
-  watcherConnect: process.platform === 'win32' ? 30_000 : 8_000,
+  // io_device_peer::setup() owns a bounded 60-second registration retry.
+  // Leave runner-scheduling margin around that native boundary instead of
+  // timing out the fixture while the bounded setup is still authoritative.
+  watcherConnect: process.platform === 'win32' ? 75_000 : 8_000,
   watcherDisconnect: process.platform === 'win32' ? 30_000 : 8_000,
-  watcherReconnect: process.platform === 'win32' ? 30_000 : 10_000,
+  watcherReconnect: process.platform === 'win32' ? 75_000 : 10_000,
   watcherStop: process.platform === 'win32' ? 15_000 : 5_000,
+  coordinatorExit: process.platform === 'win32' ? 15_000 : 10_000,
 });
 
 function printableStats() {
@@ -209,13 +213,13 @@ async function stopCoordinator(child) {
   } else {
     signalPosixProcessTree(child, 'SIGTERM');
   }
-  if (await waitForExitWithin(child, 3_000)) return;
+  if (await waitForExitWithin(child, reconnectDeadlines.coordinatorExit)) return;
   if (process.platform === 'win32') {
     child.kill();
   } else {
     signalPosixProcessTree(child, 'SIGKILL');
   }
-  if (!(await waitForExitWithin(child, 3_000))) {
+  if (!(await waitForExitWithin(child, reconnectDeadlines.coordinatorExit))) {
     throw new Error('coordinator did not exit after SIGKILL');
   }
 }

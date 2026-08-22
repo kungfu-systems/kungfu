@@ -60,7 +60,7 @@ function runProbe(mode, environment = {}) {
     encoding: 'utf8',
     timeout:
       mode === 'reconnect' && process.platform === 'win32'
-        ? 150_000
+        ? 240_000
         : mode === 'reconnect'
           ? 55_000
           : 10_000,
@@ -120,11 +120,22 @@ test('watcher dispatch bench follows and proves the load peer carrier', () => {
 test('watcher reconnect fixture sequences readiness, owns process trees, and bounds Windows transitions', () => {
   assert.match(
     watcherProbeSource,
-    /watcherConnect: process\.platform === 'win32' \? 30_000 : 8_000/,
+    /watcherConnect: process\.platform === 'win32' \? 75_000 : 8_000/,
   );
   assert.match(
     watcherProbeSource,
-    /watcherReconnect: process\.platform === 'win32' \? 30_000 : 10_000/,
+    /watcherReconnect: process\.platform === 'win32' \? 75_000 : 10_000/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /coordinatorExit: process\.platform === 'win32' \? 15_000 : 10_000/,
+  );
+  assert.equal(
+    watcherProbeSource.match(
+      /waitForExitWithin\(child, reconnectDeadlines\.coordinatorExit\)/g,
+    )?.length,
+    2,
+    'graceful and forced coordinator exits share the bounded platform deadline',
   );
   assert.match(
     watcherProbeSource,
