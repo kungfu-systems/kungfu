@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5542,
+  "generation": 5543,
   "fencingCounter": 602,
   "policy": {
     "agingSeconds": 900,
@@ -43131,11 +43131,20 @@
       "sourceWorkflowRunId": 32567687652,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-22T10:35:09.948Z",
-      "updatedAt": "2026-08-22T11:21:46.030Z",
+      "updatedAt": "2026-08-22T12:42:48.578Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:b862780ed46b09485c145b91f49b9770ca6a4bf9fb8fabfdbcf15f7ea7c3e57c",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "e18090084db367d2d9913ff98a04f5de6f08908d",
+        "observedSourceHead": "e18090084db367d2d9913ff98a04f5de6f08908d",
+        "eventAction": "closed",
+        "closedAt": "2026-08-22T12:42:48.578Z"
+      },
       "affectedPaths": [
         "scripts/check-incubation-passport.mjs",
         "scripts/check-incubation-passport.test.mjs"
@@ -43221,6 +43230,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-22T12:42:07.864Z",
-  "stateRoot": "sha256:e04365c40c34758569510220fb35b35c45bf3a1c8f83880832ff24d8c8afba92"
+  "updatedAt": "2026-08-22T12:42:48.578Z",
+  "stateRoot": "sha256:378726af5801c3ba55eb2b88e35b70a90d1d69aeee03e0d2cee93d831a604970"
 }
