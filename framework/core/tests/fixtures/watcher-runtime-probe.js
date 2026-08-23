@@ -82,8 +82,31 @@ function coordinatorEnvironment() {
   return environment;
 }
 
+function projectCoordinatorRuntime() {
+  const virtualEnvironment = path.resolve(
+    coreDir,
+    process.env.UV_PROJECT_ENVIRONMENT || '.venv',
+  );
+  const python = path.join(
+    virtualEnvironment,
+    process.platform === 'win32' ? 'Scripts' : 'bin',
+    process.platform === 'win32' ? 'python.exe' : 'python',
+  );
+  if (!fs.existsSync(python)) return null;
+  return {
+    python,
+    pythonDirectory: path.dirname(python),
+    virtualEnvironment,
+  };
+}
+
 function resolveCoordinatorRuntime(environment) {
   if (coordinatorRuntime !== null) return coordinatorRuntime;
+  const projectRuntime = projectCoordinatorRuntime();
+  if (projectRuntime !== null) {
+    coordinatorRuntime = projectRuntime;
+    return coordinatorRuntime;
+  }
   const resolved = spawnSync(
     'uv',
     ['run', '--frozen', 'python', '-c', 'import sys; print(sys.executable)'],

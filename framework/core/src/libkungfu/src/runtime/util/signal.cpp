@@ -163,6 +163,17 @@ static LONG WINAPI kf_top_level_filter(EXCEPTION_POINTERS *ep) {
 }
 #endif // _WIN32
 
+static void install_os_signal_handler(int signum) {
+#ifndef _WIN32
+  // The embedding host owns child reaping. Replacing Node/libuv's SIGCHLD
+  // handler prevents ChildProcess from observing and reaping an exited child.
+  if (signum == SIGCHLD) {
+    return;
+  }
+#endif // _WIN32
+  signal(signum, kf_os_signal_handler);
+}
+
 void handle_os_signals(void *reactor) {
   if (reactor_instance != nullptr) {
     throw yijinjing_error("kungfu can only have one reactor instance per process");
@@ -186,7 +197,7 @@ void handle_os_signals(void *reactor) {
 #endif // _WIN32
 
   for (int s = 1; s < NSIG; s++) {
-    signal(s, kf_os_signal_handler);
+    install_os_signal_handler(s);
   }
 }
 

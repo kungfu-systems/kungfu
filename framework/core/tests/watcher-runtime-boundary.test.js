@@ -52,6 +52,15 @@ const nanomsgSocketHeader = path.join(
   'nanomsg',
   'socket.h',
 );
+const signalSource = path.join(
+  coreDir,
+  'src',
+  'libkungfu',
+  'src',
+  'runtime',
+  'util',
+  'signal.cpp',
+);
 const watcherProbeSource = fs.readFileSync(probe, 'utf8');
 const reconnectProbeSource = watcherProbeSource.slice(
   watcherProbeSource.indexOf('async function reconnectProbe()'),
@@ -155,6 +164,24 @@ test('watcher reconnect fixture sequences readiness, owns process trees, and bou
     watcherProbeSource,
     /const resolved = spawnSync\(\s*'uv',[\s\S]*?'--frozen'[\s\S]*?'import sys; print\(sys\.executable\)'/,
   );
+  assert.match(
+    watcherProbeSource,
+    /process\.env\.UV_PROJECT_ENVIRONMENT \|\| '\.venv'/,
+    'the exact Core project environment must be usable without uv on PATH',
+  );
+  assert.match(
+    watcherProbeSource,
+    /process\.platform === 'win32' \? 'Scripts' : 'bin'/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /process\.platform === 'win32' \? 'python\.exe' : 'python'/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /const projectRuntime = projectCoordinatorRuntime\(\);[\s\S]*?if \(projectRuntime !== null\)[\s\S]*?return coordinatorRuntime;[\s\S]*?const resolved = spawnSync/,
+    'the project interpreter must be preferred before the uv fallback',
+  );
   assert.match(watcherProbeSource, /resolved\.status !== 0/);
   assert.match(
     watcherProbeSource,
@@ -221,6 +248,16 @@ test('watcher reconnect fixture sequences readiness, owns process trees, and bou
     'coordinator exit state is rechecked after listener installation',
   );
   assert.match(exitWaitSource, /let settled = false;/);
+  const hostSignalSource = fs.readFileSync(signalSource, 'utf8');
+  const signalInstaller = hostSignalSource.slice(
+    hostSignalSource.indexOf('static void install_os_signal_handler'),
+    hostSignalSource.indexOf('void handle_os_signals'),
+  );
+  assert.match(
+    signalInstaller,
+    /if \(signum == SIGCHLD\) \{\s*return;\s*\}[\s\S]*?signal\(signum, kf_os_signal_handler\)/,
+    'the native reactor must preserve the embedding host child-reaping handler',
+  );
 });
 
 test('peer usability persists one bounded handshake across slow-joiner retries', () => {
