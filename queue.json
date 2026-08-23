@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6162,
+  "generation": 6163,
   "fencingCounter": 633,
   "policy": {
     "agingSeconds": 900,
@@ -44727,8 +44727,40 @@
         "framework/core/src/python/kungfu/assignment_runtime/authority.py",
         "framework/core/tests/python/test_assignment_runtime.py"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3399,
+      "assignmentRoot": "sha256:7bc4669305161d172574933ea3bab9a278b810263e1a934bc794e3911d31e994",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:f31c0269f79e09b7a4fac47c42cc8732113232fc8cf2a57180867f89a928de25",
+      "deliveryClass": "non-native-fast",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:8cb787e8a4435197dfd4fe62b4070c314b36d46716cc3023bdf8cbd11c1d1815",
+      "candidateId": "sha256:a31fa4c5271cd3e41dd97fe3a299d98ea822ecedcfc4a491e2219cedadabf986",
+      "sourceHead": "0c4ce8cba12caa00c727a426bc607e711f3e860b",
+      "sourcePatchRoot": "sha256:4b2bbfe8a04fb2b1ec68f5ffb53bec0335aa56fcf3b15f64226d9fd59a1bb7e9",
+      "sourceProofRoot": "sha256:8d481232ffbf9f1775bed046a5ef5bbabfc948931ac13209f52c5df7d6da8a25",
+      "planRoot": "sha256:3315ebda716e90e6522a71b6488b1d4ddd8b9681f4cb3ca84176d96d5408c631",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:6cd74739dcfd3249dabbad1be672713bb9123e3438f6f8087cd38d658be0bb5f",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32663064176,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-23T20:07:34.974Z",
+      "updatedAt": "2026-08-23T20:07:34.974Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/maintainability/function-risk.test.mjs",
+        "framework/maintainability/source-analysis-kernel.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-23T20:00:12.337Z",
-  "stateRoot": "sha256:6226e2efd0d8817f9cc6427522e4aaa46b5033a292f46deca6dfc35ebfc73836"
+  "updatedAt": "2026-08-23T20:07:34.974Z",
+  "stateRoot": "sha256:ee320627e1561f7e568b8681f2fdd9a12713a28e6cc2bc8159228889bac96021"
 }
