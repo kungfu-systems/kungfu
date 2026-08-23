@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5929,
+  "generation": 5930,
   "fencingCounter": 622,
   "policy": {
     "agingSeconds": 900,
@@ -44231,8 +44231,38 @@
         "framework/agent-repository-work/run.mjs",
         "scripts/run-agent-opencode-continuity.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3383,
+      "assignmentRoot": "sha256:c1b1af8f22b7f88ea0df6079b5b9bf979573fe5d6b0aac080f1d266289c6407e",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:7e6cdcf78ae0b3dc66a66745b144ceb4e5593b6c2f8bcf7f20c8ad432a715178",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:42ca6f31c77643022ac6eef837dc4f744ae94f9dc6f061730f95b6e9ee3c8d19",
+      "sourceHead": "24d159f9afc62b7ca28ccd9ab7cb2918960b6a41",
+      "sourcePatchRoot": "sha256:c9032767d708f1fb9a101abf8fd95f66920d05d2234b556cf1f195e3fe0f64bf",
+      "sourceProofRoot": "sha256:242a83d823db940aa57ceb939d4679cfe38c575780317b833f12a69c8ef3e8fd",
+      "planRoot": "sha256:ae2b22e4e918878e3b3a1803aae63d46ca05b001be65351b37b4fc678f2b46be",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:65e4bccca78c5c25b2c14828d37eb7e002e065eebec4ac49e6c3405b300aed68",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32629511885,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-23T09:01:39.852Z",
+      "updatedAt": "2026-08-23T09:01:39.852Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/tests/fixtures/watcher-runtime-probe.js",
+        "framework/core/tests/watcher-runtime-boundary.test.js"
+      ]
     }
   ],
-  "updatedAt": "2026-08-23T07:17:18.439Z",
-  "stateRoot": "sha256:ef656b1456aa2c8048745c008a057876fbaee1c115b6d54703866810c4e38b2b"
+  "updatedAt": "2026-08-23T09:01:39.852Z",
+  "stateRoot": "sha256:34d94ba2e55c9f3a4f000e68ca3d537a8add8496aa88004681a263fe4dedb0b3"
 }
