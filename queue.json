@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6128,
+  "generation": 6129,
   "fencingCounter": 631,
   "policy": {
     "agingSeconds": 900,
@@ -44704,8 +44704,38 @@
         "framework/maintainability/function-risk.test.mjs",
         "framework/maintainability/source-analysis-kernel.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3396,
+      "assignmentRoot": "sha256:30d14bab9c523078c253b5e5888685e129ec72abe82026bb09d00d458ef006a2",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:b0515438a786c2a2d621d93b065856715fc189a292d7341d8864293201b5ccb8",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:b858e79c64da9c5b577e5e6837917666890defc6db18b055351e0043ba69d9df",
+      "sourceHead": "4d3d497d76de1f021690c58a73bf2ae3046c59af",
+      "sourcePatchRoot": "sha256:9eccfe8258286aa165078f69be603eb7c76ff222cc94055c49ac5f86b4adb068",
+      "sourceProofRoot": "sha256:ba188b538cdcb9014022ef6716a5b9e4dd7b6f9ec1c69a06ac0dbdad0f11d2cb",
+      "planRoot": "sha256:f0998ff13a994b6b866f783338fa9d6e8a16752491329541e5c061947cf4b36f",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:a3963cb19fea997a5b3008c78c82563d156d36939a1f1741359f70a9c8e652a2",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32656549284,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-23T19:04:53.132Z",
+      "updatedAt": "2026-08-23T19:04:53.132Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/src/python/kungfu/assignment_runtime/authority.py",
+        "framework/core/tests/python/test_assignment_runtime.py"
+      ]
     }
   ],
-  "updatedAt": "2026-08-23T19:04:49.856Z",
-  "stateRoot": "sha256:5df164e4fed6b3a02fee54f861285f7f9aa7e43d1c8c886c5620af8b2db7d727"
+  "updatedAt": "2026-08-23T19:04:53.132Z",
+  "stateRoot": "sha256:1784ca67d564c4ecebde25fe90b37982c06198056ad98a499c649d845107c949"
 }
