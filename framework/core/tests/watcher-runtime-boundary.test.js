@@ -168,6 +168,16 @@ test('watcher reconnect fixture sequences readiness, owns process trees, and bou
     watcherProbeSource,
     /coordinatorExit: process\.platform === 'win32' \? 15_000 : 10_000/,
   );
+  assert.match(
+    watcherProbeSource,
+    /const coordinatorStopLocation = Object\.freeze\(\{\s*mode: 'live',\s*role: 'system',\s*namespace: 'master',\s*name: 'master',\s*\}\);/,
+    'the graceful stop request must target the exact coordinator wire',
+  );
+  assert.match(
+    watcherProbeSource,
+    /function requestCoordinatorStop\(\) \{\s*if \(watcher === null \|\| !watcher\.isLive\(\)\) return false;\s*return watcher\.requestStop\(coordinatorStopLocation\);\s*\}/,
+    'Windows must use the coordinator command channel when the watcher is live',
+  );
   assert.equal(
     watcherProbeSource.match(
       /waitForExitWithin\(child, reconnectDeadlines\.coordinatorExit\)/g,
@@ -178,6 +188,28 @@ test('watcher reconnect fixture sequences readiness, owns process trees, and bou
   assert.match(
     watcherProbeSource,
     /\['\/pid', String\(child\.pid\), '\/T', '\/F'\]/,
+  );
+  const stopCoordinatorSource = watcherProbeSource.slice(
+    watcherProbeSource.indexOf('async function stopCoordinator('),
+    watcherProbeSource.indexOf('function runChildProbe('),
+  );
+  const gracefulStopRequest = stopCoordinatorSource.indexOf(
+    'requestCoordinatorStop()',
+  );
+  const forcedTreeStop = stopCoordinatorSource.indexOf(
+    'forceWindowsProcessTree(child)',
+  );
+  assert.ok(
+    gracefulStopRequest >= 0,
+    'Windows requests graceful coordinator stop',
+  );
+  assert.ok(
+    forcedTreeStop >= 0,
+    'Windows retains a forced process-tree fallback',
+  );
+  assert.ok(
+    gracefulStopRequest < forcedTreeStop,
+    'the coordinator must publish deregistration before the forced fallback',
   );
   assert.match(
     watcherProbeSource,

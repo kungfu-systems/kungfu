@@ -15,6 +15,12 @@ const home = fs.realpathSync.native(
   fs.mkdtempSync(path.join(temporaryRoot, 'kfwr.')),
 );
 const runtimeDir = path.join(home, 'runtime');
+const coordinatorStopLocation = Object.freeze({
+  mode: 'live',
+  role: 'system',
+  namespace: 'master',
+  name: 'master',
+});
 let watcher = null;
 let coordinatorRuntime = null;
 
@@ -261,28 +267,41 @@ function signalPosixProcessTree(child, signal) {
   }
 }
 
+function requestCoordinatorStop() {
+  if (watcher === null || !watcher.isLive()) return false;
+  return watcher.requestStop(coordinatorStopLocation);
+}
+
+function forceWindowsProcessTree(child) {
+  const terminated = spawnSync(
+    'taskkill',
+    ['/pid', String(child.pid), '/T', '/F'],
+    { encoding: 'utf8', windowsHide: true },
+  );
+  if (terminated.error) {
+    throw new Error(`taskkill failed to launch: ${terminated.error.message}`);
+  }
+  if (terminated.status !== 0 && child.exitCode === null) {
+    throw new Error(
+      `taskkill failed (${terminated.status}): ${terminated.stderr.trim()}`,
+    );
+  }
+}
+
 async function stopCoordinator(child) {
   if (child.exitCode !== null || child.signalCode !== null) return;
   if (process.platform === 'win32') {
-    const terminated = spawnSync(
-      'taskkill',
-      ['/pid', String(child.pid), '/T', '/F'],
-      { encoding: 'utf8', windowsHide: true },
-    );
-    if (terminated.error) {
-      throw new Error(`taskkill failed to launch: ${terminated.error.message}`);
-    }
-    if (terminated.status !== 0 && child.exitCode === null) {
-      throw new Error(
-        `taskkill failed (${terminated.status}): ${terminated.stderr.trim()}`,
-      );
-    }
+    // A forced Windows process-tree exit cannot publish the coordinator's
+    // Deregister frame. Prefer the existing command channel so the watcher
+    // observes the lifecycle boundary, then retain taskkill as a bounded
+    // fallback for a missing or unresponsive coordinator.
+    if (!requestCoordinatorStop()) forceWindowsProcessTree(child);
   } else {
     signalPosixProcessTree(child, 'SIGTERM');
   }
   if (await waitForExitWithin(child, reconnectDeadlines.coordinatorExit)) return;
   if (process.platform === 'win32') {
-    child.kill();
+    forceWindowsProcessTree(child);
   } else {
     signalPosixProcessTree(child, 'SIGKILL');
   }
