@@ -11,13 +11,16 @@ const mode = process.argv[2];
 const coreDir = path.resolve(__dirname, '..', '..');
 const binding = require(path.join(coreDir, 'dist', 'kungfu', 'kungfu_node.node'));
 const temporaryRoot = process.platform === 'win32' ? os.tmpdir() : '/tmp';
-const home = fs.mkdtempSync(path.join(temporaryRoot, 'kfwr.'));
+const home = fs.realpathSync.native(
+  fs.mkdtempSync(path.join(temporaryRoot, 'kfwr.')),
+);
+const runtimeDir = path.join(home, 'runtime');
 let watcher = null;
 let coordinatorRuntime = null;
 
 function createWatcher() {
   return new binding.Watcher(
-    path.join(home, 'runtime'),
+    runtimeDir,
     `runtime_${mode}`,
     true,
     2,
@@ -158,7 +161,7 @@ function startCoordinator() {
       '--home',
       home,
       '--runtime-dir',
-      path.join(home, 'runtime'),
+      runtimeDir,
       '--low-latency',
     ],
     {

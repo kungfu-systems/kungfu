@@ -139,6 +139,25 @@ test('watcher dispatch bench follows and proves the load peer carrier', () => {
 test('watcher reconnect fixture sequences readiness, owns process trees, and bounds Windows transitions', () => {
   assert.match(
     watcherProbeSource,
+    /const home = fs\.realpathSync\.native\(\s*fs\.mkdtempSync\(/,
+    'the watcher and Python coordinator must share the native-canonical temp root',
+  );
+  assert.match(
+    watcherProbeSource,
+    /const runtimeDir = path\.join\(home, 'runtime'\);/,
+  );
+  assert.equal(
+    watcherProbeSource.match(/path\.join\(home, 'runtime'\)/g)?.length,
+    1,
+    'the fixture must derive its runtime path once',
+  );
+  assert.match(
+    watcherProbeSource,
+    /function createWatcher\(\) \{\s*return new binding\.Watcher\(\s*runtimeDir,/,
+  );
+  assert.match(watcherProbeSource, /'--runtime-dir',\s*runtimeDir,/);
+  assert.match(
+    watcherProbeSource,
     /watcherConnect: process\.platform === 'win32' \? 75_000 : 8_000/,
   );
   assert.match(
