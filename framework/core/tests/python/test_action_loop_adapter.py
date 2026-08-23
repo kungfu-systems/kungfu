@@ -83,3 +83,45 @@ def test_same_root_first_atlas_refresh_binds_receipt_then_replays(
     assert replay["writeOccurred"] is False
     assert replay["receipt"] == first["receipt"]
     assert len(calls) == 1
+
+
+def test_completion_claim_emits_canonical_context_roots(monkeypatch, tmp_path):
+    calls = []
+
+    def mission_action(_runtime_dir, intent_id, values):
+        calls.append((intent_id, values))
+        if intent_id == "claim-completion":
+            return {"receipt": {"payload_hash": _root("e")}}
+        if intent_id == "review-completion":
+            return {
+                "review": {"review_id": "review-a", "verdict": "fit"},
+                "review_root": _root("f"),
+                "continuation_plan_root": _root("1"),
+            }
+        assert intent_id == "decide-continuation"
+        return {"receipt": {"payload_hash": _root("2")}}
+
+    monkeypatch.setattr(action_loop, "_mission_action", mission_action)
+    payload = {
+        "loopId": "loop:completion",
+        "loopRoot": _root("3"),
+        "idempotencyKey": "completion",
+        "envelope": {"roles": {"atlas": {"root": _root("4")}}},
+        "completion": {
+            "missionId": "initiative-a",
+            "goalId": "assignment-a",
+            "statement": "Compatibility is proven.",
+            "reviewer": "independent-reviewer",
+            "reviewerSource": _root("5"),
+            "inputAtlasRoot": _root("6"),
+        },
+    }
+
+    result = action_loop.review_completion(tmp_path, payload)
+
+    assert result["status"] == "accepted"
+    claim_values = calls[0][1]
+    assert claim_values["inputContextRoot"] == _root("6")
+    assert claim_values["resultContextRoot"] == _root("4")
+    assert "inputAtlasRoot" not in claim_values
+    assert "resultAtlasRoot" not in claim_values

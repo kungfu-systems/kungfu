@@ -159,6 +159,29 @@ def _validate_command_arguments(command: Mapping[str, Any]) -> None:
         )
 
 
+def _normalize_completion_context_roots(
+    operation: str, arguments: Mapping[str, Any]
+) -> dict[str, Any]:
+    normalized = dict(arguments)
+    if operation != "claim-completion":
+        return normalized
+    for legacy, canonical in (
+        ("inputAtlasRoot", "inputContextRoot"),
+        ("resultAtlasRoot", "resultContextRoot"),
+    ):
+        if legacy not in normalized:
+            continue
+        if canonical in normalized and normalized[canonical] != normalized[legacy]:
+            raise LocalRuntimeError(
+                "invalid-command",
+                f"Conflicting {legacy} and {canonical} values",
+                details={"fields": [legacy, canonical]},
+            )
+        normalized.setdefault(canonical, normalized[legacy])
+        normalized.pop(legacy)
+    return normalized
+
+
 def _interrupted_command_rejection(
     pending: Mapping[str, Any], error: LocalRuntimeError
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -215,13 +238,14 @@ class WorkControlAuthority:
     ) -> dict[str, Any]:
         from kungfu import profile_sdk
 
+        adapter_values = _normalize_completion_context_roots(operation, values)
         try:
             return profile_sdk.invoke_member_adapter(
                 self._profile_source(),
                 self.runtime_dir,
                 "work-control-actions",
                 operation,
-                dict(values),
+                adapter_values,
                 authorized_action=write,
             )
         except profile_sdk.ProfileSdkError as error:

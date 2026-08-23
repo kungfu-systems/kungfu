@@ -570,8 +570,10 @@ def review_completion(
             "evidenceEpisodeIds": list(completion.get("evidenceEpisodeIds") or []),
             "goSet": list(completion.get("goSet") or [completion["goalId"]]),
             "acceptanceRoot": completion.get("acceptanceRoot") or "",
-            "inputAtlasRoot": completion.get("inputAtlasRoot") or "",
-            "resultAtlasRoot": payload["envelope"]["roles"]["atlas"]["root"],
+            "inputContextRoot": completion.get("inputContextRoot")
+            or completion.get("inputAtlasRoot")
+            or "",
+            "resultContextRoot": payload["envelope"]["roles"]["atlas"]["root"],
             "projectCutRoot": completion.get("projectCutRoot") or "",
             "projectCutReceiptRoot": completion.get("projectCutReceiptRoot") or "",
             "gitCommit": completion.get("gitCommit") or "",

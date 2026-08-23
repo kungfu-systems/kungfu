@@ -519,6 +519,29 @@ def test_native_work_control_receipts_do_not_leak_compatibility_vocabulary(
     assert status["phase"] == "admitted"
 
 
+def test_public_work_control_adapter_rejects_legacy_completion_root_names(tmp_path):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    _materialize_contract(SOURCE, runtime)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.invoke_member_adapter(
+            SOURCE,
+            runtime,
+            "work-control-actions",
+            "claim-completion",
+            {
+                "initiativeId": "initiative-a",
+                "assignmentId": "assignment-a",
+                "inputAtlasRoot": "sha256:legacy-input",
+                "resultAtlasRoot": "sha256:legacy-result",
+            },
+            authorized_action=True,
+        )
+
+    assert raised.value.diagnosis["code"] == "member-adapter-invoke-failed"
+
+
 def test_native_initiative_bundle_roundtrip(tmp_path):
     source = tmp_path / "source-runtime"
     destination = tmp_path / "destination-runtime"

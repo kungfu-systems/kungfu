@@ -639,6 +639,85 @@ def test_work_control_authority_strips_runtime_only_routing_ids(tmp_path, monkey
     assert result["authorityReceipt"]["result"]["coreReceipt"]["status"] == "imported"
 
 
+def test_work_control_authority_normalizes_legacy_completion_context_roots(
+    tmp_path, monkeypatch
+):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+    captured = {}
+
+    def invoke(_source, _runtime, member, operation, values, *, authorized_action):
+        captured.update(
+            member=member,
+            operation=operation,
+            values=values,
+            write=authorized_action,
+        )
+        return {"result": {"coreReceipt": {"status": "admitted"}}}
+
+    monkeypatch.setattr(authority, "_profile_source", lambda: str(PROFILE_SOURCE))
+    monkeypatch.setattr(profile_sdk, "invoke_member_adapter", invoke)
+    command = {
+        "type": "assignment.completion.claim",
+        "target": {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+        },
+        "arguments": {
+            "inputAtlasRoot": ROOT_A,
+            "resultAtlasRoot": ROOT_B,
+        },
+    }
+
+    authority.apply(command)
+
+    assert command["arguments"] == {
+        "inputAtlasRoot": ROOT_A,
+        "resultAtlasRoot": ROOT_B,
+    }
+    assert captured == {
+        "member": "work-control-actions",
+        "operation": "claim-completion",
+        "values": {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+            "inputContextRoot": ROOT_A,
+            "resultContextRoot": ROOT_B,
+        },
+        "write": True,
+    }
+
+
+def test_work_control_authority_rejects_conflicting_completion_context_roots(
+    tmp_path, monkeypatch
+):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+    invoked = False
+
+    def invoke(*_args, **_kwargs):
+        nonlocal invoked
+        invoked = True
+        return {}
+
+    monkeypatch.setattr(profile_sdk, "invoke_member_adapter", invoke)
+
+    with pytest.raises(LocalRuntimeError, match="Conflicting inputAtlasRoot"):
+        authority.apply(
+            {
+                "type": "assignment.completion.claim",
+                "target": {
+                    "initiativeId": "initiative-a",
+                    "assignmentId": "assignment-a",
+                },
+                "arguments": {
+                    "inputAtlasRoot": ROOT_A,
+                    "inputContextRoot": ROOT_B,
+                },
+            }
+        )
+
+    assert invoked is False
+
+
 def test_work_control_authority_snapshot_avoids_atlas_parity(tmp_path, monkeypatch):
     authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
     operations = []
@@ -1051,6 +1130,133 @@ def test_restart_deterministically_recovers_durable_interrupted_commands(
         )
         assert inspected["result"]["command"]["recovered"] is True
         assert len(authority._read()["effects"]) == 1
+    finally:
+        recovered.close()
+
+
+def test_restart_recovers_legacy_completion_roots_without_rewriting_command_identity(
+    tmp_path, monkeypatch
+):
+    runtime_dir = tmp_path / "legacy-completion-roots" / ".kungfu" / "runtime"
+    authority = WorkControlAuthority(runtime_dir, source=PROFILE_SOURCE)
+    native_state = {"phase": "stage-ready"}
+    claim_values = []
+
+    def invoke(
+        _source,
+        _runtime,
+        _member,
+        operation,
+        values,
+        *,
+        authorized_action=False,
+    ):
+        if operation == "portfolio":
+            return {
+                "result": {
+                    "assignments": [
+                        {
+                            "initiative_id": "initiative-a",
+                            "assignment_id": "assignment-a",
+                            "status": native_state["phase"],
+                        }
+                    ]
+                },
+                "profileSuiteRoot": ROOT_A,
+                "memberRoot": ROOT_B,
+            }
+        if operation == "assignment-status":
+            return {
+                "result": {
+                    "phase": native_state["phase"],
+                    "execution_claims": [],
+                    "active_lease": None,
+                }
+            }
+        if operation == "runtime-authority-status":
+            return {
+                "result": {
+                    "authority": {
+                        "state": "native-only",
+                        "write_authority": "kungfu-native",
+                    }
+                }
+            }
+        assert operation == "claim-completion"
+        assert authorized_action is True
+        claim_values.append(copy.deepcopy(values))
+        native_state["phase"] = "completion-claimed"
+        return {"result": {"coreReceipt": {"status": "admitted"}}}
+
+    monkeypatch.setattr(authority, "_profile_source", lambda: str(PROFILE_SOURCE))
+    monkeypatch.setattr(profile_sdk, "invoke_member_adapter", invoke)
+    runtime = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    snapshot = _handle(
+        runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+    )
+    command = _command(
+        snapshot["revision"],
+        command_id="command.legacy.completion",
+        idempotency_key="idem.legacy.completion",
+        command_type="assignment.completion.claim",
+    )
+    command["arguments"] = {
+        "inputAtlasRoot": ROOT_A,
+        "resultAtlasRoot": ROOT_B,
+    }
+    original_command = copy.deepcopy(command)
+    command_root = _root(command)
+    runtime._state["pending"] = {
+        "commandRoot": command_root,
+        "command": command,
+        "beforeRevision": snapshot["revision"],
+        "requestId": "legacy.completion",
+    }
+    runtime._save_state()
+    runtime.close()
+
+    persisted = json.loads(
+        (runtime_dir / "assignment-runtime" / "local-v1" / "state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert persisted["pending"]["command"] == original_command
+
+    recovered = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    try:
+        assert recovered._state["pending"] is None
+        record = recovered._state["commands"]["idem.legacy.completion"]
+        assert record["commandRoot"] == command_root
+        assert record["recovered"] is True
+        assert command == original_command
+        assert claim_values == [
+            {
+                "initiativeId": "initiative-a",
+                "assignmentId": "assignment-a",
+                "inputContextRoot": ROOT_A,
+                "resultContextRoot": ROOT_B,
+            }
+        ]
+        readback = _handle(
+            recovered,
+            _request("assignment.snapshot", "assignment.snapshot.read"),
+        )
+        assert readback["status"] == "ok"
+        assert readback["result"]["assignments"][0]["phase"] == ("completion-claimed")
     finally:
         recovered.close()
 
