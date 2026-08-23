@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5855,
+  "generation": 5856,
   "fencingCounter": 619,
   "policy": {
     "agingSeconds": 900,
@@ -39,7 +39,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:8c6fea202bf2203ad6184843f9d941b8642347498bb666a395d2950d0010568b",
     "issuedAt": "2026-08-23T01:07:29.931Z",
-    "expiresAt": "2026-08-23T02:37:29.931Z",
+    "expiresAt": "2026-08-23T02:38:10.492Z",
     "fencingToken": "sha256:8fc23f49fb8b2a4ef3bdb512e760213a87949a34e7ae33e4666e88b7c8e05cf9",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -44125,10 +44125,10 @@
       "sourceWorkflowRunId": 32602918652,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-23T01:07:24.935Z",
-      "updatedAt": "2026-08-23T01:07:29.931Z",
+      "updatedAt": "2026-08-23T01:08:10.492Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
+      "status": "proving",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/libkungfu/include/kungfu/runtime/nanomsg/socket.h",
@@ -44137,6 +44137,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-23T01:07:29.931Z",
-  "stateRoot": "sha256:fc5ba2685a295551852d02777e8ede53ef2d6dd84e76e9c31d248b7425149e85"
+  "updatedAt": "2026-08-23T01:08:10.492Z",
+  "stateRoot": "sha256:327f900704b85a2a036b54a1ecad5ed2e3a3b0ee6b685d5c66c99122e6486c89"
 }
