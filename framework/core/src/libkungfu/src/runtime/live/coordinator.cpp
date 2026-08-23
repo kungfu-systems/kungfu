@@ -61,6 +61,7 @@ void coordinator::on_exit() {
   state_service_.stop();
   notify_deregister_on_exit();
   notify_coordinator_deregister_on_exit();
+  on_notify();
 }
 
 void coordinator::notify_deregister_on_exit() {

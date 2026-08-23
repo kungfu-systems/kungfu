@@ -61,6 +61,15 @@ const signalSource = path.join(
   'util',
   'signal.cpp',
 );
+const coordinatorSource = path.join(
+  coreDir,
+  'src',
+  'libkungfu',
+  'src',
+  'runtime',
+  'live',
+  'coordinator.cpp',
+);
 const watcherProbeSource = fs.readFileSync(probe, 'utf8');
 const reconnectProbeSource = watcherProbeSource.slice(
   watcherProbeSource.indexOf('async function reconnectProbe()'),
@@ -119,6 +128,19 @@ test('watcher source does not reserve a libuv worker-pool job', () => {
     source,
     /"KungfuWatcherBridge", 1, 1/,
     'the native-to-Node bridge must remain single-slot and single-producer',
+  );
+});
+
+test('coordinator wakes watchers after publishing every exit deregistration', () => {
+  const source = fs.readFileSync(coordinatorSource, 'utf8');
+  const onExit = source.slice(
+    source.indexOf('void coordinator::on_exit()'),
+    source.indexOf('void coordinator::notify_deregister_on_exit()'),
+  );
+  assert.match(
+    onExit,
+    /notify_deregister_on_exit\(\);\s*notify_coordinator_deregister_on_exit\(\);\s*on_notify\(\);/,
+    'watchers must be notified only after peer and coordinator deregisters are written',
   );
 });
 
