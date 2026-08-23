@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import pytest
+
 from kungfu.agent import action_loop
 
 
@@ -125,3 +127,46 @@ def test_completion_claim_emits_canonical_context_roots(monkeypatch, tmp_path):
     assert claim_values["resultContextRoot"] == _root("4")
     assert "inputAtlasRoot" not in claim_values
     assert "resultAtlasRoot" not in claim_values
+
+
+@pytest.mark.parametrize(
+    ("canonical", "legacy"),
+    [(_root("6"), _root("7")), ("", _root("7"))],
+)
+def test_completion_claim_rejects_conflicting_context_roots_before_action(
+    monkeypatch, tmp_path, canonical, legacy
+):
+    calls = []
+    monkeypatch.setattr(
+        action_loop,
+        "_mission_action",
+        lambda *args: calls.append(args),
+    )
+    payload = {
+        "envelope": {"roles": {"atlas": {"root": _root("4")}}},
+        "completion": {
+            "missionId": "initiative-a",
+            "goalId": "assignment-a",
+            "statement": "Compatibility is proven.",
+            "reviewer": "independent-reviewer",
+            "reviewerSource": _root("5"),
+            "inputContextRoot": canonical,
+            "inputAtlasRoot": legacy,
+        },
+    }
+
+    with pytest.raises(ValueError, match="inputContextRoot conflicts"):
+        action_loop.review_completion(tmp_path, payload)
+
+    assert calls == []
+
+
+def test_completion_context_root_accepts_equal_canonical_and_legacy_values():
+    root = _root("6")
+
+    assert (
+        action_loop._completion_input_context_root(
+            {"inputContextRoot": root, "inputAtlasRoot": root}
+        )
+        == root
+    )

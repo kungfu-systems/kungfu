@@ -550,10 +550,25 @@ def _mission_action(
     ).authorize(intent_id, values, "action-loop")
 
 
+def _completion_input_context_root(completion: dict[str, Any]) -> Any:
+    if (
+        "inputContextRoot" in completion
+        and "inputAtlasRoot" in completion
+        and completion["inputContextRoot"] != completion["inputAtlasRoot"]
+    ):
+        raise ValueError(
+            "completion inputContextRoot conflicts with legacy inputAtlasRoot"
+        )
+    if "inputContextRoot" in completion:
+        return completion["inputContextRoot"] or ""
+    return completion.get("inputAtlasRoot") or ""
+
+
 def review_completion(
     runtime_dir: str | Path, payload: dict[str, Any]
 ) -> dict[str, Any]:
     completion = payload.get("completion") or {}
+    input_context_root = _completion_input_context_root(completion)
     common = {
         "missionId": completion["missionId"],
         "goalId": completion["goalId"],
@@ -570,9 +585,7 @@ def review_completion(
             "evidenceEpisodeIds": list(completion.get("evidenceEpisodeIds") or []),
             "goSet": list(completion.get("goSet") or [completion["goalId"]]),
             "acceptanceRoot": completion.get("acceptanceRoot") or "",
-            "inputContextRoot": completion.get("inputContextRoot")
-            or completion.get("inputAtlasRoot")
-            or "",
+            "inputContextRoot": input_context_root,
             "resultContextRoot": payload["envelope"]["roles"]["atlas"]["root"],
             "projectCutRoot": completion.get("projectCutRoot") or "",
             "projectCutReceiptRoot": completion.get("projectCutReceiptRoot") or "",
