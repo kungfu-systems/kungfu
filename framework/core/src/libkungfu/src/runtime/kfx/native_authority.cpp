@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include <kungfu/runtime/kfx/native_contract.h>
@@ -1021,6 +1022,108 @@ void require_runtime_fence(const runtime_warrant_view &current, const json &requ
     refuse("KF_KFX_RUNTIME_WARRANT_TERMINAL", "Runtime Warrant is already terminal");
 }
 
+struct runtime_transition_result {
+  json state;
+  json settlement = nullptr;
+  std::string event_name;
+};
+
+runtime_transition_result heartbeat_runtime_warrant(json state, const runtime_warrant_view &current,
+                                                    int64_t recorded_at) {
+  if (recorded_at <= state.at("heartbeatAt").get<int64_t>())
+    refuse("KF_KFX_RUNTIME_HEARTBEAT_DUPLICATE", "heartbeat time must advance monotonically");
+  if (recorded_at >= state.at("expiresAt").get<int64_t>())
+    refuse("KF_KFX_RUNTIME_WARRANT_EXPIRED", "Runtime Warrant lease has expired");
+  if (recorded_at > state.at("heartbeatDeadline").get<int64_t>())
+    refuse("KF_KFX_RUNTIME_HEARTBEAT_STALE", "Runtime Warrant heartbeat deadline was missed");
+  state["heartbeatAt"] = recorded_at;
+  state["heartbeatDeadline"] = bounded_runtime_deadline(recorded_at, current.warrant.at("heartbeatTtl").get<int64_t>(),
+                                                        state.at("expiresAt").get<int64_t>());
+  return {std::move(state), nullptr, "heartbeat"};
+}
+
+runtime_transition_result revoke_runtime_warrant(json state, const runtime_warrant_view &current, const json &request,
+                                                 int64_t recorded_at) {
+  const auto authority_root = required_text(request, "revocationAuthorityRoot", "request");
+  if (!is_content_root(authority_root))
+    refuse("KF_KFX_RUNTIME_REVOCATION_INVALID", "revocation authority must be an exact content root");
+  const auto reason = required_text(request, "reason", "request");
+  state["state"] = "revoked";
+  state["revocationRoot"] = root_of({{"schema", "kungfu.kfx.runtime-revocation/v1"},
+                                     {"warrantRoot", current.warrant.at("warrantRoot")},
+                                     {"authorityRoot", authority_root},
+                                     {"reason", reason},
+                                     {"recordedAt", recorded_at}});
+  json settlement = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
+                     {"warrantRoot", current.warrant.at("warrantRoot")},
+                     {"generation", state.at("generation")},
+                     {"fencingToken", state.at("fencingToken")},
+                     {"outcome", "revoked"},
+                     {"terminalReason", reason},
+                     {"residualResponsibility", state.at("residualResponsibility")},
+                     {"residualResponsibilityDisposition", "retained-by-kungfu-core"},
+                     {"settledBy", authority_root},
+                     {"recordedAt", recorded_at}};
+  state["settlementRoot"] = root_of(settlement);
+  return {std::move(state), std::move(settlement), "revoked"};
+}
+
+runtime_transition_result settle_runtime_warrant(json state, const runtime_warrant_view &current, const json &request,
+                                                 int64_t recorded_at) {
+  if (recorded_at >= state.at("expiresAt").get<int64_t>() || recorded_at > state.at("heartbeatDeadline").get<int64_t>())
+    refuse("KF_KFX_RUNTIME_WARRANT_EXPIRED", "expired or heartbeat-stale authority cannot settle as live use");
+  const auto outcome = required_text(request, "outcome", "request");
+  const auto disposition = required_text(request, "residualResponsibilityDisposition", "request");
+  json settlement = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
+                     {"warrantRoot", current.warrant.at("warrantRoot")},
+                     {"generation", state.at("generation")},
+                     {"fencingToken", state.at("fencingToken")},
+                     {"outcome", outcome},
+                     {"residualResponsibility", state.at("residualResponsibility")},
+                     {"residualResponsibilityDisposition", disposition},
+                     {"settledBy", state.at("holder")},
+                     {"recordedAt", recorded_at}};
+  state["state"] = "settled";
+  state["settlementRoot"] = root_of(settlement);
+  return {std::move(state), std::move(settlement), "settled"};
+}
+
+runtime_transition_result recover_runtime_warrant(json state, const runtime_warrant_view &current,
+                                                  int64_t recorded_at) {
+  const bool lease_expired = recorded_at >= state.at("expiresAt").get<int64_t>();
+  const bool heartbeat_expired = recorded_at > state.at("heartbeatDeadline").get<int64_t>();
+  if (!lease_expired && !heartbeat_expired)
+    refuse("KF_KFX_RUNTIME_RECOVERY_NOT_DUE", "Core recovery requires an expired lease or missed heartbeat");
+  const auto terminal_reason = lease_expired ? "lease-expired" : "heartbeat-expired";
+  json settlement = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
+                     {"warrantRoot", current.warrant.at("warrantRoot")},
+                     {"generation", state.at("generation")},
+                     {"fencingToken", state.at("fencingToken")},
+                     {"outcome", "recovered"},
+                     {"terminalReason", terminal_reason},
+                     {"residualResponsibility", state.at("residualResponsibility")},
+                     {"residualResponsibilityDisposition", "retained-by-kungfu-core"},
+                     {"settledBy", "kungfu-core/kfx-recovery"},
+                     {"recordedAt", recorded_at}};
+  state["state"] = "recovered";
+  state["settlementRoot"] = root_of(settlement);
+  return {std::move(state), std::move(settlement), terminal_reason};
+}
+
+runtime_transition_result prepare_runtime_warrant_transition(const std::string &action,
+                                                             const runtime_warrant_view &current, const json &request,
+                                                             int64_t recorded_at) {
+  if (action == "runtime-warrant-heartbeat")
+    return heartbeat_runtime_warrant(current.state, current, recorded_at);
+  if (action == "runtime-warrant-revoke")
+    return revoke_runtime_warrant(current.state, current, request, recorded_at);
+  if (action == "runtime-warrant-settle")
+    return settle_runtime_warrant(current.state, current, request, recorded_at);
+  if (action == "runtime-warrant-recover")
+    return recover_runtime_warrant(current.state, current, recorded_at);
+  refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "unsupported Runtime Warrant transition");
+}
+
 json transition_runtime_warrant(const std::string &action, const json &request, const std::string &runtime_dir) {
   const auto package_key = required_text(request, "packageKey", "request");
   const auto host = required_text(request, "host", "request");
@@ -1028,89 +1131,10 @@ json transition_runtime_warrant(const std::string &action, const json &request, 
   const bool holder_action = action == "runtime-warrant-heartbeat" || action == "runtime-warrant-settle";
   require_runtime_fence(current, request, holder_action);
   const auto recorded_at = runtime_time(request, "recordedAt");
-  auto state = current.state;
-  json settlement = nullptr;
-  std::string event_name;
-  if (action == "runtime-warrant-heartbeat") {
-    if (recorded_at <= state.at("heartbeatAt").get<int64_t>())
-      refuse("KF_KFX_RUNTIME_HEARTBEAT_DUPLICATE", "heartbeat time must advance monotonically");
-    if (recorded_at >= state.at("expiresAt").get<int64_t>())
-      refuse("KF_KFX_RUNTIME_WARRANT_EXPIRED", "Runtime Warrant lease has expired");
-    if (recorded_at > state.at("heartbeatDeadline").get<int64_t>())
-      refuse("KF_KFX_RUNTIME_HEARTBEAT_STALE", "Runtime Warrant heartbeat deadline was missed");
-    state["heartbeatAt"] = recorded_at;
-    state["heartbeatDeadline"] = bounded_runtime_deadline(
-        recorded_at, current.warrant.at("heartbeatTtl").get<int64_t>(), state.at("expiresAt").get<int64_t>());
-    event_name = "heartbeat";
-  } else if (action == "runtime-warrant-revoke") {
-    const auto authority_root = required_text(request, "revocationAuthorityRoot", "request");
-    if (!is_content_root(authority_root))
-      refuse("KF_KFX_RUNTIME_REVOCATION_INVALID", "revocation authority must be an exact content root");
-    const auto reason = required_text(request, "reason", "request");
-    state["state"] = "revoked";
-    state["revocationRoot"] = root_of({{"schema", "kungfu.kfx.runtime-revocation/v1"},
-                                       {"warrantRoot", current.warrant.at("warrantRoot")},
-                                       {"authorityRoot", authority_root},
-                                       {"reason", reason},
-                                       {"recordedAt", recorded_at}});
-    const json settlement_identity = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
-                                      {"warrantRoot", current.warrant.at("warrantRoot")},
-                                      {"generation", state.at("generation")},
-                                      {"fencingToken", state.at("fencingToken")},
-                                      {"outcome", "revoked"},
-                                      {"terminalReason", reason},
-                                      {"residualResponsibility", state.at("residualResponsibility")},
-                                      {"residualResponsibilityDisposition", "retained-by-kungfu-core"},
-                                      {"settledBy", authority_root},
-                                      {"recordedAt", recorded_at}};
-    const auto settlement_root = root_of(settlement_identity);
-    settlement = settlement_identity;
-    state["settlementRoot"] = settlement_root;
-    event_name = "revoked";
-  } else if (action == "runtime-warrant-settle") {
-    if (recorded_at >= state.at("expiresAt").get<int64_t>() ||
-        recorded_at > state.at("heartbeatDeadline").get<int64_t>())
-      refuse("KF_KFX_RUNTIME_WARRANT_EXPIRED", "expired or heartbeat-stale authority cannot settle as live use");
-    const auto outcome = required_text(request, "outcome", "request");
-    const auto disposition = required_text(request, "residualResponsibilityDisposition", "request");
-    const json settlement_identity = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
-                                      {"warrantRoot", current.warrant.at("warrantRoot")},
-                                      {"generation", state.at("generation")},
-                                      {"fencingToken", state.at("fencingToken")},
-                                      {"outcome", outcome},
-                                      {"residualResponsibility", state.at("residualResponsibility")},
-                                      {"residualResponsibilityDisposition", disposition},
-                                      {"settledBy", state.at("holder")},
-                                      {"recordedAt", recorded_at}};
-    const auto settlement_root = root_of(settlement_identity);
-    settlement = settlement_identity;
-    state["state"] = "settled";
-    state["settlementRoot"] = settlement_root;
-    event_name = "settled";
-  } else if (action == "runtime-warrant-recover") {
-    const bool lease_expired = recorded_at >= state.at("expiresAt").get<int64_t>();
-    const bool heartbeat_expired = recorded_at > state.at("heartbeatDeadline").get<int64_t>();
-    if (!lease_expired && !heartbeat_expired)
-      refuse("KF_KFX_RUNTIME_RECOVERY_NOT_DUE", "Core recovery requires an expired lease or missed heartbeat");
-    const auto terminal_reason = lease_expired ? "lease-expired" : "heartbeat-expired";
-    const json settlement_identity = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
-                                      {"warrantRoot", current.warrant.at("warrantRoot")},
-                                      {"generation", state.at("generation")},
-                                      {"fencingToken", state.at("fencingToken")},
-                                      {"outcome", "recovered"},
-                                      {"terminalReason", terminal_reason},
-                                      {"residualResponsibility", state.at("residualResponsibility")},
-                                      {"residualResponsibilityDisposition", "retained-by-kungfu-core"},
-                                      {"settledBy", "kungfu-core/kfx-recovery"},
-                                      {"recordedAt", recorded_at}};
-    const auto settlement_root = root_of(settlement_identity);
-    settlement = settlement_identity;
-    state["state"] = "recovered";
-    state["settlementRoot"] = settlement_root;
-    event_name = terminal_reason;
-  } else {
-    refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "unsupported Runtime Warrant transition");
-  }
+  auto transition = prepare_runtime_warrant_transition(action, current, request, recorded_at);
+  auto &state = transition.state;
+  const auto &settlement = transition.settlement;
+  const auto &event_name = transition.event_name;
   state["recordedAt"] = recorded_at;
   const auto action_id = "kfx-runtime-" + event_name + ":" +
                          sha256(current.warrant.at("warrantRoot").get<std::string>() + std::to_string(recorded_at) +

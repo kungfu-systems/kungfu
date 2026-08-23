@@ -174,24 +174,25 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
     ) {
       fail(`${row.key} normative projection drifts from KFD metadata`);
     }
-    if (
-      typeof row.implementation?.status !== 'string' ||
-      !Array.isArray(row.implementation?.surfaces) ||
-      typeof row.verification?.status !== 'string' ||
-      !Array.isArray(row.verification?.evidenceRoots) ||
-      typeof row.buildchain?.gateStatus !== 'string' ||
-      typeof row.buildchain?.protocol !== 'string' ||
-      typeof row.exposure?.sdk !== 'string' ||
-      typeof row.exposure?.cli !== 'string' ||
-      typeof row.exposure?.docs !== 'string' ||
-      typeof row.releaseQualification?.status !== 'string' ||
-      typeof row.releaseQualification?.shippedSupport !== 'boolean' ||
-      !Array.isArray(row.releaseQualification?.evidenceRoots) ||
-      typeof row.claimClass !== 'string' ||
-      !Array.isArray(row.knownLimitations) ||
-      typeof row.owner !== 'string' ||
-      typeof row.nextGate !== 'string'
-    ) {
+    const missingDimension = [
+      typeof row.implementation?.status !== 'string',
+      !Array.isArray(row.implementation?.surfaces),
+      typeof row.verification?.status !== 'string',
+      !Array.isArray(row.verification?.evidenceRoots),
+      typeof row.buildchain?.gateStatus !== 'string',
+      typeof row.buildchain?.protocol !== 'string',
+      typeof row.exposure?.sdk !== 'string',
+      typeof row.exposure?.cli !== 'string',
+      typeof row.exposure?.docs !== 'string',
+      typeof row.releaseQualification?.status !== 'string',
+      typeof row.releaseQualification?.shippedSupport !== 'boolean',
+      !Array.isArray(row.releaseQualification?.evidenceRoots),
+      typeof row.claimClass !== 'string',
+      !Array.isArray(row.knownLimitations),
+      typeof row.owner !== 'string',
+      typeof row.nextGate !== 'string',
+    ].some(Boolean);
+    if (missingDimension) {
       fail(`${row.key} is missing one or more required support dimensions`);
     }
     for (const evidence of [
@@ -225,18 +226,19 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
     );
   }
   const kfd6 = byKey['kfd-6'];
-  if (
-    kfd6.supportStatus !== 'unsupported' ||
-    kfd6.implementation.status !== 'not-implemented' ||
-    kfd6.implementation.surfaces.length !== 0 ||
-    kfd6.verification.status !== 'none' ||
-    kfd6.verification.evidenceRoots.length !== 0 ||
-    kfd6.buildchain.gateStatus !== 'not-applicable' ||
-    kfd6.releaseQualification.status !== 'not-qualified' ||
-    kfd6.releaseQualification.shippedSupport ||
-    kfd6.releaseQualification.evidenceRoots.length !== 0 ||
-    kfd6.claimClass !== 'explicit-non-adoption'
-  ) {
+  const kfd6BoundaryDrift = [
+    kfd6.supportStatus !== 'unsupported',
+    kfd6.implementation.status !== 'not-implemented',
+    kfd6.implementation.surfaces.length !== 0,
+    kfd6.verification.status !== 'none',
+    kfd6.verification.evidenceRoots.length !== 0,
+    kfd6.buildchain.gateStatus !== 'not-applicable',
+    kfd6.releaseQualification.status !== 'not-qualified',
+    kfd6.releaseQualification.shippedSupport,
+    kfd6.releaseQualification.evidenceRoots.length !== 0,
+    kfd6.claimClass !== 'explicit-non-adoption',
+  ].some(Boolean);
+  if (kfd6BoundaryDrift) {
     fail('KFD-6 must remain an explicit unsupported non-adoption');
   }
   const kfd6Precursor = kfd6.precursorEvidence;
@@ -254,16 +256,17 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
   ];
   const expectedKfd6ClaimBoundary =
     'Work Design history selection, outcome estimation, and offline policy replay are bounded advisory precursors only. They do not implement, verify, activate, or ship KFD-6 autonomous discovery.';
-  if (
-    kfd6Precursor?.status !== 'non-conforming-evidence' ||
+  const kfd6PrecursorDrift = [
+    kfd6Precursor?.status !== 'non-conforming-evidence',
     kfd6Precursor.surfaces?.join(',') !==
-      expectedKfd6PrecursorSurfaces.join(',') ||
+      expectedKfd6PrecursorSurfaces.join(','),
     kfd6Precursor.evidenceRoots?.map((entry) => entry.path).join(',') !==
-      expectedKfd6PrecursorSurfaces.join(',') ||
+      expectedKfd6PrecursorSurfaces.join(','),
     kfd6Precursor.missingGates?.join(',') !==
-      expectedKfd6MissingGates.join(',') ||
-    kfd6Precursor.claimBoundary !== expectedKfd6ClaimBoundary
-  ) {
+      expectedKfd6MissingGates.join(','),
+    kfd6Precursor.claimBoundary !== expectedKfd6ClaimBoundary,
+  ].some(Boolean);
+  if (kfd6PrecursorDrift) {
     fail('KFD-6 precursor evidence must remain bounded and non-conforming');
   }
   for (const evidence of kfd6Precursor.evidenceRoots) {
@@ -344,44 +347,43 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
   ];
   const expectedKfd10Evidence =
     'framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json';
-  if (
-    kfd10.implementation.status !== 'implemented-specialized-witness' ||
-    kfd10.implementation.surfaces.join(',') !==
-      expectedKfd10Surfaces.join(',') ||
-    kfd10.verification.status !== 'non-conforming-evidence' ||
-    kfd10.verification.evidenceRoots.length !== 1 ||
-    kfd10.verification.evidenceRoots[0].path !== expectedKfd10Evidence ||
-    kfd10.buildchain.gateStatus !== 'not-applicable-draft' ||
-    kfd10.releaseQualification.status !== 'forbidden-while-draft' ||
-    kfd10.releaseQualification.shippedSupport ||
-    kfd10.exposure.cli !== 'not-product-exposed'
-  ) {
+  const kfd10BoundaryDrift = [
+    kfd10.implementation.status !== 'implemented-specialized-witness',
+    kfd10.implementation.surfaces.join(',') !== expectedKfd10Surfaces.join(','),
+    kfd10.verification.status !== 'non-conforming-evidence',
+    kfd10.verification.evidenceRoots.length !== 1,
+    kfd10.verification.evidenceRoots[0]?.path !== expectedKfd10Evidence,
+    kfd10.buildchain.gateStatus !== 'not-applicable-draft',
+    kfd10.releaseQualification.status !== 'forbidden-while-draft',
+    kfd10.releaseQualification.shippedSupport,
+    kfd10.exposure.cli !== 'not-product-exposed',
+  ].some(Boolean);
+  if (kfd10BoundaryDrift) {
     fail('KFD-10 specialized witness boundary drifted');
   }
   const kfd10Witness = readJson(
     checkoutFile(expectedKfd10Evidence, 'KFD-10 witness'),
   );
-  if (
-    kfd10Witness.schema !== 'kungfu.kfx.kfd-10-adopter-evidence/v1' ||
-    kfd10Witness.standard !== 'KFD-10' ||
-    kfd10Witness.claimClass !== 'draft-adopter-evidence' ||
-    kfd10Witness.normative?.status !== 'draft' ||
-    kfd10Witness.normative?.revision !== 2 ||
-    kfd10Witness.normative?.documentRoot !== kfd10.normative.documentSha256 ||
-    kfd10Witness.boundary?.verificationStatus !== 'non-conforming-evidence' ||
-    kfd10Witness.boundary?.buildchainGate !== 'not-applicable-draft' ||
-    kfd10Witness.boundary?.releaseQualification !== 'forbidden-while-draft' ||
-    kfd10Witness.boundary?.shippedSupport !== false ||
-    kfd10Witness.authoritySeparation?.capabilityGrantIsNotWarrant !== true ||
-    kfd10Witness.authoritySeparation?.kfdEvidenceIsNotRuntimePrivilege !==
-      true ||
-    kfd10Witness.authoritySeparation?.episodeIsNotRetroactiveAuthority !==
-      true ||
-    kfd10Witness.authoritySeparation?.settlementIsNotWarrant !== true ||
-    kfd10Witness.authoritySeparation?.recoveryOwnedByCore !== true ||
-    !Array.isArray(kfd10Witness.sourceRoots) ||
-    kfd10Witness.sourceRoots.length !== 7
-  ) {
+  const malformedKfd10Witness = [
+    kfd10Witness.schema !== 'kungfu.kfx.kfd-10-adopter-evidence/v1',
+    kfd10Witness.standard !== 'KFD-10',
+    kfd10Witness.claimClass !== 'draft-adopter-evidence',
+    kfd10Witness.normative?.status !== 'draft',
+    kfd10Witness.normative?.revision !== 2,
+    kfd10Witness.normative?.documentRoot !== kfd10.normative.documentSha256,
+    kfd10Witness.boundary?.verificationStatus !== 'non-conforming-evidence',
+    kfd10Witness.boundary?.buildchainGate !== 'not-applicable-draft',
+    kfd10Witness.boundary?.releaseQualification !== 'forbidden-while-draft',
+    kfd10Witness.boundary?.shippedSupport !== false,
+    kfd10Witness.authoritySeparation?.capabilityGrantIsNotWarrant !== true,
+    kfd10Witness.authoritySeparation?.kfdEvidenceIsNotRuntimePrivilege !== true,
+    kfd10Witness.authoritySeparation?.episodeIsNotRetroactiveAuthority !== true,
+    kfd10Witness.authoritySeparation?.settlementIsNotWarrant !== true,
+    kfd10Witness.authoritySeparation?.recoveryOwnedByCore !== true,
+    !Array.isArray(kfd10Witness.sourceRoots),
+    kfd10Witness.sourceRoots?.length !== 7,
+  ].some(Boolean);
+  if (malformedKfd10Witness) {
     fail('KFD-10 specialized witness is malformed or claim-widened');
   }
   for (const source of kfd10Witness.sourceRoots) {

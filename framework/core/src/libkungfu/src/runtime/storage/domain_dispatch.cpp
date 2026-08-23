@@ -26,6 +26,13 @@ namespace kungfu::runtime::storage_service_api::detail {
 namespace yy_storage = kungfu::yijinjing::storage;
 namespace yy_enums = kungfu::yijinjing::enums;
 
+bool is_kfx_registry_action(const std::string &action) {
+  static const std::string actions =
+      "|list|inspect|resolve|plan|status|assess|apply|authorize-host|history|runtime-warrant-issue|"
+      "runtime-warrant-heartbeat|runtime-warrant-revoke|runtime-warrant-settle|runtime-warrant-recover|kfd-10-witness|";
+  return actions.contains("|" + action + "|");
+}
+
 class file_storage_json_edge_service {
 public:
   [[nodiscard]] nlohmann::json status(const storage_service_options &options) const {
@@ -260,11 +267,7 @@ public:
       return kfx::validate_native_kfx_document(text_or(options.operation_options, "kind"),
                                                object_or_empty(options.operation_options, "document"));
     }
-    if (action == "list" || action == "inspect" || action == "resolve" || action == "plan" || action == "status" ||
-        action == "assess" || action == "apply" || action == "authorize-host" || action == "history" ||
-        action == "runtime-warrant-issue" || action == "runtime-warrant-heartbeat" ||
-        action == "runtime-warrant-revoke" || action == "runtime-warrant-settle" ||
-        action == "runtime-warrant-recover" || action == "kfd-10-witness") {
+    if (is_kfx_registry_action(action)) {
       return kfx::query_native_kfx_registry(action, object_or_empty(options.operation_options, "request"),
                                             options.runtime_dir);
     }

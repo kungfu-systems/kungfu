@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:67cf5b282fdf3f72ee3277ff07a490cc5d70205185554c29e2aab056b44bf007"
+            "sha256": "sha256:660f4ff4c40450ddd59367850da13c37e3ae2b70e162c9dd8f9d8cf833a571ab"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -542,7 +542,7 @@
         "evidenceRoots": [
           {
             "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
-            "sha256": "sha256:45463f32d003b0c05e0bdb4b7f609792e45dbbd5f8396c9558c1686b3eb8818c"
+            "sha256": "sha256:621faa1c11c0670d95db01c17ad00fca44d22c89f0b65299664c9a20da981d06"
           }
         ]
       },

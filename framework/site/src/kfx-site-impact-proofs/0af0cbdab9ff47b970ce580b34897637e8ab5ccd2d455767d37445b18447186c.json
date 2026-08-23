@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "df20d7082b751cdf79072deb47bbce3f64149f1b",
-  "changeRoot": "sha256:00e0a9b89f9d02eaf268e25600667366ef895129c429169192b4331ee8b3e7a4",
+  "changeRoot": "sha256:6badf9269d76826dd138c13a0eb0f4c270539d223a8d883ef5349e665de27c94",
   "changes": [
     {
       "baseContentRoot": "sha256:294fda122eb5c5ae1f2b60bb6e93d16c0879412173f39481eff5cd95e243f208",
@@ -11,19 +11,19 @@
     },
     {
       "baseContentRoot": "sha256:abf7e8d5d4f204ba65e3e9281c16bcfcee420742a62b7f9faf50c016bd9c7997",
-      "contentRoot": "sha256:67cf5b282fdf3f72ee3277ff07a490cc5d70205185554c29e2aab056b44bf007",
+      "contentRoot": "sha256:660f4ff4c40450ddd59367850da13c37e3ae2b70e162c9dd8f9d8cf833a571ab",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:99b21def0f82e519e5bbd04705471b4d5d99c8bf5134b88fd78da4c8b31e116a",
-      "contentRoot": "sha256:845112d43a5d6144deacb17a3f0057ccb54cea5b958dbb890409f7920a7ca50a",
+      "contentRoot": "sha256:e1fafb8ed4db4ef26e2558cf3285a7750c205b68115da16b9d36710fd18dc7ec",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:85a28ac3ed22a548d19d804fa0f1d412950f17cc06e1a0d7cce86bdaf026b66f",
-      "contentRoot": "sha256:aef9e41f9f99a835cbda606f863f27af9ffd60ae62fa36c72d729a01c820bf2f",
+      "contentRoot": "sha256:7cf377a89929bea94f6971e6ce573c64a993004443bbc672747feb4d55a8d39f",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -47,13 +47,13 @@
     },
     {
       "baseContentRoot": "sha256:abf7e8d5d4f204ba65e3e9281c16bcfcee420742a62b7f9faf50c016bd9c7997",
-      "contentRoot": "sha256:67cf5b282fdf3f72ee3277ff07a490cc5d70205185554c29e2aab056b44bf007",
+      "contentRoot": "sha256:660f4ff4c40450ddd59367850da13c37e3ae2b70e162c9dd8f9d8cf833a571ab",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:2698e26e0370ef6f118a4a09a1a4ddeaea3ef6e3e6d26412b95b20af96ec5636",
-      "contentRoot": "sha256:aef9e41f9f99a835cbda606f863f27af9ffd60ae62fa36c72d729a01c820bf2f",
+      "contentRoot": "sha256:7cf377a89929bea94f6971e6ce573c64a993004443bbc672747feb4d55a8d39f",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -107,7 +107,7 @@
     },
     {
       "baseContentRoot": "sha256:b835b37e36308d2955249e5674e1c78fdd2ae2d1c40e77eb7efc70bf42fd8ad9",
-      "contentRoot": "sha256:17fbf0113e9e163b46581ea31494ba35f87731680c2dae868386f6d21fd39f8c",
+      "contentRoot": "sha256:63537015a9a7e1082e44bfd76d1a1d7b0acd60992bc9e85f215ac202e852136f",
       "path": "framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp",
       "status": "modified"
     },
@@ -125,7 +125,7 @@
     },
     {
       "baseContentRoot": "sha256:771432b65305c10aa18cc64d85b352d235fd99565942310df929bce1cd70aea3",
-      "contentRoot": "sha256:29a3cc46a728393f424d533790477d83feb8e3ca3d9fd2c4c72a206e0301d201",
+      "contentRoot": "sha256:535b3dcd6058d70f7ecc8e16029e133e95fca942c4f7bc77235cc29ec6f10417",
       "path": "framework/core/src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
       "status": "modified"
     },
@@ -159,7 +159,7 @@
       "status": "modified"
     },
     {
-      "contentRoot": "sha256:45463f32d003b0c05e0bdb4b7f609792e45dbbd5f8396c9558c1686b3eb8818c",
+      "contentRoot": "sha256:621faa1c11c0670d95db01c17ad00fca44d22c89f0b65299664c9a20da981d06",
       "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
       "status": "added"
     },
@@ -189,7 +189,7 @@
     },
     {
       "baseContentRoot": "sha256:b888af9e163a7be1cb2adcbe65a2f978584120bd3cd3d134c65dced9a35d1274",
-      "contentRoot": "sha256:4ea034c0c5ab1123f3d2c9ca12f1071b04aca1738e611da90b616962f9a3c6fd",
+      "contentRoot": "sha256:04fe48633f5242b1acc74a07356caeae438740c3abd0b2e03c2e1aea741c90b9",
       "path": "scripts/kfd-support-matrix.mjs",
       "status": "modified"
     },
@@ -207,11 +207,11 @@
     "qualification-status",
     "sdk-cli"
   ],
-  "rationale": "The replayed KFX Runtime Warrant storage adapter, native authority tests, and Site impact mappings preserve public Site Bundle contracts, behavior, and reader journeys.",
+  "rationale": "Replayed KFD-10 Runtime Warrant evidence and authority surfaces on the current protected base; no Site Bundle implementation is required because this slice changes native/runtime evidence only and preserves draft, non-product-exposed claims.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:c5cf08917eb50a518f31bd7ca41e35a6211a3df6ca0bbde90407fcaf05f3d93a"
+  "proofRoot": "sha256:0af0cbdab9ff47b970ce580b34897637e8ab5ccd2d455767d37445b18447186c"
 }
