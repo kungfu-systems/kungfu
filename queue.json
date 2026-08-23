@@ -3,15 +3,59 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5966,
-  "fencingCounter": 624,
+  "generation": 5967,
+  "fencingCounter": 625,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:0283ff29bf1ea4a5f00770943f9be5dadfb292b777a787bc579b22feb8b770b7",
+    "pullRequestNumber": 3384,
+    "sourceHead": "915910fcc51ff1828422353ac089861b72830a86",
+    "assignmentRoot": "sha256:115ac2d49916d829ec87233e585076f6f82b26dc8db09848c5609b44fd090b9d",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:94d32ab6d7b638b05f6406d7d78a8cf7ba81edee123544cd8ef0f72932c894f2",
+    "sourcePatchRoot": "sha256:3c6191d500365aff177c43a07bf390e456dd60b48a322e80f9781042705f6c3f",
+    "sourceProofRoot": "sha256:ba7e7cf89d8c247d7a13d6810a6106e4129bed783abf2f06844dbe235d0493b4",
+    "planRoot": "sha256:e5c275a17ec04375569b1e58e47b40a135d40615f4204506cd258903b76fd0ff",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:d6973879375646617bae37a73f4cf379a96a1f9353774c8c720428c402b43405",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "affectedPaths": [
+      ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
+      ".buildchain/kfd/kfd-2/release-claims.json",
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      ".buildchain/kfd/support-matrix.json",
+      ".xinfa/portable-atlas-classification.json.gz",
+      ".xinfa/product-atlas-bundle.json",
+      "developer/sdk/kfd/kfd-2/claims/agent-onboarding-pack.json",
+      "developer/sdk/kfd/kfd-2/release-claims.json",
+      "developer/sdk/kfd/support-matrix.json",
+      "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+      "framework/core/src/python/kungfu/cli/commands/workspace.py",
+      "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+      "framework/core/src/python/kungfu/workspace_federation.py",
+      "framework/core/src/python/kungfu/workspace_federation_projection.py",
+      "framework/core/src/python/kungfu/workspace_history/__init__.py",
+      "framework/core/tests/python/test_workspace_history.py"
+    ],
+    "sourceWorkflowRunId": 32633635346,
+    "deliveryClass": "native-proof-required",
+    "generation": 625,
+    "phase": "provisional",
+    "expectedOldStateRoot": "sha256:68669b0102dfa6522c125fe4e3de617a1623cf1cefafa78ca7999dca44b51244",
+    "issuedAt": "2026-08-23T10:30:18.193Z",
+    "expiresAt": "2026-08-23T12:00:18.193Z",
+    "fencingToken": "sha256:fb6718d71cf7c6bfeb4dd3752a463c678581482bc9ae5daad189818b5d39a2c1",
+    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -44348,10 +44392,10 @@
       "sourceWorkflowRunId": 32633635346,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-23T10:30:14.185Z",
-      "updatedAt": "2026-08-23T10:30:14.185Z",
+      "updatedAt": "2026-08-23T10:30:18.193Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
@@ -44373,6 +44417,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-23T10:30:14.185Z",
-  "stateRoot": "sha256:68669b0102dfa6522c125fe4e3de617a1623cf1cefafa78ca7999dca44b51244"
+  "updatedAt": "2026-08-23T10:30:18.193Z",
+  "stateRoot": "sha256:2989aa515b8dd4c88acbaead7851c01009063cc06a1b65401dd86259f01596f3"
 }
