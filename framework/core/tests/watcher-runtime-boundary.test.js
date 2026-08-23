@@ -169,6 +169,24 @@ test('coordinator flushes exit deregistrations before a blocking shutdown notice
   );
 });
 
+test('watcher flushes a coordinator stop before its blocking notice', () => {
+  const source = fs.readFileSync(watcherSource, 'utf8');
+  const requestStop = source.slice(
+    source.indexOf('Napi::Value Watcher::RequestStop'),
+    source.indexOf('Napi::Value Watcher::PublishState'),
+  );
+  assert.match(
+    requestStop,
+    /std::lock_guard<std::mutex> guard\(feed_mutex_\);[\s\S]*?auto writer = get_writer\(get_coordinator_command_uid\(\)\);/,
+    'the Node thread must serialize the coordinator command with the native step thread',
+  );
+  assert.match(
+    requestStop,
+    /writer->mark\(now\(\), RequestStop::tag\);\s*writer->get_current_page\(\)->flush\(\);\s*[\s\S]*?get_io_device\(\)->get_publisher\(\)->publish\("\{\}", 0\);/,
+    'Windows must see the stop frame before the blocking coordinator notice',
+  );
+});
+
 test('watcher dispatch bench follows and proves the load peer carrier', () => {
   const peer = fs.readFileSync(watcherBench, 'utf8');
   const driver = fs.readFileSync(watcherBenchDriver, 'utf8');
