@@ -157,6 +157,36 @@ def _validate_command_arguments(command: Mapping[str, Any]) -> None:
             "Assessment executor profile must be inline, thread, or process",
             details={"field": "executorProfile"},
         )
+    if command.get("type") != "assignment.completion.claim":
+        return
+    evidence_availability = arguments.get("evidenceAvailability", [])
+    if not isinstance(evidence_availability, list):
+        raise LocalRuntimeError(
+            "invalid-command",
+            "evidenceAvailability must be an array",
+            details={"field": "evidenceAvailability"},
+        )
+    for index, row in enumerate(evidence_availability):
+        if not isinstance(row, Mapping):
+            raise LocalRuntimeError(
+                "invalid-command",
+                "evidenceAvailability rows must be objects",
+                details={"field": "evidenceAvailability", "index": index},
+            )
+        acceptance = str(row.get("acceptance") or "").strip()
+        level = str(row.get("level") or "").strip()
+        state = str(row.get("state") or "").strip()
+        if (
+            not acceptance
+            or level not in {"thin", "full"}
+            or state not in {"available", "unavailable", "missing"}
+        ):
+            raise LocalRuntimeError(
+                "invalid-command",
+                "evidenceAvailability requires acceptance, thin/full level, "
+                "and available/unavailable/missing state",
+                details={"field": "evidenceAvailability", "index": index},
+            )
 
 
 def _normalize_completion_context_roots(
