@@ -199,6 +199,39 @@ def _validate_command_arguments(command: Mapping[str, Any]) -> None:
     _validate_completion_evidence_availability(command, arguments)
 
 
+def _validate_assignment_create_references(
+    command: Mapping[str, Any], snapshot: Mapping[str, Any]
+) -> None:
+    if command.get("type") != "assignment.create":
+        return
+    arguments = command.get("arguments")
+    if not isinstance(arguments, Mapping):
+        return
+    parent_assignment_id = str(arguments.get("parentAssignmentId") or "")
+    if not parent_assignment_id:
+        return
+    if arguments.get("parentAssignmentRef"):
+        raise LocalRuntimeError(
+            "invalid-command",
+            "Pass parentAssignmentId shorthand or parentAssignmentRef, not both",
+            details={"fields": ["parentAssignmentId", "parentAssignmentRef"]},
+        )
+    matches = [
+        row
+        for row in snapshot.get("assignments") or []
+        if row.get("assignmentId") == parent_assignment_id
+    ]
+    if len(matches) != 1:
+        raise LocalRuntimeError(
+            "invalid-command",
+            "Local parent Assignment shorthand must resolve exactly once",
+            details={
+                "field": "parentAssignmentId",
+                "matches": len(matches),
+            },
+        )
+
+
 def _normalize_completion_context_roots(
     operation: str, arguments: Mapping[str, Any]
 ) -> dict[str, Any]:

@@ -261,6 +261,41 @@ class FakeAuthority:
         self._write(state)
 
 
+class AssignmentCreateAuthority(FakeAuthority):
+    """Fake authority that exposes a configurable local Assignment snapshot."""
+
+    def __init__(self, root: Path, assignment_ids: list[str] | None = None):
+        super().__init__(root)
+        self.assignment_ids = list(assignment_ids or ["assignment-a"])
+        self.applied_commands: list[dict[str, Any]] = []
+
+    def inspect(self) -> dict[str, Any]:
+        snapshot = super().inspect()
+        template = snapshot["assignments"][0]
+        snapshot["assignments"] = [
+            {
+                **copy.deepcopy(template),
+                "assignmentId": assignment_id,
+                "subject": f"kungfu:{assignment_id}",
+            }
+            for assignment_id in self.assignment_ids
+        ]
+        return snapshot
+
+    def apply(self, command: dict[str, Any]) -> dict[str, Any]:
+        if command["type"] != "assignment.create":
+            return super().apply(command)
+        self.applied_commands.append(copy.deepcopy(command))
+        state = self._read()
+        state["version"] += 1
+        state["effects"].append(_root(command))
+        self._write(state)
+        return {
+            "authorityReceipt": {"result": {"coreReceipt": {"status": "admitted"}}},
+            "episodeRefs": [],
+        }
+
+
 def _request(
     operation: str,
     capability: str,
@@ -331,6 +366,45 @@ def _command(
             }
         ),
     }
+
+
+def _assignment_create_command(
+    revision: dict[str, Any],
+    *,
+    assignment_id: str = "assignment-child",
+    parent_assignment_id: str = "",
+    parent_assignment_ref: dict[str, Any] | None = None,
+    depends_on: list[str] | None = None,
+    dependency_refs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    command = _command(
+        revision,
+        command_id=f"command.create.{assignment_id}",
+        idempotency_key=f"idem.create.{assignment_id}",
+        command_type="assignment.create",
+    )
+    command["target"] = {
+        "initiativeId": "initiative-a",
+        "assignmentId": assignment_id,
+    }
+    command["attempt"] = None
+    command["lease"] = None
+    command["warrant"] = None
+    command["arguments"] = {
+        "initiativeId": "initiative-a",
+        "assignmentId": assignment_id,
+        "title": "Child assignment",
+        "objective": "Exercise exact local parent validation",
+        "actor": "agent-a",
+        "actorType": "agent",
+        "source": "kungfu",
+        "status": "active",
+        "parentAssignmentId": parent_assignment_id,
+        "parentAssignmentRef": dict(parent_assignment_ref or {}),
+        "dependsOn": list(depends_on or []),
+        "dependencyRefs": copy.deepcopy(dependency_refs or []),
+    }
+    return command
 
 
 def _handle(runtime: EmbeddedLocalAssignmentRuntime, request: dict[str, Any]):
@@ -1292,6 +1366,189 @@ def test_invalid_assessment_executor_is_rejected_before_pending_write(tmp_path):
         assert rejected["error"]["code"] == "invalid-command"
         assert runtime._state["pending"] is None
         assert authority._read()["effects"] == []
+
+
+@pytest.mark.parametrize(
+    ("assignment_ids", "parent_assignment_id", "expected_matches"),
+    [
+        (["assignment-a"], "missing-parent", 0),
+        (["duplicate-parent", "duplicate-parent"], "duplicate-parent", 2),
+    ],
+)
+def test_assignment_create_rejects_unresolved_local_parent_before_pending_write(
+    tmp_path, assignment_ids, parent_assignment_id, expected_matches
+):
+    runtime_dir = tmp_path / "invalid-local-parent" / ".kungfu" / "runtime"
+    authority = AssignmentCreateAuthority(runtime_dir, assignment_ids)
+    with EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ) as runtime:
+        snapshot = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )
+        command = _assignment_create_command(
+            snapshot["revision"], parent_assignment_id=parent_assignment_id
+        )
+        rejected = _handle(
+            runtime,
+            _request(
+                "command.submit",
+                "assignment.command.submit",
+                payload=command,
+            ),
+        )
+
+        assert rejected["error"]["code"] == "invalid-command"
+        assert rejected["error"]["details"] == {
+            "field": "parentAssignmentId",
+            "matches": expected_matches,
+        }
+        assert runtime._state["pending"] is None
+        assert authority.applied_commands == []
+
+
+def test_assignment_create_accepts_local_parent_explicit_refs_and_dependencies(
+    tmp_path,
+):
+    work_ref = {
+        "workspace_identity_root": ROOT_A,
+        "object_kind": "assignment",
+        "subject": "kungfu:assignment-a",
+        "version_root": ROOT_B,
+        "cut_root": ROOT_A,
+    }
+    cases = [
+        {"assignment_id": "local-parent", "parent_assignment_id": "assignment-a"},
+        {
+            "assignment_id": "explicit-parent",
+            "parent_assignment_ref": work_ref,
+        },
+        {
+            "assignment_id": "dependency-shorthand",
+            "depends_on": ["not-yet-local"],
+        },
+        {
+            "assignment_id": "dependency-ref",
+            "dependency_refs": [work_ref],
+        },
+    ]
+    for case in cases:
+        runtime_dir = tmp_path / str(case["assignment_id"]) / ".kungfu" / "runtime"
+        authority = AssignmentCreateAuthority(runtime_dir)
+        with EmbeddedLocalAssignmentRuntime(
+            runtime_dir,
+            realm_id=REALM["realmId"],
+            generation=REALM["generation"],
+            authority=authority,
+            contract=ASSIGNMENT_RUNTIME_CONTRACT,
+            request_schema=ENVELOPE_SCHEMA,
+        ) as runtime:
+            snapshot = _handle(
+                runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+            )
+            command = _assignment_create_command(snapshot["revision"], **case)
+            accepted = _handle(
+                runtime,
+                _request(
+                    "command.submit",
+                    "assignment.command.submit",
+                    payload=command,
+                ),
+            )
+
+            assert accepted["status"] == "ok"
+            assert runtime._state["pending"] is None
+            assert authority.applied_commands == [command]
+
+
+@pytest.mark.parametrize(
+    ("assignment_id", "request_id"),
+    [
+        (
+            "producer-budget-activation-linear-r7",
+            "legacy.r7.assignment.create",
+        ),
+        (
+            "producer-budget-activation-linear-r8",
+            "legacy.r8.assignment.create",
+        ),
+    ],
+)
+def test_restart_rejects_legacy_assignment_create_with_unresolved_parent(
+    tmp_path, assignment_id, request_id
+):
+    runtime_dir = tmp_path / assignment_id / ".kungfu" / "runtime"
+    authority = AssignmentCreateAuthority(runtime_dir)
+    runtime = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    snapshot = _handle(
+        runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+    )
+    command = _assignment_create_command(
+        snapshot["revision"],
+        assignment_id=assignment_id,
+        parent_assignment_id="predecessor-not-in-current-snapshot",
+        depends_on=["historical-dependency"],
+    )
+    command_root = _root(command)
+    pending = {
+        "commandRoot": command_root,
+        "command": command,
+        "beforeRevision": snapshot["revision"],
+        "requestId": request_id,
+    }
+    runtime._state["pending"] = copy.deepcopy(pending)
+    runtime._save_state()
+    runtime.close()
+
+    persisted_before = json.loads(
+        (runtime_dir / "assignment-runtime" / "local-v1" / "state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert persisted_before["pending"] == pending
+
+    recovered = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    try:
+        assert recovered._state["pending"] is None
+        assert authority.applied_commands == []
+        event = recovered._state["events"][-1]
+        assert event["kind"] == "command-rejected"
+        assert event["revision"] == pending["beforeRevision"]
+        assert event["payload"] == {
+            "commandId": command["commandId"],
+            "commandRoot": command_root,
+            "errorCode": "invalid-command",
+        }
+        diagnostic = recovered._state["diagnostics"][-1]
+        assert diagnostic["code"] == "interrupted-command-rejected"
+        assert diagnostic["details"] == {
+            "commandId": command["commandId"],
+            "commandRoot": command_root,
+            "errorCode": "invalid-command",
+            "field": "parentAssignmentId",
+            "matches": 0,
+        }
+    finally:
+        recovered.close()
 
 
 @pytest.mark.parametrize(

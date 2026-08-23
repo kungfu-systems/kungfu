@@ -39,6 +39,7 @@ from .authority import (
     _interrupted_command_rejection,
     _root,
     _stable,
+    _validate_assignment_create_references,
     _validate_command_arguments,
 )
 from .recovery import AssignmentRuntimeRecoveryMixin
@@ -322,6 +323,13 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             self._finalize_pending(dict(pending), snapshot, revision, recovered=True)
             return
         snapshot, revision = self._observe_snapshot(record_event=False)
+        try:
+            _validate_assignment_create_references(command, snapshot)
+        except LocalRuntimeError as error:
+            if error.code != "invalid-command":
+                raise
+            self._reject_pending_before_authority(pending, error)
+            return
         before = dict(pending.get("beforeRevision") or {})
         if revision.get("root") == before.get("root"):
             authority_result = self.authority.apply(dict(pending["command"]))
@@ -609,6 +617,7 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
                 details={"field": forbidden},
             )
         _validate_command_arguments(command)
+        _validate_assignment_create_references(command, snapshot)
         attempt = command.get("attempt")
         lease = command.get("lease")
         warrant = command.get("warrant")
