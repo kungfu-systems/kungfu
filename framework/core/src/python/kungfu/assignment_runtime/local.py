@@ -323,6 +323,15 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             self._finalize_pending(dict(pending), snapshot, revision, recovered=True)
             return
         snapshot, revision = self._observe_snapshot(record_event=False)
+        self._resume_unapplied_pending(pending, command, snapshot, revision)
+
+    def _resume_unapplied_pending(
+        self,
+        pending: Mapping[str, Any],
+        command: Mapping[str, Any],
+        snapshot: Mapping[str, Any],
+        revision: Mapping[str, Any],
+    ) -> None:
         try:
             _validate_assignment_create_references(command, snapshot)
         except LocalRuntimeError as error:
