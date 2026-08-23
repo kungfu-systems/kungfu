@@ -47,6 +47,110 @@ const EXCLUDED_BRACED_SYMBOLS = new Set([
   'return',
   'sizeof',
 ]);
+const RETAINED_EVIDENCE_PATTERNS = [
+  'docs/qualification/evidence/',
+  '/evidence/',
+  '/qualification/reports/',
+  '/retained/',
+];
+const VENDORED_SOURCE_PATTERNS = [
+  'framework/core/.deps/',
+  '/node_modules/',
+  '/third_party/',
+  '/third-party/',
+  '/vendor/',
+  '/vendored/',
+];
+const DECLARATIVE_EXTENSIONS = new Set([
+  '.cmake',
+  '.fbs',
+  '.gyp',
+  '.gypi',
+  '.json',
+  '.jsonc',
+  '.lock',
+  '.proto',
+  '.toml',
+  '.yaml',
+  '.yml',
+]);
+const PUBLIC_HEADER_EXTENSIONS = new Set(['.h', '.hh', '.hpp', '.hxx']);
+const PUBLIC_ENTRYPOINTS = new Set(['shifu', 'shifu.cmd']);
+const IMPLEMENTATION_EXTENSIONS = new Set([
+  '.c',
+  '.cc',
+  '.cjs',
+  '.cmd',
+  '.cpp',
+  '.cxx',
+  '.h',
+  '.hh',
+  '.hpp',
+  '.hxx',
+  '.js',
+  '.mjs',
+  '.ps1',
+  '.py',
+  '.rs',
+  '.sh',
+  '.ts',
+  '.tsx',
+]);
+const SEGMENT_OWNER_PREFIXES = new Map([
+  ['framework', 'framework'],
+  ['crates', 'crate'],
+  ['developer', 'developer'],
+]);
+const TOP_LEVEL_OWNERS = new Map([
+  ['product', 'product/assembly'],
+  ['scripts', 'shifu/source-tooling'],
+  ['shifu', 'shifu/source-tooling'],
+  ['shifu.cmd', 'shifu/source-tooling'],
+  ['docs', 'kungfu/docs'],
+  ['.github', 'kungfu/release-workflow'],
+  ['config', 'kungfu/config'],
+  ['tests', 'kungfu/qualification'],
+  ['examples', 'kungfu/examples'],
+  ['types', 'kungfu/public-types'],
+  ['.kungfu', 'kungfu/retained-native-evidence'],
+]);
+const REPOSITORY_CONTRACT_TOP_LEVEL = new Set([
+  '.buildchain',
+  '.xinfa',
+  'package.json',
+  'pnpm-lock.yaml',
+  'Cargo.lock',
+  'Cargo.toml',
+]);
+const CORE_BUILD_FILES = new Set([
+  'framework/core/conanfile.py',
+  'framework/core/CMakeLists.txt',
+]);
+const CORE_PREFIX_OWNERS = [
+  ['framework/core/architecture/', 'core/architecture'],
+  ['framework/core/tests/', 'core/qualification'],
+  ['framework/core/.gyp/', 'core/build'],
+  ['framework/core/lib/', 'core/bindings'],
+];
+const COMMENT_STATES = {
+  '/': 'line-comment',
+  '*': 'block-comment',
+};
+const LINE_COMMENT_TRANSITIONS = {
+  true: ['\n', 'code'],
+  false: [' ', 'line-comment'],
+};
+const STRING_QUOTES = {
+  python: `"'`,
+  rust: `"'`,
+  'c-cpp': `"'`,
+  'javascript-typescript': `"'\``,
+};
+const BLANK_EXCEPT_NEWLINE = {
+  true: '\n',
+  false: ' ',
+};
+const NO_DECLARED_OWNER = Symbol('no-declared-owner');
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -210,25 +314,10 @@ function classify(pathname, bytes) {
   const extension = path.posix.extname(pathname).toLowerCase();
   if (
     pathname.startsWith('.kungfu/') ||
-    matchesAny(pathname, [
-      'docs/qualification/evidence/',
-      '/evidence/',
-      '/qualification/reports/',
-      '/retained/',
-    ])
+    matchesAny(pathname, RETAINED_EVIDENCE_PATTERNS)
   )
     return 'retained-evidence';
-  if (
-    matchesAny(pathname, [
-      'framework/core/.deps/',
-      '/node_modules/',
-      '/third_party/',
-      '/third-party/',
-      '/vendor/',
-      '/vendored/',
-    ])
-  )
-    return 'vendored-source';
+  if (matchesAny(pathname, VENDORED_SOURCE_PATTERNS)) return 'vendored-source';
   if (
     /(?:^|[/_.-])generated(?:[/_.-]|$)/u.test(pathname) ||
     generatedMarker(bytes)
@@ -236,60 +325,31 @@ function classify(pathname, bytes) {
     return 'generated-projection';
   if (
     /(?:^|\/)(?:test|tests|fixtures?|__tests__)(?:\/|$)/u.test(pathname) ||
-    /(?:^|[._-])test(?:[._-]|$)/u.test(basename) ||
-    /(?:^|[._-])spec(?:[._-]|$)/u.test(basename) ||
-    /^test_/u.test(basename)
+    /(?:^|[._-])(?:test|spec)(?:[._-]|$)|^test_/u.test(basename)
   )
     return 'test-or-fixture';
   if (
     [
-      '.fbs',
-      '.gyp',
-      '.gypi',
-      '.json',
-      '.jsonc',
-      '.lock',
-      '.proto',
-      '.toml',
-      '.yaml',
-      '.yml',
-    ].includes(extension) ||
-    extension === '.cmake' ||
-    basename === 'CMakeLists.txt'
+      DECLARATIVE_EXTENSIONS.has(extension),
+      basename === 'CMakeLists.txt',
+    ].includes(true)
   )
     return 'declarative-schema-or-table';
-  if (
-    (/\/include\//u.test(pathname) &&
-      ['.h', '.hh', '.hpp', '.hxx'].includes(extension)) ||
+  const publicHeader =
+    pathname.includes('/include/') && PUBLIC_HEADER_EXTENSIONS.has(extension);
+  const conventionalEntrypoint =
     /(?:^|\/)(?:main|index|__init__)\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx|js|mjs|cjs|ts|tsx|py|rs)$/u.test(
       pathname,
-    ) ||
-    pathname === 'shifu' ||
-    pathname === 'shifu.cmd'
-  )
-    return 'public-header-or-entrypoint';
+    );
   if (
     [
-      '.c',
-      '.cc',
-      '.cjs',
-      '.cmd',
-      '.cpp',
-      '.cxx',
-      '.h',
-      '.hh',
-      '.hpp',
-      '.hxx',
-      '.js',
-      '.mjs',
-      '.ps1',
-      '.py',
-      '.rs',
-      '.sh',
-      '.ts',
-      '.tsx',
-    ].includes(extension)
+      publicHeader,
+      conventionalEntrypoint,
+      PUBLIC_ENTRYPOINTS.has(pathname),
+    ].includes(true)
   )
+    return 'public-header-or-entrypoint';
+  if (IMPLEMENTATION_EXTENSIONS.has(extension))
     return 'first-party-handwritten-implementation';
   return '';
 }
@@ -317,54 +377,34 @@ function ownerFor(pathname, layers, ownership = []) {
   const declared = ownership.filter((rule) =>
     (rule.paths || []).includes(pathname),
   );
-  if (declared.length === 1) return declared[0].owner;
-  if (declared.length > 1) return '';
-  if (pathname.startsWith('framework/core/')) {
-    const relative = pathname.slice('framework/core/'.length);
-    const owners = layers.components.filter((component) =>
-      owns(component, relative),
-    );
-    if (owners.length === 1) return owners[0].owner;
-    if (pathname.startsWith('framework/core/architecture/'))
-      return 'core/architecture';
-    if (pathname.startsWith('framework/core/tests/'))
-      return 'core/qualification';
-    if (
-      pathname.startsWith('framework/core/.gyp/') ||
-      pathname === 'framework/core/conanfile.py' ||
-      pathname === 'framework/core/CMakeLists.txt'
-    )
-      return 'core/build';
-    if (pathname.startsWith('framework/core/lib/')) return 'core/bindings';
-    return owners.length > 1 ? '' : 'core/package';
-  }
+  const declaredOwner = [NO_DECLARED_OWNER, declared[0]?.owner, ''][
+    Math.min(declared.length, 2)
+  ];
+  if (declaredOwner !== NO_DECLARED_OWNER) return declaredOwner;
+  const corePrefix = 'framework/core/';
+  const corePath = pathname.startsWith(corePrefix);
+  const relative = pathname.slice(corePrefix.length);
+  const owners = layers.components.filter(
+    (component) => corePath && owns(component, relative),
+  );
+  if (owners.length === 1) return owners[0].owner;
+  if (CORE_BUILD_FILES.has(pathname)) return 'core/build';
+  const corePrefixOwner = CORE_PREFIX_OWNERS.find(([prefix]) =>
+    pathname.startsWith(prefix),
+  )?.[1];
+  if (corePrefixOwner) return corePrefixOwner;
+  if (owners.length > 1) return '';
+  if (corePath) return 'core/package';
   const segments = pathname.split('/');
   const top = segments[0];
-  if (top === 'framework' && segments[1]) return `framework/${segments[1]}`;
+  const segmentOwner = /^([^/]+)\/([^/]+)/u.exec(pathname);
+  const segmentOwnerPrefix = SEGMENT_OWNER_PREFIXES.get(segmentOwner?.[1]);
+  if (segmentOwnerPrefix) return `${segmentOwnerPrefix}/${segmentOwner[2]}`;
   if (top === 'extensions' && segments[1])
-    return `extension/${segments.slice(1, Math.min(3, segments.length - 1)).join('/') || segments[1]}`;
-  if (top === 'crates' && segments[1]) return `crate/${segments[1]}`;
-  if (top === 'developer' && segments[1]) return `developer/${segments[1]}`;
-  if (top === 'product') return 'product/assembly';
-  if (top === 'scripts' || pathname === 'shifu' || pathname === 'shifu.cmd')
-    return 'shifu/source-tooling';
-  if (top === 'docs') return 'kungfu/docs';
-  if (top === '.github') return 'kungfu/release-workflow';
-  if (top === 'config') return 'kungfu/config';
-  if (top === 'tests') return 'kungfu/qualification';
-  if (top === 'examples') return 'kungfu/examples';
-  if (top === 'types') return 'kungfu/public-types';
-  if (top === '.kungfu') return 'kungfu/retained-native-evidence';
-  if (
-    [
-      '.buildchain',
-      '.xinfa',
-      'package.json',
-      'pnpm-lock.yaml',
-      'Cargo.lock',
-      'Cargo.toml',
-    ].includes(top)
-  )
+    return `extension/${segments.slice(1, Math.max(2, Math.min(3, segments.length - 1))).join('/')}`;
+  const topLevelOwner = TOP_LEVEL_OWNERS.get(top);
+  if (topLevelOwner) return topLevelOwner;
+  if (REPOSITORY_CONTRACT_TOP_LEVEL.has(top))
     return 'kungfu/repository-contract';
   if (!pathname.includes('/')) return 'kungfu/repository-contract';
   return '';
@@ -412,51 +452,58 @@ function trackedFilesAt(ref) {
 
 function stripStringsAndComments(source, family) {
   const chars = [...source];
+  const stringQuotes = STRING_QUOTES[family] || STRING_QUOTES.rust;
   let state = 'code';
   let quote = '';
   for (let index = 0; index < chars.length; index += 1) {
     const char = chars[index];
     const next = chars[index + 1] || '';
     if (state === 'line-comment') {
-      if (char === '\n') state = 'code';
-      else chars[index] = ' ';
+      [chars[index], state] = LINE_COMMENT_TRANSITIONS[char === '\n'];
+      continue;
+    }
+    const closesBlockComment =
+      state === 'block-comment' && char === '*' && next === '/';
+    if (closesBlockComment) {
+      chars[index] = chars[index + 1] = ' ';
+      index += 1;
+      state = 'code';
       continue;
     }
     if (state === 'block-comment') {
-      if (char === '*' && next === '/') {
-        chars[index] = chars[index + 1] = ' ';
-        index += 1;
-        state = 'code';
-      } else if (char !== '\n') chars[index] = ' ';
+      chars[index] = BLANK_EXCEPT_NEWLINE[char === '\n'];
+      continue;
+    }
+    const escapedString = state === 'string' && char === '\\';
+    if (escapedString) {
+      chars[index] = ' ';
+      chars[index + 1] = BLANK_EXCEPT_NEWLINE[chars[index + 1] === '\n'];
+      index += 1;
+      continue;
+    }
+    const closesString = state === 'string' && char === quote;
+    if (closesString) {
+      chars[index] = ' ';
+      state = 'code';
       continue;
     }
     if (state === 'string') {
-      if (char === '\\') {
-        chars[index] = ' ';
-        if (chars[index + 1] !== '\n') chars[index + 1] = ' ';
-        index += 1;
-      } else if (char === quote) {
-        chars[index] = ' ';
-        state = 'code';
-      } else if (char !== '\n') chars[index] = ' ';
+      chars[index] = BLANK_EXCEPT_NEWLINE[char === '\n'];
       continue;
     }
-    if (char === '/' && next === '/') {
+    const commentState = char === '/' ? COMMENT_STATES[next] : undefined;
+    if (commentState) {
       chars[index] = chars[index + 1] = ' ';
       index += 1;
-      state = 'line-comment';
-    } else if (char === '/' && next === '*') {
-      chars[index] = chars[index + 1] = ' ';
-      index += 1;
-      state = 'block-comment';
-    } else if (family === 'python' && char === '#') {
+      state = commentState;
+      continue;
+    }
+    if (family === 'python' && char === '#') {
       chars[index] = ' ';
       state = 'line-comment';
-    } else if (
-      char === '"' ||
-      char === "'" ||
-      (char === '`' && family === 'javascript-typescript')
-    ) {
+      continue;
+    }
+    if (stringQuotes.includes(char)) {
       quote = char;
       chars[index] = ' ';
       state = 'string';
