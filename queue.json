@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6012,
+  "generation": 6013,
   "fencingCounter": 626,
   "policy": {
     "agingSeconds": 900,
@@ -44419,8 +44419,39 @@
         "framework/core/src/libkungfu/src/runtime/live/coordinator.cpp",
         "framework/core/tests/watcher-runtime-boundary.test.js"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3387,
+      "assignmentRoot": "sha256:15055aeb29759ce8800e479bd33f6e574e6bbb550ab92ffef178c6652cdffc22",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:bc72bf8fd6480d3bb6a65bbc753bf548496b484c8527fa33d0ea40554e14203f",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:e7e9f57d72b928e4641d695a78bd5339061b510b4e49e5b4a5b99c7f469cb278",
+      "sourceHead": "5eb2ed078005eb775f9c925718e46eeaf51e8796",
+      "sourcePatchRoot": "sha256:94a4d8e30d1d7259eeeacd3471f7c56e919370de5e18e2d31121ffef70e3ec59",
+      "sourceProofRoot": "sha256:a805a7e1c64af779b2c6fa01e125d0a5da1dcef73ccc790800d537c9f758971a",
+      "planRoot": "sha256:60ca9c95290cce4339c165554d927a1a451b3e3db5ee392c1195df2add32d2f0",
+      "closureRoot": "sha256:cccac6fb74fb3ab2478aa3e56cda7b47e6e301be63519f0ee992aeb3fea2eea6",
+      "dependencyRoot": "sha256:379dec65e61b5f421c8916a31811402d5c04297c030a5d06621a80104cd3d612",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32644215019,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-23T14:09:53.869Z",
+      "updatedAt": "2026-08-23T14:09:53.869Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/src/libkungfu/include/kungfu/runtime/live/coordinator.h",
+        "framework/core/src/libkungfu/src/runtime/live/coordinator.cpp",
+        "framework/core/tests/watcher-runtime-boundary.test.js"
+      ]
     }
   ],
-  "updatedAt": "2026-08-23T12:07:46.362Z",
-  "stateRoot": "sha256:6d6e91b2cfc58d98ae6a6c0409b6acfd60482fe184a3ed1326139bd84dcf6fc4"
+  "updatedAt": "2026-08-23T14:09:53.869Z",
+  "stateRoot": "sha256:06f0eed9ca4819862bf5f21951e1249899e8f89683112c811152b8931035998a"
 }
