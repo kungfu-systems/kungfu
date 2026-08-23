@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6183,
+  "generation": 6184,
   "fencingCounter": 635,
   "policy": {
     "agingSeconds": 900,
@@ -64,12 +64,15 @@
     "sourceWorkflowRunId": 32664402867,
     "deliveryClass": "native-proof-required",
     "generation": 635,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:afc45d6f4c9928d4077b0d7b611f9d10cdfb43dd63b55aa720903ef05dfe0638",
     "issuedAt": "2026-08-23T20:35:38.045Z",
     "expiresAt": "2026-08-23T22:42:04.064Z",
     "fencingToken": "sha256:1473b2c1a576ba12c1767f8d4f7ec8531d4f636d0a123c14976d001139293d46",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:5cccf36de1128566c9f17c4a5458246ad7de3fab8015a3ec5e78576a5e1a314f",
+    "nativeProofReuseRoot": "sha256:eed73425f9ded596e2d6b23a5945d80c5a5cd25256a09a3f51e88b7a39f1c84a",
+    "qualifiedAt": "2026-08-23T21:12:10.879Z"
   },
   "candidates": [
     {
@@ -44848,10 +44851,10 @@
       "sourceWorkflowRunId": 32664402867,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-23T20:33:41.129Z",
-      "updatedAt": "2026-08-23T21:12:04.064Z",
+      "updatedAt": "2026-08-23T21:12:10.879Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json",
@@ -44920,6 +44923,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-23T21:12:04.064Z",
-  "stateRoot": "sha256:43aa84d48a723bc2f9eaf4556e5d004cb0c6ed3145695eb83155a103bae3bd56"
+  "updatedAt": "2026-08-23T21:12:10.879Z",
+  "stateRoot": "sha256:8e9e2496f3f6c38aed0545616d6e2849337786cc65de3b9ac46f2e7107394cf4"
 }
