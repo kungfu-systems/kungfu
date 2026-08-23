@@ -4,11 +4,15 @@
 
 #include <algorithm>
 #include <cctype>
+#include <limits>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <vector>
 
 #include <kungfu/runtime/kfx/native_contract.h>
+#include <kungfu/runtime/kfx/native_registry.h>
+#include <kungfu/runtime/storage/fact_kernel.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 
 namespace kungfu::runtime::kfx::authority {
@@ -620,6 +624,560 @@ json plan(const json &packages, const std::string &registry_root, const std::str
   result["actionId"] = "kfx-action:" + sha256(authorization_plan_root).substr(0, 32);
   result["assessment"] = assessment;
   return result;
+}
+
+inline constexpr const char *KFX_PROFILE_ID = "kungfu-kfx-domain-profile";
+
+json fact_call(const std::string &runtime_dir, const std::string &action, json request) {
+  request["action"] = action;
+  auto response = storage_service_api::run_fact_kernel_operation(runtime_dir, request);
+  if (!response.value("ok", false)) {
+    refuse(action == "ref-cas" && response.value("failure_code", "") == "stale-ref" ? "KF_KFX_CUT_STALE"
+                                                                                    : "KF_KFX_FACT_REJECTED",
+           response.value("failure_code", "unknown") + ": " + response.value("message", "Fact kernel rejected KFX"));
+  }
+  return response;
+}
+
+std::string relation_id(const std::string &kind, const std::string &source, const std::string &target) {
+  return fact_id("relation", kind + ":" + source + ":" + target);
+}
+
+json parse_fact_body(const json &member) {
+  if (!member.is_object() || member.value("body_status", "") != "present" || !member.contains("body") ||
+      !member.at("body").is_string())
+    return nullptr;
+  try {
+    return json::parse(member.at("body").get<std::string>());
+  } catch (const json::exception &error) {
+    refuse("KF_KFX_SCHEMA_INVALID", "KFX Fact body is not canonical JSON: " + std::string(error.what()));
+  }
+}
+
+std::string runtime_warrant_ref(const std::string &package_key, const std::string &host) {
+  return "profiles/kfx/runtime/" + sha256(package_key + "\n" + host);
+}
+
+struct runtime_warrant_view {
+  bool present = false;
+  std::string ref_name;
+  std::string cut_root;
+  uint64_t revision = 0;
+  std::map<std::string, std::string> current_versions;
+  std::set<std::string> relation_roots;
+  json warrant = nullptr;
+  json state = nullptr;
+  json events = json::array();
+};
+
+runtime_warrant_view load_runtime_warrant(const std::string &runtime_dir, const std::string &package_key,
+                                          const std::string &host) {
+  runtime_warrant_view result;
+  result.ref_name = runtime_warrant_ref(package_key, host);
+  const auto response = storage_service_api::run_fact_kernel_operation(
+      runtime_dir,
+      {{"action", "query"}, {"ref_name", result.ref_name}, {"include_inventory", true}, {"include_bodies", true}});
+  if (!response.value("ok", false)) {
+    if (response.value("failure_code", "") == "unknown-cut")
+      return result;
+    refuse("KF_KFX_FACT_REJECTED",
+           response.value("failure_code", "unknown") + ": " + response.value("message", "Fact query failed"));
+  }
+  result.present = true;
+  result.cut_root = response.at("cut_root").get<std::string>();
+  const auto &resolution = response.at("ref_resolution");
+  result.revision = resolution.at("revision").get<uint64_t>();
+  const auto &cut = response.at("cut");
+  for (const auto &member : cut.at("objectVersions"))
+    result.current_versions[member.at(0).get<std::string>()] = member.at(1).get<std::string>();
+  for (const auto &root : cut.at("activeRelationRoots"))
+    result.relation_roots.insert(root.get<std::string>());
+  json warrants = json::array();
+  for (const auto &member : response.at("objects")) {
+    const auto body = parse_fact_body(member);
+    if (body.is_null())
+      continue;
+    const auto schema = body.value("schema", "");
+    if (schema == "kungfu.kfx.runtime-warrant/v1")
+      warrants.push_back(body);
+    else if (schema == "kungfu.kfx.runtime-lease-state-fact/v1")
+      result.state = body;
+    else if (schema == "kungfu.kfx.runtime-warrant-episode-fact/v1" ||
+             schema == "kungfu.kfx.runtime-warrant-settlement/v1")
+      result.events.push_back(body);
+  }
+  if (!result.state.is_null()) {
+    for (const auto &candidate : warrants) {
+      if (candidate.value("warrantRoot", "") == result.state.value("warrantRoot", "")) {
+        result.warrant = candidate;
+        break;
+      }
+    }
+  }
+  if (result.warrant.is_null() || result.state.is_null())
+    refuse("KF_KFX_SCHEMA_INVALID", "runtime Warrant Cut is missing its Warrant or lease state Fact");
+  std::sort(result.events.begin(), result.events.end(), [](const auto &left, const auto &right) {
+    if (left.value("recordedAt", int64_t{0}) != right.value("recordedAt", int64_t{0}))
+      return left.value("recordedAt", int64_t{0}) < right.value("recordedAt", int64_t{0});
+    return left.value("eventRoot", left.value("settlementRoot", "")) <
+           right.value("eventRoot", right.value("settlementRoot", ""));
+  });
+  return result;
+}
+
+struct fact_work_builder {
+  std::string runtime_dir;
+  std::map<std::string, std::string> versions;
+  std::set<std::string> relations;
+  json steps = json::array();
+  std::string profile_root;
+  std::string admission_root;
+
+  fact_work_builder(std::string runtime, const runtime_warrant_view &current)
+      : runtime_dir(std::move(runtime)), versions(current.current_versions), relations(current.relation_roots),
+        profile_root(native_kfx_domain_profile().at("domainProfileRoot").get<std::string>()),
+        admission_root(
+            root_of({{"schema", "kungfu.kfx-domain-profile-admission/v1"}, {"domainProfileRoot", profile_root}})) {}
+
+  json invoke(const std::string &action, const json &request) {
+    auto response = fact_call(runtime_dir, action, request);
+    if (response.value("status", "") == "idempotent-replay" && response.contains("result") &&
+        response.at("result").contains("record_root")) {
+      static const std::map<std::string, std::string> replay_root_fields = {{"object-put", "object_root"},
+                                                                            {"version-put", "version_root"},
+                                                                            {"relation-add", "relation_root"},
+                                                                            {"cut-put", "cut_root"}};
+      if (replay_root_fields.contains(action))
+        response["result"][replay_root_fields.at(action)] = response.at("result").at("record_root");
+    }
+    steps.push_back({{"action", action},
+                     {"status", response.value("status", "accepted")},
+                     {"writeOccurred", response.value("write_occurred", false)},
+                     {"receiptRoot", response.contains("receipt_root") ? response.at("receipt_root") : json(nullptr)}});
+    return response;
+  }
+
+  json put(const std::string &object_id, const std::string &object_type, const json &body) {
+    const auto created_by = root_of({{"schema", "kungfu.kfx-object-declaration/v1"},
+                                     {"domainProfileRoot", profile_root},
+                                     {"objectId", object_id},
+                                     {"objectType", object_type}});
+    invoke("object-put",
+           {{"object_id", object_id}, {"object_type", object_type}, {"created_by_receipt_root", created_by}});
+    json parents = json::array();
+    if (versions.contains(object_id))
+      parents.push_back(versions.at(object_id));
+    const auto response = invoke(
+        "version-put",
+        {{"object_id", object_id},
+         {"body", body.dump()},
+         {"schema_root", root_of({{"schema", "kungfu.kfx-fact-body-schema/v1"}, {"bodySchema", body.at("schema")}})},
+         {"parent_version_roots", parents},
+         {"declaration_roots", json::array({profile_root})},
+         {"admission_roots", json::array({admission_root})}});
+    versions[object_id] = response.at("result").at("version_root").get<std::string>();
+    return response.at("result");
+  }
+
+  void relate(const std::string &type, const std::string &source, const std::string &target, const json &attributes) {
+    const auto attributes_root = root_of(attributes);
+    const auto response = invoke("relation-add", {{"relation_id", relation_id(type, source, target)},
+                                                  {"relation_type", type},
+                                                  {"source", {{"kind", "logical-object"}, {"id", source}}},
+                                                  {"target", {{"kind", "logical-object"}, {"id", target}}},
+                                                  {"attributes_root", attributes_root},
+                                                  {"admission_roots", json::array({admission_root})}});
+    relations.insert(response.at("result").at("relation_root").get<std::string>());
+  }
+};
+
+int64_t runtime_time(const json &request, const char *field) {
+  if (!request.contains(field) || !request.at(field).is_number_integer() || request.at(field).get<int64_t>() < 0)
+    refuse("KF_KFX_RUNTIME_WARRANT_INVALID", std::string(field) + " must be a non-negative integer");
+  return request.at(field).get<int64_t>();
+}
+
+int64_t bounded_runtime_deadline(int64_t start, int64_t ttl, int64_t expires_at) {
+  const auto remaining = expires_at - start;
+  return ttl >= remaining ? expires_at : start + ttl;
+}
+
+json commit_runtime_warrant_transition(const std::string &runtime_dir, const runtime_warrant_view &current,
+                                       const json &warrant, const json &state, json event, json settlement,
+                                       const std::string &action_id) {
+  fact_work_builder builder(runtime_dir, current);
+  const auto profile_root = native_kfx_domain_profile().at("domainProfileRoot");
+  const auto warrant_id = fact_id("runtime-warrant", warrant.at("warrantRoot").get<std::string>());
+  const auto state_id = fact_id("runtime-lease-state", current.ref_name);
+  builder.put(warrant_id, "kungfu.kfx.runtime-warrant", warrant);
+  const auto state_result = builder.put(state_id, "kungfu.kfx.runtime-lease-state", state);
+
+  const auto event_identity_root = root_of(event);
+  event["eventRoot"] = event_identity_root;
+  const auto event_id = fact_id("runtime-warrant-event", event_identity_root);
+  const auto event_result = builder.put(event_id, "kungfu.kfx.runtime-warrant-episode", event);
+  builder.relate("kfx-runtime-warrant-observed-in", warrant_id, event_id,
+                 {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"actionId", action_id}});
+  builder.relate("kfx-runtime-warrant-authorizes-lease", warrant_id, state_id,
+                 {{"schema", "kungfu.kfx.relation-attributes/v1"},
+                  {"generation", state.at("generation")},
+                  {"fencingToken", state.at("fencingToken")}});
+
+  json settlement_result = nullptr;
+  if (!settlement.is_null()) {
+    const auto settlement_identity_root = root_of(settlement);
+    settlement["settlementRoot"] = settlement_identity_root;
+    const auto settlement_id = fact_id("runtime-warrant-settlement", settlement_identity_root);
+    settlement_result = builder.put(settlement_id, "kungfu.kfx.runtime-warrant-settlement", settlement);
+    builder.relate("kfx-runtime-warrant-settled-by", warrant_id, settlement_id,
+                   {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"actionId", action_id}});
+  }
+
+  json object_versions = json::array();
+  for (const auto &[object_id, version_root] : builder.versions)
+    object_versions.push_back({{"object_id", object_id}, {"version_root", version_root}});
+  json relation_roots = json::array();
+  for (const auto &root : builder.relations)
+    relation_roots.push_back(root);
+  json parent_cuts = json::array();
+  if (current.present)
+    parent_cuts.push_back(current.cut_root);
+  const auto episode_number = std::stoull(sha256(action_id).substr(0, 16), nullptr, 16);
+  const auto cut_response = builder.invoke(
+      "cut-put",
+      {{"parent_cut_roots", parent_cuts},
+       {"object_versions", object_versions},
+       {"active_relation_roots", relation_roots},
+       {"declaration_roots", json::array({builder.profile_root})},
+       {"admission_roots", json::array({builder.admission_root, warrant.at("warrantRoot"),
+                                        warrant.at("capabilityGrantRoot"), warrant.at("hostAuthorizationRoot")})},
+       {"episode_frontier", json::array({{{"episode_id", episode_number},
+                                          {"sealed_content_root", event_result.at("body_root")},
+                                          {"accepted_manifest_frame_uid", "kfx-runtime:" + action_id}}})},
+       {"omission_roots", json::array()},
+       {"conflict_roots", json::array()}});
+  const auto ref_response =
+      builder.invoke("ref-cas", {{"transition_id", action_id},
+                                 {"ref_name", current.ref_name},
+                                 {"expected_old_cut_root", current.present ? json(current.cut_root) : json(nullptr)},
+                                 {"expected_old_revision", current.revision},
+                                 {"new_cut_root", cut_response.at("result").at("cut_root")},
+                                 {"kind", current.present ? "advance" : "create"},
+                                 {"reason_root", root_of({{"schema", "kungfu.kfx.runtime-warrant-transition-reason/v1"},
+                                                          {"eventRoot", event_identity_root},
+                                                          {"state", state.at("state")}})}});
+  const auto result = ref_response.at("result");
+  const json receipt_identity = {
+      {"schema", "kungfu.kfx.runtime-warrant-transition-receipt/v1"},
+      {"actionId", action_id},
+      {"event", event.at("event")},
+      {"packageKey", warrant.at("packageKey")},
+      {"host", warrant.at("host")},
+      {"warrantRoot", warrant.at("warrantRoot")},
+      {"generation", state.at("generation")},
+      {"fencingToken", state.at("fencingToken")},
+      {"state", state.at("state")},
+      {"eventRoot", event_identity_root},
+      {"stateBodyRoot", state_result.at("body_root")},
+      {"settlementBodyRoot", settlement_result.is_null() ? json(nullptr) : settlement_result.at("body_root")},
+      {"priorCutRoot", current.present ? json(current.cut_root) : json(nullptr)},
+      {"cutRoot", result.at("current_cut_root")},
+      {"priorRevision", current.revision},
+      {"revision", result.at("current_revision")},
+      {"kernelReceiptRoot", ref_response.at("receipt_root")},
+      {"recordedAt", event.at("recordedAt")}};
+  auto receipt = receipt_identity;
+  receipt["receiptRoot"] = root_of(receipt_identity);
+  receipt["steps"] = builder.steps;
+  return receipt;
+}
+
+json issue_runtime_warrant(const json &descriptor, const json &launch, const json &request,
+                           const std::string &runtime_dir) {
+  const auto &authorization = launch.at("authorization");
+  const auto package_key = authorization.at("packageKey").get<std::string>();
+  const auto host = authorization.at("host").get<std::string>();
+  auto current = load_runtime_warrant(runtime_dir, package_key, host);
+  const auto issued_at = runtime_time(request, "issuedAt");
+  const auto expires_at = runtime_time(request, "expiresAt");
+  const auto heartbeat_ttl = runtime_time(request, "heartbeatTtl");
+  if (expires_at <= issued_at || heartbeat_ttl <= 0)
+    refuse("KF_KFX_RUNTIME_WARRANT_INVALID", "runtime Warrant expiry and heartbeat TTL must be positive");
+  if (current.present && current.state.value("state", "") == "active")
+    refuse("KF_KFX_RUNTIME_WARRANT_ACTIVE", "the package and host already have an unsettled Runtime Warrant");
+  const auto holder = required_text(request, "holder", "request");
+  const auto purpose = required_text(request, "purpose", "request");
+  const auto nonce = required_text(request, "leaseNonce", "request");
+  const auto residual = required_text(request, "residualResponsibility", "request");
+  const auto requested_capabilities = string_array_or_empty(request, "requestedCapabilities");
+  if (requested_capabilities.empty())
+    refuse("KF_KFX_RUNTIME_WARRANT_INVALID", "Runtime Warrant requires a non-empty attenuated capability scope");
+  for (const auto &capability : requested_capabilities) {
+    if (std::find(authorization.at("grantedCapabilities").begin(), authorization.at("grantedCapabilities").end(),
+                  capability) == authorization.at("grantedCapabilities").end())
+      refuse("KF_KFX_RUNTIME_AUTHORITY_AMPLIFICATION",
+             "Runtime Warrant capability scope exceeds the exact Core capability grant");
+  }
+  const auto prior_generation = current.present ? current.state.at("generation").get<uint64_t>() : uint64_t{0};
+  if (prior_generation == std::numeric_limits<uint64_t>::max())
+    refuse("KF_KFX_RUNTIME_WARRANT_INVALID", "Runtime Warrant generation space is exhausted");
+  const auto generation = prior_generation + 1;
+  const auto target_roots = json{{"registryRoot", descriptor.at("registryRoot")},
+                                 {"graphRoot", descriptor.at("graphRoot")},
+                                 {"cutRoot", descriptor.at("cutRoot")},
+                                 {"hostGenerationRoot", descriptor.at("generationRoot")},
+                                 {"packageRoot", authorization.at("packageRoot")}};
+  const json warrant_identity = {{"schema", "kungfu.kfx.runtime-warrant/v1"},
+                                 {"warrantClass", "leased-runtime"},
+                                 {"issuer", "kungfu-core/kfx-control"},
+                                 {"holder", holder},
+                                 {"purpose", purpose},
+                                 {"packageKey", package_key},
+                                 {"host", host},
+                                 {"generation", generation},
+                                 {"actionScope", json::array({"heartbeat", "run", "settle"})},
+                                 {"capabilityScope", requested_capabilities},
+                                 {"targetRoots", target_roots},
+                                 {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+                                 {"hostAuthorizationRoot", authorization.at("authorizationRoot")},
+                                 {"mutationWarrantRoot", authorization.at("warrantRoot")},
+                                 {"issuedAt", issued_at},
+                                 {"expiresAt", expires_at},
+                                 {"heartbeatTtl", heartbeat_ttl},
+                                 {"revocationChannel", current.ref_name},
+                                 {"residualResponsibility", residual},
+                                 {"delegation", "forbidden-without-new-core-source"}};
+  const auto warrant_root = root_of(warrant_identity);
+  const auto fencing_token = root_of({{"schema", "kungfu.kfx.runtime-fence/v1"},
+                                      {"warrantRoot", warrant_root},
+                                      {"generation", generation},
+                                      {"holder", holder},
+                                      {"leaseNonce", nonce}});
+  auto warrant = warrant_identity;
+  warrant["profile"] = KFX_PROFILE_ID;
+  warrant["domainProfileRoot"] = native_kfx_domain_profile().at("domainProfileRoot");
+  warrant["warrantRoot"] = warrant_root;
+  const auto heartbeat_deadline = bounded_runtime_deadline(issued_at, heartbeat_ttl, expires_at);
+  const json state = {{"schema", "kungfu.kfx.runtime-lease-state-fact/v1"},
+                      {"profile", KFX_PROFILE_ID},
+                      {"domainProfileRoot", native_kfx_domain_profile().at("domainProfileRoot")},
+                      {"warrantRoot", warrant_root},
+                      {"packageKey", package_key},
+                      {"host", host},
+                      {"holder", holder},
+                      {"generation", generation},
+                      {"fencingToken", fencing_token},
+                      {"state", "active"},
+                      {"heartbeatAt", issued_at},
+                      {"heartbeatDeadline", heartbeat_deadline},
+                      {"expiresAt", expires_at},
+                      {"revocationRoot", nullptr},
+                      {"settlementRoot", nullptr},
+                      {"residualResponsibility", residual},
+                      {"recordedAt", issued_at}};
+  const auto action_id = "kfx-runtime-issue:" + sha256(warrant_root + fencing_token).substr(0, 32);
+  const json event = {{"schema", "kungfu.kfx.runtime-warrant-episode-fact/v1"},
+                      {"profile", KFX_PROFILE_ID},
+                      {"domainProfileRoot", native_kfx_domain_profile().at("domainProfileRoot")},
+                      {"actionId", action_id},
+                      {"event", "issued"},
+                      {"warrantRoot", warrant_root},
+                      {"packageKey", package_key},
+                      {"host", host},
+                      {"holder", holder},
+                      {"generation", generation},
+                      {"fencingToken", fencing_token},
+                      {"targetRoots", target_roots},
+                      {"recordedAt", issued_at}};
+  const auto receipt =
+      commit_runtime_warrant_transition(runtime_dir, current, warrant, state, event, nullptr, action_id);
+  return {{"schema", "kungfu.kfx.runtime-warrant-authorization/v1"},
+          {"executionAllowed", true},
+          {"hostLaunch", launch},
+          {"runtimeWarrant", warrant},
+          {"leaseState", state},
+          {"receipt", receipt}};
+}
+
+void require_runtime_fence(const runtime_warrant_view &current, const json &request, bool require_holder) {
+  if (!current.present)
+    refuse("KF_KFX_RUNTIME_WARRANT_MISSING", "no Runtime Warrant exists for the requested package and host");
+  uint64_t expected_generation = 0;
+  if (request.contains("expectedGeneration") && request.at("expectedGeneration").is_number_unsigned()) {
+    expected_generation = request.at("expectedGeneration").get<uint64_t>();
+  } else if (request.contains("expectedGeneration") && request.at("expectedGeneration").is_number_integer() &&
+             request.at("expectedGeneration").get<int64_t>() >= 0) {
+    expected_generation = static_cast<uint64_t>(request.at("expectedGeneration").get<int64_t>());
+  } else {
+    refuse("KF_KFX_RUNTIME_FENCE_STALE", "Runtime Warrant generation is missing or invalid");
+  }
+  if (request.value("expectedWarrantRoot", "") != current.warrant.value("warrantRoot", "") ||
+      expected_generation != current.state.at("generation").get<uint64_t>() ||
+      request.value("expectedFencingToken", "") != current.state.value("fencingToken", ""))
+    refuse("KF_KFX_RUNTIME_FENCE_STALE", "Runtime Warrant root, generation, or fencing token is stale");
+  if (require_holder && request.value("holder", "") != current.state.value("holder", ""))
+    refuse("KF_KFX_RUNTIME_HOLDER_STALE", "Runtime Warrant holder does not match the active lease");
+  if (current.state.value("state", "") != "active")
+    refuse("KF_KFX_RUNTIME_WARRANT_TERMINAL", "Runtime Warrant is already terminal");
+}
+
+json transition_runtime_warrant(const std::string &action, const json &request, const std::string &runtime_dir) {
+  const auto package_key = required_text(request, "packageKey", "request");
+  const auto host = required_text(request, "host", "request");
+  auto current = load_runtime_warrant(runtime_dir, package_key, host);
+  const bool holder_action = action == "runtime-warrant-heartbeat" || action == "runtime-warrant-settle";
+  require_runtime_fence(current, request, holder_action);
+  const auto recorded_at = runtime_time(request, "recordedAt");
+  auto state = current.state;
+  json settlement = nullptr;
+  std::string event_name;
+  if (action == "runtime-warrant-heartbeat") {
+    if (recorded_at <= state.at("heartbeatAt").get<int64_t>())
+      refuse("KF_KFX_RUNTIME_HEARTBEAT_DUPLICATE", "heartbeat time must advance monotonically");
+    if (recorded_at >= state.at("expiresAt").get<int64_t>())
+      refuse("KF_KFX_RUNTIME_WARRANT_EXPIRED", "Runtime Warrant lease has expired");
+    if (recorded_at > state.at("heartbeatDeadline").get<int64_t>())
+      refuse("KF_KFX_RUNTIME_HEARTBEAT_STALE", "Runtime Warrant heartbeat deadline was missed");
+    state["heartbeatAt"] = recorded_at;
+    state["heartbeatDeadline"] = bounded_runtime_deadline(
+        recorded_at, current.warrant.at("heartbeatTtl").get<int64_t>(), state.at("expiresAt").get<int64_t>());
+    event_name = "heartbeat";
+  } else if (action == "runtime-warrant-revoke") {
+    const auto authority_root = required_text(request, "revocationAuthorityRoot", "request");
+    if (!is_content_root(authority_root))
+      refuse("KF_KFX_RUNTIME_REVOCATION_INVALID", "revocation authority must be an exact content root");
+    const auto reason = required_text(request, "reason", "request");
+    state["state"] = "revoked";
+    state["revocationRoot"] = root_of({{"schema", "kungfu.kfx.runtime-revocation/v1"},
+                                       {"warrantRoot", current.warrant.at("warrantRoot")},
+                                       {"authorityRoot", authority_root},
+                                       {"reason", reason},
+                                       {"recordedAt", recorded_at}});
+    const json settlement_identity = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
+                                      {"warrantRoot", current.warrant.at("warrantRoot")},
+                                      {"generation", state.at("generation")},
+                                      {"fencingToken", state.at("fencingToken")},
+                                      {"outcome", "revoked"},
+                                      {"terminalReason", reason},
+                                      {"residualResponsibility", state.at("residualResponsibility")},
+                                      {"residualResponsibilityDisposition", "retained-by-kungfu-core"},
+                                      {"settledBy", authority_root},
+                                      {"recordedAt", recorded_at}};
+    const auto settlement_root = root_of(settlement_identity);
+    settlement = settlement_identity;
+    state["settlementRoot"] = settlement_root;
+    event_name = "revoked";
+  } else if (action == "runtime-warrant-settle") {
+    if (recorded_at >= state.at("expiresAt").get<int64_t>() ||
+        recorded_at > state.at("heartbeatDeadline").get<int64_t>())
+      refuse("KF_KFX_RUNTIME_WARRANT_EXPIRED", "expired or heartbeat-stale authority cannot settle as live use");
+    const auto outcome = required_text(request, "outcome", "request");
+    const auto disposition = required_text(request, "residualResponsibilityDisposition", "request");
+    const json settlement_identity = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
+                                      {"warrantRoot", current.warrant.at("warrantRoot")},
+                                      {"generation", state.at("generation")},
+                                      {"fencingToken", state.at("fencingToken")},
+                                      {"outcome", outcome},
+                                      {"residualResponsibility", state.at("residualResponsibility")},
+                                      {"residualResponsibilityDisposition", disposition},
+                                      {"settledBy", state.at("holder")},
+                                      {"recordedAt", recorded_at}};
+    const auto settlement_root = root_of(settlement_identity);
+    settlement = settlement_identity;
+    state["state"] = "settled";
+    state["settlementRoot"] = settlement_root;
+    event_name = "settled";
+  } else if (action == "runtime-warrant-recover") {
+    const bool lease_expired = recorded_at >= state.at("expiresAt").get<int64_t>();
+    const bool heartbeat_expired = recorded_at > state.at("heartbeatDeadline").get<int64_t>();
+    if (!lease_expired && !heartbeat_expired)
+      refuse("KF_KFX_RUNTIME_RECOVERY_NOT_DUE", "Core recovery requires an expired lease or missed heartbeat");
+    const auto terminal_reason = lease_expired ? "lease-expired" : "heartbeat-expired";
+    const json settlement_identity = {{"schema", "kungfu.kfx.runtime-warrant-settlement/v1"},
+                                      {"warrantRoot", current.warrant.at("warrantRoot")},
+                                      {"generation", state.at("generation")},
+                                      {"fencingToken", state.at("fencingToken")},
+                                      {"outcome", "recovered"},
+                                      {"terminalReason", terminal_reason},
+                                      {"residualResponsibility", state.at("residualResponsibility")},
+                                      {"residualResponsibilityDisposition", "retained-by-kungfu-core"},
+                                      {"settledBy", "kungfu-core/kfx-recovery"},
+                                      {"recordedAt", recorded_at}};
+    const auto settlement_root = root_of(settlement_identity);
+    settlement = settlement_identity;
+    state["state"] = "recovered";
+    state["settlementRoot"] = settlement_root;
+    event_name = terminal_reason;
+  } else {
+    refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "unsupported Runtime Warrant transition");
+  }
+  state["recordedAt"] = recorded_at;
+  const auto action_id = "kfx-runtime-" + event_name + ":" +
+                         sha256(current.warrant.at("warrantRoot").get<std::string>() + std::to_string(recorded_at) +
+                                state.at("fencingToken").get<std::string>())
+                             .substr(0, 32);
+  const json event = {{"schema", "kungfu.kfx.runtime-warrant-episode-fact/v1"},
+                      {"profile", KFX_PROFILE_ID},
+                      {"domainProfileRoot", native_kfx_domain_profile().at("domainProfileRoot")},
+                      {"actionId", action_id},
+                      {"event", event_name},
+                      {"warrantRoot", current.warrant.at("warrantRoot")},
+                      {"packageKey", package_key},
+                      {"host", host},
+                      {"holder", state.at("holder")},
+                      {"generation", state.at("generation")},
+                      {"fencingToken", state.at("fencingToken")},
+                      {"state", state.at("state")},
+                      {"recordedAt", recorded_at}};
+  const auto receipt =
+      commit_runtime_warrant_transition(runtime_dir, current, current.warrant, state, event, settlement, action_id);
+  return {{"schema", "kungfu.kfx.runtime-warrant-transition/v1"},
+          {"event", event_name},
+          {"leaseState", state},
+          {"receipt", receipt}};
+}
+
+json kfd10_runtime_witness(const json &request, const std::string &runtime_dir, const json &mutation) {
+  const auto package_key = required_text(request, "packageKey", "request");
+  const auto host = required_text(request, "host", "request");
+  const auto current = load_runtime_warrant(runtime_dir, package_key, host);
+  if (!current.present)
+    refuse("KF_KFX_RUNTIME_WARRANT_MISSING", "KFD-10 witness requires retained Runtime Warrant facts");
+  const auto profile = native_kfx_domain_profile();
+  const auto kfd = profile.at("kfd10AdopterWitness");
+  const json identity = {
+      {"schema", "kungfu.kfx.kfd-10-adopter-witness/v1"},
+      {"standard", "KFD-10"},
+      {"claimClass", "draft-adopter-evidence"},
+      {"adopter", "kungfu-kfx-control-and-runtime"},
+      {"normative",
+       {{"status", kfd.at("status")}, {"revision", kfd.at("revision")}, {"documentRoot", kfd.at("documentRoot")}}},
+      {"domainProfileRoot", profile.at("domainProfileRoot")},
+      {"packageKey", package_key},
+      {"host", host},
+      {"mutationLifecycleRoot", mutation.at("historyRoot")},
+      {"runtimeLifecycleRoot", root_of(current.events)},
+      {"runtimeWarrantRoot", current.warrant.at("warrantRoot")},
+      {"runtimeCutRef", current.ref_name},
+      {"runtimeCutRoot", current.cut_root},
+      {"runtimeRevision", current.revision},
+      {"leaseState", current.state},
+      {"authoritySeparation",
+       {{"capabilityGrantIsNotWarrant", true},
+        {"kfdEvidenceIsNotRuntimePrivilege", true},
+        {"episodeIsNotRetroactiveAuthority", true},
+        {"settlementIsNotWarrant", true},
+        {"recoveryOwnedByCore", true}}},
+      {"faultCodes", json::array({"KF_KFX_RUNTIME_AUTHORITY_AMPLIFICATION", "KF_KFX_RUNTIME_FENCE_STALE",
+                                  "KF_KFX_RUNTIME_HEARTBEAT_DUPLICATE", "KF_KFX_RUNTIME_HEARTBEAT_STALE",
+                                  "KF_KFX_RUNTIME_HOLDER_STALE", "KF_KFX_RUNTIME_REVOCATION_INVALID",
+                                  "KF_KFX_RUNTIME_WARRANT_EXPIRED", "KF_KFX_RUNTIME_WARRANT_TERMINAL"})},
+      {"boundary", "first-party specialized witness; KFD remains draft and grants no runtime permission"},
+      {"nonClaims", json::array({"KFD-10 conformance", "KFD-10 activation", "shipped KFD-10 support",
+                                 "independent certification", "authority from package identity or support claims"})}};
+  auto witness = identity;
+  witness["witnessRoot"] = root_of(identity);
+  return witness;
 }
 
 } // namespace kungfu::runtime::kfx::authority

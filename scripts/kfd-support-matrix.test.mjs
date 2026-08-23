@@ -110,9 +110,9 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
   assert.equal(kfd10.supportStatus, 'draft-adopter-evidence');
   assert.equal(kfd10.implementation.status, 'implemented-specialized-witness');
   assert.deepEqual(kfd10.implementation.surfaces, [
-    'framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp',
+    'framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp',
     'framework/kfx/kungfu-kfx-domain-profile.contract.json',
-    'framework/core/src/python/kungfu/storage/service.py',
+    'framework/core/src/python/kungfu/storage/kfx_service.py',
   ]);
   assert.deepEqual(
     kfd10.verification.evidenceRoots.map((entry) => entry.path),

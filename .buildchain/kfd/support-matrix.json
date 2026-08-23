@@ -532,9 +532,9 @@
       "implementation": {
         "status": "implemented-specialized-witness",
         "surfaces": [
-          "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
+          "framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp",
           "framework/kfx/kungfu-kfx-domain-profile.contract.json",
-          "framework/core/src/python/kungfu/storage/service.py"
+          "framework/core/src/python/kungfu/storage/kfx_service.py"
         ]
       },
       "verification": {
@@ -542,7 +542,7 @@
         "evidenceRoots": [
           {
             "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
-            "sha256": "sha256:46714aef4004b6b40def4881b9d7d4d5e2c8f1b40fe93b9bc140bb911bcfab88"
+            "sha256": "sha256:45463f32d003b0c05e0bdb4b7f609792e45dbbd5f8396c9558c1686b3eb8818c"
           }
         ]
       },

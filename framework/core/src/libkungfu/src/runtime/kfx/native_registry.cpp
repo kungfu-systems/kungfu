@@ -73,9 +73,10 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
   if (action == "apply" || runtime_mutation)
     writer_lock.emplace(runtime_dir);
   if (runtime_transition)
-    return transition_runtime_warrant(action, request, runtime_dir);
+    return authority::transition_runtime_warrant(action, request, runtime_dir);
   if (action == "kfd-10-witness")
-    return kfd10_runtime_witness(request, runtime_dir);
+    return authority::kfd10_runtime_witness(
+        request, runtime_dir, lifecycle_history(runtime_dir, {{"packageKey", request.value("packageKey", "")}}));
   const auto lifecycle = load_lifecycle(runtime_dir);
   auto snapshot_request = request;
   if (action == "apply")
@@ -97,8 +98,11 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     refuse("KF_KFX_CUT_MISSING", "no named KFX Fact Cut exists; provide a bounded discovery observation to plan");
   }
   const auto load_plan = lifecycle_plan(selected, lifecycle, request);
-  if (action == "runtime-warrant-issue")
-    return issue_runtime_warrant(load_plan.at("hostContract"), lifecycle, request, runtime_dir);
+  if (action == "runtime-warrant-issue") {
+    const auto &descriptor = load_plan.at("hostContract");
+    return authority::issue_runtime_warrant(descriptor, authorize_host_launch(descriptor, lifecycle, request), request,
+                                            runtime_dir);
+  }
   if (action == "authorize-host")
     return authorize_host_launch(load_plan.at("hostContract"), lifecycle, request);
   if (control_request && action == "apply") {

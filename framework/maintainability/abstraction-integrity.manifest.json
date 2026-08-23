@@ -263,6 +263,12 @@
       ]
     },
     {
+      "owner": "core/python-kfx-service-contract",
+      "paths": [
+        "framework/core/src/python/kungfu/storage/kfx_service.py"
+      ]
+    },
+    {
       "owner": "core/python-profile-sdk",
       "paths": [
         "framework/core/src/python/kungfu/profile_sdk_kfd3.py",
