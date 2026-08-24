@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6444,
+  "generation": 6445,
   "fencingCounter": 647,
   "policy": {
     "agingSeconds": 900,
@@ -81,12 +81,15 @@
     "sourceWorkflowRunId": 32696355040,
     "deliveryClass": "native-proof-required",
     "generation": 647,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:dd6617a9600f1cd7c1ec58f96fe519be8fabe605a9ab8ac2dd3f7bb224f70e8c",
     "issuedAt": "2026-08-24T06:24:17.217Z",
     "expiresAt": "2026-08-24T07:56:51.053Z",
     "fencingToken": "sha256:0125f792401f3fb0b1b3bb879612718c7dacf69b97a929c474efc0a23937e5a9",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:3fb00337f69704025c294d5cac6a4d3534baf8ec1959c6f42246b4d44c50f5db",
+    "nativeProofReuseRoot": "sha256:872b2e2c46f9c830a5b5fb5066310bf4440ec7d1bd2ec9e4a3bfe843e4b08ae6",
+    "qualifiedAt": "2026-08-24T06:26:57.624Z"
   },
   "candidates": [
     {
@@ -45515,10 +45518,10 @@
       "sourceWorkflowRunId": 32696355040,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-24T06:24:12.065Z",
-      "updatedAt": "2026-08-24T06:26:51.053Z",
+      "updatedAt": "2026-08-24T06:26:57.624Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json",
@@ -45572,6 +45575,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-24T06:26:51.053Z",
-  "stateRoot": "sha256:c7ba9c20d0a350217ed6c584db268ab6c61fc5d4efc9bb27641f09478a2e1d52"
+  "updatedAt": "2026-08-24T06:26:57.624Z",
+  "stateRoot": "sha256:63f9ad8b1cac4168908719b6d46a7b2aabd01b5b4df25483668e2f098003779e"
 }
