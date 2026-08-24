@@ -27,6 +27,22 @@ def _only(values: Mapping[str, Any], allowed: set[str], operation: str) -> None:
         raise ValueError(f"unknown {operation} input: {sorted(unknown)}")
 
 
+def _text(values: Mapping[str, Any], key: str, default: str = "") -> str:
+    return str(values.get(key) or default)
+
+
+def _string_rows(values: Mapping[str, Any], key: str) -> list[str]:
+    return [str(row) for row in (values.get(key) or [])]
+
+
+def _object_rows(values: Mapping[str, Any], key: str) -> list[dict[str, Any]]:
+    return [dict(row) for row in (values.get(key) or [])]
+
+
+def _mapping(values: Mapping[str, Any], key: str) -> dict[str, Any]:
+    return dict(values.get(key) or {})
+
+
 def _domain(context: Mapping[str, Any]):
     return profile_sdk.load_member_python_package(
         str(context["source"]), "work-control-actions", "domain"
@@ -62,380 +78,396 @@ def _assignment_cards(
     ]
 
 
-def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
-    work_control = domain.work_control
+def _create_initiative(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {
+            "initiativeId",
+            "title",
+            "intent",
+            "actor",
+            "actorType",
+            "status",
+            "horizon",
+            "sourceIdentity",
+        },
+        "create-initiative",
+    )
+    receipt = domain.work_control.create_initiative(
+        runtime_dir,
+        initiative_id=str(values.get("initiativeId") or ""),
+        title=str(values.get("title") or ""),
+        intent=str(values.get("intent") or ""),
+        actor=str(values.get("actor") or ""),
+        actor_type=str(values.get("actorType") or "agent"),
+        status=str(values.get("status") or "active"),
+        horizon=str(values.get("horizon") or "long-term"),
+        source_identity=dict(values.get("sourceIdentity") or {}),
+    )
+    return receipt, [receipt["initiative_subject"]]
 
-    if operation == "create-initiative":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "title",
-                "intent",
-                "actor",
-                "actorType",
-                "status",
-                "horizon",
-                "sourceIdentity",
-            },
-            operation,
+
+_CREATE_ASSIGNMENT_FIELDS = {
+    "initiativeId",
+    "assignmentId",
+    "title",
+    "objective",
+    "actor",
+    "actorType",
+    "source",
+    "status",
+    "parentAssignmentId",
+    "dependsOn",
+    "owningWorkspaceIdentityRoot",
+    "initiativeRef",
+    "parentAssignmentRef",
+    "dependencyRefs",
+    "responsibility",
+    "acceptanceRoot",
+    "contextRoot",
+    "contextBinding",
+    "projectCutRoot",
+    "evidenceEpisodeRoots",
+    "requestRoot",
+    "captureReceiptRoots",
+    "workDefinition",
+}
+
+
+def _create_assignment(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(values, _CREATE_ASSIGNMENT_FIELDS, "create-assignment")
+    receipt = domain.work_control.create_assignment(
+        runtime_dir,
+        initiative_id=_text(values, "initiativeId"),
+        assignment_id=_text(values, "assignmentId"),
+        title=_text(values, "title"),
+        objective=_text(values, "objective"),
+        actor=_text(values, "actor"),
+        actor_type=_text(values, "actorType", "agent"),
+        storage_source_id=_text(values, "source", "kungfu"),
+        status=_text(values, "status", "active"),
+        parent_assignment_id=_text(values, "parentAssignmentId"),
+        depends_on=_string_rows(values, "dependsOn"),
+        owning_workspace_identity_root=_text(values, "owningWorkspaceIdentityRoot"),
+        initiative_ref=_mapping(values, "initiativeRef"),
+        parent_assignment_ref=_mapping(values, "parentAssignmentRef"),
+        dependency_refs=_object_rows(values, "dependencyRefs"),
+        responsibility=_text(values, "responsibility"),
+        acceptance_root=_text(values, "acceptanceRoot"),
+        context_root=_text(values, "contextRoot"),
+        context_binding=_mapping(values, "contextBinding"),
+        project_cut_root=_text(values, "projectCutRoot"),
+        evidence_episode_roots=_string_rows(values, "evidenceEpisodeRoots"),
+        request_root=_text(values, "requestRoot"),
+        capture_receipt_roots=_string_rows(values, "captureReceiptRoots"),
+        work_definition=_mapping(values, "workDefinition"),
+    )
+    return receipt, [receipt["initiative_subject"], receipt["assignment_subject"]]
+
+
+def _append_assignment_relation_event(
+    domain, runtime_dir: str, values: Mapping[str, Any]
+):
+    _only(
+        values,
+        {
+            "workspaceIdentityRoot",
+            "relation",
+            "eventType",
+            "actor",
+            "predecessorEventRoots",
+            "evidenceRoots",
+            "knownRelations",
+            "actorType",
+        },
+        "append-assignment-relation-event",
+    )
+    receipt = domain.work_control.append_assignment_relation_event(
+        runtime_dir,
+        workspace_identity_root=str(values.get("workspaceIdentityRoot") or ""),
+        relation=dict(values.get("relation") or {}),
+        event_type=str(values.get("eventType") or ""),
+        actor=str(values.get("actor") or ""),
+        predecessor_event_roots=[
+            str(row) for row in (values.get("predecessorEventRoots") or [])
+        ],
+        evidence_roots=[str(row) for row in (values.get("evidenceRoots") or [])],
+        known_relations=[dict(row) for row in (values.get("knownRelations") or [])],
+        actor_type=str(values.get("actorType") or "agent"),
+    )
+    relation = receipt["event"]["relation"]
+    return receipt, [relation["source"]["subject"], relation["target"]["subject"]]
+
+
+def _claim_assignment(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {
+            "initiativeId",
+            "assignmentId",
+            "owner",
+            "agent",
+            "slot",
+            "leaseId",
+            "leaseExpiresAt",
+            "attemptId",
+            "authorizedBy",
+            "grantScope",
+            "actorType",
+            "source",
+        },
+        "claim-assignment",
+    )
+    receipt = domain.work_control.claim_assignment_execution(
+        runtime_dir,
+        initiative_id=_text(values, "initiativeId"),
+        assignment_id=_text(values, "assignmentId"),
+        owner=_text(values, "owner"),
+        agent=_text(values, "agent"),
+        slot=_text(values, "slot"),
+        lease_id=_text(values, "leaseId"),
+        lease_expires_at=_text(values, "leaseExpiresAt"),
+        attempt_id=_text(values, "attemptId"),
+        authorized_by=_text(values, "authorizedBy"),
+        grant_scope=_text(values, "grantScope", "assignment-execution"),
+        actor_type=_text(values, "actorType", "agent"),
+        storage_source_id=_text(values, "source", "kungfu"),
+    )
+    return receipt, [receipt["receipt"]["subject_key"]]
+
+
+def _advance_assignment(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {
+            "initiativeId",
+            "assignmentId",
+            "toPhase",
+            "expectedPhase",
+            "actor",
+            "actorType",
+            "reason",
+            "source",
+        },
+        "advance-assignment",
+    )
+    receipt = domain.work_control.advance_assignment_phase(
+        runtime_dir,
+        initiative_id=str(values.get("initiativeId") or ""),
+        assignment_id=str(values.get("assignmentId") or ""),
+        to_phase=str(values.get("toPhase") or ""),
+        expected_phase=str(values.get("expectedPhase") or ""),
+        actor=str(values.get("actor") or ""),
+        actor_type=str(values.get("actorType") or "agent"),
+        reason=str(values.get("reason") or ""),
+        storage_source_id=str(values.get("source") or "kungfu"),
+    )
+    return receipt, [receipt["receipt"]["subject_key"]]
+
+
+def _claim_completion(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {
+            "initiativeId",
+            "assignmentId",
+            "statement",
+            "actor",
+            "actorType",
+            "source",
+            "evidenceEpisodeIds",
+            "assignmentSet",
+            "acceptanceRoot",
+            "inputContextRoot",
+            "resultContextRoot",
+            "projectCutRoot",
+            "projectCutReceiptRoot",
+            "gitCommit",
+            "gitTreeRoot",
+            "proofRoots",
+            "knownGaps",
+            "evidenceAvailability",
+        },
+        "claim-completion",
+    )
+    receipt = domain.work_control.claim_completion(
+        runtime_dir,
+        initiative_id=_text(values, "initiativeId"),
+        assignment_id=_text(values, "assignmentId"),
+        statement=_text(values, "statement"),
+        actor=_text(values, "actor"),
+        actor_type=_text(values, "actorType", "agent"),
+        storage_source_id=_text(values, "source", "kungfu"),
+        evidence_episode_ids=[int(row) for row in values.get("evidenceEpisodeIds", [])],
+        assignment_set=_string_rows(values, "assignmentSet"),
+        acceptance_root=_text(values, "acceptanceRoot"),
+        input_context_root=_text(values, "inputContextRoot"),
+        result_context_root=_text(values, "resultContextRoot"),
+        project_cut_root=_text(values, "projectCutRoot"),
+        project_cut_receipt_root=_text(values, "projectCutReceiptRoot"),
+        git_commit=_text(values, "gitCommit"),
+        git_tree_root=_text(values, "gitTreeRoot"),
+        proof_roots=_string_rows(values, "proofRoots"),
+        known_gaps=_string_rows(values, "knownGaps"),
+        evidence_availability=list(values.get("evidenceAvailability", [])),
+    )
+    return receipt, [
+        receipt["initiative_subject"],
+        receipt["assignment_subject"],
+        receipt["claim"]["claim_id"],
+    ]
+
+
+def _assess_progress(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {
+            "initiativeId",
+            "assignmentId",
+            "source",
+            "purpose",
+            "authorizedBy",
+            "cutSystemTime",
+            "executorProfile",
+        },
+        "assess-progress",
+    )
+    common = {
+        "initiative_id": _text(values, "initiativeId"),
+        "storage_source_id": _text(values, "source", "kungfu"),
+        "purpose": _text(values, "purpose", "operator-review"),
+        "authorized_by": _text(values, "authorizedBy", "kungfu-profile"),
+        "cut_system_time": int(values.get("cutSystemTime") or 0),
+        "executor_profile": _text(values, "executorProfile", "thread"),
+    }
+    if values.get("assignmentId"):
+        receipt = domain.work_control.assess_completion(
+            runtime_dir, assignment_id=str(values["assignmentId"]), **common
         )
-        receipt = work_control.create_initiative(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            title=str(values.get("title") or ""),
-            intent=str(values.get("intent") or ""),
-            actor=str(values.get("actor") or ""),
-            actor_type=str(values.get("actorType") or "agent"),
-            status=str(values.get("status") or "active"),
-            horizon=str(values.get("horizon") or "long-term"),
-            source_identity=dict(values.get("sourceIdentity") or {}),
-        )
-        affected = [receipt["initiative_subject"]]
-    elif operation == "create-assignment":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "assignmentId",
-                "title",
-                "objective",
-                "actor",
-                "actorType",
-                "source",
-                "status",
-                "parentAssignmentId",
-                "dependsOn",
-                "owningWorkspaceIdentityRoot",
-                "initiativeRef",
-                "parentAssignmentRef",
-                "dependencyRefs",
-                "responsibility",
-                "acceptanceRoot",
-                "contextRoot",
-                "contextBinding",
-                "projectCutRoot",
-                "evidenceEpisodeRoots",
-                "requestRoot",
-                "captureReceiptRoots",
-                "workDefinition",
-            },
-            operation,
-        )
-        receipt = work_control.create_assignment(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            assignment_id=str(values.get("assignmentId") or ""),
-            title=str(values.get("title") or ""),
-            objective=str(values.get("objective") or ""),
-            actor=str(values.get("actor") or ""),
-            actor_type=str(values.get("actorType") or "agent"),
-            storage_source_id=str(values.get("source") or "kungfu"),
-            status=str(values.get("status") or "active"),
-            parent_assignment_id=str(values.get("parentAssignmentId") or ""),
-            depends_on=[str(row) for row in (values.get("dependsOn") or [])],
-            owning_workspace_identity_root=str(
-                values.get("owningWorkspaceIdentityRoot") or ""
-            ),
-            initiative_ref=dict(values.get("initiativeRef") or {}),
-            parent_assignment_ref=dict(values.get("parentAssignmentRef") or {}),
-            dependency_refs=[dict(row) for row in (values.get("dependencyRefs") or [])],
-            responsibility=str(values.get("responsibility") or ""),
-            acceptance_root=str(values.get("acceptanceRoot") or ""),
-            context_root=str(values.get("contextRoot") or ""),
-            context_binding=dict(values.get("contextBinding") or {}),
-            project_cut_root=str(values.get("projectCutRoot") or ""),
-            evidence_episode_roots=[
-                str(row) for row in (values.get("evidenceEpisodeRoots") or [])
-            ],
-            request_root=str(values.get("requestRoot") or ""),
-            capture_receipt_roots=[
-                str(row) for row in (values.get("captureReceiptRoots") or [])
-            ],
-            work_definition=dict(values.get("workDefinition") or {}),
-        )
-        affected = [
-            receipt["initiative_subject"],
-            receipt["assignment_subject"],
-        ]
-    elif operation == "append-assignment-relation-event":
-        _only(
-            values,
-            {
-                "workspaceIdentityRoot",
-                "relation",
-                "eventType",
-                "actor",
-                "predecessorEventRoots",
-                "evidenceRoots",
-                "knownRelations",
-                "actorType",
-            },
-            operation,
-        )
-        receipt = work_control.append_assignment_relation_event(
-            runtime_dir,
-            workspace_identity_root=str(values.get("workspaceIdentityRoot") or ""),
-            relation=dict(values.get("relation") or {}),
-            event_type=str(values.get("eventType") or ""),
-            actor=str(values.get("actor") or ""),
-            predecessor_event_roots=[
-                str(row) for row in (values.get("predecessorEventRoots") or [])
-            ],
-            evidence_roots=[str(row) for row in (values.get("evidenceRoots") or [])],
-            known_relations=[dict(row) for row in (values.get("knownRelations") or [])],
-            actor_type=str(values.get("actorType") or "agent"),
-        )
-        affected = [
-            receipt["event"]["relation"]["source"]["subject"],
-            receipt["event"]["relation"]["target"]["subject"],
-        ]
-    elif operation == "claim-assignment":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "assignmentId",
-                "owner",
-                "agent",
-                "slot",
-                "leaseId",
-                "leaseExpiresAt",
-                "attemptId",
-                "authorizedBy",
-                "grantScope",
-                "actorType",
-                "source",
-            },
-            operation,
-        )
-        receipt = work_control.claim_assignment_execution(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            assignment_id=str(values.get("assignmentId") or ""),
-            owner=str(values.get("owner") or ""),
-            agent=str(values.get("agent") or ""),
-            slot=str(values.get("slot") or ""),
-            lease_id=str(values.get("leaseId") or ""),
-            lease_expires_at=str(values.get("leaseExpiresAt") or ""),
-            attempt_id=str(values.get("attemptId") or ""),
-            authorized_by=str(values.get("authorizedBy") or ""),
-            grant_scope=str(values.get("grantScope") or "assignment-execution"),
-            actor_type=str(values.get("actorType") or "agent"),
-            storage_source_id=str(values.get("source") or "kungfu"),
-        )
-        affected = [receipt["receipt"]["subject_key"]]
-    elif operation == "advance-assignment":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "assignmentId",
-                "toPhase",
-                "expectedPhase",
-                "actor",
-                "actorType",
-                "reason",
-                "source",
-            },
-            operation,
-        )
-        receipt = work_control.advance_assignment_phase(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            assignment_id=str(values.get("assignmentId") or ""),
-            to_phase=str(values.get("toPhase") or ""),
-            expected_phase=str(values.get("expectedPhase") or ""),
-            actor=str(values.get("actor") or ""),
-            actor_type=str(values.get("actorType") or "agent"),
-            reason=str(values.get("reason") or ""),
-            storage_source_id=str(values.get("source") or "kungfu"),
-        )
-        affected = [receipt["receipt"]["subject_key"]]
-    elif operation == "claim-completion":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "assignmentId",
-                "statement",
-                "actor",
-                "actorType",
-                "source",
-                "evidenceEpisodeIds",
-                "assignmentSet",
-                "acceptanceRoot",
-                "inputContextRoot",
-                "resultContextRoot",
-                "projectCutRoot",
-                "projectCutReceiptRoot",
-                "gitCommit",
-                "gitTreeRoot",
-                "proofRoots",
-                "knownGaps",
-                "evidenceAvailability",
-            },
-            operation,
-        )
-        receipt = work_control.claim_completion(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            assignment_id=str(values.get("assignmentId") or ""),
-            statement=str(values.get("statement") or ""),
-            actor=str(values.get("actor") or ""),
-            actor_type=str(values.get("actorType") or "agent"),
-            storage_source_id=str(values.get("source") or "kungfu"),
-            evidence_episode_ids=[
-                int(row) for row in values.get("evidenceEpisodeIds", [])
-            ],
-            assignment_set=[str(row) for row in values.get("assignmentSet", [])],
-            acceptance_root=str(values.get("acceptanceRoot") or ""),
-            input_context_root=str(values.get("inputContextRoot") or ""),
-            result_context_root=str(values.get("resultContextRoot") or ""),
-            project_cut_root=str(values.get("projectCutRoot") or ""),
-            project_cut_receipt_root=str(values.get("projectCutReceiptRoot") or ""),
-            git_commit=str(values.get("gitCommit") or ""),
-            git_tree_root=str(values.get("gitTreeRoot") or ""),
-            proof_roots=[str(row) for row in values.get("proofRoots", [])],
-            known_gaps=[str(row) for row in values.get("knownGaps", [])],
-            evidence_availability=list(values.get("evidenceAvailability", [])),
-        )
-        affected = [
-            receipt["initiative_subject"],
-            receipt["assignment_subject"],
-            receipt["claim"]["claim_id"],
-        ]
-    elif operation == "assess-progress":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "assignmentId",
-                "source",
-                "purpose",
-                "authorizedBy",
-                "cutSystemTime",
-                "executorProfile",
-            },
-            operation,
-        )
-        common = {
-            "initiative_id": str(values.get("initiativeId") or ""),
-            "storage_source_id": str(values.get("source") or "kungfu"),
-            "purpose": str(values.get("purpose") or "operator-review"),
-            "authorized_by": str(values.get("authorizedBy") or "kungfu-profile"),
-            "cut_system_time": int(values.get("cutSystemTime") or 0),
-            "executor_profile": str(values.get("executorProfile") or "thread"),
-        }
-        if values.get("assignmentId"):
-            receipt = work_control.assess_completion(
-                runtime_dir, assignment_id=str(values["assignmentId"]), **common
-            )
-        else:
-            receipt = work_control.assess_progress(runtime_dir, **common)
-        affected = [receipt["state"]["initiative_subject"]]
-    elif operation == "review-completion":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "assignmentId",
-                "reviewer",
-                "reviewerSource",
-                "source",
-                "purpose",
-                "cutSystemTime",
-                "executorProfile",
-                "proposedFollowups",
-                "checkoutPath",
-            },
-            operation,
-        )
-        receipt = work_control.review_completion(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            assignment_id=str(values.get("assignmentId") or ""),
-            reviewer=str(values.get("reviewer") or ""),
-            reviewer_source=str(values.get("reviewerSource") or ""),
-            storage_source_id=str(values.get("source") or "kungfu"),
-            purpose=str(values.get("purpose") or "handoff"),
-            cut_system_time=int(values.get("cutSystemTime") or 0),
-            executor_profile=str(values.get("executorProfile") or "thread"),
-            proposed_followups=list(values.get("proposedFollowups", [])),
-            checkout_path=str(values.get("checkoutPath") or ""),
-        )
-        affected = [
-            receipt["trust_report"]["state"]["initiative_subject"],
-            receipt["review"]["review_id"],
-        ]
-    elif operation == "decide-continuation":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "assignmentId",
-                "reviewId",
-                "expectedReviewRoot",
-                "expectedPlanRoot",
-                "action",
-                "actor",
-                "actorType",
-                "changeClass",
-                "source",
-                "reason",
-            },
-            operation,
-        )
-        receipt = work_control.decide_continuation(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            assignment_id=str(values.get("assignmentId") or ""),
-            review_id=str(values.get("reviewId") or ""),
-            expected_review_root=str(values.get("expectedReviewRoot") or ""),
-            expected_plan_root=str(values.get("expectedPlanRoot") or ""),
-            action=str(values.get("action") or ""),
-            actor=str(values.get("actor") or ""),
-            actor_type=str(values.get("actorType") or "agent"),
-            change_class=str(values.get("changeClass") or "mechanical"),
-            storage_source_id=str(values.get("source") or "kungfu"),
-            reason=str(values.get("reason") or ""),
-        )
-        affected = [receipt["decision"]["review_id"]]
-    elif operation == "export-initiative":
-        _only(
-            values,
-            {
-                "initiativeId",
-                "out",
-                "mode",
-                "source",
-                "purpose",
-            },
-            operation,
-        )
-        options = {
-            "mode": str(values.get("mode") or "full"),
-            "storage_source_id": str(values.get("source") or "kungfu"),
-            "purpose": str(values.get("purpose") or "operator-review"),
-        }
-        receipt = domain.initiative_bundle.write_initiative_bundle(
-            runtime_dir,
-            str(values.get("out") or ""),
-            initiative_id=str(values.get("initiativeId") or ""),
-            **options,
-        )
-        affected = [receipt["initiative_subject"]]
-    elif operation == "import-initiative":
-        _only(values, {"from", "execute"}, operation)
-        work_control._ensure_native_write_allowed(runtime_dir)
-        receipt = domain.initiative_bundle.import_initiative_bundle_file(
-            runtime_dir,
-            str(values.get("from") or ""),
-            execute=bool(values.get("execute")),
-        )
-        affected = [receipt["initiative_subject"]]
     else:
+        receipt = domain.work_control.assess_progress(runtime_dir, **common)
+    return receipt, [receipt["state"]["initiative_subject"]]
+
+
+def _review_completion(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {
+            "initiativeId",
+            "assignmentId",
+            "reviewer",
+            "reviewerSource",
+            "source",
+            "purpose",
+            "cutSystemTime",
+            "executorProfile",
+            "proposedFollowups",
+            "checkoutPath",
+        },
+        "review-completion",
+    )
+    receipt = domain.work_control.review_completion(
+        runtime_dir,
+        initiative_id=str(values.get("initiativeId") or ""),
+        assignment_id=str(values.get("assignmentId") or ""),
+        reviewer=str(values.get("reviewer") or ""),
+        reviewer_source=str(values.get("reviewerSource") or ""),
+        storage_source_id=str(values.get("source") or "kungfu"),
+        purpose=str(values.get("purpose") or "handoff"),
+        cut_system_time=int(values.get("cutSystemTime") or 0),
+        executor_profile=str(values.get("executorProfile") or "thread"),
+        proposed_followups=list(values.get("proposedFollowups", [])),
+        checkout_path=str(values.get("checkoutPath") or ""),
+    )
+    return receipt, [
+        receipt["trust_report"]["state"]["initiative_subject"],
+        receipt["review"]["review_id"],
+    ]
+
+
+def _decide_continuation(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {
+            "initiativeId",
+            "assignmentId",
+            "reviewId",
+            "expectedReviewRoot",
+            "expectedPlanRoot",
+            "action",
+            "actor",
+            "actorType",
+            "changeClass",
+            "source",
+            "reason",
+        },
+        "decide-continuation",
+    )
+    receipt = domain.work_control.decide_continuation(
+        runtime_dir,
+        initiative_id=_text(values, "initiativeId"),
+        assignment_id=_text(values, "assignmentId"),
+        review_id=_text(values, "reviewId"),
+        expected_review_root=_text(values, "expectedReviewRoot"),
+        expected_plan_root=_text(values, "expectedPlanRoot"),
+        action=_text(values, "action"),
+        actor=_text(values, "actor"),
+        actor_type=_text(values, "actorType", "agent"),
+        change_class=_text(values, "changeClass", "mechanical"),
+        storage_source_id=_text(values, "source", "kungfu"),
+        reason=_text(values, "reason"),
+    )
+    return receipt, [receipt["decision"]["review_id"]]
+
+
+def _export_initiative(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(
+        values,
+        {"initiativeId", "out", "mode", "source", "purpose"},
+        "export-initiative",
+    )
+    receipt = domain.initiative_bundle.write_initiative_bundle(
+        runtime_dir,
+        str(values.get("out") or ""),
+        initiative_id=str(values.get("initiativeId") or ""),
+        mode=str(values.get("mode") or "full"),
+        storage_source_id=str(values.get("source") or "kungfu"),
+        purpose=str(values.get("purpose") or "operator-review"),
+    )
+    return receipt, [receipt["initiative_subject"]]
+
+
+def _import_initiative(domain, runtime_dir: str, values: Mapping[str, Any]):
+    _only(values, {"from", "execute"}, "import-initiative")
+    domain.work_control._ensure_native_write_allowed(runtime_dir)
+    receipt = domain.initiative_bundle.import_initiative_bundle_file(
+        runtime_dir,
+        str(values.get("from") or ""),
+        execute=bool(values.get("execute")),
+    )
+    return receipt, [receipt["initiative_subject"]]
+
+
+_ACTION_HANDLERS = {
+    "create-initiative": _create_initiative,
+    "create-assignment": _create_assignment,
+    "append-assignment-relation-event": _append_assignment_relation_event,
+    "claim-assignment": _claim_assignment,
+    "advance-assignment": _advance_assignment,
+    "claim-completion": _claim_completion,
+    "assess-progress": _assess_progress,
+    "review-completion": _review_completion,
+    "decide-continuation": _decide_continuation,
+    "export-initiative": _export_initiative,
+    "import-initiative": _import_initiative,
+}
+
+
+def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
+    handler = _ACTION_HANDLERS.get(operation)
+    if handler is None:
         raise ValueError(f"unsupported Work Control action: {operation}")
+    receipt, affected = handler(domain, runtime_dir, values)
     return {
         "coreReceipt": receipt,
         "affected": {

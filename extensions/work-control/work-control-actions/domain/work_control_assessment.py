@@ -163,7 +163,7 @@ def _responsibility_state(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _cost_profile(runtime_dir: str, state: dict[str, Any]) -> dict[str, Any]:
+def _cost_work_ids(state: dict[str, Any]) -> set[str]:
     work_ids = {
         str(row.get("subject_key") or "") for row in state.get("assignments", [])
     }
@@ -172,90 +172,138 @@ def _cost_profile(runtime_dir: str, state: dict[str, Any]) -> dict[str, Any]:
         for row in state.get("assignments", [])
     )
     work_ids.discard("")
-    declared_cut = state.get("cut", {}).get("declared", {})
-    cost_cut = (
-        int(declared_cut.get("system_time") or 0)
-        if declared_cut.get("kind") == "system_time"
-        else 0
-    )
+    return work_ids
+
+
+def _cost_episode_rows(runtime_dir: str) -> list[dict[str, Any]]:
     # Open the Episode fold before Rewind readers. Both are journal-backed, and
     # this pins one visibility frontier for the profile instead of letting a
     # later reader construction observe a different filesystem snapshot.
-    first_episode_rows = storage_service.episode_list(runtime_dir).get("episodes", [])
-    refreshed_episode_rows = storage_service.episode_list(runtime_dir).get(
-        "episodes", []
-    )
-    episode_rows = list(
+    first_rows = storage_service.episode_list(runtime_dir).get("episodes", [])
+    refreshed_rows = storage_service.episode_list(runtime_dir).get("episodes", [])
+    return list(
         {
             str(row.get("episode_id") or ""): row
-            for row in [*first_episode_rows, *refreshed_episode_rows]
+            for row in [*first_rows, *refreshed_rows]
         }.values()
     )
+
+
+def _cost_run_index(
+    runtime_dir: str, episode_rows: list[dict[str, Any]]
+) -> tuple[Path, list[str], dict[str, dict[str, Any]]]:
+    episode_by_run = {
+        source.removeprefix("rewind:"): episode
+        for episode in episode_rows
+        if (source := str(episode.get("open", {}).get("source") or "")).startswith(
+            "rewind:"
+        )
+    }
     rewind_root = Path(runtime_dir) / "rewind"
-    observations: list[dict[str, Any]] = []
-    unreadable_runs = []
-    episode_id_by_run = {}
-    episode_by_run = {}
-    for episode in episode_rows:
-        source = str(episode.get("open", {}).get("source") or "")
-        if source.startswith("rewind:"):
-            episode_by_run[source.removeprefix("rewind:")] = episode
     run_ids = set(episode_by_run)
     if rewind_root.is_dir():
         run_ids.update(path.name for path in rewind_root.iterdir() if path.is_dir())
-    for run_id in sorted(run_ids):
-        run_dir = rewind_root / run_id
-        if run_dir.is_dir():
-            manifest_path = run_dir / "bundle" / "manifest.json"
-            if manifest_path.is_file():
-                try:
-                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                    episode_id = manifest.get("fact_bridge", {}).get("episode_id") or ""
-                    if str(episode_id).isdigit():
-                        episode_id_by_run[run_id] = str(episode_id)
-                except (OSError, ValueError, TypeError):
-                    pass
+    return rewind_root, sorted(run_ids), episode_by_run
+
+
+def _cost_manifest_episode_id(run_dir: Path) -> str:
+    if not run_dir.is_dir():
+        return ""
+    manifest_path = run_dir / "bundle" / "manifest.json"
+    if not manifest_path.is_file():
+        return ""
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        episode_id = manifest.get("fact_bridge", {}).get("episode_id") or ""
+        return str(episode_id) if str(episode_id).isdigit() else ""
+    except (OSError, ValueError, TypeError):
+        return ""
+
+
+def _cost_fact_text(fact: dict[str, Any], key: str, default: str = "") -> str:
+    return str(fact.get(key) or default)
+
+
+def _cost_fact_int(fact: dict[str, Any], key: str) -> int:
+    return int(fact.get(key) or 0)
+
+
+def _cost_fact_usd(fact: dict[str, Any]) -> float | None:
+    return float(fact.get("cost_usd") or 0.0) if fact.get("cost_usd_known") else None
+
+
+def _cost_observation(run_id: str, header: Any, fact: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "run_id": _cost_fact_text(fact, "run_id", run_id),
+        "work_id": _cost_fact_text(fact, "work_id"),
+        "system_time": str(header.gen_time),
+        "provider": _cost_fact_text(fact, "provider"),
+        "surface": _cost_fact_text(fact, "surface"),
+        "model": _cost_fact_text(fact, "model"),
+        "source": _cost_fact_text(fact, "source"),
+        "attribution": ATTRIBUTION_NAMES.get(
+            _cost_fact_int(fact, "attribution"), "unknown"
+        ),
+        "attribution_rank": _cost_fact_int(fact, "attribution"),
+        "ambiguous": bool(fact.get("ambiguous_attribution")),
+        "input_tokens": _cost_fact_int(fact, "input_tokens"),
+        "output_tokens": _cost_fact_int(fact, "output_tokens"),
+        "cached_input_tokens": _cost_fact_int(fact, "cached_input_tokens"),
+        "cache_creation_input_tokens": _cost_fact_int(
+            fact, "cache_creation_input_tokens"
+        ),
+        "reasoning_tokens": _cost_fact_int(fact, "reasoning_tokens"),
+        "cost_usd": _cost_fact_usd(fact),
+    }
+
+
+def _cost_run_observations(
+    runtime_dir: str,
+    run_id: str,
+    work_ids: set[str],
+    cost_cut: int,
+) -> list[dict[str, Any]]:
+    observations = []
+    for action_type, header, payload in rewind_replay.read_frames(runtime_dir, run_id):
+        if action_type != ACTION_COST_SNAPSHOT:
+            continue
+        if cost_cut and int(header.gen_time) > cost_cut:
+            continue
+        fact = rewind_replay.decode_native(action_type, payload)
+        if str(fact.get("work_id") or "") in work_ids:
+            observations.append(_cost_observation(run_id, header, fact))
+    return observations
+
+
+def _cost_observations(
+    runtime_dir: str,
+    rewind_root: Path,
+    run_ids: list[str],
+    work_ids: set[str],
+    cost_cut: int,
+) -> tuple[list[dict[str, Any]], dict[str, str], list[dict[str, str]]]:
+    observations: list[dict[str, Any]] = []
+    episode_id_by_run = {}
+    unreadable_runs = []
+    for run_id in run_ids:
+        episode_id = _cost_manifest_episode_id(rewind_root / run_id)
+        if episode_id:
+            episode_id_by_run[run_id] = episode_id
         try:
-            frames = rewind_replay.read_frames(runtime_dir, run_id)
+            observations.extend(
+                _cost_run_observations(runtime_dir, run_id, work_ids, cost_cut)
+            )
         except (FileNotFoundError, RuntimeError, ValueError) as error:
             unreadable_runs.append({"run_id": run_id, "error": type(error).__name__})
-            continue
-        for action_type, header, payload in frames:
-            if action_type != ACTION_COST_SNAPSHOT:
-                continue
-            if cost_cut and int(header.gen_time) > cost_cut:
-                continue
-            fact = rewind_replay.decode_native(action_type, payload)
-            if str(fact.get("work_id") or "") not in work_ids:
-                continue
-            observations.append(
-                {
-                    "run_id": str(fact.get("run_id") or run_id),
-                    "work_id": str(fact.get("work_id") or ""),
-                    "system_time": str(header.gen_time),
-                    "provider": str(fact.get("provider") or ""),
-                    "surface": str(fact.get("surface") or ""),
-                    "model": str(fact.get("model") or ""),
-                    "source": str(fact.get("source") or ""),
-                    "attribution": ATTRIBUTION_NAMES.get(
-                        int(fact.get("attribution") or 0), "unknown"
-                    ),
-                    "attribution_rank": int(fact.get("attribution") or 0),
-                    "ambiguous": bool(fact.get("ambiguous_attribution")),
-                    "input_tokens": int(fact.get("input_tokens") or 0),
-                    "output_tokens": int(fact.get("output_tokens") or 0),
-                    "cached_input_tokens": int(fact.get("cached_input_tokens") or 0),
-                    "cache_creation_input_tokens": int(
-                        fact.get("cache_creation_input_tokens") or 0
-                    ),
-                    "reasoning_tokens": int(fact.get("reasoning_tokens") or 0),
-                    "cost_usd": (
-                        float(fact.get("cost_usd") or 0.0)
-                        if fact.get("cost_usd_known")
-                        else None
-                    ),
-                }
-            )
+    return observations, episode_id_by_run, unreadable_runs
+
+
+def _cost_proof_episodes(
+    runtime_dir: str,
+    observations: list[dict[str, Any]],
+    episode_id_by_run: dict[str, str],
+    episode_by_run: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, str]], list[str]]:
     proof_episodes = []
     unsealed_runs = []
     for run_id in sorted({row["run_id"] for row in observations}):
@@ -278,6 +326,26 @@ def _cost_profile(runtime_dir: str, state: dict[str, Any]) -> dict[str, Any]:
                 "episode_root": verified["episode_root"],
             }
         )
+    return proof_episodes, unsealed_runs
+
+
+def _cost_profile(runtime_dir: str, state: dict[str, Any]) -> dict[str, Any]:
+    work_ids = _cost_work_ids(state)
+    declared_cut = state.get("cut", {}).get("declared", {})
+    cost_cut = (
+        int(declared_cut.get("system_time") or 0)
+        if declared_cut.get("kind") == "system_time"
+        else 0
+    )
+    rewind_root, run_ids, episode_by_run = _cost_run_index(
+        runtime_dir, _cost_episode_rows(runtime_dir)
+    )
+    observations, episode_id_by_run, unreadable_runs = _cost_observations(
+        runtime_dir, rewind_root, run_ids, work_ids, cost_cut
+    )
+    proof_episodes, unsealed_runs = _cost_proof_episodes(
+        runtime_dir, observations, episode_id_by_run, episode_by_run
+    )
 
     tokens = {
         name: sum(int(row[name]) for row in observations)
