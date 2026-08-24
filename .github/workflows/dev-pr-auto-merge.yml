@@ -605,6 +605,7 @@ jobs:
     name: Requalify source CheckRun under Warrant
     needs:
       - resolve-target
+      - delivery-contract
       - admission
     if: >-
       needs.admission.result == 'success' &&
@@ -796,7 +797,7 @@ jobs:
              | select(
                  .status == "completed" and
                  (.conclusion == "success" or
-                  ($deliveryClass == "source-only" and .conclusion == "skipped"))
+                  ($deliveryClass == "non-native-fast" and .conclusion == "skipped"))
                )' \
             "$source_jobs" >/dev/null
           jq -e \

@@ -651,10 +651,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:59fb51270979f9a2c9028a4aa2f0b3ec6b87d6157e66254e8a96800847e52065",
+          "definitionDigest": "sha256:db63beec6d90da4d984669490602ce147fbacafc38a239e028fa0dfc98f0534c",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Download exact qualified Warrant evidence","authority":"evidence-publication","definitionDigest":"sha256:7cf85852095de6c5c926b19a599f250dfa7f8effc83d436701c80b66b24ac0b1"},{"index":2,"label":"id:publish","authority":"evidence-publication","definitionDigest":"sha256:b659866a34f3b8fc5362535ed97cdd32a4b2d5a7115a021c343c04c06910833d"},{"index":3,"label":"name:Upload exact native CheckRun bridge receipt","authority":"evidence-publication","definitionDigest":"sha256:0738c87b720b7aca17c51a18e36864e6329e7fb64d75cd89549be39e5fa4c0e4"}]
+          "steps": [{"index":1,"label":"name:Download exact qualified Warrant evidence","authority":"evidence-publication","definitionDigest":"sha256:7cf85852095de6c5c926b19a599f250dfa7f8effc83d436701c80b66b24ac0b1"},{"index":2,"label":"id:publish","authority":"evidence-publication","definitionDigest":"sha256:87411d26f87074be6afe686732e9a429557bda0a0744873ac12cece222c7656e"},{"index":3,"label":"name:Upload exact native CheckRun bridge receipt","authority":"evidence-publication","definitionDigest":"sha256:0738c87b720b7aca17c51a18e36864e6329e7fb64d75cd89549be39e5fa4c0e4"}]
         },
         {
           "id": "resolve-target",
