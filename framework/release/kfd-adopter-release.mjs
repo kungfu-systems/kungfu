@@ -18,6 +18,26 @@ const MANIFEST_RELATIVE_PATH = '.buildchain/runtime/kfd-adopter/manifest.json';
 const GATE_RELATIVE_PATH = '.buildchain/runtime/kfd-adopter/gate.json';
 const WARRANT_RELATIVE_PATH =
   'framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json';
+const LEGACY_WARRANT_RELATIVE_PATH =
+  'framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json';
+
+function requireExactKfd10WitnessDeclaration(
+  support,
+  evidencePaths,
+  implementationStatus,
+  witnessPath,
+  label,
+) {
+  if (
+    support?.implementation?.status !== implementationStatus ||
+    support?.verification?.status !== 'non-conforming-evidence' ||
+    evidencePaths.length !== 1 ||
+    evidencePaths[0] !== witnessPath
+  ) {
+    throw new Error(`KFD-10 ${label} adopter witness declaration drifted`);
+  }
+  return witnessPath;
+}
 
 export function resolveKfd10AdopterWitnessPath(support) {
   const evidencePaths = (support?.verification?.evidenceRoots || []).map(
@@ -26,15 +46,22 @@ export function resolveKfd10AdopterWitnessPath(support) {
   const specialized =
     support?.implementation?.status === 'implemented-specialized-witness' ||
     evidencePaths.includes(WARRANT_RELATIVE_PATH);
-  if (!specialized) return null;
-  if (
-    support?.verification?.status !== 'non-conforming-evidence' ||
-    evidencePaths.length !== 1 ||
-    evidencePaths[0] !== WARRANT_RELATIVE_PATH
-  ) {
-    throw new Error('KFD-10 specialized adopter witness declaration drifted');
+  if (!specialized) {
+    return requireExactKfd10WitnessDeclaration(
+      support,
+      evidencePaths,
+      'partial',
+      LEGACY_WARRANT_RELATIVE_PATH,
+      'legacy',
+    );
   }
-  return WARRANT_RELATIVE_PATH;
+  return requireExactKfd10WitnessDeclaration(
+    support,
+    evidencePaths,
+    'implemented-specialized-witness',
+    WARRANT_RELATIVE_PATH,
+    'specialized',
+  );
 }
 
 function fileRoot(filePath) {

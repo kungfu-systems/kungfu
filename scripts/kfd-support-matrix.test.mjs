@@ -24,7 +24,7 @@ const KFD3_QUERY = path.join(
 const BASE = JSON.parse(readFileSync(AUTHORITY, 'utf8'));
 const BASE_QUERY = JSON.parse(readFileSync(KFD3_QUERY, 'utf8'));
 
-test('keeps post-cut KFD-10 adopter evidence out of legacy sealed candidates', () => {
+test('binds the exact legacy KFD-10 evidence from sealed candidates', () => {
   assert.equal(
     resolveKfd10AdopterWitnessPath({
       implementation: { status: 'partial' },
@@ -37,7 +37,22 @@ test('keeps post-cut KFD-10 adopter evidence out of legacy sealed candidates', (
         ],
       },
     }),
-    null,
+    'framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json',
+  );
+  assert.throws(
+    () =>
+      resolveKfd10AdopterWitnessPath({
+        implementation: { status: 'partial' },
+        verification: {
+          status: 'non-conforming-evidence',
+          evidenceRoots: [
+            {
+              path: 'framework/agent-work/evidence/kfd-7/other.json',
+            },
+          ],
+        },
+      }),
+    /KFD-10 legacy adopter witness declaration drifted/,
   );
 });
 
