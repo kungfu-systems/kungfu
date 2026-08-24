@@ -24,6 +24,7 @@ from .authority import (
     SNAPSHOT_SCHEMA,
     REQUEST_SCHEMA,
     LocalRuntimeError,
+    _LEASE_COMMANDS,
     _copy_json,
     _root,
     _stable,
@@ -43,6 +44,11 @@ _INTENT_COMMAND_TYPES = {
     "assess-progress": "initiative.progress.assess",
     "review-completion": "assignment.completion.review",
     "decide-continuation": "assignment.continuation.decide",
+    "work-input-snapshot": "work.input.snapshot",
+    "work-managed-run": "work.run.record",
+    "work-effect-authorize": "work.effect.authorize",
+    "work-effect-attempt": "work.effect.attempt",
+    "work-effect-outcome": "work.effect.outcome",
     "import-atlas": "assignment.atlas.import",
     "activate-work-control": "assignment.authority.activate",
     "restore-atlas-authority": "assignment.authority.restore",
@@ -439,6 +445,18 @@ class LocalAssignmentRuntimeApplication:
             )
         return _copy_json(lifecycle)
 
+    def work_semantics_status(
+        self, initiative_id: str, assignment_id: str
+    ) -> dict[str, Any]:
+        lifecycle = self.status(initiative_id, assignment_id)
+        semantics = lifecycle.get("work_semantics")
+        if not isinstance(semantics, Mapping):
+            raise LocalRuntimeError(
+                "backend-unavailable",
+                "Assignment Runtime snapshot omitted the Work semantics projection",
+            )
+        return _copy_json(semantics)
+
     def recovery_plan(self) -> dict[str, Any]:
         with self._runtime() as runtime:
             client = EmbeddedAssignmentRuntimeClient(
@@ -528,7 +546,7 @@ class LocalAssignmentRuntimeApplication:
                     "state": "active",
                     "expiresAt": str(arguments.get("leaseExpiresAt") or ""),
                 }
-            elif command_type == "assignment.stage":
+            elif command_type in _LEASE_COMMANDS:
                 matches = [
                     row
                     for row in snapshot.get("assignments") or []
@@ -538,7 +556,7 @@ class LocalAssignmentRuntimeApplication:
                 if len(matches) != 1:
                     raise LocalRuntimeError(
                         "ambiguous-identity",
-                        "Runtime stage target does not resolve exactly once",
+                        "Runtime lease-bound target does not resolve exactly once",
                     )
                 attempt = _copy_json(matches[0].get("attempt"))
                 lease = _copy_json(matches[0].get("lease"))

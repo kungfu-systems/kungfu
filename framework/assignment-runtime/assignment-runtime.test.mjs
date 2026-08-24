@@ -40,7 +40,18 @@ test('freezes one backend-neutral Assignment Runtime contract', () => {
   assert.equal(contract.authority.writer, 'realm-runtime');
   assert.equal(Object.hasOwn(contract, 'compatibility'), false);
   assert.equal(contract.localRuntimeProfile.publicPathContract, false);
-  assert.equal(contract.implementationStatus.localRuntime, 'deferred-r1');
+  assert.equal(contract.implementationStatus.localRuntime, 'implemented-r1');
+  assert.deepEqual(contract.workSemantics.commandTypes, [
+    'work.input.snapshot',
+    'work.run.record',
+    'work.effect.authorize',
+    'work.effect.attempt',
+    'work.effect.outcome',
+  ]);
+  assert.match(
+    contract.workSemantics.ambiguousOutcome,
+    /never permits blind repeat/,
+  );
   assert.equal(
     contract.implementationStatus.clusterRuntime,
     'not-started-out-of-scope',

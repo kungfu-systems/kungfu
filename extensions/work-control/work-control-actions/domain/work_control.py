@@ -96,6 +96,7 @@ from .work_control_runtime import (
     capabilities as capabilities,
     claim_assignment_execution as claim_assignment_execution,
     claim_completion as claim_completion,
+    contract_materialization_plan as contract_materialization_plan,
     create_assignment as create_assignment,
     create_initiative as create_initiative,
     list_assignment_relation_events as list_assignment_relation_events,

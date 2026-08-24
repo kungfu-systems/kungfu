@@ -552,13 +552,13 @@
       },
       "source": {
         "path": "framework/assignment-runtime/assignment-runtime.contract.json",
-        "sha256": "sha256:db09816af1dedd481712a76c9dc918d2253552308e41ceeafb80898cf548c535",
-        "renderedSha256": "sha256:db09816af1dedd481712a76c9dc918d2253552308e41ceeafb80898cf548c535",
+        "sha256": "sha256:2c771ac54afd33a2be81423799dd8464a4086e141170c1c5d6f3b8014a05916d",
+        "renderedSha256": "sha256:2c771ac54afd33a2be81423799dd8464a4086e141170c1c5d6f3b8014a05916d",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/assignment-runtime/kungfu-assignment-runtime.contract.json",
-        "expectedSha256": "sha256:db09816af1dedd481712a76c9dc918d2253552308e41ceeafb80898cf548c535"
+        "expectedSha256": "sha256:2c771ac54afd33a2be81423799dd8464a4086e141170c1c5d6f3b8014a05916d"
       }
     },
     {
