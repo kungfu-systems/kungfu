@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6267,
+  "generation": 6268,
   "fencingCounter": 639,
   "policy": {
     "agingSeconds": 900,
@@ -45142,8 +45142,38 @@
         "framework/core/src/python/kungfu/assignment_runtime/local.py",
         "framework/core/tests/python/test_assignment_runtime.py"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3403,
+      "assignmentRoot": "sha256:25a069c337b9dbeb41836fd4a8896e59676cac17437aed7e57631dcdb3b58772",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:ac29efa74341b25cdb59b0296d8b0cffe3a4d316fa18e2c822108d87b808d50c",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:e8f7238229fa36b8b9dc7522150d96d59dd3bb5d911a00af3d1a0fb19b473dd1",
+      "sourceHead": "cf9b76eafd53d99418f2673e92c886544873795c",
+      "sourcePatchRoot": "sha256:62c52b4d5f6838a41c59f8524228a9620b73fcb41d9bd03f5ee57b9cea6bfd9c",
+      "sourceProofRoot": "sha256:39380103afc0b6022987b77451404ea1f32424e21450c6206acbf996909221b4",
+      "planRoot": "sha256:5d2552174cdd032e64667186936ec52245c26f1a10f5accd86c03a0dac8994ac",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:4b86d6b56ad61307f8dd154635adaf22c250961ba6a780c34c0893602ff16fc6",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32676289737,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-24T00:26:02.730Z",
+      "updatedAt": "2026-08-24T00:26:02.730Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/maintainability/function-risk.test.mjs",
+        "framework/maintainability/semantic-amplification.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-24T00:22:56.823Z",
-  "stateRoot": "sha256:1e08c5f223e3339d672ca7f823e937f2c1a5b6f3ba46931cb02279078877485f"
+  "updatedAt": "2026-08-24T00:26:02.730Z",
+  "stateRoot": "sha256:61afc80e11ad36e186c0bc630ac30ea17aa03211a9dcd3d7fab75c95d7aa8e4a"
 }
