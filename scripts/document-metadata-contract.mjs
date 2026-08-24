@@ -618,6 +618,520 @@ function validateAdrEvidence(
 }
 
 /**
+ * @typedef {{
+ *   rel: string,
+ *   decision: string,
+ *   implementation: string,
+ *   supersedes: string[],
+ *   supersededBy: string[],
+ *   amends: string[],
+ *   amendedBy: string[],
+ *   line: number,
+ *   supersedesLine: number,
+ *   supersededByLine: number,
+ *   amendsLine: number,
+ *   amendedByLine: number
+ * }} AdrRecord
+ */
+
+/**
+ * @typedef {{
+ *   root: string,
+ *   contract: MetadataContract,
+ *   findings: Finding[],
+ *   registered: Record<string, Record<string, string | string[]>>,
+ *   registryLabel: string,
+ *   adrIds: Set<string>,
+ *   adrRecords: Map<string, AdrRecord>,
+ *   commitProblems: Map<string, string | null>
+ * }} MetadataValidationContext
+ */
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {string} text
+ */
+function selectMetadataProfile(context, rel, text) {
+  const { contract, findings, registered } = context;
+  const adrRoot = contract.adrIdentity?.root || ADR_ROOT;
+  const isAdrDocument =
+    Boolean(adrRoot) &&
+    rel.startsWith(`${adrRoot}/`) &&
+    rel !== `${adrRoot}/README.md` &&
+    /\.(?:md|markdown)$/.test(rel);
+  if (
+    !isAdrDocument &&
+    contract.externalFrontmatterSchemas.some((schema) => matches(rel, schema))
+  ) {
+    if (registered[rel]) {
+      findings.push({
+        code: 'metadata-authority-duplicate',
+        file: rel,
+        line: 1,
+        message:
+          'external-schema document cannot also use the Kungfu metadata registry',
+      });
+    }
+    return null;
+  }
+  const profile = isAdrDocument
+    ? contract.profiles.find(
+        (candidate) => candidate.id === 'architecture-decision',
+      )
+    : contract.profiles.find((candidate) => matches(rel, candidate));
+  if (!profile) {
+    findings.push({
+      code: 'metadata-profile',
+      file: rel,
+      line: 1,
+      message: 'document is not routed to a metadata profile',
+    });
+    return null;
+  }
+  return { adrRoot, profile, text };
+}
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {string} text
+ * @param {MetadataProfile} profile
+ */
+function resolveDocumentFields(context, rel, text, profile) {
+  const { contract, findings, registered, registryLabel } = context;
+  const frontmatter = parseFrontmatter(text);
+  const registryEntry = registered[rel];
+  if (profile.metadataMode === 'registry') {
+    if (frontmatter) {
+      findings.push({
+        code: 'metadata-authority-duplicate',
+        file: rel,
+        line: 1,
+        message: `${profile.id} metadata belongs in ${registryLabel}, not visible frontmatter`,
+      });
+    }
+    if (!registryEntry) {
+      findings.push({
+        code: 'metadata-registry-required',
+        file: rel,
+        line: 1,
+        message: `${profile.id} requires one entry in ${registryLabel}`,
+      });
+      return null;
+    }
+  } else if (registryEntry) {
+    findings.push({
+      code: 'metadata-authority-duplicate',
+      file: rel,
+      line: 1,
+      message: `${profile.id} metadata must be inline and cannot also appear in the registry`,
+    });
+  }
+  if (profile.metadataMode === 'inline' && !frontmatter) {
+    findings.push({
+      code: 'metadata-required',
+      file: rel,
+      line: 1,
+      message: `frontmatter required by ${profile.id} profile`,
+    });
+    return null;
+  }
+  if (
+    profile.metadataMode === 'inline-optional' &&
+    !frontmatter &&
+    !registryEntry
+  ) {
+    return null;
+  }
+  if (frontmatter?.malformed) {
+    findings.push({
+      code: 'metadata-malformed',
+      file: rel,
+      line: 1,
+      message: 'frontmatter is missing its closing delimiter',
+    });
+    return null;
+  }
+  for (const duplicate of frontmatter?.duplicates || []) {
+    findings.push({
+      code: 'metadata-duplicate',
+      file: rel,
+      line: duplicate.line,
+      message: `duplicate frontmatter field: ${duplicate.key}`,
+    });
+  }
+  const fields = registryEntry
+    ? registryFields(registryEntry)
+    : frontmatter?.fields || new Map();
+  const headerText = frontmatter
+    ? text
+        .split(/\r?\n/)
+        .slice(1, frontmatter.endLine - 1)
+        .join('\n')
+    : '';
+  if (/^\s+[a-z][a-z0-9_]*\s*:/m.test(headerText)) {
+    findings.push({
+      code: 'metadata-nested-field',
+      file: rel,
+      line: 1,
+      message:
+        'Kungfu metadata is flat; nested maintenance or generation attribution is not allowed',
+    });
+  }
+  validateFields(fields, profile, contract, rel, findings);
+  return { fields, frontmatter };
+}
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {Map<string, {value: unknown, line: number}>} fields
+ */
+function validateSourceKinds(context, rel, fields) {
+  const sources = fields.get('sources');
+  if (!sources) return;
+  const allowed = context.contract.sourceKinds || [];
+  if (!Array.isArray(sources.value)) {
+    context.findings.push({
+      code: 'metadata-sources',
+      file: rel,
+      line: sources.line,
+      message: 'sources must be an inline YAML list',
+    });
+    return;
+  }
+  for (const source of sources.value) {
+    if (!allowed.includes(source)) {
+      context.findings.push({
+        code: 'metadata-sources',
+        file: rel,
+        line: sources.line,
+        message: `unknown source kind: ${String(source)}`,
+      });
+    }
+  }
+}
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {string} adrRoot
+ */
+function validateAdrPath(context, rel, adrRoot) {
+  const { contract, findings } = context;
+  if (contract.adrIdentity && path.posix.dirname(rel) !== adrRoot) {
+    findings.push({
+      code: 'adr-path-layout',
+      file: rel,
+      line: 1,
+      message:
+        'ADR records must be direct children of the canonical ADR directory',
+    });
+  }
+  if (!rel.endsWith('.md')) {
+    findings.push({
+      code: 'adr-path-extension',
+      file: rel,
+      line: 1,
+      message: 'ADR records require the canonical lowercase .md extension',
+    });
+  }
+}
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {Map<string, {value: unknown, line: number}>} fields
+ */
+function collectAdrRelations(context, rel, fields) {
+  const relations = {
+    supersedes: fields.get('supersedes'),
+    supersededBy: fields.get('superseded_by'),
+    amends: fields.get('amends'),
+    amendedBy: fields.get('amended_by'),
+  };
+  for (const [name, field] of [
+    ['supersedes', relations.supersedes],
+    ['superseded_by', relations.supersededBy],
+    ['amends', relations.amends],
+    ['amended_by', relations.amendedBy],
+  ]) {
+    if (field && !Array.isArray(field.value)) {
+      context.findings.push({
+        code: 'adr-supersession-list',
+        file: rel,
+        line: field.line,
+        message: `${name} must be an inline YAML list`,
+      });
+    }
+  }
+  return relations;
+}
+
+function storeAdrRecord(context, rel, fields, id, relations) {
+  const idValue = String(id.value);
+  if (context.adrRecords.has(idValue)) {
+    context.findings.push({
+      code: 'adr-id-duplicate',
+      file: rel,
+      line: id.line,
+      message: `adr_id is already used by ${context.adrRecords.get(idValue).rel}`,
+    });
+  }
+  context.adrRecords.set(idValue, {
+    rel,
+    decision: String(fields.get('decision_status')?.value || ''),
+    implementation: String(fields.get('implementation_status')?.value || ''),
+    supersedes: Array.isArray(relations.supersedes?.value)
+      ? relations.supersedes.value.map(String)
+      : [],
+    supersededBy: Array.isArray(relations.supersededBy?.value)
+      ? relations.supersededBy.value.map(String)
+      : [],
+    amends: Array.isArray(relations.amends?.value)
+      ? relations.amends.value.map(String)
+      : [],
+    amendedBy: Array.isArray(relations.amendedBy?.value)
+      ? relations.amendedBy.value.map(String)
+      : [],
+    line: id.line,
+    supersedesLine: relations.supersedes?.line || id.line,
+    supersededByLine: relations.supersededBy?.line || id.line,
+    amendsLine: relations.amends?.line || id.line,
+    amendedByLine: relations.amendedBy?.line || id.line,
+  });
+}
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {string} adrRoot
+ * @param {Map<string, {value: unknown, line: number}>} fields
+ */
+function recordAdrRelations(context, rel, adrRoot, fields) {
+  const { findings, adrIds } = context;
+  validateAdrPath(context, rel, adrRoot);
+  const id = fields.get('adr_id');
+  if (!id) {
+    findings.push({
+      code: 'adr-id-required',
+      file: rel,
+      line: 1,
+      message: 'ADR records require inline adr_id metadata',
+    });
+  }
+  if (id) adrIds.add(String(id.value));
+  const relations = collectAdrRelations(context, rel, fields);
+  if (id) storeAdrRecord(context, rel, fields, id, relations);
+  return id;
+}
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {string} text
+ * @param {ReturnType<typeof parseFrontmatter>} frontmatter
+ * @param {Map<string, {value: unknown, line: number}>} fields
+ * @param {{value: unknown, line: number} | undefined} id
+ */
+function validateAdrProjection(context, rel, text, frontmatter, fields, id) {
+  const { findings } = context;
+  const expectedId = identityFromAdrPath(rel);
+  const identity = id ? classifyAdrIdentity(String(id.value)) : null;
+  if (id && !identity) {
+    findings.push({
+      code: 'adr-id-format',
+      file: rel,
+      line: id.line,
+      message: 'ADR identities must be KF-ADR-<UUIDv7> or SHIFU-ADR-<UUIDv7>',
+    });
+  }
+  if (!expectedId) {
+    findings.push({
+      code: 'adr-filename-identity',
+      file: rel,
+      line: 1,
+      message:
+        'ADR filenames must equal the full canonical UUIDv7 identity plus .md',
+    });
+  }
+  if (id && id.value !== expectedId) {
+    findings.push({
+      code: 'adr-id-drift',
+      file: rel,
+      line: id.line,
+      message: `adr_id must match filename: ${expectedId}`,
+    });
+  }
+  const headingIdentity = visibleAdrHeadingIdentity(text);
+  if (!headingIdentity || (id && headingIdentity !== id.value)) {
+    findings.push({
+      code: 'adr-heading-id-drift',
+      file: rel,
+      line: (frontmatter?.endLine || 1) + 1,
+      message: `ADR heading identity must match adr_id: ${String(id?.value || '')}`,
+    });
+  }
+  const visible = visibleDecisionStatus(text);
+  const decision = fields.get('decision_status');
+  if (!visible) {
+    findings.push({
+      code: 'adr-status-projection',
+      file: rel,
+      line: (frontmatter?.endLine || 1) + 1,
+      message: 'ADR body must project a visible decision status',
+    });
+  } else if (decision && visible !== decision.value) {
+    findings.push({
+      code: 'adr-status-drift',
+      file: rel,
+      line: (frontmatter?.endLine || 1) + 1,
+      message: `visible status ${visible} differs from decision_status ${String(decision.value)}`,
+    });
+  }
+}
+
+/**
+ * @param {MetadataValidationContext} context
+ * @param {string} rel
+ * @param {string} text
+ * @param {string} adrRoot
+ * @param {ReturnType<typeof parseFrontmatter>} frontmatter
+ * @param {Map<string, {value: unknown, line: number}>} fields
+ */
+function validateAdrDocument(context, rel, text, adrRoot, frontmatter, fields) {
+  const id = recordAdrRelations(context, rel, adrRoot, fields);
+  validateAdrProjection(context, rel, text, frontmatter, fields, id);
+  validateAdrEvidence(
+    fields,
+    rel,
+    context.root,
+    context.contract,
+    context.findings,
+    context.commitProblems,
+  );
+}
+
+/** @param {MetadataValidationContext} context @param {string} id @param {AdrRecord} record */
+function validateAdrState(context, id, record) {
+  const terminal = ['superseded', 'rejected', 'withdrawn'].includes(
+    record.decision,
+  );
+  if (terminal && record.implementation !== 'not-applicable') {
+    context.findings.push({
+      code: 'adr-terminal-implementation',
+      file: record.rel,
+      line: record.line,
+      message: `${record.decision} decisions require implementation_status not-applicable`,
+    });
+  }
+  if (record.decision === 'superseded' && record.supersededBy.length === 0) {
+    context.findings.push({
+      code: 'adr-supersession-missing',
+      file: record.rel,
+      line: record.line,
+      message: `${id} is superseded but does not declare superseded_by`,
+    });
+  }
+  if (record.decision !== 'superseded' && record.supersededBy.length > 0) {
+    context.findings.push({
+      code: 'adr-supersession-state',
+      file: record.rel,
+      line: record.supersededByLine,
+      message: `${id} declares superseded_by but decision_status is ${record.decision}`,
+    });
+  }
+}
+
+/** @param {MetadataValidationContext} context @param {string} id @param {AdrRecord} record */
+function validateAdrSupersession(context, id, record) {
+  for (const targetId of record.supersedes) {
+    const target = context.adrRecords.get(targetId);
+    if (targetId === id || !target) {
+      context.findings.push({
+        code: 'adr-supersession-target',
+        file: record.rel,
+        line: record.supersedesLine,
+        message: `${id} supersedes invalid target ${targetId}`,
+      });
+    } else if (
+      target.decision !== 'superseded' ||
+      !target.supersededBy.includes(id)
+    ) {
+      context.findings.push({
+        code: 'adr-supersession-reciprocal',
+        file: record.rel,
+        line: record.supersedesLine,
+        message: `${id} -> ${targetId} must be reciprocal and target a superseded decision`,
+      });
+    }
+  }
+  for (const successorId of record.supersededBy) {
+    const successor = context.adrRecords.get(successorId);
+    if (
+      successorId === id ||
+      !successor ||
+      !successor.supersedes.includes(id)
+    ) {
+      context.findings.push({
+        code: 'adr-supersession-reciprocal',
+        file: record.rel,
+        line: record.supersededByLine,
+        message: `${id} <- ${successorId} must be reciprocal`,
+      });
+    }
+  }
+}
+
+/** @param {MetadataValidationContext} context @param {string} id @param {AdrRecord} record */
+function validateAdrAmendment(context, id, record) {
+  for (const targetId of record.amends) {
+    const target = context.adrRecords.get(targetId);
+    if (targetId === id || !target || !target.amendedBy.includes(id)) {
+      context.findings.push({
+        code: 'adr-amendment-reciprocal',
+        file: record.rel,
+        line: record.amendsLine,
+        message: `${id} -> ${targetId} amendment must name an existing reciprocal target`,
+      });
+    }
+  }
+  for (const successorId of record.amendedBy) {
+    const successor = context.adrRecords.get(successorId);
+    if (successorId === id || !successor || !successor.amends.includes(id)) {
+      context.findings.push({
+        code: 'adr-amendment-reciprocal',
+        file: record.rel,
+        line: record.amendedByLine,
+        message: `${id} <- ${successorId} amendment must be reciprocal`,
+      });
+    }
+  }
+}
+
+/** @param {Map<string, AdrRecord>} records @param {'supersedes' | 'amends'} relation */
+function firstRelationCycle(records, relation) {
+  const visiting = new Set();
+  const visited = new Set();
+  const visit = (id) => {
+    if (visiting.has(id)) return true;
+    if (visited.has(id)) return false;
+    visiting.add(id);
+    const cyclic = (records.get(id)?.[relation] || []).some((target) =>
+      visit(target),
+    );
+    visiting.delete(id);
+    visited.add(id);
+    return cyclic;
+  };
+  for (const id of records.keys()) {
+    if (visit(id)) return id;
+  }
+  return null;
+}
+
+/**
  * @param {{root?: string, files: string[], contract?: MetadataContract, evidenceBaseCommit?: string}} options
  * @returns {Finding[]}
  */
@@ -633,305 +1147,43 @@ export function validateDocumentMetadata(options) {
   /** @type {Finding[]} */
   const findings = [];
   const metadataRegistry = readMetadataRegistry(root, contract);
-  const registered = metadataRegistry.documents;
-  const registryLabel = metadataRegistry.paths.join(', ');
-  const fileSet = new Set(options.files);
-  const adrIds = new Set();
-  const adrRecords = new Map();
-  const commitProblems = batchReachableCommitProblems(
+  /** @type {MetadataValidationContext} */
+  const context = {
     root,
-    evidenceCommitCandidates(root, options.files, contract),
-    pullRequestBaseCommit,
-  );
+    contract,
+    findings,
+    registered: metadataRegistry.documents,
+    registryLabel: metadataRegistry.paths.join(', '),
+    adrIds: new Set(),
+    adrRecords: new Map(),
+    commitProblems: batchReachableCommitProblems(
+      root,
+      evidenceCommitCandidates(root, options.files, contract),
+      pullRequestBaseCommit,
+    ),
+  };
 
   for (const rel of options.files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');
-    const adrRoot = contract.adrIdentity?.root || ADR_ROOT;
-    const isAdrDocument =
-      Boolean(adrRoot) &&
-      rel.startsWith(`${adrRoot}/`) &&
-      rel !== `${adrRoot}/README.md` &&
-      /\.(?:md|markdown)$/.test(rel);
-    if (
-      !isAdrDocument &&
-      contract.externalFrontmatterSchemas.some((schema) => matches(rel, schema))
-    ) {
-      if (registered[rel]) {
-        findings.push({
-          code: 'metadata-authority-duplicate',
-          file: rel,
-          line: 1,
-          message:
-            'external-schema document cannot also use the Kungfu metadata registry',
-        });
-      }
-      continue;
-    }
-    const profile = isAdrDocument
-      ? contract.profiles.find(
-          (candidate) => candidate.id === 'architecture-decision',
-        )
-      : contract.profiles.find((candidate) => matches(rel, candidate));
-    if (!profile) {
-      findings.push({
-        code: 'metadata-profile',
-        file: rel,
-        line: 1,
-        message: 'document is not routed to a metadata profile',
-      });
-      continue;
-    }
-    const frontmatter = parseFrontmatter(text);
-    const registryEntry = registered[rel];
-    if (profile.metadataMode === 'registry') {
-      if (frontmatter) {
-        findings.push({
-          code: 'metadata-authority-duplicate',
-          file: rel,
-          line: 1,
-          message: `${profile.id} metadata belongs in ${registryLabel}, not visible frontmatter`,
-        });
-      }
-      if (!registryEntry) {
-        findings.push({
-          code: 'metadata-registry-required',
-          file: rel,
-          line: 1,
-          message: `${profile.id} requires one entry in ${registryLabel}`,
-        });
-        continue;
-      }
-    } else if (registryEntry) {
-      findings.push({
-        code: 'metadata-authority-duplicate',
-        file: rel,
-        line: 1,
-        message: `${profile.id} metadata must be inline and cannot also appear in the registry`,
-      });
-    }
-    if (profile.metadataMode === 'inline' && !frontmatter) {
-      findings.push({
-        code: 'metadata-required',
-        file: rel,
-        line: 1,
-        message: `frontmatter required by ${profile.id} profile`,
-      });
-      continue;
-    }
-    if (
-      profile.metadataMode === 'inline-optional' &&
-      !frontmatter &&
-      !registryEntry
-    ) {
-      continue;
-    }
-    if (frontmatter?.malformed) {
-      findings.push({
-        code: 'metadata-malformed',
-        file: rel,
-        line: 1,
-        message: 'frontmatter is missing its closing delimiter',
-      });
-      continue;
-    }
-    for (const duplicate of frontmatter?.duplicates || []) {
-      findings.push({
-        code: 'metadata-duplicate',
-        file: rel,
-        line: duplicate.line,
-        message: `duplicate frontmatter field: ${duplicate.key}`,
-      });
-    }
-    const fields = registryEntry
-      ? registryFields(registryEntry)
-      : frontmatter?.fields || new Map();
-    const headerText = frontmatter
-      ? text
-          .split(/\r?\n/)
-          .slice(1, frontmatter.endLine - 1)
-          .join('\n')
-      : '';
-    if (/^\s+[a-z][a-z0-9_]*\s*:/m.test(headerText)) {
-      findings.push({
-        code: 'metadata-nested-field',
-        file: rel,
-        line: 1,
-        message:
-          'Kungfu metadata is flat; nested maintenance or generation attribution is not allowed',
-      });
-    }
-    validateFields(fields, profile, contract, rel, findings);
-    const sources = fields.get('sources');
-    if (sources) {
-      const allowed = contract.sourceKinds || [];
-      if (!Array.isArray(sources.value)) {
-        findings.push({
-          code: 'metadata-sources',
-          file: rel,
-          line: sources.line,
-          message: 'sources must be an inline YAML list',
-        });
-      } else {
-        for (const source of sources.value) {
-          if (!allowed.includes(source)) {
-            findings.push({
-              code: 'metadata-sources',
-              file: rel,
-              line: sources.line,
-              message: `unknown source kind: ${String(source)}`,
-            });
-          }
-        }
-      }
-    }
-
-    if (profile.id === 'architecture-decision') {
-      if (contract.adrIdentity && path.posix.dirname(rel) !== adrRoot) {
-        findings.push({
-          code: 'adr-path-layout',
-          file: rel,
-          line: 1,
-          message:
-            'ADR records must be direct children of the canonical ADR directory',
-        });
-      }
-      if (!rel.endsWith('.md')) {
-        findings.push({
-          code: 'adr-path-extension',
-          file: rel,
-          line: 1,
-          message: 'ADR records require the canonical lowercase .md extension',
-        });
-      }
-      const expectedId = identityFromAdrPath(rel);
-      const id = fields.get('adr_id');
-      if (!id) {
-        findings.push({
-          code: 'adr-id-required',
-          file: rel,
-          line: 1,
-          message: 'ADR records require inline adr_id metadata',
-        });
-      }
-      if (id) adrIds.add(String(id.value));
-      const supersedesField = fields.get('supersedes');
-      const supersededByField = fields.get('superseded_by');
-      const amendsField = fields.get('amends');
-      const amendedByField = fields.get('amended_by');
-      for (const [name, field] of [
-        ['supersedes', supersedesField],
-        ['superseded_by', supersededByField],
-        ['amends', amendsField],
-        ['amended_by', amendedByField],
-      ]) {
-        if (field && !Array.isArray(field.value)) {
-          findings.push({
-            code: 'adr-supersession-list',
-            file: rel,
-            line: field.line,
-            message: `${name} must be an inline YAML list`,
-          });
-        }
-      }
-      if (id) {
-        if (adrRecords.has(String(id.value))) {
-          findings.push({
-            code: 'adr-id-duplicate',
-            file: rel,
-            line: id.line,
-            message: `adr_id is already used by ${adrRecords.get(String(id.value)).rel}`,
-          });
-        }
-        adrRecords.set(String(id.value), {
-          rel,
-          decision: String(fields.get('decision_status')?.value || ''),
-          implementation: String(
-            fields.get('implementation_status')?.value || '',
-          ),
-          supersedes: Array.isArray(supersedesField?.value)
-            ? supersedesField.value.map(String)
-            : [],
-          supersededBy: Array.isArray(supersededByField?.value)
-            ? supersededByField.value.map(String)
-            : [],
-          amends: Array.isArray(amendsField?.value)
-            ? amendsField.value.map(String)
-            : [],
-          amendedBy: Array.isArray(amendedByField?.value)
-            ? amendedByField.value.map(String)
-            : [],
-          line: id.line,
-          supersedesLine: supersedesField?.line || id.line,
-          supersededByLine: supersededByField?.line || id.line,
-          amendsLine: amendsField?.line || id.line,
-          amendedByLine: amendedByField?.line || id.line,
-        });
-      }
-      const identity = id ? classifyAdrIdentity(String(id.value)) : null;
-      if (id && !identity) {
-        findings.push({
-          code: 'adr-id-format',
-          file: rel,
-          line: id.line,
-          message:
-            'ADR identities must be KF-ADR-<UUIDv7> or SHIFU-ADR-<UUIDv7>',
-        });
-      }
-      if (!expectedId) {
-        findings.push({
-          code: 'adr-filename-identity',
-          file: rel,
-          line: 1,
-          message:
-            'ADR filenames must equal the full canonical UUIDv7 identity plus .md',
-        });
-      }
-      if (id && id.value !== expectedId) {
-        findings.push({
-          code: 'adr-id-drift',
-          file: rel,
-          line: id.line,
-          message: `adr_id must match filename: ${expectedId}`,
-        });
-      }
-      const headingIdentity = visibleAdrHeadingIdentity(text);
-      if (!headingIdentity || (id && headingIdentity !== id.value)) {
-        findings.push({
-          code: 'adr-heading-id-drift',
-          file: rel,
-          line: (frontmatter?.endLine || 1) + 1,
-          message: `ADR heading identity must match adr_id: ${String(id?.value || '')}`,
-        });
-      }
-      const visible = visibleDecisionStatus(text);
-      const decision = fields.get('decision_status');
-      if (!visible) {
-        findings.push({
-          code: 'adr-status-projection',
-          file: rel,
-          line: (frontmatter?.endLine || 1) + 1,
-          message: 'ADR body must project a visible decision status',
-        });
-      } else if (decision && visible !== decision.value) {
-        findings.push({
-          code: 'adr-status-drift',
-          file: rel,
-          line: (frontmatter?.endLine || 1) + 1,
-          message: `visible status ${visible} differs from decision_status ${String(decision.value)}`,
-        });
-      }
-      validateAdrEvidence(
-        fields,
+    const route = selectMetadataProfile(context, rel, text);
+    if (!route) continue;
+    const resolved = resolveDocumentFields(context, rel, text, route.profile);
+    if (!resolved) continue;
+    validateSourceKinds(context, rel, resolved.fields);
+    if (route.profile.id === 'architecture-decision') {
+      validateAdrDocument(
+        context,
         rel,
-        root,
-        contract,
-        findings,
-        commitProblems,
+        text,
+        route.adrRoot,
+        resolved.frontmatter,
+        resolved.fields,
       );
     }
   }
 
-  for (const rel of Object.keys(registered)) {
+  const fileSet = new Set(options.files);
+  for (const rel of Object.keys(context.registered)) {
     if (!fileSet.has(rel)) {
       findings.push({
         code: 'metadata-registry-orphan',
@@ -944,7 +1196,7 @@ export function validateDocumentMetadata(options) {
   for (const id of Object.keys(
     contract.adrEvidence?.legacyEvidenceExemptions || {},
   )) {
-    if (!adrIds.has(id)) {
+    if (!context.adrIds.has(id)) {
       findings.push({
         code: 'adr-evidence-exemption-orphan',
         file: DEFAULT_CONTRACT,
@@ -954,142 +1206,35 @@ export function validateDocumentMetadata(options) {
     }
   }
 
-  for (const [id, record] of adrRecords) {
-    const terminal = ['superseded', 'rejected', 'withdrawn'].includes(
-      record.decision,
-    );
-    if (terminal && record.implementation !== 'not-applicable') {
-      findings.push({
-        code: 'adr-terminal-implementation',
-        file: record.rel,
-        line: record.line,
-        message: `${record.decision} decisions require implementation_status not-applicable`,
-      });
-    }
-    if (record.decision === 'superseded' && record.supersededBy.length === 0) {
-      findings.push({
-        code: 'adr-supersession-missing',
-        file: record.rel,
-        line: record.line,
-        message: `${id} is superseded but does not declare superseded_by`,
-      });
-    }
-    if (record.decision !== 'superseded' && record.supersededBy.length > 0) {
-      findings.push({
-        code: 'adr-supersession-state',
-        file: record.rel,
-        line: record.supersededByLine,
-        message: `${id} declares superseded_by but decision_status is ${record.decision}`,
-      });
-    }
-    for (const targetId of record.supersedes) {
-      const target = adrRecords.get(targetId);
-      if (targetId === id || !target) {
-        findings.push({
-          code: 'adr-supersession-target',
-          file: record.rel,
-          line: record.supersedesLine,
-          message: `${id} supersedes invalid target ${targetId}`,
-        });
-      } else if (
-        target.decision !== 'superseded' ||
-        !target.supersededBy.includes(id)
-      ) {
-        findings.push({
-          code: 'adr-supersession-reciprocal',
-          file: record.rel,
-          line: record.supersedesLine,
-          message: `${id} -> ${targetId} must be reciprocal and target a superseded decision`,
-        });
-      }
-    }
-    for (const successorId of record.supersededBy) {
-      const successor = adrRecords.get(successorId);
-      if (
-        successorId === id ||
-        !successor ||
-        !successor.supersedes.includes(id)
-      ) {
-        findings.push({
-          code: 'adr-supersession-reciprocal',
-          file: record.rel,
-          line: record.supersededByLine,
-          message: `${id} <- ${successorId} must be reciprocal`,
-        });
-      }
-    }
-    for (const targetId of record.amends) {
-      const target = adrRecords.get(targetId);
-      if (targetId === id || !target || !target.amendedBy.includes(id)) {
-        findings.push({
-          code: 'adr-amendment-reciprocal',
-          file: record.rel,
-          line: record.amendsLine,
-          message: `${id} -> ${targetId} amendment must name an existing reciprocal target`,
-        });
-      }
-    }
-    for (const successorId of record.amendedBy) {
-      const successor = adrRecords.get(successorId);
-      if (successorId === id || !successor || !successor.amends.includes(id)) {
-        findings.push({
-          code: 'adr-amendment-reciprocal',
-          file: record.rel,
-          line: record.amendedByLine,
-          message: `${id} <- ${successorId} amendment must be reciprocal`,
-        });
-      }
-    }
+  for (const [id, record] of context.adrRecords) {
+    validateAdrState(context, id, record);
+    validateAdrSupersession(context, id, record);
+    validateAdrAmendment(context, id, record);
   }
 
-  const visiting = new Set();
-  const visited = new Set();
-  const visit = (id) => {
-    if (visiting.has(id)) return true;
-    if (visited.has(id)) return false;
-    visiting.add(id);
-    const cyclic = (adrRecords.get(id)?.supersedes || []).some((target) =>
-      visit(target),
-    );
-    visiting.delete(id);
-    visited.add(id);
-    return cyclic;
-  };
-  for (const [id, record] of adrRecords) {
-    if (visit(id)) {
-      findings.push({
-        code: 'adr-supersession-cycle',
-        file: record.rel,
-        line: record.line,
-        message: `ADR supersession graph contains a cycle reachable from ${id}`,
-      });
-      break;
-    }
+  const supersessionCycle = firstRelationCycle(
+    context.adrRecords,
+    'supersedes',
+  );
+  if (supersessionCycle) {
+    const record = context.adrRecords.get(supersessionCycle);
+    findings.push({
+      code: 'adr-supersession-cycle',
+      file: record.rel,
+      line: record.line,
+      message: `ADR supersession graph contains a cycle reachable from ${supersessionCycle}`,
+    });
   }
 
-  const amendmentVisiting = new Set();
-  const amendmentVisited = new Set();
-  const visitAmendments = (id) => {
-    if (amendmentVisiting.has(id)) return true;
-    if (amendmentVisited.has(id)) return false;
-    amendmentVisiting.add(id);
-    const cyclic = (adrRecords.get(id)?.amends || []).some((target) =>
-      visitAmendments(target),
-    );
-    amendmentVisiting.delete(id);
-    amendmentVisited.add(id);
-    return cyclic;
-  };
-  for (const [id, record] of adrRecords) {
-    if (visitAmendments(id)) {
-      findings.push({
-        code: 'adr-amendment-cycle',
-        file: record.rel,
-        line: record.amendsLine,
-        message: `ADR amendment graph contains a cycle through ${id}`,
-      });
-      break;
-    }
+  const amendmentCycle = firstRelationCycle(context.adrRecords, 'amends');
+  if (amendmentCycle) {
+    const record = context.adrRecords.get(amendmentCycle);
+    findings.push({
+      code: 'adr-amendment-cycle',
+      file: record.rel,
+      line: record.amendsLine,
+      message: `ADR amendment graph contains a cycle through ${amendmentCycle}`,
+    });
   }
 
   return findings.sort(

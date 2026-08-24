@@ -2,6 +2,7 @@
 // @ts-check
 
 import { createHash } from 'node:crypto';
+import { scanJson } from './json-scanner.mjs';
 
 export const PROJECT_CUT_SCHEMA = 'project.cut/v1';
 export const PROJECT_CUT_ROOT_INPUT_SCHEMA = 'project.cut.root-input/v1';
@@ -112,132 +113,6 @@ export function sha256Bytes(bytes) {
 
 export function semanticRoot(value) {
   return sha256Bytes(Buffer.from(canonicalJson(value), 'utf8'));
-}
-
-function scanJson(text, { losslessUint64 = false } = {}) {
-  let index = 0;
-  const fail = (code, message) => {
-    throw Object.assign(new Error(`${message} at byte ${index}`), {
-      code,
-      path: '$',
-    });
-  };
-  const whitespace = () => {
-    while (/[\t\n\r ]/u.test(text[index] ?? '')) index += 1;
-  };
-  const stringToken = () => {
-    if (text[index] !== '"') fail('invalid-json', 'expected string');
-    const start = index;
-    index += 1;
-    while (index < text.length) {
-      const character = text[index];
-      if (character === '"') {
-        index += 1;
-        return JSON.parse(text.slice(start, index));
-      }
-      if (character === '\\') {
-        index += 1;
-        if (text[index] === 'u') {
-          if (!/^[0-9a-fA-F]{4}$/u.test(text.slice(index + 1, index + 5)))
-            fail('invalid-json', 'invalid Unicode escape');
-          index += 5;
-        } else {
-          if (!/["\\/bfnrt]/u.test(text[index] ?? ''))
-            fail('invalid-json', 'invalid string escape');
-          index += 1;
-        }
-      } else {
-        if (character.charCodeAt(0) < 0x20)
-          fail('invalid-json', 'unescaped control character');
-        index += 1;
-      }
-    }
-    fail('invalid-json', 'unterminated string');
-  };
-  const value = () => {
-    whitespace();
-    const character = text[index];
-    if (character === '{') {
-      index += 1;
-      whitespace();
-      const keys = new Set();
-      const object = {};
-      if (text[index] === '}') {
-        index += 1;
-        return object;
-      }
-      while (index < text.length) {
-        const key = stringToken();
-        if (keys.has(key))
-          fail('duplicate-object-key', `duplicate object key '${key}'`);
-        keys.add(key);
-        whitespace();
-        if (text[index] !== ':') fail('invalid-json', 'expected colon');
-        index += 1;
-        const child = value();
-        Object.defineProperty(object, key, {
-          value: child,
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
-        whitespace();
-        if (text[index] === '}') {
-          index += 1;
-          return object;
-        }
-        if (text[index] !== ',') fail('invalid-json', 'expected comma');
-        index += 1;
-        whitespace();
-      }
-      fail('invalid-json', 'unterminated object');
-    }
-    if (character === '[') {
-      index += 1;
-      whitespace();
-      const array = [];
-      if (text[index] === ']') {
-        index += 1;
-        return array;
-      }
-      while (index < text.length) {
-        array.push(value());
-        whitespace();
-        if (text[index] === ']') {
-          index += 1;
-          return array;
-        }
-        if (text[index] !== ',') fail('invalid-json', 'expected comma');
-        index += 1;
-      }
-      fail('invalid-json', 'unterminated array');
-    }
-    if (character === '"') {
-      return stringToken();
-    }
-    const token = text
-      .slice(index)
-      .match(
-        /^(?:true|false|null|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/u,
-      )?.[0];
-    if (!token) fail('invalid-json', 'expected JSON value');
-    index += token.length;
-    if (token === 'true') return true;
-    if (token === 'false') return false;
-    if (token === 'null') return null;
-    if (
-      losslessUint64 &&
-      /^[0-9]+$/u.test(token) &&
-      BigInt(token) > BigInt(Number.MAX_SAFE_INTEGER)
-    )
-      return BigInt(token);
-    return Number(token);
-  };
-  whitespace();
-  const parsed = value();
-  whitespace();
-  if (index !== text.length) fail('invalid-json', 'unexpected trailing data');
-  return parsed;
 }
 
 /**
