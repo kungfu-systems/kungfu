@@ -181,6 +181,64 @@ test('source-analysis tables preserve classification, ownership, and lexical bou
   assert.equal(stripStringsAndComments('"x"', 'unknown'), '   ');
 });
 
+test('python multiline v2 follows the closing signature into the indented body', () => {
+  const file = {
+    path: 'framework/a.py',
+    bytes: Buffer.from(
+      [
+        'def work(',
+        '    first,',
+        '    second,',
+        '):',
+        '    if first:',
+        '        return second',
+        '    return None',
+        '',
+        '@decorated',
+        'def next_work():',
+        '    return 1',
+        '',
+      ].join('\n'),
+    ),
+  };
+  const legacy = extractKernelFunctions(file, layers, ownership);
+  const v2 = extractKernelFunctions(file, layers, ownership, {
+    extractorAlgorithm: 'python-multiline-v2',
+  });
+  assert.equal(legacy[0].endLine, 3);
+  assert.equal(v2[0].endLine, 8);
+  assert.equal(v2[0].cyclomatic, 2);
+  assert.equal(v2[0].cognitive, 1);
+  assert.equal(v2[1].symbol, 'next_work');
+  assert.equal(v2[1].startLine, 10);
+});
+
+test('python multiline v2 normalizes class indentation for stable moved bodies', () => {
+  const topLevel = {
+    path: 'framework/top.py',
+    bytes: Buffer.from(
+      'def work(value):\n    if value:\n        return value\n    return None\n',
+    ),
+  };
+  const classMethod = {
+    path: 'framework/class.py',
+    bytes: Buffer.from(
+      'class Owner:\n    def work(value):\n        if value:\n            return value\n        return None\n',
+    ),
+  };
+  const options = { extractorAlgorithm: 'python-multiline-v2' };
+  const first = extractKernelFunctions(topLevel, layers, ownership, options)[0];
+  const second = extractKernelFunctions(
+    classMethod,
+    layers,
+    ownership,
+    options,
+  )[0];
+  assert.equal(second.bodyRoot, first.bodyRoot);
+  assert.equal(second.baseRisk, first.baseRisk);
+  assert.equal(second.cognitive, first.cognitive);
+});
+
 test('shared kernel shadows the legacy exact-repository analysis', () => {
   const policy = readJson(
     'framework/maintainability/function-risk-policy.json',
@@ -419,6 +477,373 @@ test('changed-code ratchet blocks increases but leaves unchanged historical debt
   );
   assert.ok(
     findings.some(({ code }) => code === 'changed-function-risk-increase'),
+  );
+});
+
+test('same-path duplicate symbols match by stable owner occurrence', () => {
+  const first = metric({
+    id: 'javascript-typescript:scripts/a.mjs:close:10',
+    symbol: 'close',
+    startLine: 10,
+    bodyRoot: digest('first close'),
+    baseRisk: 200,
+  });
+  const second = metric({
+    id: 'javascript-typescript:scripts/a.mjs:close:40',
+    symbol: 'close',
+    startLine: 40,
+    bodyRoot: digest('second close'),
+    baseRisk: 10,
+  });
+  const shifted = [
+    {
+      ...first,
+      id: 'javascript-typescript:scripts/a.mjs:close:12',
+      startLine: 12,
+    },
+    {
+      ...second,
+      id: 'javascript-typescript:scripts/a.mjs:close:42',
+      startLine: 42,
+    },
+  ];
+  const unchanged = analyzeTransition(
+    shifted,
+    [first, second],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.deepEqual(
+    unchanged.functions.map(({ previousId }) => previousId),
+    [first.id, second.id],
+  );
+  assert.deepEqual(
+    evaluateFunctionRiskRatchet(
+      { functions: shifted, files: [] },
+      { functions: [first, second], files: [] },
+      unchanged,
+      ratchetPolicy,
+    ),
+    [],
+  );
+  const legacy = analyzeTransition(shifted, [first, second], [], [], policy, {
+    movementScope: 'same-owner',
+  });
+  assert.deepEqual(
+    legacy.functions.map(({ previousId }) => previousId),
+    [second.id, second.id],
+  );
+
+  const withoutFirst = analyzeTransition(
+    [shifted[1]],
+    [first, second],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.equal(withoutFirst.functions[0].previousId, second.id);
+
+  const changed = [
+    shifted[0],
+    { ...shifted[1], bodyRoot: digest('changed second close'), baseRisk: 11 },
+  ];
+  const transition = analyzeTransition(
+    changed,
+    [first, second],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.ok(
+    evaluateFunctionRiskRatchet(
+      { functions: changed, files: [] },
+      { functions: [first, second], files: [] },
+      transition,
+      ratchetPolicy,
+    ).some(({ code }) => code === 'changed-function-risk-increase'),
+  );
+
+  const deletedFirstAndChangedSecond = analyzeTransition(
+    [
+      {
+        ...second,
+        id: 'javascript-typescript:scripts/a.mjs:close:42',
+        startLine: 42,
+        bodyRoot: digest('changed second close after first deletion'),
+        baseRisk: 11,
+      },
+    ],
+    [first, second],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.equal(deletedFirstAndChangedSecond.functions[0].previousId, second.id);
+  assert.ok(
+    evaluateFunctionRiskRatchet(
+      { functions: deletedFirstAndChangedSecond.functions, files: [] },
+      { functions: [first, second], files: [] },
+      deletedFirstAndChangedSecond,
+      ratchetPolicy,
+    ).some(({ code }) => code === 'changed-function-risk-increase'),
+  );
+
+  const movedDeletedAndChanged = analyzeTransition(
+    [
+      {
+        ...second,
+        id: 'javascript-typescript:scripts/a.mjs:close:38',
+        startLine: 38,
+        bodyRoot: digest('changed second close after move and deletion'),
+      },
+      {
+        ...first,
+        id: 'javascript-typescript:scripts/a.mjs:close:70',
+        startLine: 70,
+      },
+    ],
+    [first, second],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.deepEqual(
+    movedDeletedAndChanged.functions.map(({ previousId }) => previousId),
+    [second.id, first.id],
+  );
+
+  const distanceBaseline = [
+    metric({
+      id: 'javascript-typescript:scripts/a.mjs:close:1',
+      symbol: 'close',
+      startLine: 1,
+      bodyRoot: digest('distance baseline first'),
+      baseRisk: 10,
+    }),
+    metric({
+      id: 'javascript-typescript:scripts/a.mjs:close:11',
+      symbol: 'close',
+      startLine: 11,
+      bodyRoot: digest('distance baseline second'),
+      baseRisk: 100,
+    }),
+  ];
+  const distanceCurrent = [
+    metric({
+      id: 'javascript-typescript:scripts/a.mjs:close:10',
+      symbol: 'close',
+      startLine: 10,
+      bodyRoot: digest('distance current first'),
+      baseRisk: 15,
+    }),
+    metric({
+      id: 'javascript-typescript:scripts/a.mjs:close:21',
+      symbol: 'close',
+      startLine: 21,
+      bodyRoot: digest('distance current second'),
+      baseRisk: 100,
+    }),
+  ];
+  const minimumDistance = analyzeTransition(
+    distanceCurrent,
+    distanceBaseline,
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.deepEqual(
+    minimumDistance.functions.map(({ previousId }) => previousId),
+    distanceBaseline.map(({ id }) => id),
+  );
+  assert.ok(
+    evaluateFunctionRiskRatchet(
+      { functions: distanceCurrent, files: [] },
+      { functions: distanceBaseline, files: [] },
+      minimumDistance,
+      ratchetPolicy,
+    ).some(({ code }) => code === 'changed-function-risk-increase'),
+  );
+
+  const exactSecond = analyzeTransition(
+    [
+      metric({
+        id: 'javascript-typescript:scripts/a.mjs:close:12',
+        symbol: 'close',
+        startLine: 12,
+        bodyRoot: digest('c'),
+        baseRisk: 15,
+      }),
+      {
+        ...second,
+        id: 'javascript-typescript:scripts/a.mjs:close:22',
+        startLine: 22,
+      },
+    ],
+    [
+      metric({
+        id: 'javascript-typescript:scripts/a.mjs:close:10',
+        symbol: 'close',
+        startLine: 10,
+        bodyRoot: digest('a'),
+        baseRisk: 10,
+      }),
+      { ...second, startLine: 20 },
+    ],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.equal(
+    exactSecond.functions[0].previousId,
+    'javascript-typescript:scripts/a.mjs:close:10',
+  );
+  assert.equal(exactSecond.functions[1].previousId, second.id);
+
+  const repeatedExactBody = analyzeTransition(
+    [
+      metric({
+        id: 'javascript-typescript:scripts/a.mjs:close:90',
+        symbol: 'close',
+        startLine: 90,
+        bodyRoot: digest('same close body'),
+      }),
+    ],
+    [
+      metric({
+        id: 'javascript-typescript:scripts/a.mjs:close:10',
+        symbol: 'close',
+        startLine: 10,
+        bodyRoot: digest('same close body'),
+      }),
+      metric({
+        id: 'javascript-typescript:scripts/a.mjs:close:100',
+        symbol: 'close',
+        startLine: 100,
+        bodyRoot: digest('same close body'),
+      }),
+    ],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.equal(
+    repeatedExactBody.functions[0].previousId,
+    'javascript-typescript:scripts/a.mjs:close:100',
+  );
+});
+
+test('qualified occurrence v2 fails closed on ambiguous cross-file identity', () => {
+  const baseline = [
+    metric({ path: 'scripts/old-a.mjs', id: 'old-a', bodyRoot: digest('a') }),
+    metric({ path: 'scripts/old-b.mjs', id: 'old-b', bodyRoot: digest('b') }),
+  ];
+  const current = [
+    metric({ path: 'scripts/new-a.mjs', id: 'new-a', bodyRoot: digest('c') }),
+    metric({ path: 'scripts/new-b.mjs', id: 'new-b', bodyRoot: digest('d') }),
+  ];
+  const transition = analyzeTransition(current, baseline, [], [], policy, {
+    identityAlgorithm: 'qualified-occurrence-v2',
+    movementScope: 'same-owner',
+  });
+  assert.ok(
+    transition.findings.some(
+      ({ code }) => code === 'ambiguous-function-identity',
+    ),
+  );
+  assert.ok(
+    evaluateFunctionRiskRatchet(
+      { functions: current, files: [] },
+      { functions: baseline, files: [] },
+      transition,
+      ratchetPolicy,
+    ).some(({ code }) => code === 'ambiguous-function-identity'),
+  );
+});
+
+test('qualified occurrence v2 locks unique moved bodies before same-path order matching', () => {
+  const baselineA = metric({
+    path: 'scripts/a.mjs',
+    id: 'baseline-a',
+    startLine: 10,
+    bodyRoot: digest('body a'),
+    baseRisk: 200,
+  });
+  const baselineB = metric({
+    path: 'scripts/a.mjs',
+    id: 'baseline-b',
+    startLine: 100,
+    bodyRoot: digest('body b'),
+    baseRisk: 10,
+  });
+  const changedB = metric({
+    path: 'scripts/a.mjs',
+    id: 'changed-b',
+    startLine: 11,
+    bodyRoot: digest('changed body b'),
+    baseRisk: 11,
+  });
+  const movedA = metric({
+    path: 'scripts/moved.mjs',
+    id: 'moved-a',
+    startLine: 1,
+    bodyRoot: baselineA.bodyRoot,
+    baseRisk: baselineA.baseRisk,
+  });
+  const transition = analyzeTransition(
+    [changedB, movedA],
+    [baselineA, baselineB],
+    [],
+    [],
+    policy,
+    {
+      identityAlgorithm: 'qualified-occurrence-v2',
+      movementScope: 'same-owner',
+    },
+  );
+  assert.deepEqual(
+    transition.functions.map(({ previousId }) => previousId),
+    [baselineB.id, baselineA.id],
+  );
+  assert.ok(
+    evaluateFunctionRiskRatchet(
+      { functions: [changedB, movedA], files: [] },
+      { functions: [baselineA, baselineB], files: [] },
+      transition,
+      ratchetPolicy,
+    ).some(({ code }) => code === 'changed-function-risk-increase'),
   );
 });
 

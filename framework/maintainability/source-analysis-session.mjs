@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import {
   ROOT,
-  functionSnapshot as analyzeSnapshot,
+  functionSnapshot as analyze,
   digest,
   git,
   languageFamily,
@@ -67,11 +67,11 @@ function trackedFilesAtPaths(ref, paths) {
 
 function functionSnapshot(files, policy, layers, ownership, options = {}) {
   if (!options.analysisMemo)
-    return analyzeSnapshot(files, policy, layers, ownership);
+    return analyze(files, policy, layers, ownership, options);
   const contractRoot = digest({
     includedClasses: policy.includedClasses,
     layers,
-    ownership,
+    ownership: [ownership, options.extractorAlgorithm],
   });
   const parts = files
     .filter(({ path: pathname }) => languageFamily(pathname))
@@ -79,7 +79,7 @@ function functionSnapshot(files, policy, layers, ownership, options = {}) {
       const contentRoot = digest(file.bytes);
       const key = digest({ path: file.path, contentRoot, contractRoot });
       if (options.analysisMemo.has(key)) return options.analysisMemo.get(key);
-      const snapshot = analyzeSnapshot([file], policy, layers, ownership);
+      const snapshot = analyze([file], policy, layers, ownership, options);
       const part = { file: snapshot.files[0], functions: snapshot.functions };
       options.analysisMemo.set(key, part);
       options.onExtract?.(file.path, contentRoot);
