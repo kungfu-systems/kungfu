@@ -676,6 +676,72 @@ test('live report is rooted, advisory, four-language, and maps every entrypoint'
   );
 });
 
+test('phase-2 governance hotspots stay below the exact protected baseline without risk transfer', () => {
+  const exactBaseline = 'df20d7082b751cdf79072deb47bbce3f64149f1b';
+  const repositoryPolicy = readJson(
+    'framework/maintainability/function-risk-policy.json',
+  );
+  const repositoryLayers = readJson('framework/core/architecture/layers.json');
+  const repositoryOwnership = readJson(
+    'framework/maintainability/abstraction-integrity.manifest.json',
+  ).ownership;
+  const baseline = kernelFunctionSnapshot(
+    trackedFilesAt(exactBaseline),
+    repositoryPolicy,
+    repositoryLayers,
+    repositoryOwnership,
+  ).functions;
+  const report = buildReport({ languageFamily: 'javascript-typescript' });
+  const owner = 'framework/maintainability';
+  const current = report.functions.filter((item) => item.owner === owner);
+  const targets = new Map([
+    ['source-analysis-kernel.mjs:stripStringsAndComments', 138],
+    ['source-analysis-kernel.mjs:ownerFor', 122],
+    ['source-analysis-kernel.mjs:classify', 98],
+    ['semantic-amplification.mjs:evaluateDetector', 76],
+    ['semantic-amplification.mjs:queryTaskGraph', 75],
+  ]);
+  const targetFunctions = current.filter((item) =>
+    targets.has(`${path.basename(item.path)}:${item.symbol}`),
+  );
+
+  assert.equal(targetFunctions.length, targets.size);
+  for (const item of targetFunctions)
+    assert.ok(
+      item.baseRisk < targets.get(`${path.basename(item.path)}:${item.symbol}`),
+      `${item.symbol} must improve against ${exactBaseline}`,
+    );
+  assert.ok(
+    targetFunctions.reduce((sum, item) => sum + item.baseRisk, 0) <= 381,
+  );
+  assert.ok(current.reduce((sum, item) => sum + item.baseRisk, 0) < 2328);
+  assert.ok(current.filter((item) => item.baseRisk > 50).length < 14);
+  assert.equal(current.filter((item) => item.baseRisk > 100).length, 0);
+  assert.ok(Math.max(...current.map((item) => item.baseRisk)) < 100);
+  assert.equal(
+    report.findings.filter(
+      ({ code, paths }) =>
+        code === 'wrapper-only-extraction' &&
+        paths.some((relative) =>
+          relative.startsWith('framework/maintainability/'),
+        ),
+    ).length,
+    0,
+  );
+
+  const baselineHotspots = new Set(
+    baseline
+      .filter((item) => item.owner === owner && item.baseRisk > 50)
+      .map((item) => `${item.path}:${item.symbol}`),
+  );
+  assert.ok(
+    current
+      .filter((item) => item.baseRisk > 50)
+      .every((item) => baselineHotspots.has(`${item.path}:${item.symbol}`)),
+    'no new or renamed same-owner hotspot may exceed 50',
+  );
+});
+
 test('C++ view uses its exact protected-head baseline and excludes other languages', () => {
   const report = buildReport({ languageFamily: 'c-cpp' });
   assert.deepEqual(report.view, {
