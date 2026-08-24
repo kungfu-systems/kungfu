@@ -24,7 +24,7 @@ from kungfu.assignment_runtime import (
     profile_source,
 )
 from kungfu import dogfood as dogfood_api
-from kungfu import profile_composition, profile_sdk
+from kungfu import profile_sdk
 from kungfu.agent import run_agent
 from kungfu.agent import resources as agent_resources
 from kungfu.cli.commands import (
@@ -196,16 +196,14 @@ def _ensure_profile(runtime_dir, authorized_by):
         receipts.append(
             profile_sdk.authorized_lifecycle_apply(runtime_dir, plan, answer)
         )
-    contract = profile_composition.contract_materialization_plan(source, runtime_dir)
-    if contract["operations"]:
-        answer = profile_sdk.answer_decision(
-            contract["decisionCard"], "approve", authorized_by
+    domain = profile_sdk.load_member_python_package(
+        source, "work-control-actions", "domain"
+    )
+    receipts.extend(
+        domain.work_control.ensure_profile_contract(
+            str(runtime_dir), str(source), authorized_by
         )
-        receipts.append(
-            profile_composition.authorized_contract_materialize(
-                runtime_dir, contract, answer
-            )
-        )
+    )
     return receipts
 
 
@@ -428,7 +426,7 @@ def _admit_captured_assignment(
 @assignment_context
 @surface(id="kungfu.work.capture")
 def capture(ctx, request_value, workspace_root, home, cwd, json_output):
-    def operation():
+    def capture_operation():
         if request_value == "-":
             request = json.load(click.get_text_stream("stdin"))
         else:
@@ -444,7 +442,7 @@ def capture(ctx, request_value, workspace_root, home, cwd, json_output):
         return orchestration.capture_assignment_request(request, target)
 
     _ = json_output
-    _emit(_run(operation))
+    _emit(_run(capture_operation))
 
 
 @assignment.command(help="admit one verified captured request into this workspace")
@@ -478,7 +476,7 @@ def admit(
     actor_type,
     allow_foreign_binding,
 ):
-    def operation():
+    def admit_operation():
         initiative_admission_stdin = ""
         if initiative_admission:
             initiative_admission_stdin = (
@@ -499,7 +497,7 @@ def admit(
             allow_foreign_binding=allow_foreign_binding,
         )
 
-    result = _run(operation)
+    result = _run(admit_operation)
     if result is not None:
         _emit(result)
         if result.get("ok") is not True:
@@ -1221,7 +1219,7 @@ def relation_event(
     predecessor_roots,
     evidence_roots,
 ):
-    def operation():
+    def relation_event_operation():
         identity, runtime_dir = _runtime(workspace_root)
         _ensure_profile(runtime_dir, actor)
         relation = json.loads(relation_file.read_text(encoding="utf-8"))
@@ -1249,7 +1247,7 @@ def relation_event(
             "workspace": identity.as_dict(),
         }
 
-    result = _run(operation)
+    result = _run(relation_event_operation)
     if result is not None:
         _emit(result)
 
@@ -1684,7 +1682,7 @@ def family_verify_v2(ctx, state_file):
 @click.option("--target", type=click.Choice(["run", "closeout"]), required=True)
 @assignment_context
 def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
-    def operation():
+    def gate_operation():
         _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
         status_value = _status(runtime_dir, initiative_id, assignment_id)
         orchestration_gate = orchestration.gate(status_value, target)
@@ -1711,7 +1709,7 @@ def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
             ],
         }
 
-    result = _run(operation)
+    result = _run(gate_operation)
     _emit(result)
     if not result["ok"]:
         raise click.exceptions.Exit(4)
@@ -1730,7 +1728,7 @@ def _json_action(name, intent_id):
     @assignment_context
     @surface(id=f"kungfu.work.{name.replace('-', '.')}")
     def command(ctx, input_file, workspace_root, home, authorized_by):
-        def operation():
+        def assignment_action_operation():
             values = json.loads(input_file.read_text(encoding="utf-8"))
             _, runtime_dir, _ = _runtime(workspace_root, home)
             _ensure_profile(runtime_dir, authorized_by)
@@ -1748,7 +1746,7 @@ def _json_action(name, intent_id):
                 "next_actions": current["next_actions"],
             }
 
-        _emit(_run(operation))
+        _emit(_run(assignment_action_operation))
 
     return command
 
@@ -1792,7 +1790,7 @@ def binding_create(
     child_status,
     out,
 ):
-    def operation():
+    def binding_create_operation():
         binding = orchestration.cross_workspace_binding(
             json.loads(parent_admission.read_text(encoding="utf-8")),
             json.loads(parent_status.read_text(encoding="utf-8")),
@@ -1821,7 +1819,7 @@ def binding_create(
             ],
         }
 
-    _emit(_run(operation))
+    _emit(_run(binding_create_operation))
 
 
 @assignment.command(
@@ -1845,7 +1843,7 @@ def bind(
     execute,
     expected_binding_root,
 ):
-    def operation():
+    def bind_operation():
         binding = json.loads(binding_file.read_text(encoding="utf-8"))
         identity, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
         current = _status(runtime_dir, initiative_id, assignment_id)
@@ -1869,7 +1867,7 @@ def bind(
             plan, binding, expected_binding_root
         )
 
-    _emit(_run(operation))
+    _emit(_run(bind_operation))
 
 
 @assignment.command(
@@ -1914,7 +1912,7 @@ def seal(
     execute,
     expected_state_root,
 ):
-    def operation():
+    def seal_operation():
         identity, runtime_dir, _ = _runtime(workspace_root, home)
         _ensure_profile(runtime_dir, "assignment-seal")
         current = _status(runtime_dir, initiative_id, assignment_id)
@@ -1933,7 +1931,7 @@ def seal(
             }
         return orchestration.apply_sealed_state(plan, expected_state_root)
 
-    _emit(_run(operation))
+    _emit(_run(seal_operation))
 
 
 @assignment.command(

@@ -187,6 +187,25 @@ def _exact_active_claim(
     return matches[0]
 
 
+def _attempt_from_status(status: Mapping[str, Any]) -> dict[str, Any] | None:
+    claims = status.get("execution_claims") or status.get("executionClaims") or []
+    if not claims:
+        return None
+    active_lease = status.get("active_lease") or status.get("activeLease")
+    claim = (
+        _exact_active_claim(list(claims), active_lease)
+        if isinstance(active_lease, Mapping)
+        else dict(claims[-1])
+    )
+    phase = str(status.get("phase") or "claimed")
+    attempt_id, claim_id = _claim_identity(claim)
+    return {
+        "attemptId": attempt_id or claim_id,
+        "claimId": claim_id,
+        "state": phase if phase in {"claimed", "executing", "settled"} else "claimed",
+    }
+
+
 class LocalRuntimeError(RuntimeError):
     """Stable public Runtime error."""
 
@@ -531,28 +550,7 @@ class WorkControlAuthority:
 
     @staticmethod
     def _attempt(status: Mapping[str, Any]) -> dict[str, Any] | None:
-        claims = status.get("execution_claims") or status.get("executionClaims") or []
-        if not claims:
-            return None
-        active_lease = status.get("active_lease") or status.get("activeLease")
-        claim = (
-            _exact_active_claim(list(claims), active_lease)
-            if isinstance(active_lease, Mapping)
-            else dict(claims[-1])
-        )
-        phase = str(status.get("phase") or "claimed")
-        state = phase if phase in {"claimed", "executing", "settled"} else "claimed"
-        return {
-            "attemptId": str(
-                claim.get("attempt_id")
-                or claim.get("attemptId")
-                or claim.get("claim_id")
-                or claim.get("claimId")
-                or ""
-            ),
-            "claimId": str(claim.get("claim_id") or claim.get("claimId") or ""),
-            "state": state,
-        }
+        return _attempt_from_status(status)
 
     @staticmethod
     def _lease(status: Mapping[str, Any]) -> dict[str, Any] | None:

@@ -319,6 +319,32 @@ def contract_materialization_plan(runtime_dir: str, source: str) -> dict[str, An
         return _retained_source_authority_compatibility(runtime_dir, error)
 
 
+def ensure_profile_contract(
+    runtime_dir: str, source: str, authorized_by: str
+) -> list[dict[str, Any]]:
+    """Materialize Work declarations or prove the retained-history boundary."""
+
+    contract = contract_materialization_plan(runtime_dir, source)
+    if contract.get("status") == "retained-history-compatible":
+        return [
+            {
+                "schema": "kungfu.work.profile-contract-compatibility-receipt/v1",
+                "profileContract": _ensure_contract(runtime_dir),
+                "writeOccurred": False,
+            }
+        ]
+    if not contract["operations"]:
+        return []
+    answer = profile_sdk.answer_decision(
+        contract["decisionCard"], "approve", authorized_by
+    )
+    return [
+        profile_composition.authorized_contract_materialize(
+            runtime_dir, contract, answer
+        )
+    ]
+
+
 def _profile_context(runtime_dir: str) -> dict[str, Any]:
     discovered = work_control_profile_source(runtime_dir)
     source = discovered["source"]

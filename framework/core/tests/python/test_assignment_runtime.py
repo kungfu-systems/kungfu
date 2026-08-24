@@ -82,12 +82,6 @@ def test_work_profile_ensure_uses_profile_owned_retained_history_compatibility(
     from kungfu.cli.commands import assignment as work_commands
 
     runtime = tmp_path / "runtime"
-    migration = profile_sdk.ProfileSdkError(
-        "fact-surface-authority-migration-required",
-        "removed source authorities retain admitted facts and require an explicit migration",
-        factSurface="kungfu.initiative-assignment.initiative",
-        admittedSourceAuthorities=["atlas-adapter"],
-    )
     monkeypatch.setattr(work_commands, "profile_source", lambda: PROFILE_SOURCE)
     monkeypatch.setattr(
         profile_sdk,
@@ -118,11 +112,6 @@ def test_work_profile_ensure_uses_profile_owned_retained_history_compatibility(
             else {}
         ),
     )
-    monkeypatch.setattr(
-        work_commands.profile_composition,
-        "contract_materialization_plan",
-        lambda _source, _runtime: (_ for _ in ()).throw(migration),
-    )
     compatibility = {
         "schema": "kungfu.work-control.profile-contract/v1",
         "status": "retained-history-compatible",
@@ -130,7 +119,13 @@ def test_work_profile_ensure_uses_profile_owned_retained_history_compatibility(
     }
     domain = types.SimpleNamespace(
         work_control=types.SimpleNamespace(
-            _ensure_contract=lambda _runtime: compatibility
+            ensure_profile_contract=lambda _runtime, _source, _actor: [
+                {
+                    "schema": "kungfu.work.profile-contract-compatibility-receipt/v1",
+                    "profileContract": compatibility,
+                    "writeOccurred": False,
+                }
+            ]
         )
     )
     monkeypatch.setattr(
