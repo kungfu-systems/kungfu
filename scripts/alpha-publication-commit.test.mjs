@@ -33,6 +33,7 @@ test('publication consumes one exact manifest set from the sealed candidate', ()
     );
     for (const [platform, architecture] of [
       ['darwin', 'arm64'],
+      ['linux', 'arm64'],
       ['linux', 'x64'],
       ['win32', 'x64'],
     ]) {
@@ -69,7 +70,7 @@ test('publication consumes one exact manifest set from the sealed candidate', ()
       }).manifests.map(
         ({ platform, architecture }) => `${platform}-${architecture}`,
       ),
-      ['darwin-arm64', 'linux-x64', 'win32-x64'],
+      ['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64'],
     );
     assert.throws(
       () =>
