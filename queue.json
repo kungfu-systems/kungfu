@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6568,
+  "generation": 6569,
   "fencingCounter": 654,
   "policy": {
     "agingSeconds": 900,
@@ -11,44 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:9621ba27012046237126a3dae4f541114094a99a9f86fe58fedd20a33b745291",
-    "pullRequestNumber": 3417,
-    "sourceHead": "931dc6185ef51c08cf11b9fabc630ce4c074840e",
-    "assignmentRoot": "sha256:371552777013f3c107b9938b96c877ea4654a5b732b44057e8d7e7aa3e5b19ba",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:3ffde623eebf177c62b25d6c7e3f5b5247a99ae183a5c29726a4f0e67bced1d3",
-    "sourcePatchRoot": "sha256:a42747a21af1c8ad8140783f7180ee2ebd9362907eef41f2d680a1c086a6f72c",
-    "sourceProofRoot": "sha256:0d8fe58b3d198e544c4cddbe5b45d6dbf13edb5adcf1cfbe3b36a9ba8125f764",
-    "planRoot": "sha256:2b737536b606a83b198bcefa2881776dbf4438acb42afcd9ce6599e1a703621c",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:56a5fb506a20d8ca9edc5c2214a6536d34d0025a9f9e161cb8eb3a05d6c3a47f",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "affectedPaths": [
-      ".github/workflows/dev-pr-auto-merge.yml",
-      "docs/qualification/gates/workflow-authority.json",
-      "framework/release/kfd-adopter-release.mjs",
-      "framework/release/publication-surfaces.json",
-      "scripts/dev-pr-auto-merge.test.mjs",
-      "scripts/kfd-support-matrix.test.mjs"
-    ],
-    "sourceWorkflowRunId": 32736121332,
-    "deliveryClass": "native-proof-required",
-    "generation": 654,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:dfdd60b012c75b6234f8a7889ec281930ea683912c9ef403553e321666dd3d8b",
-    "issuedAt": "2026-08-24T14:44:52.728Z",
-    "expiresAt": "2026-08-24T16:35:50.070Z",
-    "fencingToken": "sha256:9a3689e8f98fc40e48ec148bdd5546d5dbf6dd9130f3ec975db5c17f7f616064",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:721f5492ef3ff1e645ca8b7a98911e3a7cece946c216af232792a96d59a9ebda",
-    "nativeProofReuseRoot": "sha256:6aa46fcacb1fdc76c75378a773571d9735f4e79a5c048283f791e1617982d349",
-    "qualifiedAt": "2026-08-24T14:58:50.724Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -45850,11 +45813,20 @@
       "sourceWorkflowRunId": 32736121332,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-24T14:44:46.852Z",
-      "updatedAt": "2026-08-24T15:05:50.070Z",
+      "updatedAt": "2026-08-24T16:36:39.103Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "terminalClass": "authoritative-failure",
+        "reason": "Expired exact Warrant attempt: admitted source workflow 32736121332 and all jobs are terminal; exact PR #3417 head is absent from GitHub Merge Queue. PR remains open for its owner.",
+        "evidenceRoot": "sha256:7eb7e47990ab4fd07723d5240f46403d2251795cf97fba9104d9f572171803d1",
+        "closedAt": "2026-08-24T16:36:39.103Z",
+        "fencingToken": "sha256:9a3689e8f98fc40e48ec148bdd5546d5dbf6dd9130f3ec975db5c17f7f616064",
+        "leaseGeneration": 654,
+        "nativeProofRoot": "sha256:721f5492ef3ff1e645ca8b7a98911e3a7cece946c216af232792a96d59a9ebda"
+      },
       "affectedPaths": [
         ".github/workflows/dev-pr-auto-merge.yml",
         "docs/qualification/gates/workflow-authority.json",
@@ -45917,6 +45889,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-24T15:49:55.956Z",
-  "stateRoot": "sha256:56c29a6298e4b9962b4d1f85f2da623e8341897a40a55dc3cf8d04920c7a95ab"
+  "updatedAt": "2026-08-24T16:36:39.103Z",
+  "stateRoot": "sha256:41ee0900db5990945fe81950d6ec02c7b8769a03d94d32e9dee91d03ee61481f"
 }
