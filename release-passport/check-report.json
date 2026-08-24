@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-release-check-report",
+  "checkedAt": "2026-08-24T20:03:28.205Z",
+  "ok": true,
+  "trust": "pass",
+  "surfaceImpactRequirement": {
+    "required": false,
+    "type": "alpha",
+    "reason": "surfaceImpacts[] is optional for alpha, local, and legacy passport contexts",
+    "channel": "alpha",
+    "targetRef": "alpha/v4/v4.0"
+  },
+  "completeness": {
+    "artifactCount": 5420,
+    "evidenceArtifactCount": 5420,
+    "packageSetPresent": false,
+    "trustedPublishingPresent": false,
+    "transactionPresent": true,
+    "anchorManifestPresent": false,
+    "buildSummaryPresent": true,
+    "platformArtifactManifestCount": 4,
+    "distTagPromotionEvidencePresent": true,
+    "adopterDeliveryPresent": false,
+    "impactPresent": true,
+    "agentIndexPresent": true,
+    "productMechanismPresent": true,
+    "surfaceImpactsRequired": false,
+    "surfaceImpactCount": 0,
+    "versionImpact": "unknown",
+    "releaseEvidenceCount": 0
+  },
+  "issues": [
+    {
+      "level": "warning",
+      "code": "kfd-2.claims[4].downgraded",
+      "message": "public release claim is downgraded and needs human review",
+      "details": {
+        "id": "remote-fact-boundary",
+        "proseOnly": false
+      }
+    },
+    {
+      "level": "warning",
+      "code": "kfd-2.claims[5].downgraded",
+      "message": "public release claim is downgraded and needs human review",
+      "details": {
+        "id": "agent-work-state-contract",
+        "proseOnly": false
+      }
+    },
+    {
+      "level": "warning",
+      "code": "kfd-2.claims[6].downgraded",
+      "message": "public release claim is downgraded and needs human review",
+      "details": {
+        "id": "cross-language-authority-membrane",
+        "proseOnly": false
+      }
+    },
+    {
+      "level": "warning",
+      "code": "kfd-2.status",
+      "message": "kfd-2 release trust passport audit is downgraded by prose-only or residual-risk claims",
+      "details": {}
+    }
+  ]
+}

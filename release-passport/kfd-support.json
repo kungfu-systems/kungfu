@@ -1,0 +1,465 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-kfd-support-matrix",
+  "authority": {
+    "path": "kfd-adopter-manifest.json",
+    "contract": "kfd.adopter-conformance-manifest/v1",
+    "root": "sha256:77db61d94adf10b0a97dd71c0fdd4c9a8a8bd9ff65b4a2c64a44c783e0450a8d",
+    "gateRoot": "sha256:ce4877c6dd9783c2df6614533546efb62ed429f9948f5da81d920550f90bfca2",
+    "adopterId": "kungfu-systems/kungfu",
+    "sourceRepository": "kungfu-systems/kungfu",
+    "sourceSha": "6d99af738b78eccb48885a5fd59b88a0e5e4900a"
+  },
+  "upstream": {
+    "package": "@kungfu-tech/kfd",
+    "version": "1.0.0-alpha.65",
+    "artifactRoot": "sha256:c0781bcaf191a58561ae32ee2fbedabbb48ed50b5725c356fbd83704089637f8",
+    "registryRoot": "sha256:8ab283dd225e8940a4f9d92eca7d59fff6e8d29e66275c03baa923ad2ff63298",
+    "verifierSetRoot": "sha256:aad9b4193e965b68e465bbe4e648e5a03c3d78a6575dfda1d5e90943404779f4",
+    "standardsSha256": "sha256:4cc77b8364fa5d4f158933ee3c89640b9ef1e2979c45c2fd9e7d69060258255e"
+  },
+  "rows": [
+    {
+      "id": "KFD-1",
+      "key": "kfd-1",
+      "title": "Facts must not drift",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 7
+      },
+      "implementation": {
+        "status": "implemented"
+      },
+      "verification": {
+        "status": "passed"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "Independent decision-specific assessment and certification remain external."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "candidate",
+        "usage": "used",
+        "root": "sha256:a9cab7df06c3e40de4d3e8585e578841af08375df9a9d97d5255442ee16ed8f2"
+      }
+    },
+    {
+      "id": "KFD-2",
+      "key": "kfd-2",
+      "title": "Trust must start from facts",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 3
+      },
+      "implementation": {
+        "status": "implemented"
+      },
+      "verification": {
+        "status": "passed"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "Independent decision-specific assessment and certification remain external."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "candidate",
+        "usage": "used",
+        "root": "sha256:199438ece9bdf457f4cfff092a1f863d5d0911894a6d6631a02ab0f6247f424a"
+      }
+    },
+    {
+      "id": "KFD-3",
+      "key": "kfd-3",
+      "title": "Cooperation must start from trusted value",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 5
+      },
+      "implementation": {
+        "status": "implemented"
+      },
+      "verification": {
+        "status": "passed"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "Independent decision-specific assessment and certification remain external."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "candidate",
+        "usage": "used",
+        "root": "sha256:9e5f39973885d6053c00e23ee2ef468a0074983f3b28e6f46e54d959f22ea2ab"
+      }
+    },
+    {
+      "id": "KFD-4",
+      "key": "kfd-4",
+      "title": "Views must remain bound to declared perspectives",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 10
+      },
+      "implementation": {
+        "status": "implemented"
+      },
+      "verification": {
+        "status": "passed"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-product-gate/v1",
+        "gateStatus": "passed"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "Independent decision-specific assessment and certification remain external."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "candidate",
+        "usage": "used",
+        "root": "sha256:8abb9282425e810f288a2293844af8f9115aec23b7ecc16b59cc31ba9325f08f"
+      }
+    },
+    {
+      "id": "KFD-5",
+      "key": "kfd-5",
+      "title": "Primitive discovery must separate genesis from qualification",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 7
+      },
+      "implementation": {
+        "status": "implemented"
+      },
+      "verification": {
+        "status": "passed"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-product-gate/v1",
+        "gateStatus": "passed"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "Independent decision-specific assessment and certification remain external."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "candidate",
+        "usage": "used",
+        "root": "sha256:61d130ec7ae94c1ebea8324753f53653cae374541d31272be7a89328983be663"
+      }
+    },
+    {
+      "id": "KFD-6",
+      "key": "kfd-6",
+      "title": "Autonomous discovery must remain grounded in causal experience",
+      "supportStatus": "unsupported",
+      "normative": {
+        "status": "draft",
+        "revision": 10
+      },
+      "implementation": {
+        "status": "not-declared"
+      },
+      "verification": {
+        "status": "not-declared"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "Kungfu does not claim KFD-6 support in this cut."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "unsupported",
+        "usage": "unused",
+        "root": "sha256:2d5c71d47e796fc9787508e10ea428f068f3b210158940bd2b7f0f4513de980f"
+      }
+    },
+    {
+      "id": "KFD-7",
+      "key": "kfd-7",
+      "title": "Real-world action must keep state, occurrence, and action coordinates distinct",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 8
+      },
+      "implementation": {
+        "status": "implemented"
+      },
+      "verification": {
+        "status": "passed"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-product-gate/v1",
+        "gateStatus": "passed"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "Independent decision-specific assessment and certification remain external."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "candidate",
+        "usage": "used",
+        "root": "sha256:73511dc4e71a27ab4040fde78da331b1d1d90544d8d44f6b3f32114f80c008f9"
+      }
+    },
+    {
+      "id": "KFD-8",
+      "key": "kfd-8",
+      "title": "Perspective must remain bound to admitted facts and declared loss",
+      "supportStatus": "not-used",
+      "normative": {
+        "status": "draft",
+        "revision": 2
+      },
+      "implementation": {
+        "status": "not-declared"
+      },
+      "verification": {
+        "status": "not-declared"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "No adopter evidence has been declared for this decision."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "not-used",
+        "usage": "unused",
+        "root": "sha256:5e60ce2a41d887ff6680cc92bf76bb4de89b55e233fdc3045646b0bb41c38d36"
+      }
+    },
+    {
+      "id": "KFD-9",
+      "key": "kfd-9",
+      "title": "Continuing direction must outlive the actions that advance it",
+      "supportStatus": "not-used",
+      "normative": {
+        "status": "draft",
+        "revision": 2
+      },
+      "implementation": {
+        "status": "not-declared"
+      },
+      "verification": {
+        "status": "not-declared"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "No adopter evidence has been declared for this decision."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "not-used",
+        "usage": "unused",
+        "root": "sha256:ad6daed9a34d31d02d0421703b16f22cd600b5b2091dcb05689c38075e358529"
+      }
+    },
+    {
+      "id": "KFD-10",
+      "key": "kfd-10",
+      "title": "Authority must remain explicit, bounded, and revocable",
+      "supportStatus": "draft-adopter-evidence",
+      "normative": {
+        "status": "draft",
+        "revision": 2
+      },
+      "implementation": {
+        "status": "not-declared"
+      },
+      "verification": {
+        "status": "passed"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "A rooted witness is a declaration input; independent assessment and authority remain external."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "draft-evidence",
+        "usage": "evaluating",
+        "root": "sha256:196dd51ed323b5f822648d79d45711815e09b67eda1e3987546aa97e7a29d2d2"
+      }
+    },
+    {
+      "id": "KFD-11",
+      "key": "kfd-11",
+      "title": "Consequential settlement must separate claim, assessment, decision, and admission",
+      "supportStatus": "not-used",
+      "normative": {
+        "status": "draft",
+        "revision": 2
+      },
+      "implementation": {
+        "status": "not-declared"
+      },
+      "verification": {
+        "status": "not-declared"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "No adopter evidence has been declared for this decision."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "not-used",
+        "usage": "unused",
+        "root": "sha256:67cb3100a60e7cb8cc1686cb41d924d30a65a0617ad283bc59c5ac8fa20d986c"
+      }
+    },
+    {
+      "id": "KFD-12",
+      "key": "kfd-12",
+      "title": "Software work must keep Initiative and Assignment distinct",
+      "supportStatus": "not-used",
+      "normative": {
+        "status": "draft",
+        "revision": 5
+      },
+      "implementation": {
+        "status": "not-declared"
+      },
+      "verification": {
+        "status": "not-declared"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "No adopter evidence has been declared for this decision."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "not-used",
+        "usage": "unused",
+        "root": "sha256:d739dba2e160953c5bfa8d6be6ccd3f027a09ec41cc65175f7e4474aca1f2248"
+      }
+    },
+    {
+      "id": "KFD-13",
+      "key": "kfd-13",
+      "title": "Project settlement must bind authorities without absorbing them",
+      "supportStatus": "not-used",
+      "normative": {
+        "status": "draft",
+        "revision": 4
+      },
+      "implementation": {
+        "status": "not-declared"
+      },
+      "verification": {
+        "status": "not-declared"
+      },
+      "buildchain": {
+        "protocol": "kungfu-buildchain-kfd-adopter-manifest-gate/v1",
+        "gateStatus": "manifest-verified"
+      },
+      "releaseQualification": {
+        "shippedSupport": false
+      },
+      "claimClass": "standard-adopter-manifest-projection",
+      "knownLimitations": [
+        "No adopter evidence has been declared for this decision."
+      ],
+      "owner": "kungfu-systems/kungfu",
+      "nextGate": "Release Passport artifact binding and independent release decision",
+      "declaration": {
+        "state": "not-used",
+        "usage": "unused",
+        "root": "sha256:bc781021eb65b33c4cf5c24af03a5c0831bbd5cbda548eb2c3c59000acc3b7bb"
+      }
+    }
+  ]
+}

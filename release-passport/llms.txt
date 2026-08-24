@@ -1,0 +1,6 @@
+# Buildchain Release Passport
+
+Release: v4.0.0-alpha.3
+
+Start with buildchain.release.json. Verify artifact-evidence.json before installing binaries.
+If verification fails, do not install or promote this release.

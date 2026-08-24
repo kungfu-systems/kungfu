@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-agent-index",
+  "release": {
+    "tag": "v4.0.0-alpha.3"
+  },
+  "entrypoints": [
+    {
+      "id": "release-passport",
+      "kind": "json",
+      "path": "buildchain.release.json",
+      "description": "Read this first to verify release completeness, artifacts, impact, and recovery pointers."
+    },
+    {
+      "id": "llms",
+      "kind": "text",
+      "path": "llms.txt",
+      "description": "Short agent-readable release instructions."
+    }
+  ]
+}

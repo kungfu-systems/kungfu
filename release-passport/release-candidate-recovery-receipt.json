@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-release-candidate-recovery/v1",
+  "action": "reused",
+  "createdAt": "2026-08-24T20:02:57.568Z",
+  "repository": "kungfu-systems/kungfu",
+  "recoveryRunId": "32769805978",
+  "originalCandidate": {
+    "runId": "32672193888",
+    "workflowFile": "build.yml",
+    "workflowName": "Build",
+    "pullRequest": 3393,
+    "sourceSha": "6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+    "mergeSha": "067f36ce4ed2e54e7f1ee4490598d86f20bd90df",
+    "tree": "b64e46b85655a28b1395aa8ebe5c4bf961d4c0cf"
+  },
+  "target": {
+    "channel": "alpha",
+    "ref": "alpha/v4/v4.0",
+    "sha": "067f36ce4ed2e54e7f1ee4490598d86f20bd90df",
+    "observedRefSha": "067f36ce4ed2e54e7f1ee4490598d86f20bd90df",
+    "tree": "b64e46b85655a28b1395aa8ebe5c4bf961d4c0cf",
+    "version": "4.0.0-alpha.3"
+  },
+  "recovered": {
+    "candidateRoot": "sha256:23887c05854b6e86eaa624321af7b1aa636bc83744462fc03d51e8cedcc452a6",
+    "buildSummaryRoot": "sha256:e0d70a0014ae96eb60c3d3702b7f7c15c458402a948295b9ce4d28ed9583c079",
+    "artifactRoot": "sha256:f2d3e73df2498a016cf028a7900418c6b3eb2dac889073c8d4c4704098736b85",
+    "artifactArchiveRoot": "sha256:de1b21c6feccc97bb436355fc76a26806bf595a1102f094fc611b61d8fd4fcb7",
+    "artifactCount": 42,
+    "artifacts": [
+      {
+        "name": "kungfu-alpha-publication-tail-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 1744,
+        "digest": "sha256:76ee1eddbbb82fdf5e00b9567343c36820b5be54ac41a3fec32110407df9a3e6"
+      },
+      {
+        "name": "kungfu-anchored-version-material-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 368,
+        "digest": "sha256:8c400a04cb6777e2b0cfefe44484d23e9a65dea246fd5be593444435388893cb"
+      },
+      {
+        "name": "kungfu-attestation-policy-linux-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 1081,
+        "digest": "sha256:187771fb752cc3897f5f0cc6eb52dbb21cd7d19673d9bf9f1e25e06a10c9bb22"
+      },
+      {
+        "name": "kungfu-controller-plan-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 3201,
+        "digest": "sha256:b74f0d74eebd46b0c5a11b87cd0b0c53310b70cdfbbff83022d21f6e925e7a1c"
+      },
+      {
+        "name": "kungfu-controller-receipt-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 956,
+        "digest": "sha256:79ef4961cf67bd6c71540d5ed338a0c8589dbcbe6e662af0954c7eca3f94f888"
+      },
+      {
+        "name": "kungfu-credential-manifest-macos-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 882,
+        "digest": "sha256:9e9d06ff9224afe62a601a345dbd25da71cc5706a35c416c60ffaab27c6e7ae6"
+      },
+      {
+        "name": "kungfu-diagnostics-linux-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 248374,
+        "digest": "sha256:6010221c0b7a166cfd8f3a568a5f0adcb71717b686711dc238c1fac33ce382eb"
+      },
+      {
+        "name": "kungfu-diagnostics-linux-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 252002,
+        "digest": "sha256:e421e4bcae34408e31cef375828be6630f8b923c72e046d7f702c6100937f22e"
+      },
+      {
+        "name": "kungfu-diagnostics-macos-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 4746,
+        "digest": "sha256:6aaecd76c722c4df78758716f7665665d0132b9b1c3402ae41cfbfb00a1dd226"
+      },
+      {
+        "name": "kungfu-diagnostics-summary-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 5925,
+        "digest": "sha256:48feff8b22f003d1d46d315932a82088fc0e752fd6e43d56ab3be79ff8375642"
+      },
+      {
+        "name": "kungfu-diagnostics-windows-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 132276,
+        "digest": "sha256:a4aae1b632366e761bbaabdc8687a8d4046d119cb2a454a8f437e0d893d03dbc"
+      },
+      {
+        "name": "kungfu-linux-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 288588153,
+        "digest": "sha256:7939ff70fd2f0916dadd2df879fdd15f379d84ed50c023dd31dcc5ed6956398d"
+      },
+      {
+        "name": "kungfu-linux-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 1290971275,
+        "digest": "sha256:f107e960eda109cd2bd3cd101be77d0e8c33972174063fdb71447fd7845d54be"
+      },
+      {
+        "name": "kungfu-macos-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 1795287470,
+        "digest": "sha256:0cfc567cbace935c1625a01bdcd51b60a2dd5dce6b4b173a7bd7237eb599aec8"
+      },
+      {
+        "name": "kungfu-macos-credential-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 586259483,
+        "digest": "sha256:814007d15d6be790b5d231c1b42d4c62dfd5c4099fbfb4dfe76613a7a8edae18"
+      },
+      {
+        "name": "kungfu-manifest-linux-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 12007,
+        "digest": "sha256:480f18077a91f0fcf4bd9a53a593fbafc5b61e7149e340d457cc8ef17cc71903"
+      },
+      {
+        "name": "kungfu-manifest-linux-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 237206,
+        "digest": "sha256:ead322168686504a6c2d7e0dfa601a3495c22a06f4529ad5fe3e22dfecf56d04"
+      },
+      {
+        "name": "kungfu-manifest-macos-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 18086,
+        "digest": "sha256:c7687f00a755a97bfaf3c0a303ee8329aa240a6cb506cb63fc48cc7242e6e06b"
+      },
+      {
+        "name": "kungfu-manifest-windows-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 18112,
+        "digest": "sha256:9b21ae49b53bcd69203649ac007b25141eee34c3ddd86236c8287bdb44a97d9f"
+      },
+      {
+        "name": "kungfu-publish-source-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 482,
+        "digest": "sha256:cc757894010828526e77fc576ecb54a7684d1d4ec3c64da3662c118e9b822357"
+      },
+      {
+        "name": "kungfu-release-candidate-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 1602,
+        "digest": "sha256:0298b390a8f2b1f844bdbb65fe9f486f8512b5a6efbf8af37a8e07b72a3d40b2"
+      },
+      {
+        "name": "kungfu-release-candidate-controller-receipt-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 1001,
+        "digest": "sha256:2eeeece21eb009810d66114b8099e63309703d9a9d4b8e63763b7bbaa3c90500"
+      },
+      {
+        "name": "kungfu-runtime-checkout-bootstrap-675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "size": 37336,
+        "digest": "sha256:722e27845f3eaf63973b4d79d94fc4d09c4ef670e77520a53b87227923bd73bf"
+      },
+      {
+        "name": "kungfu-runtime-checkout-linux-arm64-675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "size": 797,
+        "digest": "sha256:02dbc050abe14fd2e452044aad70cbc84e1128c06471816c0072cd479ca50efb"
+      },
+      {
+        "name": "kungfu-runtime-checkout-linux-x64-675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "size": 796,
+        "digest": "sha256:393f012bca4d6093f3349507ba1ab82fbb8daf04135a087c06c4d42266b83a5d"
+      },
+      {
+        "name": "kungfu-runtime-checkout-macos-arm64-675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "size": 797,
+        "digest": "sha256:5ca25e43f10a23e0512a2f460c0a35790cde373863e8d436bb2eb22e3f374a00"
+      },
+      {
+        "name": "kungfu-runtime-checkout-windows-x64-675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "size": 798,
+        "digest": "sha256:3c9015aa623a2d4df618dd0ba6008f408828a7f14b0e844061866abacb9375be"
+      },
+      {
+        "name": "kungfu-signing-control-request-linux-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 688,
+        "digest": "sha256:46f8edf6afc7c1e22d7744912bc8d7c31f1ac88f371a10454b648c304d69e7a2"
+      },
+      {
+        "name": "kungfu-signing-control-request-linux-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 684,
+        "digest": "sha256:b1b4a66de44e9ddbbd062f844e6eced1fb48a3e28aa5010703ef1735ec495518"
+      },
+      {
+        "name": "kungfu-signing-control-request-macos-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 707,
+        "digest": "sha256:5cf8bb2368fa5fa12fa83aeb0a42516eeca89deb1f60ad7740a8b621b477598a"
+      },
+      {
+        "name": "kungfu-signing-control-request-windows-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 685,
+        "digest": "sha256:5388db839a422dc29b573b4bcada57340f8110e1f59401f8e0888b29cffb680b"
+      },
+      {
+        "name": "kungfu-signing-controller-receipt-linux-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 761,
+        "digest": "sha256:508ad938d5858312ef689fedfb25011d9ef59abb7e57096f382104145941be25"
+      },
+      {
+        "name": "kungfu-signing-controller-receipt-linux-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 756,
+        "digest": "sha256:ccdeb883157039fc8e6a4c44e6c1200b563baed476ddfb5186a8e4aa78a2ce4d"
+      },
+      {
+        "name": "kungfu-signing-controller-receipt-macos-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 844,
+        "digest": "sha256:38ebb77ff79285ef54ff42a5d5f6ce487c65b2761ff7061bb54c2a14287d5925"
+      },
+      {
+        "name": "kungfu-signing-controller-receipt-windows-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 763,
+        "digest": "sha256:f43501b92c35f762acfda40859358f0a9c7cc4e1ac587697dbf38e665be2f744"
+      },
+      {
+        "name": "kungfu-signing-delegation-linux-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 674,
+        "digest": "sha256:d9e2c58bb9972dfefbb9b9783ef1e7e8509337239cc12bc421bb186690f04e7f"
+      },
+      {
+        "name": "kungfu-signing-delegation-linux-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 667,
+        "digest": "sha256:59693be28681b09f746218424a435c3fe5f5a17c15f080f7ed7a1d592f735654"
+      },
+      {
+        "name": "kungfu-signing-delegation-macos-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 718,
+        "digest": "sha256:73e8760b4224f94672332d64399e8f34e2d85640127badb075b97a1b71a54cb6"
+      },
+      {
+        "name": "kungfu-signing-delegation-windows-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 668,
+        "digest": "sha256:4eff67ed2a59254e5ca60aae81f6e6d2105f0ce28a13c7bf5238dbcfeca79645"
+      },
+      {
+        "name": "kungfu-signing-request-macos-arm64-6d99af738b78eccb48885a5fd59b88a0e5e4900a-32672193888-1",
+        "size": 416858007,
+        "digest": "sha256:b933dcf8992de81e51ca2b55aee071556838b916e51d1e661d0e5a20e75b9938"
+      },
+      {
+        "name": "kungfu-summary-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 11573,
+        "digest": "sha256:885cb98e1bed4f2d1d6ccdb9ebc503956e46768d2bcee9ae4e9142fb4bbc77bb"
+      },
+      {
+        "name": "kungfu-windows-x64-6d99af738b78eccb48885a5fd59b88a0e5e4900a",
+        "size": 720667302,
+        "digest": "sha256:35f2734c2cb13308e8e27eccd02b1cf7c5a975df98194ce75b80d00f7054b5f3"
+      }
+    ]
+  },
+  "skippedBuildStages": [
+    "install",
+    "build",
+    "verify",
+    "platform-matrix"
+  ],
+  "payloadBytes": "unchanged",
+  "buildchainToolingSha": "a5f43da50ea4ad5138ccf901135b89a711a1780c",
+  "transaction": {
+    "identity": "2cdd29d99d19d43c6f85897f1222991f7e6cfe45fb2805b4f2346c8637aa544f",
+    "state": "complete",
+    "publicationState": "alpha-complete"
+  },
+  "root": "sha256:d72a2aeef7d07b7a97cda6ed7b3f4e44516aff2782c8b94ff004ecd750fd7e83"
+}
