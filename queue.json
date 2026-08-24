@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6335,
+  "generation": 6336,
   "fencingCounter": 643,
   "policy": {
     "agingSeconds": 900,
@@ -41,7 +41,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:ea2128b81e5643ad10b692d03b9051e811fb2dc1db083d3a6daaf7fb2499a0c3",
     "issuedAt": "2026-08-24T02:54:08.381Z",
-    "expiresAt": "2026-08-24T04:24:08.381Z",
+    "expiresAt": "2026-08-24T04:24:46.043Z",
     "fencingToken": "sha256:0de3eadb72c29491aaf52703bc409e0f97768792414129e12bab587b2133fb91",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -45263,10 +45263,10 @@
       "sourceWorkflowRunId": 32682124843,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-24T02:37:58.468Z",
-      "updatedAt": "2026-08-24T02:54:08.381Z",
+      "updatedAt": "2026-08-24T02:54:46.043Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "selected",
+      "status": "proving",
       "terminal": null,
       "affectedPaths": [
         "docs/qualification/evidence/kungfu-fact-only-temporal-admission-cutover.json",
@@ -45277,6 +45277,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-24T02:54:08.381Z",
-  "stateRoot": "sha256:01d5e1df1e9ae9428841620de1cf584f549b2f4714dc4440d15b48600eec1e79"
+  "updatedAt": "2026-08-24T02:54:46.043Z",
+  "stateRoot": "sha256:bde0b25e4ab538374f4910f44f394ae98e10fecbe060b42034de92319929a666"
 }
