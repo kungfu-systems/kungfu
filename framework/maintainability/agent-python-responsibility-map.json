@@ -149,7 +149,7 @@
         "cli": {
           "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
           "group": "work",
-          "sha256": "9084c1c2f0608ac0530ad1077e7c6b4cdd714c0e106e34393e4383a910dda31d",
+          "sha256": "55b00a99255c655fee1484b91b743bd0bad57f1203483b88e8012b91c945d915",
           "invariant": "Pre-existing command names, option names, defaults, output schemas, and exit behavior remain compatible; domain-neutral Work commands are additive."
         },
         "schemas": [
@@ -238,7 +238,7 @@
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
-            "sha256": "9084c1c2f0608ac0530ad1077e7c6b4cdd714c0e106e34393e4383a910dda31d"
+            "sha256": "55b00a99255c655fee1484b91b743bd0bad57f1203483b88e8012b91c945d915"
           }
         ],
         "ownerAggregate": {
@@ -261,11 +261,11 @@
               "framework/core/src/python/kungfu/assignment_outcome.py",
               "framework/core/src/python/kungfu/cli/commands/assignment.py"
             ],
-            "responsibilities": 97,
+            "responsibilities": 95,
             "functionRisk": {
-          "functions": 113,
-          "baseRisk": 1876,
-          "changeRisk": 2258,
+          "functions": 112,
+          "baseRisk": 1839,
+          "changeRisk": 2215,
               "maximum": 254
             }
           }
@@ -335,8 +335,8 @@
         "functionRisk": { "functions": 71, "total": 1022, "maximum": 157 }
       },
       "current": {
-        "physicalLines": 1963,
-        "responsibilities": 67,
+        "physicalLines": 1905,
+        "responsibilities": 65,
         "functionRisk": { "functions": 70, "total": 847, "maximum": 57 }
       },
       "ownerFiles": [
@@ -354,9 +354,9 @@
         "functionRisk": { "functions": 55, "total": 585, "maximum": 95 }
       },
       "current": {
-        "physicalLines": 2016,
-        "responsibilities": 58,
-        "functionRisk": { "functions": 53, "total": 485, "maximum": 66 }
+        "physicalLines": 2061,
+        "responsibilities": 59,
+        "functionRisk": { "functions": 54, "total": 488, "maximum": 66 }
       },
       "ownerFiles": [
         "framework/core/src/python/kungfu/profile_sdk_source.py",
