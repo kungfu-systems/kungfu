@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6504,
+  "generation": 6505,
   "fencingCounter": 651,
   "policy": {
     "agingSeconds": 900,
@@ -42,7 +42,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:e96bb3eba48d1bd3ee3cd25fe09121ed2e063e2d2af5855980eac1b1175978b7",
     "issuedAt": "2026-08-24T12:09:16.617Z",
-    "expiresAt": "2026-08-24T13:39:16.617Z",
+    "expiresAt": "2026-08-24T13:39:58.923Z",
     "fencingToken": "sha256:3c99afd2bef57c948f46c815e3939096cdfe90cfaa6089f4c657cb2f944fd546",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -45704,10 +45704,10 @@
       "sourceWorkflowRunId": 32724936480,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-24T12:09:11.817Z",
-      "updatedAt": "2026-08-24T12:09:16.617Z",
+      "updatedAt": "2026-08-24T12:09:58.923Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
+      "status": "proving",
       "terminal": null,
       "affectedPaths": [
         ".github/workflows/dev-pr-auto-merge.yml",
@@ -45719,6 +45719,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-24T12:09:16.617Z",
-  "stateRoot": "sha256:1fa2f5e97efa4205d0f0eabc4962a5ea7a4dc3f854f8a88d4936d8ab22ce0bc4"
+  "updatedAt": "2026-08-24T12:09:58.923Z",
+  "stateRoot": "sha256:ff0c723cd03e79885a9765daadac9991b1c6b5a21a7566e0b2c4ea3758429c16"
 }
