@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6685,
+  "generation": 6686,
   "fencingCounter": 660,
   "policy": {
     "agingSeconds": 900,
@@ -36,12 +36,15 @@
     "sourceWorkflowRunId": 32788508233,
     "deliveryClass": "native-proof-required",
     "generation": 660,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:5206806ee87dc344e836467db0bcff4fa31dcbc10166d8e816e6d5ba95afa2e3",
     "issuedAt": "2026-08-24T23:23:56.794Z",
     "expiresAt": "2026-08-25T01:16:57.425Z",
     "fencingToken": "sha256:1b113bd29ffee4effb71338577dbe35cc14c219941bf7dd798934cf70414741e",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:b03c43e5b1c954eb922ad83ac236526fa92e63fcc8e14064c20b4b404e919baa",
+    "nativeProofReuseRoot": "sha256:77dbf503cca15de71cd4e9f8b7ddc8ff63b6509892fd91639a6febfb89a919ba",
+    "qualifiedAt": "2026-08-24T23:47:04.954Z"
   },
   "candidates": [
     {
@@ -46277,10 +46280,10 @@
       "sourceWorkflowRunId": 32788508233,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-24T23:21:57.882Z",
-      "updatedAt": "2026-08-24T23:46:57.425Z",
+      "updatedAt": "2026-08-24T23:47:04.954Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/assignment_runtime/authority.py",
@@ -46289,6 +46292,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-24T23:46:57.425Z",
-  "stateRoot": "sha256:4301e709b24769bd088b3141ae09238e457ab21a534b093f93c658b7aeefc365"
+  "updatedAt": "2026-08-24T23:47:04.954Z",
+  "stateRoot": "sha256:7f34c2d62459b435ff57679275ecd9f42dc30433c6febb9045d715778e210777"
 }
