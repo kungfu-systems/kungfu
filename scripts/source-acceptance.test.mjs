@@ -253,6 +253,35 @@ test('KFD evidence runtime adapts the repository-bound Git reader for queue repl
   assert.equal(resolved, sourceSha);
 });
 
+test('KFD evidence runtime hydrates a recovered write source before binding', () => {
+  const sourceSha = 'a'.repeat(40);
+  let prepared = false;
+  const resolved = resolveGitBoundKfdEvidenceSourceSha({
+    root: ROOT,
+    write: true,
+    committed: '',
+    configured: sourceSha,
+    prepareHistory: (root, options) => {
+      assert.equal(root, ROOT);
+      assert.deepEqual(options, { requiredCommit: sourceSha });
+      prepared = true;
+    },
+    selectSourceSha: ({ write, configured }) => {
+      assert.equal(write, true);
+      assert.equal(configured, sourceSha);
+      return sourceSha;
+    },
+    assertBinding: ({ sourceSha: selectedSourceSha, headSha }) => {
+      assert.equal(prepared, true);
+      assert.equal(selectedSourceSha, sourceSha);
+      assert.match(headSha, /^[0-9a-f]{40}$/u);
+      return selectedSourceSha;
+    },
+    findTreeEquivalentAncestor: () => '',
+  });
+  assert.equal(resolved, sourceSha);
+});
+
 test('KFD evidence checks the committed witness binding under an exact CI source', () => {
   const committed = 'a'.repeat(40);
   const configured = 'b'.repeat(40);
