@@ -530,11 +530,11 @@ function lineAt(starts, offset) {
   return low;
 }
 
-function matchingBrace(source, open) {
+function matchingBrace(source, open, opening = '{', closing = '}') {
   let depth = 0;
   for (let index = open; index < source.length; index += 1) {
-    if (source[index] === '{') depth += 1;
-    else if (source[index] === '}') {
+    if (source[index] === opening) depth += 1;
+    else if (source[index] === closing) {
       depth -= 1;
       if (depth === 0) return index;
     }
@@ -575,35 +575,57 @@ function metricsFor(source, family) {
   };
 }
 
-function pythonFunctions(source, stripped) {
+function pythonFunctionEnd(lines, starts, stripped, index, match, multiline) {
+  const indent = match[1].replaceAll('\t', '    ').length;
+  const signatureOpen = starts[index] + lines[index].indexOf('(', match.index);
+  const signatureClose = matchingBrace(stripped, signatureOpen, '(', ')');
+  const signatureTail = stripped.slice(signatureClose);
+  let end = multiline
+    ? lineAt(
+        starts,
+        signatureClose + Math.max(0, signatureTail.search(/:\s*(?:\n|$)/u)),
+      )
+    : index + 1;
+  const boundary = new RegExp(
+    `^ {0,${indent}}${multiline ? '\\S' : '[^\\s@#]'}`,
+    'u',
+  );
+  while (
+    end < lines.length &&
+    !boundary.test(lines[end].replaceAll('\t', '    '))
+  )
+    end += 1;
+  return end;
+}
+
+function pythonFunctions(source, stripped, options = {}) {
   const lines = stripped.split('\n');
   const original = source.split('\n');
+  const starts = lineStarts(stripped);
   const results = [];
   for (let index = 0; index < lines.length; index += 1) {
     const match = /^(\s*)(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(/u.exec(
       lines[index],
     );
     if (!match) continue;
-    const indent = match[1].replaceAll('\t', '    ').length;
-    let end = index + 1;
-    while (end < lines.length) {
-      if (!lines[end].trim()) {
-        end += 1;
-        continue;
-      }
-      const nextIndent = (lines[end].match(/^\s*/u)?.[0] || '').replaceAll(
-        '\t',
-        '    ',
-      ).length;
-      if (nextIndent <= indent && !/^\s*[@#]/u.test(lines[end])) break;
-      end += 1;
-    }
+    const multiline = options.extractorAlgorithm === 'python-multiline-v2';
+    const end = pythonFunctionEnd(
+      lines,
+      starts,
+      stripped,
+      index,
+      match,
+      multiline,
+    );
+    const selected = lines.slice(index, end);
     results.push({
       symbol: match[2],
       startLine: index + 1,
       endLine: Math.max(index + 1, end),
       body: original.slice(index, end).join('\n'),
-      strippedBody: lines.slice(index, end).join('\n'),
+      strippedBody: multiline
+        ? selected.map((line) => line.slice(match[1].length)).join('\n')
+        : selected.join('\n'),
     });
   }
   return results;
@@ -637,14 +659,14 @@ function bracedFunctions(source, stripped, family) {
   );
 }
 
-function extractFunctions(file, layers, ownership) {
+function extractFunctions(file, layers, ownership, options = {}) {
   const family = languageFamily(file.path);
   if (!family) return [];
   const source = file.bytes.toString('utf8');
   const stripped = stripStringsAndComments(source, family);
   const extracted =
     family === 'python'
-      ? pythonFunctions(source, stripped)
+      ? pythonFunctions(source, stripped, options)
       : bracedFunctions(source, stripped, family);
   return extracted.map((item) => {
     const metrics = metricsFor(item.strippedBody, family);
@@ -671,7 +693,7 @@ function extractFunctions(file, layers, ownership) {
   });
 }
 
-function functionSnapshot(files, policy, layers, ownership) {
+function functionSnapshot(files, policy, layers, ownership, options = {}) {
   const all = files
     .filter(({ path: pathname }) => languageFamily(pathname))
     .map((file) => ({
@@ -686,7 +708,7 @@ function functionSnapshot(files, policy, layers, ownership) {
     policy.includedClasses.includes(file.class),
   );
   const functions = included
-    .flatMap((file) => extractFunctions(file, layers, ownership))
+    .flatMap((file) => extractFunctions(file, layers, ownership, options))
     .sort((left, right) => left.id.localeCompare(right.id));
   const fileFacts = all.map(({ bytes: _bytes, ...fact }) => fact);
   return { sourceRoot: digest(fileFacts), files: fileFacts, functions };
