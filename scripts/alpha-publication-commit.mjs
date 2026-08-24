@@ -46,7 +46,12 @@ const CHANNEL_URL = 'https://kungfu.tech/.well-known/kungfu/alpha.json';
 const CANONICAL_BASE_URL = 'https://kungfu.tech';
 const BUNDLE_MANIFEST_ASSET = 'kungfu-installer-publication-bundle.json';
 const RELEASE_MANIFEST_SCHEMA = 'kungfu.product-upgrade.manifest/v1';
-const EXPECTED_RELEASE_MANIFESTS = ['darwin-arm64', 'linux-x64', 'win32-x64'];
+const EXPECTED_RELEASE_MANIFESTS = [
+  'darwin-arm64',
+  'linux-arm64',
+  'linux-x64',
+  'win32-x64',
+];
 
 function required(value, label) {
   if (typeof value !== 'string' || value.trim() === '') {
