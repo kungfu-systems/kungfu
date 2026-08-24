@@ -23,6 +23,7 @@ from kungfu.assignment_runtime import (
     create_runtime_host_command,
     profile_source,
 )
+from kungfu.assignment_runtime import profile_lifecycle
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_sdk
 from kungfu.agent import run_agent
@@ -159,9 +160,13 @@ for (
     assignment.add_command(runtime_recovery_command)
 
 
-_ensure_profile = lambda runtime_dir, authorized_by: profile_sdk.ensure_work_profile(  # noqa: E731
-    profile_source(), runtime_dir, authorized_by
-)
+def _reconcile_work_profile(runtime_dir, authorized_by):
+    return profile_lifecycle.ensure_work_profile(
+        profile_source(), runtime_dir, authorized_by
+    )
+
+
+_ensure_profile = _reconcile_work_profile
 
 
 def _prepare_resume_profile(runtime_dir, actor):

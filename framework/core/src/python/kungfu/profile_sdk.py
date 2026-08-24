@@ -740,51 +740,6 @@ def load_member_python_package(source: str | Path, member_id: str, package: str)
     return module
 
 
-def ensure_work_profile(
-    source: str | Path, runtime_dir: str | Path, authorized_by: str
-) -> list[dict[str, Any]]:
-    """Reconcile lifecycle state and its Profile-owned compatibility contract."""
-
-    receipts = []
-    validated = validate_source(source, runtime_dir)
-    inspection = validated["inspection"]
-    profile_id = inspection["profile"]["id"]
-    desired_root = inspection["profile_suite_root"]
-    lifecycle = storage_service.profile_lifecycle(
-        runtime_dir, "list", include_removed=True
-    )
-    state = next(
-        (
-            row
-            for row in lifecycle.get("profiles", [])
-            if row.get("profile_id") == profile_id and not row.get("removed")
-        ),
-        None,
-    )
-    if state is None:
-        actions = ["install", "qualify", "activate"]
-    elif state.get("profile_suite_root") != desired_root:
-        actions = ["upgrade", "qualify", "activate"]
-    else:
-        actions = []
-        if not state.get("qualified"):
-            actions.append("qualify")
-        if not state.get("activated"):
-            actions.append("activate")
-    for action in actions:
-        values = {"granted_permissions": ["storage"]} if action == "activate" else {}
-        plan = lifecycle_plan(runtime_dir, action, source, **values)
-        answer = answer_decision(plan["decisionCard"], "approve", authorized_by)
-        receipts.append(authorized_lifecycle_apply(runtime_dir, plan, answer))
-    domain = load_member_python_package(source, "work-control-actions", "domain")
-    receipts.extend(
-        domain.work_control.ensure_profile_contract(
-            str(runtime_dir), str(source), authorized_by
-        )
-    )
-    return receipts
-
-
 def validate_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
     scoped = _VALIDATION_SCOPE.get()
     cache_key = (
