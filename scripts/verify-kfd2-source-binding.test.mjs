@@ -54,3 +54,20 @@ test('release workflows publish the complete canonical KFD-2 claim set', () => {
     }
   }
 });
+
+test('release workflows materialize the standard KFD adopter authority', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/release-new-version.yml'),
+    'utf8',
+  );
+  const manifestInputs = workflow.match(
+    /release-passport-kfd-adopter-manifest-json: \.buildchain\/runtime\/kfd-adopter\/manifest\.json/g,
+  );
+  const artifactCommands = workflow.match(
+    /release-passport-kfd-3-artifact-verify-command: [^\n]*--write --json >\/dev\/null && [^\n]*--artifact-witness --json/g,
+  );
+
+  assert.equal(manifestInputs?.length, 2);
+  assert.equal(artifactCommands?.length, 2);
+  assert.doesNotMatch(workflow, /release-passport-kfd-support-matrix-json:/);
+});

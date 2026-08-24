@@ -506,18 +506,35 @@ export const BUILDCHAIN_KFD2_REGISTRY_PATH =
 export const BUILDCHAIN_KFD3_DIR = '.buildchain/kfd/kfd-3';
 export const KFD3_DEFAULT_REGISTRY_PATH = '.buildchain/kfd/kfd-3/surfaces.json';
 
+async function loadKfdAdopterRuntime() {
+  const [adopterManifest, artifactVerification, adopterToolchain] =
+    await Promise.all([
+      import('@kungfu-tech/buildchain-alpha/kfd-adopter-manifest'),
+      import('@kungfu-tech/buildchain-alpha/artifact-verification-envelope'),
+      import('@kungfu-tech/kfd/adopter-conformance/toolchain'),
+    ]);
+  return { ...adopterManifest, ...artifactVerification, ...adopterToolchain };
+}
+
 export async function loadBuildchainKfdRuntime() {
   try {
-    const [{ kfd1, kfd2, kfd3 }, productGates] = await Promise.all([
+    const [{ kfd1, kfd2, kfd3 }, productGates, adopter] = await Promise.all([
       import('@kungfu-tech/buildchain-alpha/kfd'),
       import('@kungfu-tech/buildchain-alpha/kfd-product-gates'),
+      loadKfdAdopterRuntime(),
     ]);
     const support =
       typeof productGates.createKfdSupportProjection === 'function' &&
       typeof productGates.validateKfdSupportProjection === 'function'
         ? {}
         : alphaKfdSupportCompatibility(productGates);
-    return { kfd1, kfd2, kfd3, productGates: { ...productGates, ...support } };
+    return {
+      kfd1,
+      kfd2,
+      kfd3,
+      adopter,
+      productGates: { ...productGates, ...support },
+    };
   } catch (error) {
     if (
       error &&
