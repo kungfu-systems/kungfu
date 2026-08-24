@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 import threading
+from functools import partial
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
@@ -157,6 +158,33 @@ def _bind_command_lease(
     attempt = command.get("attempt")
     if isinstance(attempt, Mapping):
         arguments.setdefault("attemptId", attempt.get("attemptId"))
+
+
+def _claim_identity(value: Mapping[str, Any]) -> tuple[str, str]:
+    return (
+        str(value.get("attempt_id") or value.get("attemptId") or ""),
+        str(value.get("claim_id") or value.get("claimId") or ""),
+    )
+
+
+def _claim_matches(active: Mapping[str, Any], candidate: Mapping[str, Any]) -> bool:
+    active_attempt, active_claim = _claim_identity(active)
+    candidate_attempt, candidate_claim = _claim_identity(candidate)
+    return candidate_attempt == active_attempt and (
+        not active_claim or candidate_claim == active_claim
+    )
+
+
+def _exact_active_claim(
+    claims: list[Mapping[str, Any]], active: Mapping[str, Any]
+) -> dict[str, Any]:
+    matches = list(map(dict, filter(partial(_claim_matches, active), claims)))
+    if len(matches) != 1:
+        raise LocalRuntimeError(
+            "ambiguous-identity",
+            "Active Work lease does not bind exactly one execution Attempt",
+        )
+    return matches[0]
 
 
 class LocalRuntimeError(RuntimeError):
@@ -506,12 +534,23 @@ class WorkControlAuthority:
         claims = status.get("execution_claims") or status.get("executionClaims") or []
         if not claims:
             return None
-        claim = dict(claims[-1])
+        active_lease = status.get("active_lease") or status.get("activeLease")
+        claim = (
+            _exact_active_claim(list(claims), active_lease)
+            if isinstance(active_lease, Mapping)
+            else dict(claims[-1])
+        )
         phase = str(status.get("phase") or "claimed")
         state = phase if phase in {"claimed", "executing", "settled"} else "claimed"
         return {
-            "attemptId": str(claim.get("attempt_id") or claim.get("claim_id") or ""),
-            "claimId": str(claim.get("claim_id") or ""),
+            "attemptId": str(
+                claim.get("attempt_id")
+                or claim.get("attemptId")
+                or claim.get("claim_id")
+                or claim.get("claimId")
+                or ""
+            ),
+            "claimId": str(claim.get("claim_id") or claim.get("claimId") or ""),
             "state": state,
         }
 

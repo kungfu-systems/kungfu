@@ -24,7 +24,6 @@ from .authority import (
     SNAPSHOT_SCHEMA,
     REQUEST_SCHEMA,
     LocalRuntimeError,
-    _LEASE_COMMANDS,
     _copy_json,
     _root,
     _stable,
@@ -44,11 +43,6 @@ _INTENT_COMMAND_TYPES = {
     "assess-progress": "initiative.progress.assess",
     "review-completion": "assignment.completion.review",
     "decide-continuation": "assignment.continuation.decide",
-    "work-input-snapshot": "work.input.snapshot",
-    "work-managed-run": "work.run.record",
-    "work-effect-authorize": "work.effect.authorize",
-    "work-effect-attempt": "work.effect.attempt",
-    "work-effect-outcome": "work.effect.outcome",
     "import-atlas": "assignment.atlas.import",
     "activate-work-control": "assignment.authority.activate",
     "restore-atlas-authority": "assignment.authority.restore",
@@ -534,7 +528,7 @@ class LocalAssignmentRuntimeApplication:
                     "state": "active",
                     "expiresAt": str(arguments.get("leaseExpiresAt") or ""),
                 }
-            elif command_type in _LEASE_COMMANDS:
+            elif command_type == "assignment.stage":
                 matches = [
                     row
                     for row in snapshot.get("assignments") or []
@@ -544,7 +538,7 @@ class LocalAssignmentRuntimeApplication:
                 if len(matches) != 1:
                     raise LocalRuntimeError(
                         "ambiguous-identity",
-                        "Runtime lease-bound target does not resolve exactly once",
+                        "Runtime stage target does not resolve exactly once",
                     )
                 attempt = _copy_json(matches[0].get("attempt"))
                 lease = _copy_json(matches[0].get("lease"))
