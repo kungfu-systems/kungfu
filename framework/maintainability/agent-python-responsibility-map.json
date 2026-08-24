@@ -149,8 +149,8 @@
         "cli": {
           "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
           "group": "work",
-          "sha256": "403a9c492d1c6c72291f0066a25b5301a828adfbda54458f90686c96bf6069fb",
-          "invariant": "Command names, option names, defaults, output schemas, and exit behavior remain byte-identical to the exact base."
+          "sha256": "9084c1c2f0608ac0530ad1077e7c6b4cdd714c0e106e34393e4383a910dda31d",
+          "invariant": "Pre-existing command names, option names, defaults, output schemas, and exit behavior remain compatible; domain-neutral Work commands are additive."
         },
         "schemas": [
           "kungfu.assignment-request/v1",
@@ -238,7 +238,7 @@
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
-            "sha256": "403a9c492d1c6c72291f0066a25b5301a828adfbda54458f90686c96bf6069fb"
+            "sha256": "9084c1c2f0608ac0530ad1077e7c6b4cdd714c0e106e34393e4383a910dda31d"
           }
         ],
         "ownerAggregate": {
@@ -264,7 +264,7 @@
             "responsibilities": 97,
             "functionRisk": {
           "functions": 113,
-          "baseRisk": 1894,
+          "baseRisk": 1876,
           "changeRisk": 2258,
               "maximum": 254
             }
@@ -335,9 +335,9 @@
         "functionRisk": { "functions": 71, "total": 1022, "maximum": 157 }
       },
       "current": {
-        "physicalLines": 1950,
+        "physicalLines": 1963,
         "responsibilities": 67,
-        "functionRisk": { "functions": 70, "total": 865, "maximum": 57 }
+        "functionRisk": { "functions": 70, "total": 847, "maximum": 57 }
       },
       "ownerFiles": [
         "framework/core/src/python/kungfu/cli/commands/assignment_review/__init__.py"

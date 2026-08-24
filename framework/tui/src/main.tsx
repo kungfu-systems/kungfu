@@ -153,7 +153,9 @@ import {
 const nodeRequire = createRequire(import.meta.url);
 let tuiAgentSessionEndpoint = '';
 let tuiAgentSessionReady: Promise<string> | undefined;
-type TuiAgentSessionHost = ReturnType<typeof createAttachedAgentSessionHost>;
+type TuiAgentSessionHost =
+  | ReturnType<typeof createAttachedAgentSessionHost>
+  | ReturnType<typeof createDetachedAgentSessionHost>;
 let tuiAgentSessionHost: TuiAgentSessionHost | undefined;
 let tuiAgentSessionRuntimeDir = '';
 function tuiAgentSessionEnvironment(

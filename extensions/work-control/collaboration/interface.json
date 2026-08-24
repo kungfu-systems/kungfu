@@ -36,6 +36,7 @@
       "title": "Delegated agent",
       "authorityClasses": [
         "assignment-relation-operator",
+        "assignment-execution-owner",
         "assignment-stage-operator",
         "independent-reviewer",
         "continuation-operator"
@@ -187,6 +188,86 @@
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
         "guiMethod": "decideContinuation"
+      }
+    },
+    {
+      "id": "work-input-snapshot",
+      "title": "Record one opaque Work input snapshot",
+      "actionId": "work-input-snapshot",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "recordWorkInputSnapshot"
+      }
+    },
+    {
+      "id": "work-managed-run",
+      "title": "Record one exact-snapshot managed run",
+      "actionId": "work-managed-run",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "recordWorkManagedRun"
+      }
+    },
+    {
+      "id": "work-effect-authorize",
+      "title": "Authorize one opaque external effect",
+      "actionId": "work-effect-authorize",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "authorizeWorkEffect"
+      }
+    },
+    {
+      "id": "work-effect-attempt",
+      "title": "Record one authorized effect attempt before transport",
+      "actionId": "work-effect-attempt",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-attention",
+      "requiredAuthority": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "recordWorkEffectAttempt"
+      }
+    },
+    {
+      "id": "work-effect-outcome",
+      "title": "Record or reconcile transport and business outcomes",
+      "actionId": "work-effect-outcome",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-attention",
+      "requiredAuthority": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "recordWorkEffectOutcome"
       }
     },
     {

@@ -71,13 +71,26 @@ _COMMAND_OPERATIONS = {
     "initiative.progress.assess": "assess-progress",
     "assignment.completion.review": "review-completion",
     "assignment.continuation.decide": "decide-continuation",
+    "work.input.snapshot": "work-input-snapshot",
+    "work.run.record": "work-managed-run",
+    "work.effect.authorize": "work-effect-authorize",
+    "work.effect.attempt": "work-effect-attempt",
+    "work.effect.outcome": "work-effect-outcome",
     "assignment.atlas.import": "import-atlas",
     "assignment.authority.activate": "activate-work-control",
     "assignment.authority.restore": "restore-atlas-authority",
     "initiative.bundle.export": "export-initiative",
     "initiative.bundle.import": "import-initiative",
 }
-_LEASE_COMMANDS = {"assignment.claim", "assignment.stage"}
+_LEASE_COMMANDS = {
+    "assignment.claim",
+    "assignment.stage",
+    "work.input.snapshot",
+    "work.run.record",
+    "work.effect.authorize",
+    "work.effect.attempt",
+    "work.effect.outcome",
+}
 _ASSESSMENT_EXECUTOR_PROFILES = {"inline", "thread", "process"}
 _PROCESS_WRITERS: set[str] = set()
 _PROCESS_WRITERS_GUARD = threading.Lock()
@@ -475,12 +488,44 @@ class WorkControlAuthority:
         claims = status.get("execution_claims") or status.get("executionClaims") or []
         if not claims:
             return None
-        claim = dict(claims[-1])
+        active_lease = status.get("active_lease") or status.get("activeLease")
+        if isinstance(active_lease, Mapping):
+            active_attempt_id = str(
+                active_lease.get("attempt_id") or active_lease.get("attemptId") or ""
+            )
+            active_claim_id = str(
+                active_lease.get("claim_id") or active_lease.get("claimId") or ""
+            )
+            matches = [
+                dict(candidate)
+                for candidate in claims
+                if str(candidate.get("attempt_id") or candidate.get("attemptId") or "")
+                == active_attempt_id
+                and (
+                    not active_claim_id
+                    or str(candidate.get("claim_id") or candidate.get("claimId") or "")
+                    == active_claim_id
+                )
+            ]
+            if len(matches) != 1:
+                raise LocalRuntimeError(
+                    "ambiguous-identity",
+                    "Active Work lease does not bind exactly one execution Attempt",
+                )
+            claim = matches[0]
+        else:
+            claim = dict(claims[0])
         phase = str(status.get("phase") or "claimed")
         state = phase if phase in {"claimed", "executing", "settled"} else "claimed"
         return {
-            "attemptId": str(claim.get("attempt_id") or claim.get("claim_id") or ""),
-            "claimId": str(claim.get("claim_id") or ""),
+            "attemptId": str(
+                claim.get("attempt_id")
+                or claim.get("attemptId")
+                or claim.get("claim_id")
+                or claim.get("claimId")
+                or ""
+            ),
+            "claimId": str(claim.get("claim_id") or claim.get("claimId") or ""),
             "state": state,
         }
 
@@ -524,12 +569,17 @@ class WorkControlAuthority:
                 "malformed-identity", "Runtime Assignment routing identity drifted"
             )
         lease = command.get("lease")
-        if operation == "claim-assignment" and isinstance(lease, Mapping):
-            arguments.setdefault("leaseId", lease.get("leaseId"))
-            arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
-            attempt = command.get("attempt")
-            if isinstance(attempt, Mapping):
-                arguments.setdefault("attemptId", attempt.get("attemptId"))
+        if (
+            isinstance(lease, Mapping)
+            and str(command.get("type") or "") in _LEASE_COMMANDS
+        ):
+            if operation == "claim-assignment":
+                arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
+            if operation != "advance-assignment":
+                arguments.setdefault("leaseId", lease.get("leaseId"))
+                attempt = command.get("attempt")
+                if isinstance(attempt, Mapping):
+                    arguments.setdefault("attemptId", attempt.get("attemptId"))
         try:
             receipt = self._invoke(operation, arguments, write=True)
         except LocalRuntimeError:

@@ -341,7 +341,25 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             return
         before = dict(pending.get("beforeRevision") or {})
         if revision.get("root") == before.get("root"):
-            authority_result = self.authority.apply(dict(pending["command"]))
+            try:
+                authority_result = self.authority.apply(dict(pending["command"]))
+            except LocalRuntimeError as error:
+                diagnostic = {
+                    "code": "interrupted-write-retry-failed",
+                    "message": (
+                        "The interrupted command could not be replayed; its authority "
+                        "outcome remains unknown"
+                    ),
+                    "severity": "error",
+                    "recovery": ["diagnostics.get", "recovery.plan"],
+                    "details": {"causeCode": error.code},
+                }
+                diagnostics = list(self._state.get("diagnostics") or [])
+                if diagnostic not in diagnostics:
+                    diagnostics.append(diagnostic)
+                self._state["diagnostics"] = diagnostics
+                self._save_state()
+                return
             pending = {**dict(pending), "authorityResult": authority_result}
             self._state["pending"] = pending
             self._save_state()
@@ -647,7 +665,7 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
                 ) from error
             if expires_at.tzinfo is None or expires_at <= datetime.now(UTC):
                 raise LocalRuntimeError("lease-required", "Command lease is expired")
-            if command_type == "assignment.stage":
+            if command_type != "assignment.claim":
                 matches = [
                     row
                     for row in snapshot.get("assignments") or []

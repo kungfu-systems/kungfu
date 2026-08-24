@@ -113,6 +113,89 @@ def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path)
     assert review["review"]["reviewer"] == "independent-reviewer"
 
 
+def test_work_control_accepts_only_exact_retired_atlas_source_history(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    migration = profile_sdk.ProfileSdkError(
+        "fact-surface-authority-migration-required",
+        "removed source authorities retain admitted facts and require an explicit migration",
+        factSurface="kungfu.initiative-assignment.initiative",
+        admittedSourceAuthorities=["atlas-adapter"],
+    )
+    monkeypatch.setattr(
+        profile_composition,
+        "contract_materialization_plan",
+        lambda _source, _runtime: (_ for _ in ()).throw(migration),
+    )
+    monkeypatch.setattr(
+        storage_service,
+        "fact_state",
+        lambda _runtime: {
+            "observation_history": [
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.initiative",
+                    "source_id": "atlas-adapter",
+                },
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.assignment",
+                    "source_id": "kungfu-agent",
+                },
+            ]
+        },
+    )
+
+    contract = work_control._ensure_contract(str(runtime))
+
+    assert contract["status"] == "retained-history-compatible"
+    assert contract["retained_source_authorities"] == ["atlas-adapter"]
+
+
+def test_work_control_rejects_unrecognized_retired_source_history(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    migration = profile_sdk.ProfileSdkError(
+        "fact-surface-authority-migration-required",
+        "removed source authorities retain admitted facts and require an explicit migration",
+        factSurface="kungfu.initiative-assignment.initiative",
+        admittedSourceAuthorities=["atlas-adapter"],
+    )
+    monkeypatch.setattr(
+        profile_composition,
+        "contract_materialization_plan",
+        lambda _source, _runtime: (_ for _ in ()).throw(migration),
+    )
+    monkeypatch.setattr(
+        storage_service,
+        "fact_state",
+        lambda _runtime: {
+            "observation_history": [
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.initiative",
+                    "source_id": "atlas-adapter",
+                },
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.assignment",
+                    "source_id": "unknown-adapter",
+                },
+            ]
+        },
+    )
+
+    with pytest.raises(
+        profile_sdk.ProfileSdkError,
+        match="outside its exact retained compatibility boundary",
+    ):
+        work_control._ensure_contract(str(runtime))
+
+
 @pytest.mark.parametrize(
     ("agent_request_root", "expected_verdict", "expected_conflict_count"),
     [

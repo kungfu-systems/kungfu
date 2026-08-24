@@ -62,8 +62,142 @@ def _assignment_cards(
     ]
 
 
+def _work_semantics_action(
+    domain, operation: str, runtime_dir: str, values: Mapping[str, Any]
+):
+    common_allowed = {
+        "initiativeId",
+        "assignmentId",
+        "attemptId",
+        "leaseId",
+        "actor",
+        "actorType",
+        "source",
+    }
+    common = {
+        "initiative_id": str(values.get("initiativeId") or ""),
+        "assignment_id": str(values.get("assignmentId") or ""),
+        "attempt_id": str(values.get("attemptId") or ""),
+        "lease_id": str(values.get("leaseId") or ""),
+        "actor": str(values.get("actor") or ""),
+        "actor_type": str(values.get("actorType") or "agent"),
+        "storage_source_id": str(values.get("source") or "kungfu"),
+    }
+    semantics = domain.work_semantics
+    if operation == "work-input-snapshot":
+        _only(
+            values,
+            common_allowed | {"snapshotId", "inputRoot", "evidenceRoots"},
+            operation,
+        )
+        receipt = semantics.record_input_snapshot(
+            runtime_dir,
+            snapshot_id=str(values.get("snapshotId") or ""),
+            input_root=str(values.get("inputRoot") or ""),
+            evidence_roots=[str(row) for row in values.get("evidenceRoots", [])],
+            **common,
+        )
+    elif operation == "work-managed-run":
+        _only(
+            values,
+            common_allowed
+            | {
+                "runId",
+                "inputSnapshotRoot",
+                "role",
+                "resultState",
+                "resultRoot",
+                "evidenceRoots",
+            },
+            operation,
+        )
+        receipt = semantics.record_managed_run(
+            runtime_dir,
+            run_id=str(values.get("runId") or ""),
+            input_snapshot_root=str(values.get("inputSnapshotRoot") or ""),
+            role=str(values.get("role") or ""),
+            result_state=str(values.get("resultState") or ""),
+            result_root=str(values.get("resultRoot") or ""),
+            evidence_roots=[str(row) for row in values.get("evidenceRoots", [])],
+            **common,
+        )
+    elif operation == "work-effect-authorize":
+        _only(
+            values,
+            common_allowed
+            | {
+                "authorizationId",
+                "effectId",
+                "effectKind",
+                "inputSnapshotRoot",
+                "scopeRoot",
+                "evidenceRoots",
+            },
+            operation,
+        )
+        receipt = semantics.authorize_effect(
+            runtime_dir,
+            authorization_id=str(values.get("authorizationId") or ""),
+            effect_id=str(values.get("effectId") or ""),
+            effect_kind=str(values.get("effectKind") or ""),
+            input_snapshot_root=str(values.get("inputSnapshotRoot") or ""),
+            scope_root=str(values.get("scopeRoot") or ""),
+            evidence_roots=[str(row) for row in values.get("evidenceRoots", [])],
+            **common,
+        )
+    elif operation == "work-effect-attempt":
+        _only(
+            values,
+            common_allowed
+            | {"effectAttemptId", "authorizationRoot", "transportRequestRoot"},
+            operation,
+        )
+        receipt = semantics.record_effect_attempt(
+            runtime_dir,
+            effect_attempt_id=str(values.get("effectAttemptId") or ""),
+            authorization_root=str(values.get("authorizationRoot") or ""),
+            transport_request_root=str(values.get("transportRequestRoot") or ""),
+            **common,
+        )
+    elif operation == "work-effect-outcome":
+        _only(
+            values,
+            common_allowed
+            | {
+                "effectAttemptRoot",
+                "transportState",
+                "businessState",
+                "outcomeRoot",
+                "evidenceRoots",
+            },
+            operation,
+        )
+        receipt = semantics.record_effect_outcome(
+            runtime_dir,
+            effect_attempt_root=str(values.get("effectAttemptRoot") or ""),
+            transport_state=str(values.get("transportState") or ""),
+            business_state=str(values.get("businessState") or ""),
+            outcome_root=str(values.get("outcomeRoot") or ""),
+            evidence_roots=[str(row) for row in values.get("evidenceRoots", [])],
+            **common,
+        )
+    else:
+        raise ValueError(f"unsupported Work semantics action: {operation}")
+    return {
+        "coreReceipt": receipt,
+        "affected": {
+            "profileId": "kungfu.work-control",
+            "entityKeys": [receipt["receipt"]["subject_key"]],
+            "queryKeys": ["assignment-status", "work-semantics-status"],
+        },
+    }
+
+
 def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
     work_control = domain.work_control
+
+    if operation.startswith("work-"):
+        return _work_semantics_action(domain, operation, runtime_dir, values)
 
     if operation == "create-initiative":
         _only(
@@ -480,6 +614,11 @@ def _invoke(
         "decide-continuation",
         "export-initiative",
         "import-initiative",
+        "work-input-snapshot",
+        "work-managed-run",
+        "work-effect-authorize",
+        "work-effect-attempt",
+        "work-effect-outcome",
     }:
         if context.get("invocationMode") != "authorized-action":
             raise ValueError(
@@ -553,5 +692,13 @@ def _invoke(
             assignment_id=str(values.get("assignmentId") or ""),
             storage_source_id=str(values.get("source") or "kungfu"),
             now=str(values.get("now") or ""),
+        )
+    if operation == "work-semantics-status":
+        _only(values, {"initiativeId", "assignmentId", "source"}, operation)
+        return domain.work_semantics.status(
+            runtime_dir,
+            initiative_id=str(values.get("initiativeId") or ""),
+            assignment_id=str(values.get("assignmentId") or ""),
+            storage_source_id=str(values.get("source") or "kungfu"),
         )
     raise ValueError(f"unsupported Work Control adapter operation: {operation}")

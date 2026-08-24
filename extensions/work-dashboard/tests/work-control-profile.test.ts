@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { Profile } from '../../../framework/api/src/capability/profile.ts';
-import { openWorkControlProfile } from '../src/view/work-control-profile.ts';
+import {
+  openKfd3ProfileApplication,
+  openWorkControlProfile,
+} from '../src/view/work-control-profile.ts';
 
 test('Work Control Profile nativeClient is read-only in the GUI', async () => {
   const source = '/profiles/work-control';
@@ -108,6 +111,41 @@ test('Work Control Profile nativeClient is read-only in the GUI', async () => {
           actor: 'test-owner',
         } as never),
     ],
+    [
+      'recordWorkInputSnapshot',
+      () =>
+        nativeClient.recordWorkInputSnapshot('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'recordWorkManagedRun',
+      () =>
+        nativeClient.recordWorkManagedRun('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'authorizeWorkEffect',
+      () =>
+        nativeClient.authorizeWorkEffect('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'recordWorkEffectAttempt',
+      () =>
+        nativeClient.recordWorkEffectAttempt('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'recordWorkEffectOutcome',
+      () =>
+        nativeClient.recordWorkEffectOutcome('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
   ];
   for (const [name, mutate] of mutations) {
     await assert.rejects(mutate(), (error: Error & { code?: string }) => {
@@ -120,6 +158,84 @@ test('Work Control Profile nativeClient is read-only in the GUI', async () => {
     });
   }
   assert.deepEqual(calls, ['authority-status']);
+});
+
+test('KFD-3 application projects every Work semantics intent through the shared API', async () => {
+  const source = '/profiles/work-control';
+  const calls: string[] = [];
+  const profile = {
+    runtimeDir: '/runtime',
+    discover: () => ({ source }),
+    intentPlan: (_source: string, intentId: string) => ({
+      planId: `plan:${intentId}`,
+    }),
+    authorizeIntentAsync: async (
+      _source: string,
+      intentId: string,
+      _planId: string,
+      _choice: string,
+      _authorizedBy: string,
+      _input: unknown,
+    ) => {
+      calls.push(intentId);
+      return {
+        executionReceiptVerified: true,
+        actionReceipt: {
+          verified: true,
+          coreReceipt: { schema: 'kungfu.work-semantics.write-receipt/v1' },
+        },
+      };
+    },
+  } as unknown as Profile;
+  const application = openKfd3ProfileApplication(profile);
+  const common = {
+    attemptId: 'attempt-a',
+    leaseId: 'lease-a',
+    actor: 'test-owner',
+  };
+
+  await application.recordWorkInputSnapshot('initiative-a', 'assignment-a', {
+    ...common,
+    snapshotId: 'snapshot-a',
+    inputRoot: 'sha256:input',
+  });
+  await application.recordWorkManagedRun('initiative-a', 'assignment-a', {
+    ...common,
+    runId: 'run-a',
+    inputSnapshotRoot: 'sha256:snapshot',
+    role: 'fixture',
+    resultState: 'succeeded',
+    resultRoot: 'sha256:result',
+  });
+  await application.authorizeWorkEffect('initiative-a', 'assignment-a', {
+    ...common,
+    authorizationId: 'authorization-a',
+    effectId: 'effect-a',
+    effectKind: 'fixture',
+    inputSnapshotRoot: 'sha256:snapshot',
+    scopeRoot: 'sha256:scope',
+  });
+  await application.recordWorkEffectAttempt('initiative-a', 'assignment-a', {
+    ...common,
+    effectAttemptId: 'effect-attempt-a',
+    authorizationRoot: 'sha256:authorization',
+    transportRequestRoot: 'sha256:request',
+  });
+  await application.recordWorkEffectOutcome('initiative-a', 'assignment-a', {
+    ...common,
+    effectAttemptRoot: 'sha256:effect-attempt',
+    transportState: 'accepted',
+    businessState: 'accepted',
+    outcomeRoot: 'sha256:outcome',
+  });
+
+  assert.deepEqual(calls, [
+    'work-input-snapshot',
+    'work-managed-run',
+    'work-effect-authorize',
+    'work-effect-attempt',
+    'work-effect-outcome',
+  ]);
 });
 
 test('KFD-3 application authority executes an exact verified Profile intent', async () => {
