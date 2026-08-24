@@ -477,12 +477,166 @@ export type ProjectWorkActionRequest = {
   action: ProjectWorkQuickAction;
 };
 
-type ProjectWorkComposer = {
+export type ProjectWorkComposer = {
   step: 'objective' | 'acceptance' | 'preview' | 'capturing';
   objective: string;
   acceptanceCriterion: string;
   plan?: ProjectWorkCapturePlan;
 };
+
+export type WorkWindowInputContext = {
+  agentReply?: string;
+  composer?: ProjectWorkComposer;
+  planPending: boolean;
+  retainedAgentReviewable: boolean;
+  attentionKind?: 'blocked' | 'needs-approval' | 'needs-answer' | string;
+  sessionControllable?: boolean;
+};
+
+export type WorkWindowInputAction =
+  | { kind: 'none' }
+  | { kind: 'set-agent-reply'; value?: string }
+  | { kind: 'submit-agent-reply' }
+  | { kind: 'set-composer'; value?: ProjectWorkComposer; message?: string }
+  | { kind: 'capture-composed-work' }
+  | { kind: 'preview-composed-work' }
+  | { kind: 'cancel-plan' }
+  | { kind: 'confirm-plan' }
+  | { kind: 'exit' }
+  | { kind: 'open-lab' }
+  | { kind: 'focus-file-tree' }
+  | { kind: 'open-projects' }
+  | { kind: 'continue-retained-work' }
+  | { kind: 'retry-agent-attempt' }
+  | { kind: 'begin-new-work' }
+  | { kind: 'decide-agent-approval'; approved: boolean }
+  | { kind: 'preview-agent-run' };
+
+const NO_WORK_WINDOW_INPUT_ACTION = { kind: 'none' } as const;
+
+function printableTerminalInput(value: string): boolean {
+  return [...value].every((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint >= 0x20 && codePoint !== 0x7f;
+  });
+}
+
+function agentReplyInputAction(
+  value: string,
+  reply: string,
+): WorkWindowInputAction {
+  if (value === '\u001b') return { kind: 'set-agent-reply' };
+  if (value === '\u007f' || value === '\b')
+    return { kind: 'set-agent-reply', value: reply.slice(0, -1) };
+  if (value === '\r' || value === '\n') return { kind: 'submit-agent-reply' };
+  if (printableTerminalInput(value))
+    return {
+      kind: 'set-agent-reply',
+      value: `${reply}${value}`.slice(0, 1000),
+    };
+  return NO_WORK_WINDOW_INPUT_ACTION;
+}
+
+function composerInputAction(
+  value: string,
+  composer: ProjectWorkComposer,
+): WorkWindowInputAction {
+  if (composer.step === 'capturing') return NO_WORK_WINDOW_INPUT_ACTION;
+  if (composer.step === 'preview') {
+    if (value === '\u001b' || value === 'b')
+      return {
+        kind: 'set-composer',
+        value: { ...composer, step: 'acceptance', plan: undefined },
+      };
+    if (value === '\r' || value === '\n')
+      return { kind: 'capture-composed-work' };
+    return NO_WORK_WINDOW_INPUT_ACTION;
+  }
+  if (value === '\u001b')
+    return {
+      kind: 'set-composer',
+      message: 'New Work cancelled; nothing was captured.',
+    };
+  if (value === '\u007f' || value === '\b')
+    return {
+      kind: 'set-composer',
+      value:
+        composer.step === 'objective'
+          ? { ...composer, objective: composer.objective.slice(0, -1) }
+          : {
+              ...composer,
+              acceptanceCriterion: composer.acceptanceCriterion.slice(0, -1),
+            },
+    };
+  if (value === '\r' || value === '\n') {
+    if (composer.step === 'objective') {
+      if (!composer.objective.trim()) return NO_WORK_WINDOW_INPUT_ACTION;
+      return {
+        kind: 'set-composer',
+        value: { ...composer, step: 'acceptance' },
+        message: 'Define the result that independent review should check.',
+      };
+    }
+    if (!composer.acceptanceCriterion.trim())
+      return NO_WORK_WINDOW_INPUT_ACTION;
+    return { kind: 'preview-composed-work' };
+  }
+  if (!printableTerminalInput(value)) return NO_WORK_WINDOW_INPUT_ACTION;
+  return {
+    kind: 'set-composer',
+    value:
+      composer.step === 'objective'
+        ? {
+            ...composer,
+            objective: `${composer.objective}${value}`.slice(0, 320),
+          }
+        : {
+            ...composer,
+            acceptanceCriterion:
+              `${composer.acceptanceCriterion}${value}`.slice(0, 320),
+          },
+  };
+}
+
+function defaultWorkWindowInputAction(
+  value: string,
+  context: WorkWindowInputContext,
+): WorkWindowInputAction {
+  if (value === 'q' || value === '\u0003') return { kind: 'exit' };
+  if (value === 'a') return { kind: 'open-lab' };
+  if (value === 't') return { kind: 'focus-file-tree' };
+  if (value === 'p' || value === '\u001b') return { kind: 'open-projects' };
+  if ((value === 'v' || value === '\r') && context.retainedAgentReviewable)
+    return { kind: 'continue-retained-work' };
+  if (context.attentionKind === 'blocked' && value === 'r')
+    return { kind: 'retry-agent-attempt' };
+  if (context.sessionControllable === false) return NO_WORK_WINDOW_INPUT_ACTION;
+  if (value === 'n' || value === '\r') return { kind: 'begin-new-work' };
+  if (context.attentionKind === 'needs-approval' && value === 'y')
+    return { kind: 'decide-agent-approval', approved: true };
+  if (context.attentionKind === 'needs-approval' && value === 'n')
+    return { kind: 'decide-agent-approval', approved: false };
+  if (context.attentionKind === 'needs-answer' && value === 'i')
+    return { kind: 'set-agent-reply', value: '' };
+  if (value === 'r') return { kind: 'preview-agent-run' };
+  return NO_WORK_WINDOW_INPUT_ACTION;
+}
+
+export function workWindowInputAction(
+  value: string,
+  context: WorkWindowInputContext,
+): WorkWindowInputAction {
+  if (context.agentReply !== undefined)
+    return agentReplyInputAction(value, context.agentReply);
+  if (context.composer) return composerInputAction(value, context.composer);
+  if (context.planPending) {
+    if (value === '\u001b' || value === 'b' || value === 'n')
+      return { kind: 'cancel-plan' };
+    if (value === '\r' || value === 'y') return { kind: 'confirm-plan' };
+    return NO_WORK_WINDOW_INPUT_ACTION;
+  }
+  return defaultWorkWindowInputAction(value, context);
+}
 
 function ProjectWorkDock({
   title,
@@ -903,137 +1057,56 @@ export function ProjectWorkHost({
     const onData = (chunk: Buffer | string) => {
       const value = String(chunk);
       if (isInputCaptured()) return;
-      if (agentReply !== undefined) {
-        if (value === '\u001b') {
-          setAgentReply(undefined);
-        } else if (value === '\u007f' || value === '\b') {
-          setAgentReply((current) => current?.slice(0, -1) ?? '');
-        } else if (value === '\r' || value === '\n') {
-          submitAgentReply();
-        } else if (
-          [...value].every((character) => {
-            const codePoint = character.codePointAt(0) ?? 0;
-            return codePoint >= 0x20 && codePoint !== 0x7f;
-          })
-        ) {
-          setAgentReply((current) => `${current ?? ''}${value}`.slice(0, 1000));
+      const action = workWindowInputAction(value, {
+        agentReply,
+        composer,
+        planPending: Boolean(plan),
+        retainedAgentReviewable,
+        attentionKind: attention?.kind,
+        sessionControllable: session?.controllable,
+      });
+      if (action.kind === 'none') return;
+      if (action.kind === 'set-agent-reply') return setAgentReply(action.value);
+      if (action.kind === 'submit-agent-reply') return submitAgentReply();
+      if (action.kind === 'set-composer') {
+        setComposer(action.value);
+        if (action.message) setMessage(action.message);
+        return;
+      }
+      if (action.kind === 'capture-composed-work') return captureComposedWork();
+      if (action.kind === 'preview-composed-work' && composer) {
+        try {
+          setComposer({
+            ...composer,
+            step: 'preview',
+            plan: projects.prepareWork(
+              composer.objective,
+              composer.acceptanceCriterion,
+            ),
+          });
+          setMessage('Review this Work before capturing it.');
+        } catch (error) {
+          setMessage(error instanceof Error ? error.message : String(error));
         }
         return;
       }
-      if (composer) {
-        if (composer.step === 'capturing') return;
-        if (composer.step === 'preview') {
-          if (value === '\u001b' || value === 'b') {
-            setComposer({ ...composer, step: 'acceptance', plan: undefined });
-          } else if (value === '\r' || value === '\n') {
-            captureComposedWork();
-          }
-          return;
-        }
-        if (value === '\u001b') {
-          setComposer(undefined);
-          setMessage('New Work cancelled; nothing was captured.');
-          return;
-        }
-        if (value === '\u007f' || value === '\b') {
-          setComposer((current) =>
-            current?.step === 'objective'
-              ? { ...current, objective: current.objective.slice(0, -1) }
-              : current
-                ? {
-                    ...current,
-                    acceptanceCriterion: current.acceptanceCriterion.slice(
-                      0,
-                      -1,
-                    ),
-                  }
-                : current,
-          );
-          return;
-        }
-        if (value === '\r' || value === '\n') {
-          if (composer.step === 'objective') {
-            if (!composer.objective.trim()) return;
-            setComposer({ ...composer, step: 'acceptance' });
-            setMessage(
-              'Define the result that independent review should check.',
-            );
-          } else {
-            if (!composer.acceptanceCriterion.trim()) return;
-            try {
-              setComposer({
-                ...composer,
-                step: 'preview',
-                plan: projects.prepareWork(
-                  composer.objective,
-                  composer.acceptanceCriterion,
-                ),
-              });
-              setMessage('Review this Work before capturing it.');
-            } catch (error) {
-              setMessage(
-                error instanceof Error ? error.message : String(error),
-              );
-            }
-          }
-          return;
-        }
-        const printable = [...value].every((character) => {
-          const codePoint = character.codePointAt(0) ?? 0;
-          return codePoint >= 0x20 && codePoint !== 0x7f;
-        });
-        if (printable) {
-          setComposer((current) =>
-            current?.step === 'objective'
-              ? {
-                  ...current,
-                  objective: `${current.objective}${value}`.slice(0, 320),
-                }
-              : current
-                ? {
-                    ...current,
-                    acceptanceCriterion:
-                      `${current.acceptanceCriterion}${value}`.slice(0, 320),
-                  }
-                : current,
-          );
-        }
+      if (action.kind === 'cancel-plan') {
+        setPlan(undefined);
+        setMessage('Work start cancelled; no effects were performed.');
         return;
       }
-      if (plan) {
-        if (value === '\u001b' || value === 'b' || value === 'n') {
-          setPlan(undefined);
-          setMessage('Work start cancelled; no effects were performed.');
-        } else if (value === '\r' || value === 'y') {
-          confirmRun();
-        }
-        return;
-      }
-      if (value === 'q' || value === '\u0003') return exit();
-      if (value === 'a') return onOpenLab();
-      if (value === 't') {
-        setFileTreeFocused(true);
-        return;
-      }
-      if (value === 'p' || value === '\u001b') return onOpenProjects();
-      if (value === 'v' && retainedAgentReviewable)
+      if (action.kind === 'confirm-plan') return confirmRun();
+      if (action.kind === 'exit') return exit();
+      if (action.kind === 'open-lab') return onOpenLab();
+      if (action.kind === 'focus-file-tree') return setFileTreeFocused(true);
+      if (action.kind === 'open-projects') return onOpenProjects();
+      if (action.kind === 'continue-retained-work')
         return continueRetainedWork();
-      if (value === '\r' && retainedAgentReviewable)
-        return continueRetainedWork();
-      if (attention?.kind === 'blocked' && value === 'r')
-        return retryAgentAttempt();
-      if (session?.controllable === false) return;
-      if (value === 'n') return beginNewWork();
-      if (attention?.kind === 'needs-approval' && value === 'y')
-        return decideAgentApproval(true);
-      if (attention?.kind === 'needs-approval' && value === 'n')
-        return decideAgentApproval(false);
-      if (attention?.kind === 'needs-answer' && value === 'i') {
-        setAgentReply('');
-        return;
-      }
-      if (value === '\r') return beginNewWork();
-      if (value === 'r') previewCodex();
+      if (action.kind === 'retry-agent-attempt') return retryAgentAttempt();
+      if (action.kind === 'begin-new-work') return beginNewWork();
+      if (action.kind === 'decide-agent-approval')
+        return decideAgentApproval(action.approved);
+      previewCodex();
     };
     process.stdin.on('data', onData);
     return () => {

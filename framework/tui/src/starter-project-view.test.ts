@@ -20,11 +20,48 @@ import {
   openedProjectWorks,
   projectSectionNavigationAtPoint,
   reviewReceiptCanResume,
+  starterProjectInputAction,
   starterProjectModel,
   starterProjectOverviewEnterStage,
   starterWorkEventLine,
   workReceiptHasRetainedSession,
 } from './starter-project-view/index.js';
+
+test('starter project input state machine preserves stage-specific commands', () => {
+  const context = {
+    stage: 'detail' as const,
+    planExecutable: false,
+    reviewPlanExecutable: false,
+    closePlanExecutable: false,
+  };
+  assert.deepEqual(starterProjectInputAction('\r', context), {
+    kind: 'open-agents',
+  });
+  assert.deepEqual(
+    starterProjectInputAction('\u001b[B', { ...context, stage: 'agents' }),
+    { kind: 'select-profile', delta: 1 },
+  );
+  assert.deepEqual(
+    starterProjectInputAction('\r', {
+      ...context,
+      stage: 'preview',
+      planExecutable: true,
+    }),
+    { kind: 'start' },
+  );
+  assert.deepEqual(
+    starterProjectInputAction('a', { ...context, stage: 'review' }),
+    { kind: 'reset-review', stage: 'detail' },
+  );
+  assert.deepEqual(
+    starterProjectInputAction('\t', { ...context, stage: 'overview' }),
+    { kind: 'select-region', delta: 1 },
+  );
+  assert.deepEqual(
+    starterProjectInputAction('q', { ...context, stage: 'running' }),
+    { kind: 'none' },
+  );
+});
 
 const receipt = {
   schema: 'kungfu.project-template.creation-receipt/v1',
@@ -243,9 +280,14 @@ test('Review Work exposes a durable fresh-Agent revision route', () => {
   );
 
   assert.match(source, /\[a\] revise with fresh Agent/u);
-  assert.match(
-    source,
-    /stage === 'review'[\s\S]*?input === 'a'[\s\S]*?setStage\('detail'\)/u,
+  assert.deepEqual(
+    starterProjectInputAction('a', {
+      stage: 'review',
+      planExecutable: false,
+      reviewPlanExecutable: false,
+      closePlanExecutable: false,
+    }),
+    { kind: 'reset-review', stage: 'detail' },
   );
 });
 

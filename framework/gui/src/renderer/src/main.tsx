@@ -85,6 +85,9 @@ import {
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import {
   AgentFirstOnboardingPanel,
+  NotificationToasts,
+  ShellOverlays,
+  StatusBarView,
   type WindowChromeConfig,
   type WindowChromeControl,
   createLabOnboardingRoutes,
@@ -116,10 +119,8 @@ import {
   DEFAULT_STATE,
   exitHistoryStatusItem,
   loadShellState,
-  notificationColor,
   notificationId,
   saveShellState,
-  statusColor,
   trustStatusText,
   trustTooltip,
   useExitHistoryStatus,
@@ -904,226 +905,60 @@ function ShellTitleBar({
   );
 }
 
-function App() {
-  const [agentWorkLab] = React.useState(openRendererAgentWorkLab);
-  const [projects] = React.useState(openRendererProjects);
-  const workspaceBridge = React.useMemo(workspaceIpc, []);
-  const {
-    entry: agentFirstEntry,
-    initialOpen: initialOnboardingOpen,
-    persist: persistOnboarding,
-    installCli: installOnboardingCli,
-  } = useAgentFirstEntry();
-  const initialProjectsOpen =
-    window.process.env.KFE_INITIAL_SURFACE === 'projects';
-  const initialFocusedProjectPath =
-    window.process.env.KFE_FOCUSED_PROJECT_PATH || '';
-  const initialCoreWorkOpen = !initialProjectsOpen && !initialOnboardingOpen;
-  const [startup] = React.useState(() =>
-    deferredAgentWorkStartup(
-      initialOnboardingOpen
-        ? 'onboarding'
-        : initialProjectsOpen
-          ? 'projects'
-          : 'work',
-      window.process.env.KF_RUNTIME_DIR || '',
-    ),
-  );
-  const startupSurface = capability.agentWorkLabStartupSurface(startup);
-  const [runtime] = React.useState(() =>
-    !initialProjectsOpen &&
-    !initialOnboardingOpen &&
-    !initialCoreWorkOpen &&
-    startupSurface === 'work-graph'
-      ? bootRuntime()
-      : deferredRuntime(
-          agentWorkLab,
-          `startup routed to ${startup.route}: ${startup.reasonCode}`,
-        ),
-  );
-  runtime.projects = projects;
-  const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
-    () => {
-      if (initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen)
-        return null;
-      const env = window.process.env as Record<string, string | undefined>;
-      return resolveKfxHostDescriptor({
-        nativePlan: () => runtime.storage?.kfxRegistry('plan', {}),
-        cliPlan: () => {
-          const childProcess = window.require('node:child_process') as {
-            execFileSync: (
-              file: string,
-              args: string[],
-              options: {
-                encoding: 'utf8';
-                env: Record<string, string | undefined>;
-                maxBuffer: number;
-              },
-            ) => string;
-          };
-          const path = window.require('node:path') as Pick<
-            typeof import('node:path'),
-            'delimiter' | 'dirname' | 'resolve'
-          >;
-          const fs = window.require('node:fs') as {
-            existsSync: (value: string) => boolean;
-          };
-          const bin = env.KUNGFU_CLI_BIN || env.KUNGFU_BIN;
-          if (!bin) throw new Error('Kungfu CLI is unavailable');
-          const raw = childProcess.execFileSync(
-            bin,
-            guiKungfuCliArgs(env, kfxNativePlanArgs(env, path, fs.existsSync)),
-            { encoding: 'utf8', env, maxBuffer: 4 * 1024 * 1024 },
-          );
-          return JSON.parse(raw) as unknown;
-        },
-      });
-    },
-  );
-  const [loaded] = React.useState<KfxLoadResult>(() =>
-    initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen
-      ? {
-          discoveredKfxCount: 0,
-          entries: [],
-          suites: {},
-          profiles: [],
-          failures: [],
-        }
-      : loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
-  );
-  React.useEffect(() => {
-    if (
-      window.process.env.KUNGFU_GUI_DEV_SUPERVISOR === '1' &&
-      loaded.failures.length > 0
-    ) {
-      console.error(
-        `KF_GUI_KFX_FAILURES ${JSON.stringify(
-          loaded.failures.map((failure) => ({
-            dir: failure.dir,
-            error: failure.error,
-          })),
-        )}`,
+function resolveGuiKfxDescriptor(
+  runtime: Runtime,
+  skipKfx: boolean,
+): KfxExperienceFlowDescriptor | null {
+  if (skipKfx) return null;
+  const env = window.process.env as Record<string, string | undefined>;
+  return resolveKfxHostDescriptor({
+    nativePlan: () => runtime.storage?.kfxRegistry('plan', {}),
+    cliPlan: () => {
+      const childProcess = window.require('node:child_process') as {
+        execFileSync: (
+          file: string,
+          args: string[],
+          options: {
+            encoding: 'utf8';
+            env: Record<string, string | undefined>;
+            maxBuffer: number;
+          },
+        ) => string;
+      };
+      const path = window.require('node:path') as Pick<
+        typeof import('node:path'),
+        'delimiter' | 'dirname' | 'resolve'
+      >;
+      const fs = window.require('node:fs') as {
+        existsSync: (value: string) => boolean;
+      };
+      const bin = env.KUNGFU_CLI_BIN || env.KUNGFU_BIN;
+      if (!bin) throw new Error('Kungfu CLI is unavailable');
+      const raw = childProcess.execFileSync(
+        bin,
+        guiKungfuCliArgs(env, kfxNativePlanArgs(env, path, fs.existsSync)),
+        { encoding: 'utf8', env, maxBuffer: 4 * 1024 * 1024 },
       );
-    }
-  }, [loaded.failures]);
-  const visibleKfxFailures = React.useMemo(
-    () => actionableKfxFailures(loaded.failures, kfxDescriptor !== null),
-    [kfxDescriptor, loaded.failures],
-  );
-  const initialAgentWorkLabOpen =
-    initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen
-      ? false
-      : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length);
-  const [shellSurface, setShellSurface] = React.useState(() =>
-    initialShellSurface({
-      onboardingOpen: initialOnboardingOpen,
-      projectsOpen: initialProjectsOpen,
-      focusedProjectPath: initialFocusedProjectPath,
-      agentWorkLabOpen: initialAgentWorkLabOpen,
-    }),
-  );
-  const { onboardingOpen, coreWorkOpen } = shellSurfaceFlags(shellSurface);
-  const visibleRetainedCoreSurface = visibleCoreSurface(shellSurface);
-  const retainedCoreSurfaces = useRetainedCoreSurfaces(
-    visibleRetainedCoreSurface,
-  );
-  const [focusedProjectPath, setFocusedProjectPath] = React.useState(
-    initialFocusedProjectPath,
-  );
-  const [projectSearchDocuments, setProjectSearchDocuments] = React.useState<
-    ProductSearchDocument[]
-  >([]);
-  const [currentProjectName, setCurrentProjectName] = React.useState('');
-  const [state, setState] = React.useState<ShellState>(() =>
-    runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
-  );
-  const profiles = React.useMemo(
-    () => availableProfiles(loaded.profiles),
-    [loaded.profiles],
-  );
-  const profile = focusedProfile(
-    profiles,
-    state.profileId,
-    window.process.env.KFE_DEFAULT_PROFILE,
-  );
-  const enabled = React.useMemo(
-    () => accessibleEntries(loaded.entries, state),
-    [loaded.entries, state],
-  );
-  const [active, setActive] = React.useState(
-    () =>
-      window.process.env.KFE_INITIAL_VIEW || profileHomeId(profile, enabled),
-  );
-  const [params, setParams] = React.useState<Record<string, string>>(
-    (): Record<string, string> =>
-      initialFocusedProjectPath
-        ? {
-            projectPath: initialFocusedProjectPath,
-            projectSection: 'files',
-          }
-        : {},
-  );
-  const lastWorkParamsRef = React.useRef<Record<string, string>>(
-    initialFocusedProjectPath
-      ? {
-          projectPath: initialFocusedProjectPath,
-          projectSection: 'files',
-        }
-      : {},
-  );
-  const lastProjectParamsRef = React.useRef<Record<string, string> | null>(
-    initialFocusedProjectPath
-      ? {
-          projectPath: initialFocusedProjectPath,
-          projectSection: 'files',
-        }
-      : null,
-  );
-  const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
-  const [searchText, setSearchText] = React.useState('');
-  const [cliSearchDocuments, setCliSearchDocuments] = React.useState<
-    ProductSearchDocument[]
-  >([]);
-  const [workSearchDocuments, setWorkSearchDocuments] = React.useState<
-    ProductSearchDocument[]
-  >([]);
-  const [globalWorkSearchDocuments, setGlobalWorkSearchDocuments] =
-    React.useState<ProductSearchDocument[]>([]);
-  const [searchCatalogStatus, setSearchCatalogStatus] = React.useState(
+      return JSON.parse(raw) as unknown;
+    },
+  });
+}
+
+function emptyKfxLoadResult(): KfxLoadResult {
+  return {
+    discoveredKfxCount: 0,
+    entries: [],
+    suites: {},
+    profiles: [],
+    failures: [],
+  };
+}
+
+function useCliSearchCatalog() {
+  const [documents, setDocuments] = React.useState<ProductSearchDocument[]>([]);
+  const [status, setStatus] = React.useState(
     'Loading governed command catalog',
   );
-  const [windowChrome, controlWindow] = useWindowChrome();
-  const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
-  const [configError, setConfigError] = React.useState('');
-  const [runtimeStatus, setRuntimeStatus] =
-    React.useState<RuntimeStatusResult | null>(null);
-  const historyStatus = useExitHistoryStatus(runtime.ok);
-  const [statusBarItems, setStatusBarItems] = React.useState<
-    Record<string, StatusBarItem>
-  >({});
-  const [notifications, setNotifications] = React.useState<ShellNotification[]>(
-    [],
-  );
-  const notificationTimers = React.useRef(new Map<string, number>());
-  const startupViewApplied = React.useRef(false);
-
-  React.useEffect(() => {
-    if (startupViewApplied.current || !config) return;
-    startupViewApplied.current = true;
-    const agent = config.config.agent as
-      | { startupView?: 'profile-home' | 'agent-console' }
-      | undefined;
-    const consoleEntry = productRoleEntry(enabled, 'agent-console');
-    if (
-      !window.process.env.KFE_INITIAL_VIEW &&
-      agent?.startupView === 'agent-console' &&
-      consoleEntry
-    ) {
-      setActive(consoleEntry.id);
-    }
-  }, [config, enabled]);
-
   React.useEffect(() => {
     type ExecFile = (
       file: string,
@@ -1156,26 +991,21 @@ function App() {
               file,
               guiKungfuCliArgs(env, args),
               options,
-              (error, stdout, stderr) => {
-                if (error) {
-                  reject(new Error(stderr.trim() || error.message));
-                } else {
-                  resolve(stdout);
-                }
-              },
+              (error, stdout, stderr) =>
+                error
+                  ? reject(new Error(stderr.trim() || error.message))
+                  : resolve(stdout),
             );
           }),
       })
-      .then((documents) => {
+      .then((next) => {
         if (!active) return;
-        setCliSearchDocuments(documents);
-        setSearchCatalogStatus(
-          `${documents.length} governed Help and Command entries`,
-        );
+        setDocuments(next);
+        setStatus(`${next.length} governed Help and Command entries`);
       })
       .catch((error) => {
         if (!active) return;
-        setSearchCatalogStatus(
+        setStatus(
           `Command catalog unavailable: ${
             error instanceof Error ? error.message : String(error)
           }`,
@@ -1185,14 +1015,18 @@ function App() {
       active = false;
     };
   }, []);
+  return { documents, status };
+}
 
+function useGlobalWorkSearchDocuments(
+  initialProjectsOpen: boolean,
+  projectId?: string,
+  projectPath?: string,
+) {
+  const [documents, setDocuments] = React.useState<ProductSearchDocument[]>([]);
   React.useEffect(() => {
-    if (
-      initialProjectsOpen &&
-      (params.projectId?.trim() || params.projectPath?.trim())
-    ) {
+    if (initialProjectsOpen && (projectId?.trim() || projectPath?.trim()))
       return;
-    }
     type GlobalWorkObserverEvent =
       | {
           schema: 'kungfu.gui.global-work-observer-event/v1';
@@ -1220,18 +1054,16 @@ function App() {
       ipc = (window.require('electron') as { ipcRenderer: GlobalWorkIpc })
         .ipcRenderer;
     } catch {
-      ipc = null;
+      return;
     }
-    if (!ipc) return;
     const receive = (_event: unknown, payload: GlobalWorkObserverEvent) => {
       if (
         payload?.schema !== 'kungfu.gui.global-work-observer-event/v1' ||
         payload.kind !== 'snapshot'
-      ) {
+      )
         return;
-      }
       try {
-        setGlobalWorkSearchDocuments(
+        setDocuments(
           capability.globalWorkSearchDocuments(
             capability.parseGlobalWorkSnapshot(payload.snapshot),
           ),
@@ -1243,23 +1075,24 @@ function App() {
     ipc.on(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, receive);
     void ipc.invoke(GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL);
     return () => {
-      ipc?.removeListener(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, receive);
-      void ipc?.invoke(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL);
+      ipc.removeListener(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, receive);
+      void ipc.invoke(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL);
     };
-  }, [initialProjectsOpen, params.projectId, params.projectPath]);
+  }, [initialProjectsOpen, projectId, projectPath]);
+  return documents;
+}
 
-  // shared refresh bus: one shell-owned timer, kfx subscribe
+function useRefreshBus() {
   const subscribers = React.useRef(new Set<() => void>());
-  const refreshProductData = React.useCallback(() => {
+  const refresh = React.useCallback(() => {
     publishRefresh(subscribers.current, (error) => {
       console.error('[shell] product data refresh failed', error);
     });
   }, []);
   React.useEffect(() => {
-    const timer = setInterval(refreshProductData, 5000);
+    const timer = setInterval(refresh, 5000);
     return () => clearInterval(timer);
-  }, [refreshProductData]);
-
+  }, [refresh]);
   React.useEffect(() => {
     type RefreshIpc = {
       on: (channel: string, handler: () => void) => void;
@@ -1270,15 +1103,22 @@ function App() {
       ipc = (window.require('electron') as { ipcRenderer: RefreshIpc })
         .ipcRenderer;
     } catch {
-      ipc = null;
+      return;
     }
-    if (!ipc) return;
-    ipc.on(SHELL_REFRESH_CHANNEL, refreshProductData);
-    return () => ipc?.removeListener(SHELL_REFRESH_CHANNEL, refreshProductData);
-  }, [refreshProductData]);
+    ipc.on(SHELL_REFRESH_CHANNEL, refresh);
+    return () => ipc.removeListener(SHELL_REFRESH_CHANNEL, refresh);
+  }, [refresh]);
+  const subscribe = React.useCallback((fn: () => void) => {
+    subscribers.current.add(fn);
+    return () => subscribers.current.delete(fn);
+  }, []);
+  return { subscribers, subscribe };
+}
 
+function useRuntimeStatus(runtimeOk: boolean) {
+  const [status, setStatus] = React.useState<RuntimeStatusResult | null>(null);
   React.useEffect(() => {
-    if (!runtime.ok) return;
+    if (!runtimeOk) return;
     type RuntimeStatusIpc = {
       invoke: (channel: string) => Promise<RuntimeStatusResult>;
     };
@@ -1287,22 +1127,21 @@ function App() {
       ipc = (window.require('electron') as { ipcRenderer: RuntimeStatusIpc })
         .ipcRenderer;
     } catch {
-      ipc = null;
+      return;
     }
-    if (!ipc) return;
     let cancelled = false;
     const refresh = () => {
       void ipc
         .invoke(RUNTIME_STATUS_GET_CHANNEL)
         .then((next) => {
-          if (!cancelled) setRuntimeStatus(next);
+          if (!cancelled) setStatus(next);
         })
-        .catch((e: unknown) => {
+        .catch((error: unknown) => {
           if (cancelled) return;
-          setRuntimeStatus({
+          setStatus({
             ok: false,
             payload: null,
-            error: e instanceof Error ? e.message : String(e),
+            error: error instanceof Error ? error.message : String(error),
             updatedAt: Date.now(),
           });
         });
@@ -1313,17 +1152,24 @@ function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [runtime.ok]);
+  }, [runtimeOk]);
+  return status;
+}
 
+function useWorkSearchDocuments(
+  runtime: Runtime,
+  subscribers: React.MutableRefObject<Set<() => void>>,
+) {
+  const [documents, setDocuments] = React.useState<ProductSearchDocument[]>([]);
   React.useEffect(() => {
     if (!runtime.work) {
-      setWorkSearchDocuments([]);
+      setDocuments([]);
       return;
     }
     const refresh = () => {
       try {
         runtime.work?.refresh();
-        setWorkSearchDocuments(
+        setDocuments(
           (runtime.work?.items() ?? []).map((item, index) => ({
             id: `work.${item.workId}`,
             kind: 'work',
@@ -1338,7 +1184,7 @@ function App() {
           })),
         );
       } catch {
-        setWorkSearchDocuments([]);
+        setDocuments([]);
       }
     };
     refresh();
@@ -1346,132 +1192,82 @@ function App() {
     return () => {
       subscribers.current.delete(refresh);
     };
-  }, [runtime.work]);
+  }, [runtime.work, subscribers]);
+  return documents;
+}
 
-  React.useEffect(
-    () => () => {
-      for (const timer of notificationTimers.current.values()) {
-        window.clearTimeout(timer);
-      }
-      notificationTimers.current.clear();
-    },
-    [],
-  );
-
-  const openKfx = React.useCallback(
-    (kfxId: string, nextParams?: Record<string, string>) => {
-      setShellSurface('kfx');
-      setParams(nextParams ?? {});
-      setActive(kfxId);
-    },
-    [],
-  );
-
-  const updateState = React.useCallback(
-    (patch: Partial<ShellState>) => {
-      const requestedProfile = patch.profileId
-        ? focusedProfile(profiles, patch.profileId)
-        : null;
-      if (requestedProfile) {
-        setParams({});
-        setActive(profileHomeId(requestedProfile, enabled));
-      }
-      setState((current) => {
-        const next = {
-          ...current,
-          ...patch,
-          ...(requestedProfile ? { profileId: requestedProfile.id } : {}),
-        };
-        if (runtime.domain) saveShellState(runtime.domain, next);
-        return next;
-      });
-    },
-    [enabled, profiles, runtime.domain],
-  );
-
+function useGuiConfig(
+  enabled: KfxEntry[],
+  setActive: React.Dispatch<React.SetStateAction<string>>,
+) {
+  const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
+  const [error, setError] = React.useState('');
+  const startupViewApplied = React.useRef(false);
   React.useEffect(() => {
-    if (state.profileId !== profile.id) {
-      setState((current) => {
-        const next = { ...current, profileId: profile.id };
-        if (runtime.domain) saveShellState(runtime.domain, next);
-        return next;
-      });
-    }
-  }, [profile.id, runtime.domain, state.profileId]);
-
-  React.useEffect(() => {
-    type NavigationIpc = {
-      on: (
-        channel: string,
-        handler: (event: unknown, request: ShellNavigateRequest) => void,
-      ) => void;
-      removeListener: (
-        channel: string,
-        handler: (event: unknown, request: ShellNavigateRequest) => void,
-      ) => void;
-    };
-    let ipc: NavigationIpc | null = null;
-    try {
-      ipc = (window.require('electron') as { ipcRenderer: NavigationIpc })
-        .ipcRenderer;
-    } catch {
-      ipc = null;
-    }
-    if (!ipc) return;
-    const navigate = createShellNavigationHandler({
-      settings: () => setSettingsOpen(true),
-      onboarding: () => setShellSurface('onboarding'),
-      'profile-home': () => openKfx(profileHomeId(profile, enabled)),
-      view: (request) =>
-        openKfx(
-          (request as Extract<ShellNavigateRequest, { target: 'view' }>).kfxId,
-        ),
-    });
-    ipc.on(SHELL_NAVIGATE_CHANNEL, navigate);
-    return () => ipc?.removeListener(SHELL_NAVIGATE_CHANNEL, navigate);
-  }, [enabled, openKfx, profile]);
-
-  const reloadConfig = React.useCallback(() => {
+    if (startupViewApplied.current || !config) return;
+    startupViewApplied.current = true;
+    const agent = config.config.agent as
+      | { startupView?: 'profile-home' | 'agent-console' }
+      | undefined;
+    const consoleEntry = productRoleEntry(enabled, 'agent-console');
+    if (
+      !window.process.env.KFE_INITIAL_VIEW &&
+      agent?.startupView === 'agent-console' &&
+      consoleEntry
+    )
+      setActive(consoleEntry.id);
+  }, [config, enabled, setActive]);
+  const reload = React.useCallback(() => {
     try {
       setConfig(loadKungfuConfig());
-      setConfigError('');
-    } catch (e) {
+      setError('');
+    } catch (cause) {
       setConfig(null);
-      setConfigError((e as Error).message);
+      setError((cause as Error).message);
     }
   }, []);
-
-  React.useEffect(() => {
-    reloadConfig();
-  }, [reloadConfig]);
-
-  const updateConfigValue = React.useCallback(
+  React.useEffect(reload, []);
+  const setValue = React.useCallback(
     (key: string, value: KungfuConfigValue) => {
       try {
         setConfig(setKungfuConfigValue(key, value));
-        setConfigError('');
-      } catch (e) {
-        setConfigError((e as Error).message);
-        throw e;
+        setError('');
+      } catch (cause) {
+        setError((cause as Error).message);
+        throw cause;
       }
     },
     [],
   );
-
-  const removeConfigValue = React.useCallback((key: string) => {
+  const unsetValue = React.useCallback((key: string) => {
     try {
       setConfig(unsetKungfuConfigValue(key));
-      setConfigError('');
-    } catch (e) {
-      setConfigError((e as Error).message);
-      throw e;
+      setError('');
+    } catch (cause) {
+      setError((cause as Error).message);
+      throw cause;
     }
   }, []);
+  const ui = normalizedUiConfig(config);
+  React.useEffect(() => {
+    try {
+      const electron = window.require('electron') as {
+        webFrame?: { setZoomFactor: (factor: number) => void };
+      };
+      electron.webFrame?.setZoomFactor(ui.scale);
+    } catch {
+      // non-electron tests or previews keep CSS sizing without webFrame zoom
+    }
+  }, [ui.scale]);
+  return { config, error, reload, setValue, unsetValue, ui };
+}
 
-  const setStatusBarItem = React.useCallback((item: StatusBarItem) => {
+function useStatusBarRegistry() {
+  const [items, setItems] = React.useState<Record<string, StatusBarItem>>({});
+  const set = React.useCallback((item: StatusBarItem) => {
     if (!item.id) throw new Error('statusBar item id is required');
     if (!item.text) throw new Error('statusBar item text is required');
-    setStatusBarItems((current) => ({
+    setItems((current) => ({
       ...current,
       [item.id]: {
         ...item,
@@ -1481,43 +1277,51 @@ function App() {
       },
     }));
   }, []);
-
-  const clearStatusBarItem = React.useCallback((id: string) => {
-    setStatusBarItems((current) => {
+  const clear = React.useCallback((id: string) => {
+    setItems((current) => {
       const next = { ...current };
       delete next[id];
       return next;
     });
   }, []);
+  return { items, set, clear };
+}
 
-  const dismissNotification = React.useCallback((id: string) => {
-    const timer = notificationTimers.current.get(id);
+function useNotificationCenter(
+  openKfx: (kfxId: string, params?: Record<string, string>) => void,
+  openSettings: () => void,
+) {
+  const [notifications, setNotifications] = React.useState<ShellNotification[]>(
+    [],
+  );
+  const timers = React.useRef(new Map<string, number>());
+  React.useEffect(
+    () => () => {
+      for (const timer of timers.current.values()) window.clearTimeout(timer);
+      timers.current.clear();
+    },
+    [],
+  );
+  const dismiss = React.useCallback((id: string) => {
+    const timer = timers.current.get(id);
     if (timer !== undefined) {
       window.clearTimeout(timer);
-      notificationTimers.current.delete(id);
+      timers.current.delete(id);
     }
     setNotifications((current) => current.filter((item) => item.id !== id));
   }, []);
-
-  const runShellCommand = React.useCallback(
+  const runCommand = React.useCallback(
     (command: ShellCommand | undefined) => {
       if (!command) return;
-      if (command.kind === 'open-kfx') {
-        openKfx(command.kfxId, command.params);
-        return;
-      }
-      if (command.kind === 'open-settings') {
-        setSettingsOpen(true);
-        return;
-      }
-      if (command.kind === 'dismiss-notification') {
-        dismissNotification(command.notificationId);
-      }
+      if (command.kind === 'open-kfx')
+        return openKfx(command.kfxId, command.params);
+      if (command.kind === 'open-settings') return openSettings();
+      if (command.kind === 'dismiss-notification')
+        dismiss(command.notificationId);
     },
-    [dismissNotification, openKfx],
+    [dismiss, openKfx, openSettings],
   );
-
-  const showNotification = React.useCallback(
+  const show = React.useCallback(
     (input: ShellNotificationInput) => {
       const id = notificationId();
       const item: ShellNotification = {
@@ -1531,80 +1335,39 @@ function App() {
       };
       setNotifications((current) => [item, ...current].slice(0, 5));
       if (item.timeoutMs !== 0) {
-        const timer = window.setTimeout(
-          () => dismissNotification(id),
-          item.timeoutMs,
-        );
-        notificationTimers.current.set(id, timer);
+        const timer = window.setTimeout(() => dismiss(id), item.timeoutMs);
+        timers.current.set(id, timer);
       }
       return id;
     },
-    [dismissNotification],
+    [dismiss],
   );
-  const labOnboarding = createLabOnboardingRoutes({
-    state: agentFirstEntry.state,
-    persist: persistOnboarding,
-    notify: showNotification,
-    openPath: workspaceBridge.path,
-  });
+  return { notifications, dismiss, runCommand, show };
+}
 
-  const uiConfig = normalizedUiConfig(config);
-
-  React.useEffect(() => {
-    try {
-      const electron = window.require('electron') as {
-        webFrame?: { setZoomFactor: (factor: number) => void };
-      };
-      electron.webFrame?.setZoomFactor(uiConfig.scale);
-    } catch {
-      // non-electron tests or previews keep CSS sizing without webFrame zoom
-    }
-  }, [uiConfig.scale]);
-
-  const settingFallbacks: Record<string, string> = Object.fromEntries(
-    loaded.entries.flatMap((entry) =>
-      entry.settings.map((decl) => [decl.key, decl.fallback]),
-    ),
-  );
-
-  const activeKfx =
-    enabled.find((k) => k.id === active) ??
-    enabled.find((k) => k.id === profileHomeId(profile, enabled)) ??
-    enabled[0] ??
-    null;
-
-  const sessionWindowLaunch =
-    React.useMemo<SessionWindowLaunchAuthorization | null>(() => {
-      const entry = loaded.entries.find(
-        (candidate) =>
-          candidate.tier === 'node-integrated' &&
-          candidate.capabilities.includes('terminal') &&
-          candidate.authorizationRoot !== null,
-      );
-      if (!entry || !entry.authorizationRoot || !kfxDescriptor) return null;
-      return {
-        descriptor: kfxDescriptor,
-        packageKey: entry.id,
-        authorizationRoot: entry.authorizationRoot,
-      };
-    }, [kfxDescriptor, loaded.entries]);
-
-  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2/3: expose per-session OS window control to views through the
-  // shell so a view stays electron-free. Present only when the flag is on and
-  // this (node-integrated) renderer can reach ipc; absent otherwise, so a view
-  // feature-detects and hides the affordance. Built once — the ipc handle and
-  // flag are stable over the shell's life.
-  //
-  // Also requires the durable host to run in the main process (stage 3): a
-  // popped-out window renders the live terminal by reaching that shared host over
-  // the relay, which is impossible when the host lives in this renderer. So
-  // pop-out is offered only when both flags are on, never a window that cannot
-  // reach its session.
-  const sessionWindowShell = React.useMemo<Partial<Shell>>(() => {
+function useSessionWindowShell(
+  descriptor: KfxExperienceFlowDescriptor | null,
+  entries: KfxEntry[],
+): Partial<Shell> {
+  const launch = React.useMemo<SessionWindowLaunchAuthorization | null>(() => {
+    const entry = entries.find(
+      (candidate) =>
+        candidate.tier === 'node-integrated' &&
+        candidate.capabilities.includes('terminal') &&
+        candidate.authorizationRoot !== null,
+    );
+    if (!entry?.authorizationRoot || !descriptor) return null;
+    return {
+      descriptor,
+      packageKey: entry.id,
+      authorizationRoot: entry.authorizationRoot,
+    };
+  }, [descriptor, entries]);
+  return React.useMemo<Partial<Shell>>(() => {
     if (
       window.process?.env?.KF_SESSION_WINDOWS !== '1' ||
       window.process?.env?.KF_TERMINAL_HOST !== 'main' ||
-      !sessionWindowLaunch
+      !launch
     )
       return {};
     type SessionWindowIpc = {
@@ -1623,139 +1386,158 @@ function App() {
       ipc = (window.require('electron') as { ipcRenderer: SessionWindowIpc })
         .ipcRenderer;
     } catch {
-      ipc = null;
+      return {};
     }
-    if (!ipc) return {};
-    const ipcRenderer = ipc;
     return {
       popOutSession: (runId) => {
         const windowId = globalThis.crypto?.randomUUID?.() ?? `w-${runId}`;
-        void ipcRenderer.invoke(SESSION_WINDOW_OPEN_CHANNEL, {
+        void ipc.invoke(SESSION_WINDOW_OPEN_CHANNEL, {
           windowId,
           runId,
-          launch: sessionWindowLaunch,
+          launch,
         });
       },
       restoreSessionWindows: (windows) => {
         if (windows.length === 0) return;
-        void ipcRenderer.invoke(SESSION_WINDOW_RESTORE_CHANNEL, {
-          windows: windows.map((w) => ({
-            windowId: w.windowId,
-            runId: w.runId,
+        void ipc.invoke(SESSION_WINDOW_RESTORE_CHANNEL, {
+          windows: windows.map((windowRecord) => ({
+            windowId: windowRecord.windowId,
+            runId: windowRecord.runId,
             saved: {
-              displayId: w.displayId,
-              bounds: { x: w.x, y: w.y, width: w.width, height: w.height },
+              displayId: windowRecord.displayId,
+              bounds: {
+                x: windowRecord.x,
+                y: windowRecord.y,
+                width: windowRecord.width,
+                height: windowRecord.height,
+              },
             },
-            launch: sessionWindowLaunch,
+            launch,
           })),
         });
       },
       onSessionWindowsSnapshot: (fn) => {
         const handler = (_event: unknown, payload: unknown) =>
           fn((payload as { snapshot: SessionWindowRecord[] }).snapshot);
-        ipcRenderer.on(SESSION_WINDOW_SNAPSHOT_CHANNEL, handler);
+        ipc.on(SESSION_WINDOW_SNAPSHOT_CHANNEL, handler);
         return () =>
-          ipcRenderer.removeListener(SESSION_WINDOW_SNAPSHOT_CHANNEL, handler);
+          ipc.removeListener(SESSION_WINDOW_SNAPSHOT_CHANNEL, handler);
       },
     };
-  }, [sessionWindowLaunch]);
+  }, [launch]);
+}
 
-  const subscribeRefresh = React.useCallback((fn: () => void) => {
-    subscribers.current.add(fn);
-    return () => subscribers.current.delete(fn);
-  }, []);
-
-  const shell: Shell = {
-    open: openKfx,
-    params,
-    onRefresh: subscribeRefresh,
-    setting: (key) => state.settings[key] ?? settingFallbacks[key] ?? '',
-    updateState,
-    state,
-    statusBar: {
-      set: setStatusBarItem,
-      clear: clearStatusBarItem,
-    },
-    notify: showNotification,
-    dismissNotification,
-    config,
-    configError,
-    reloadConfig,
-    setConfigValue: updateConfigValue,
-    unsetConfigValue: removeConfigValue,
-    info: {
-      ok: runtime.ok,
-      message: runtime.message,
-      runtimeDir: runtime.runtimeDir,
-      kungfuVersion: runtime.kungfuVersion,
-      runtimeStatus,
-      buildInfo: runtime.buildInfo,
-      skillManager: runtime.skillManager,
-      exports: runtime.exports,
-      schemaTypes: runtime.schemaTypes,
-    },
-    registry: loaded.entries,
-    suites: loaded.suites,
-    profiles,
-    ...sessionWindowShell,
+function useAppFoundation() {
+  const [agentWorkLab] = React.useState(openRendererAgentWorkLab);
+  const [projects] = React.useState(openRendererProjects);
+  const workspaceBridge = React.useMemo(workspaceIpc, []);
+  const agentFirst = useAgentFirstEntry();
+  const initialProjectsOpen =
+    window.process.env.KFE_INITIAL_SURFACE === 'projects';
+  const initialFocusedProjectPath =
+    window.process.env.KFE_FOCUSED_PROJECT_PATH || '';
+  const initialCoreWorkOpen = !initialProjectsOpen && !agentFirst.initialOpen;
+  const [startup] = React.useState(() =>
+    deferredAgentWorkStartup(
+      agentFirst.initialOpen
+        ? 'onboarding'
+        : initialProjectsOpen
+          ? 'projects'
+          : 'work',
+      window.process.env.KF_RUNTIME_DIR || '',
+    ),
+  );
+  const startupSurface = capability.agentWorkLabStartupSurface(startup);
+  const [runtime] = React.useState(() =>
+    !initialProjectsOpen &&
+    !agentFirst.initialOpen &&
+    !initialCoreWorkOpen &&
+    startupSurface === 'work-graph'
+      ? bootRuntime()
+      : deferredRuntime(
+          agentWorkLab,
+          `startup routed to ${startup.route}: ${startup.reasonCode}`,
+        ),
+  );
+  runtime.projects = projects;
+  const skipKfx =
+    initialProjectsOpen || agentFirst.initialOpen || initialCoreWorkOpen;
+  const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
+    () => resolveGuiKfxDescriptor(runtime, skipKfx),
+  );
+  const [loaded] = React.useState<KfxLoadResult>(() =>
+    skipKfx
+      ? emptyKfxLoadResult()
+      : loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
+  );
+  React.useEffect(() => {
+    if (
+      window.process.env.KUNGFU_GUI_DEV_SUPERVISOR !== '1' ||
+      loaded.failures.length === 0
+    )
+      return;
+    console.error(
+      `KF_GUI_KFX_FAILURES ${JSON.stringify(
+        loaded.failures.map((failure) => ({
+          dir: failure.dir,
+          error: failure.error,
+        })),
+      )}`,
+    );
+  }, [loaded.failures]);
+  const visibleKfxFailures = React.useMemo(
+    () => actionableKfxFailures(loaded.failures, kfxDescriptor !== null),
+    [kfxDescriptor, loaded.failures],
+  );
+  const initialAgentWorkLabOpen = skipKfx
+    ? false
+    : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length);
+  return {
+    agentWorkLab,
+    projects,
+    workspaceBridge,
+    agentFirst,
+    initialProjectsOpen,
+    initialFocusedProjectPath,
+    startup,
+    runtime,
+    kfxDescriptor,
+    loaded,
+    visibleKfxFailures,
+    initialAgentWorkLabOpen,
   };
+}
 
-  const primaryNav = primaryNavigation(profile, enabled);
-  const workEntry =
-    productRoleEntry(enabled, 'profile-view') ??
-    enabled.find((entry) => entry.id === profileHomeId(profile, enabled));
-  const openCoreWork = React.useCallback(
-    (nextParams: Record<string, string>) => {
-      setParams(nextParams);
-      setShellSurface('core-work');
-    },
-    [],
-  );
-  const openWorkSurface = React.useCallback(
-    (nextParams?: Record<string, string>) => {
-      const restoredParams = nextParams ?? lastWorkParamsRef.current;
-      if (nextParams && Object.keys(nextParams).length > 0) {
-        lastWorkParamsRef.current = nextParams;
-      }
-      const projectPath = restoredParams.projectPath?.trim();
-      if (projectPath) {
-        lastProjectParamsRef.current = restoredParams;
-        setFocusedProjectPath(projectPath);
-      }
-      if (workEntry) {
-        openKfx(workEntry.id, restoredParams);
-      } else {
-        openCoreWork(restoredParams);
-      }
-    },
-    [openCoreWork, openKfx, workEntry],
-  );
-  const restoreProjectWork = React.useCallback(
-    (projectPath: string, section: 'files' | 'work'): boolean => {
-      openWorkSurface({ projectPath, projectSection: section });
-      return true;
-    },
-    [openWorkSurface],
-  );
-  const advancedNav = primaryNav.filter((item) => item.id !== workEntry?.id);
-  const projectWorkOpen =
-    (coreWorkOpen || activeKfx?.id === workEntry?.id) &&
-    Boolean(params.projectPath?.trim());
-  const currentProjectDisplayName =
-    currentProjectName ||
-    lastProjectParamsRef.current?.projectPath
-      ?.split(/[\\/]/u)
-      .filter(Boolean)
-      .at(-1) ||
-    '';
-
-  const caps = activeKfx ? subsetCaps(runtime, activeKfx) : null;
-  const settingsKfx =
-    enabled.find((k) => k.id === 'settings') ??
-    loaded.entries.find((k) => k.id === 'settings') ??
-    null;
-  const settingsCaps = settingsKfx ? subsetCaps(runtime, settingsKfx) : null;
-  const viewSearchDocuments = React.useMemo<ProductSearchDocument[]>(
+function useProductSearch({
+  enabled,
+  cliDocuments,
+  globalWorkDocuments,
+  workDocuments,
+  searchText,
+  focusedProjectPath,
+  openKfx,
+  openWork,
+  openProject,
+  notify,
+  clearSearch,
+}: {
+  enabled: KfxEntry[];
+  cliDocuments: ProductSearchDocument[];
+  globalWorkDocuments: ProductSearchDocument[];
+  workDocuments: ProductSearchDocument[];
+  searchText: string;
+  focusedProjectPath: string;
+  openKfx: (id: string) => void;
+  openWork: (params: Record<string, string>) => void;
+  openProject: (path: string) => void;
+  notify: (input: ShellNotificationInput) => string;
+  clearSearch: () => void;
+}) {
+  const [projectDocuments, setProjectDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [currentProjectName, setCurrentProjectName] = React.useState('');
+  const viewDocuments = React.useMemo<ProductSearchDocument[]>(
     () =>
       enabled.map((entry, index) => ({
         id: `view.${entry.id}`,
@@ -1768,30 +1550,30 @@ function App() {
       })),
     [enabled],
   );
-  const searchDocuments = React.useMemo(
+  const documents = React.useMemo(
     () => [
       ...capability.SYSTEM_HELP_DOCUMENTS,
-      ...cliSearchDocuments,
-      ...globalWorkSearchDocuments,
-      ...workSearchDocuments,
-      ...projectSearchDocuments,
-      ...viewSearchDocuments,
+      ...cliDocuments,
+      ...globalWorkDocuments,
+      ...workDocuments,
+      ...projectDocuments,
+      ...viewDocuments,
     ],
     [
-      cliSearchDocuments,
-      globalWorkSearchDocuments,
-      projectSearchDocuments,
-      viewSearchDocuments,
-      workSearchDocuments,
+      cliDocuments,
+      globalWorkDocuments,
+      projectDocuments,
+      viewDocuments,
+      workDocuments,
     ],
   );
-  const searchResults = React.useMemo(
-    () => capability.searchProductDocuments(searchDocuments, searchText),
-    [searchDocuments, searchText],
+  const results = React.useMemo(
+    () => capability.searchProductDocuments(documents, searchText),
+    [documents, searchText],
   );
-  const handleProjectsCatalog = React.useCallback(
+  const handleCatalog = React.useCallback(
     (catalog: ProjectsCatalog) => {
-      setProjectSearchDocuments(capability.projectSearchDocuments(catalog));
+      setProjectDocuments(capability.projectSearchDocuments(catalog));
       setCurrentProjectName(
         catalog.projects.find((project) => project.path === focusedProjectPath)
           ?.name ??
@@ -1801,33 +1583,42 @@ function App() {
     },
     [focusedProjectPath],
   );
-  const handleOpenProject = React.useCallback(
-    (workspace: { workspace_root: string }) =>
-      workspaceBridge.path(workspace.workspace_root),
-    [workspaceBridge],
-  );
-  const activateSearchResult = React.useCallback(
+  const activate = React.useCallback(
     (result: ProductSearchResult) => {
-      if (result.action.kind === 'open-view') {
-        openKfx(result.action.viewId);
-      } else if (result.action.kind === 'open-work') {
-        openWorkSurface({ workId: result.action.workId });
-      } else if (result.action.kind === 'open-project') {
-        setFocusedProjectPath(result.action.projectPath);
-        setShellSurface(projectSearchSurface);
-      } else {
-        showNotification({
+      if (result.action.kind === 'open-view') openKfx(result.action.viewId);
+      else if (result.action.kind === 'open-work')
+        openWork({ workId: result.action.workId });
+      else if (result.action.kind === 'open-project')
+        openProject(result.action.projectPath);
+      else
+        notify({
           level: 'info',
           title: result.title,
           message: result.summary,
         });
-      }
-      setSearchText('');
+      clearSearch();
     },
-    [openKfx, openWorkSurface, showNotification],
+    [clearSearch, notify, openKfx, openProject, openWork],
   );
+  return { currentProjectName, results, handleCatalog, activate };
+}
 
-  const workspaceRuntime = deriveWorkspaceRuntimePresentation(runtimeStatus);
+function buildStatusBarItems({
+  runtime,
+  runtimeStatus,
+  profileId,
+  enabled,
+  historyItem,
+  registered,
+}: {
+  runtime: Runtime;
+  runtimeStatus: RuntimeStatusResult | null;
+  profileId: string;
+  enabled: KfxEntry[];
+  historyItem: StatusBarItem;
+  registered: Record<string, StatusBarItem>;
+}): StatusBarItem[] {
+  const workspace = deriveWorkspaceRuntimePresentation(runtimeStatus);
   const trustCounts = runtimeStatus?.payload?.assessments?.counts ?? {};
   const trustBlocked =
     (trustCounts.stale ?? 0) +
@@ -1841,15 +1632,15 @@ function App() {
   const statusCommand = statusEntry
     ? ({ kind: 'open-kfx', kfxId: statusEntry.id } as const)
     : undefined;
-  const systemStatusItems: StatusBarItem[] = [
+  const system: StatusBarItem[] = [
     {
       id: 'system.workspace-runtime',
-      text: workspaceRuntime.label,
-      icon: workspaceRuntime.icon,
-      severity: workspaceRuntime.severity,
+      text: workspace.label,
+      icon: workspace.icon,
+      severity: workspace.severity,
       side: 'left',
       priority: -100,
-      tooltip: workspaceRuntime.detail,
+      tooltip: workspace.detail,
       command: statusCommand,
     },
     {
@@ -1873,10 +1664,10 @@ function App() {
       tooltip: trustTooltip(runtimeStatus),
       command: statusCommand,
     },
-    exitHistoryStatusItem(historyStatus, statusCommand),
+    historyItem,
     {
       id: 'system.profile',
-      text: `profile: ${profile.id}`,
+      text: `profile: ${profileId}`,
       side: 'right',
       priority: 90,
       tooltip: 'Active profile',
@@ -1893,219 +1684,272 @@ function App() {
         : undefined,
     },
   ];
-
-  const allStatusItems = [
-    ...systemStatusItems,
-    ...Object.values(statusBarItems),
-  ].sort(
+  return [...system, ...Object.values(registered)].sort(
     (a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.id.localeCompare(b.id),
   );
+}
 
-  const renderStatusItem = (item: StatusBarItem) => {
-    const color = statusColor(item.severity);
-    const content = (
-      <>
-        {item.icon ? <span style={{ color }}>{item.icon}</span> : null}
-        <span
-          style={{
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {item.text}
-        </span>
-      </>
-    );
-    const style: React.CSSProperties = {
-      ...mono,
-      height: 24,
-      maxWidth: 260,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 5,
-      padding: '0 8px',
-      boxSizing: 'border-box',
-      border: 'none',
-      borderRadius: 0,
-      background: 'transparent',
-      color: '#ffffff',
-      cursor: item.command ? 'pointer' : 'default',
-      overflow: 'hidden',
-      flexShrink: 0,
-    };
-    if (!item.command) {
-      return (
-        <span key={item.id} title={item.tooltip} style={style}>
-          {content}
-        </span>
-      );
-    }
-    return (
-      <button
-        key={item.id}
-        type="button"
-        title={item.tooltip}
-        onClick={() => runShellCommand(item.command)}
-        style={style}
-      >
-        {content}
-      </button>
-    );
-  };
-
-  const notificationToasts =
-    notifications.length > 0 ? (
-      <div
-        aria-live="polite"
-        style={{
-          position: 'fixed',
-          right: 16,
-          bottom: 36,
-          zIndex: 900,
-          width: 'min(360px, calc(100vw - 32px))',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          pointerEvents: 'none',
-        }}
-      >
-        {notifications.map((item) => (
-          <section
-            key={item.id}
-            style={{
-              border: '1px solid #3c3c3c',
-              borderLeft: `3px solid ${notificationColor(item.level)}`,
-              borderRadius: 6,
-              background: '#252526',
-              boxShadow: '0 12px 36px rgba(0, 0, 0, 0.36)',
-              pointerEvents: 'auto',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 8,
-                padding: '10px 10px 8px 12px',
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  {item.title}
-                </div>
-                {item.message ? (
-                  <div
-                    style={{
-                      ...mono,
-                      marginTop: 4,
-                      color: '#cccccc',
-                      whiteSpace: 'pre-wrap',
-                    }}
-                  >
-                    {item.message}
-                  </div>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                aria-label="Dismiss notification"
-                onClick={() => dismissNotification(item.id)}
-                style={{
-                  ...mono,
-                  width: 22,
-                  height: 22,
-                  border: 'none',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: 'transparent',
-                  color: '#cccccc',
-                }}
-              >
-                ×
-              </button>
-            </div>
-            {item.actions && item.actions.length > 0 ? (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  gap: 8,
-                  padding: '0 10px 10px 12px',
-                }}
-              >
-                {item.actions.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    onClick={() => runShellCommand(action.command)}
-                    style={{
-                      ...mono,
-                      border: '1px solid #3c3c3c',
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      background: '#1e1e1e',
-                      color: '#cccccc',
-                      padding: '4px 8px',
-                    }}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </section>
-        ))}
-      </div>
-    ) : null;
-
-  const statusBar = (
-    <footer
-      style={{
-        width: '100%',
-        height: 24,
-        padding: '0 8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        flexShrink: 0,
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        borderTop: '1px solid #0e639c',
-        background: '#007acc',
-        color: '#ffffff',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          overflow: 'hidden',
-          minWidth: 0,
-        }}
-      >
-        {allStatusItems
-          .filter((item) => (item.side ?? 'left') === 'left')
-          .map(renderStatusItem)}
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          overflow: 'hidden',
-          minWidth: 0,
-        }}
-      >
-        {allStatusItems
-          .filter((item) => item.side === 'right')
-          .map(renderStatusItem)}
-      </div>
-    </footer>
+function useShellNavigationState(
+  foundation: ReturnType<typeof useAppFoundation>,
+) {
+  const {
+    runtime,
+    loaded,
+    agentFirst,
+    initialProjectsOpen,
+    initialFocusedProjectPath,
+    initialAgentWorkLabOpen,
+  } = foundation;
+  const [surface, setSurface] = React.useState(() =>
+    initialShellSurface({
+      onboardingOpen: agentFirst.initialOpen,
+      projectsOpen: initialProjectsOpen,
+      focusedProjectPath: initialFocusedProjectPath,
+      agentWorkLabOpen: initialAgentWorkLabOpen,
+    }),
   );
+  const { onboardingOpen, coreWorkOpen } = shellSurfaceFlags(surface);
+  const visibleRetainedCoreSurface = visibleCoreSurface(surface);
+  const retainedCoreSurfaces = useRetainedCoreSurfaces(
+    visibleRetainedCoreSurface,
+  );
+  const [focusedProjectPath, setFocusedProjectPath] = React.useState(
+    initialFocusedProjectPath,
+  );
+  const [state, setState] = React.useState<ShellState>(() =>
+    runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
+  );
+  const profiles = React.useMemo(
+    () => availableProfiles(loaded.profiles),
+    [loaded.profiles],
+  );
+  const profile = focusedProfile(
+    profiles,
+    state.profileId,
+    window.process.env.KFE_DEFAULT_PROFILE,
+  );
+  const enabled = React.useMemo(
+    () => accessibleEntries(loaded.entries, state),
+    [loaded.entries, state],
+  );
+  const [active, setActive] = React.useState(
+    () =>
+      window.process.env.KFE_INITIAL_VIEW || profileHomeId(profile, enabled),
+  );
+  const [params, setParams] = React.useState<Record<string, string>>(
+    (): Record<string, string> =>
+      initialFocusedProjectPath
+        ? { projectPath: initialFocusedProjectPath, projectSection: 'files' }
+        : {},
+  );
+  const lastWorkParamsRef = React.useRef<Record<string, string>>(
+    initialFocusedProjectPath
+      ? { projectPath: initialFocusedProjectPath, projectSection: 'files' }
+      : {},
+  );
+  const lastProjectParamsRef = React.useRef<Record<string, string> | null>(
+    initialFocusedProjectPath
+      ? { projectPath: initialFocusedProjectPath, projectSection: 'files' }
+      : null,
+  );
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
+  const [searchText, setSearchText] = React.useState('');
+  const openKfx = React.useCallback(
+    (kfxId: string, nextParams?: Record<string, string>) => {
+      setSurface('kfx');
+      setParams(nextParams ?? {});
+      setActive(kfxId);
+    },
+    [],
+  );
+  const updateState = React.useCallback(
+    (patch: Partial<ShellState>) => {
+      const requestedProfile = patch.profileId
+        ? focusedProfile(profiles, patch.profileId)
+        : null;
+      if (requestedProfile) {
+        setParams({});
+        setActive(profileHomeId(requestedProfile, enabled));
+      }
+      setState((current) => {
+        const next = {
+          ...current,
+          ...patch,
+          ...(requestedProfile ? { profileId: requestedProfile.id } : {}),
+        };
+        if (runtime.domain) saveShellState(runtime.domain, next);
+        return next;
+      });
+    },
+    [enabled, profiles, runtime.domain],
+  );
+  React.useEffect(() => {
+    if (state.profileId === profile.id) return;
+    setState((current) => {
+      const next = { ...current, profileId: profile.id };
+      if (runtime.domain) saveShellState(runtime.domain, next);
+      return next;
+    });
+  }, [profile.id, runtime.domain, state.profileId]);
+  React.useEffect(() => {
+    type NavigationIpc = {
+      on: (
+        channel: string,
+        handler: (event: unknown, request: ShellNavigateRequest) => void,
+      ) => void;
+      removeListener: (
+        channel: string,
+        handler: (event: unknown, request: ShellNavigateRequest) => void,
+      ) => void;
+    };
+    let ipc: NavigationIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: NavigationIpc })
+        .ipcRenderer;
+    } catch {
+      return;
+    }
+    const navigate = createShellNavigationHandler({
+      settings: () => setSettingsOpen(true),
+      onboarding: () => setSurface('onboarding'),
+      'profile-home': () => openKfx(profileHomeId(profile, enabled)),
+      view: (request) =>
+        openKfx(
+          (request as Extract<ShellNavigateRequest, { target: 'view' }>).kfxId,
+        ),
+    });
+    ipc.on(SHELL_NAVIGATE_CHANNEL, navigate);
+    return () => ipc.removeListener(SHELL_NAVIGATE_CHANNEL, navigate);
+  }, [enabled, openKfx, profile]);
+  return {
+    surface,
+    setSurface,
+    onboardingOpen,
+    coreWorkOpen,
+    visibleRetainedCoreSurface,
+    retainedCoreSurfaces,
+    focusedProjectPath,
+    setFocusedProjectPath,
+    state,
+    profiles,
+    profile,
+    enabled,
+    active,
+    setActive,
+    params,
+    setParams,
+    lastWorkParamsRef,
+    lastProjectParamsRef,
+    settingsOpen,
+    setSettingsOpen,
+    workspaceOpen,
+    setWorkspaceOpen,
+    searchText,
+    setSearchText,
+    openKfx,
+    updateState,
+  };
+}
 
+function useWorkSurfaceNavigation(
+  foundation: ReturnType<typeof useAppFoundation>,
+  navigation: ReturnType<typeof useShellNavigationState>,
+) {
+  const { runtime, loaded, workspaceBridge } = foundation;
+  const {
+    coreWorkOpen,
+    focusedProjectPath,
+    setFocusedProjectPath,
+    profile,
+    enabled,
+    active,
+    params,
+    setParams,
+    setSurface,
+    openKfx,
+    lastWorkParamsRef,
+    lastProjectParamsRef,
+  } = navigation;
+  const activeKfx =
+    enabled.find((entry) => entry.id === active) ??
+    enabled.find((entry) => entry.id === profileHomeId(profile, enabled)) ??
+    enabled[0] ??
+    null;
+  const primaryNav = primaryNavigation(profile, enabled);
+  const workEntry =
+    productRoleEntry(enabled, 'profile-view') ??
+    enabled.find((entry) => entry.id === profileHomeId(profile, enabled));
+  const openCoreWork = React.useCallback(
+    (nextParams: Record<string, string>) => {
+      setParams(nextParams);
+      setSurface('core-work');
+    },
+    [setParams, setSurface],
+  );
+  const openWork = React.useCallback(
+    (nextParams?: Record<string, string>) => {
+      const restoredParams = nextParams ?? lastWorkParamsRef.current;
+      if (nextParams && Object.keys(nextParams).length > 0)
+        lastWorkParamsRef.current = nextParams;
+      const projectPath = restoredParams.projectPath?.trim();
+      if (projectPath) {
+        lastProjectParamsRef.current = restoredParams;
+        setFocusedProjectPath(projectPath);
+      }
+      if (workEntry) openKfx(workEntry.id, restoredParams);
+      else openCoreWork(restoredParams);
+    },
+    [
+      lastProjectParamsRef,
+      lastWorkParamsRef,
+      openCoreWork,
+      openKfx,
+      setFocusedProjectPath,
+      workEntry,
+    ],
+  );
+  const restoreProject = React.useCallback(
+    (projectPath: string, section: 'files' | 'work'): boolean => {
+      openWork({ projectPath, projectSection: section });
+      return true;
+    },
+    [openWork],
+  );
+  const projectWorkOpen =
+    (coreWorkOpen || activeKfx?.id === workEntry?.id) &&
+    Boolean(params.projectPath?.trim());
+  const settingsKfx =
+    enabled.find((entry) => entry.id === 'settings') ??
+    loaded.entries.find((entry) => entry.id === 'settings') ??
+    null;
+  return {
+    activeKfx,
+    workEntry,
+    openWork,
+    restoreProject,
+    advancedNav: primaryNav.filter((item) => item.id !== workEntry?.id),
+    projectWorkOpen,
+    caps: activeKfx ? subsetCaps(runtime, activeKfx) : null,
+    settingsKfx,
+    settingsCaps: settingsKfx ? subsetCaps(runtime, settingsKfx) : null,
+    handleOpenProject: (workspace: { workspace_root: string }) =>
+      workspaceBridge.path(workspace.workspace_root),
+    focusedProjectPath,
+  };
+}
+
+function useShellOverlayShortcuts({
+  settingsOpen,
+  workspaceOpen,
+  setSettingsOpen,
+  setWorkspaceOpen,
+}: {
+  settingsOpen: boolean;
+  workspaceOpen: boolean;
+  setSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setWorkspaceOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   React.useEffect(() => {
     const onShellKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && (settingsOpen || workspaceOpen)) {
@@ -2121,117 +1965,323 @@ function App() {
     };
     window.addEventListener('keydown', onShellKeyDown);
     return () => window.removeEventListener('keydown', onShellKeyDown);
-  }, [settingsOpen, workspaceOpen]);
+  }, [setSettingsOpen, setWorkspaceOpen, settingsOpen, workspaceOpen]);
+}
 
-  const workspaceOverlay = workspaceOpen ? (
+function ShellWorkspaceContent({
+  onboarding,
+  retained,
+  activeKfx,
+}: {
+  onboarding: React.ComponentProps<typeof AgentFirstOnboardingPanel> | null;
+  retained: React.ComponentProps<typeof RetainedCoreSurfaceStack>;
+  activeKfx: React.ComponentProps<typeof ActiveKfxSurface> | null;
+}) {
+  return (
     <div
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) setWorkspaceOpen(false);
-      }}
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        background: 'rgba(0, 0, 0, 0.5)',
+        flex: 1,
+        minHeight: 0,
+        padding: '14px 16px 12px',
         boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        overflow: 'hidden',
       }}
     >
-      <WorkspacePanel />
-    </div>
-  ) : null;
-
-  const settingsOverlay = settingsOpen ? (
-    <div
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) setSettingsOpen(false);
-      }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        background: 'rgba(0, 0, 0, 0.42)',
-        boxSizing: 'border-box',
-      }}
-    >
-      <dialog
-        open
-        aria-label="Settings"
+      <div
         style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 'min(980px, 100%)',
-          maxHeight: 'min(720px, calc(100vh - 48px))',
-          minHeight: 420,
-          margin: 0,
-          padding: 0,
           display: 'flex',
-          flexDirection: 'column',
+          gap: 12,
+          flex: 1,
+          minHeight: 0,
           overflow: 'hidden',
-          border: '1px solid #3c3c3c',
-          borderRadius: 8,
-          background: '#252526',
-          boxShadow: '0 20px 80px rgba(0, 0, 0, 0.45)',
         }}
       >
-        <header
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 14px',
-            borderBottom: '1px solid #3c3c3c',
-          }}
-        >
-          <div style={{ fontSize: 14, fontWeight: 600 }}>Settings</div>
-          <button
-            type="button"
-            aria-label="Close settings"
-            onClick={() => setSettingsOpen(false)}
-            style={{
-              ...mono,
-              width: 28,
-              height: 28,
-              border: '1px solid #3c3c3c',
-              borderRadius: 6,
-              cursor: 'pointer',
-              background: '#1e1e1e',
-              color: '#cccccc',
-            }}
-          >
-            ×
-          </button>
-        </header>
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 14 }}>
-          {settingsKfx && settingsCaps ? (
-            <KfxErrorBoundary kfxId={settingsKfx.id}>
-              <settingsKfx.View caps={settingsCaps} shell={shell} />
-            </KfxErrorBoundary>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          {onboarding ? (
+            <AgentFirstOnboardingPanel {...onboarding} />
           ) : (
-            <div style={{ ...mono, color: '#f48771' }}>
-              settings kfx unavailable
-            </div>
+            <>
+              <RetainedCoreSurfaceStack {...retained} />
+              {activeKfx ? <ActiveKfxSurface {...activeKfx} /> : null}
+            </>
           )}
         </div>
-      </dialog>
+      </div>
     </div>
-  ) : null;
+  );
+}
+
+function App() {
+  const foundation = useAppFoundation();
+  const {
+    agentWorkLab,
+    projects,
+    workspaceBridge,
+    agentFirst,
+    initialProjectsOpen,
+    initialFocusedProjectPath,
+    startup,
+    runtime,
+    kfxDescriptor,
+    loaded,
+    visibleKfxFailures,
+    initialAgentWorkLabOpen,
+  } = foundation;
+  const {
+    entry: agentFirstEntry,
+    initialOpen: initialOnboardingOpen,
+    persist: persistOnboarding,
+    installCli: installOnboardingCli,
+  } = agentFirst;
+  const navigation = useShellNavigationState(foundation);
+  const {
+    surface: shellSurface,
+    setSurface: setShellSurface,
+    onboardingOpen,
+    coreWorkOpen,
+    visibleRetainedCoreSurface,
+    retainedCoreSurfaces,
+    focusedProjectPath,
+    setFocusedProjectPath,
+    state,
+    profiles,
+    profile,
+    enabled,
+    active,
+    setActive,
+    params,
+    setParams,
+    lastWorkParamsRef,
+    lastProjectParamsRef,
+    settingsOpen,
+    setSettingsOpen,
+    workspaceOpen,
+    setWorkspaceOpen,
+    searchText,
+    setSearchText,
+    openKfx,
+    updateState,
+  } = navigation;
+  const cliSearchCatalog = useCliSearchCatalog();
+  const globalWorkSearchDocuments = useGlobalWorkSearchDocuments(
+    initialProjectsOpen,
+    params.projectId,
+    params.projectPath,
+  );
+  const refreshBus = useRefreshBus();
+  const workSearchDocuments = useWorkSearchDocuments(
+    runtime,
+    refreshBus.subscribers,
+  );
+  const [windowChrome, controlWindow] = useWindowChrome();
+  const guiConfig = useGuiConfig(enabled, setActive);
+  const runtimeStatus = useRuntimeStatus(runtime.ok);
+  const historyStatus = useExitHistoryStatus(runtime.ok);
+  const statusBarRegistry = useStatusBarRegistry();
+
+  const notificationCenter = useNotificationCenter(openKfx, () =>
+    setSettingsOpen(true),
+  );
+  const labOnboarding = createLabOnboardingRoutes({
+    state: agentFirstEntry.state,
+    persist: persistOnboarding,
+    notify: notificationCenter.show,
+    openPath: workspaceBridge.path,
+  });
+
+  const settingFallbacks: Record<string, string> = Object.fromEntries(
+    loaded.entries.flatMap((entry) =>
+      entry.settings.map((decl) => [decl.key, decl.fallback]),
+    ),
+  );
+
+  const workSurface = useWorkSurfaceNavigation(foundation, navigation);
+  const {
+    activeKfx,
+    workEntry,
+    openWork: openWorkSurface,
+    restoreProject: restoreProjectWork,
+    advancedNav,
+    projectWorkOpen,
+    caps,
+    settingsKfx,
+    settingsCaps,
+    handleOpenProject,
+  } = workSurface;
+
+  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2/3: expose per-session OS window control to views through the
+  // shell so a view stays electron-free. Present only when the flag is on and
+  // this (node-integrated) renderer can reach ipc; absent otherwise, so a view
+  // feature-detects and hides the affordance. Built once — the ipc handle and
+  // flag are stable over the shell's life.
+  //
+  // Also requires the durable host to run in the main process (stage 3): a
+  // popped-out window renders the live terminal by reaching that shared host over
+  // the relay, which is impossible when the host lives in this renderer. So
+  // pop-out is offered only when both flags are on, never a window that cannot
+  // reach its session.
+  const sessionWindowShell = useSessionWindowShell(
+    kfxDescriptor,
+    loaded.entries,
+  );
+
+  const shell: Shell = {
+    open: openKfx,
+    params,
+    onRefresh: refreshBus.subscribe,
+    setting: (key) => state.settings[key] ?? settingFallbacks[key] ?? '',
+    updateState,
+    state,
+    statusBar: {
+      set: statusBarRegistry.set,
+      clear: statusBarRegistry.clear,
+    },
+    notify: notificationCenter.show,
+    dismissNotification: notificationCenter.dismiss,
+    config: guiConfig.config,
+    configError: guiConfig.error,
+    reloadConfig: guiConfig.reload,
+    setConfigValue: guiConfig.setValue,
+    unsetConfigValue: guiConfig.unsetValue,
+    info: {
+      ok: runtime.ok,
+      message: runtime.message,
+      runtimeDir: runtime.runtimeDir,
+      kungfuVersion: runtime.kungfuVersion,
+      runtimeStatus,
+      buildInfo: runtime.buildInfo,
+      skillManager: runtime.skillManager,
+      exports: runtime.exports,
+      schemaTypes: runtime.schemaTypes,
+    },
+    registry: loaded.entries,
+    suites: loaded.suites,
+    profiles,
+    ...sessionWindowShell,
+  };
+
+  const openProjectSearch = React.useCallback(
+    (projectPath: string) => {
+      setFocusedProjectPath(projectPath);
+      setShellSurface(projectSearchSurface);
+    },
+    [setFocusedProjectPath, setShellSurface],
+  );
+  const productSearch = useProductSearch({
+    enabled,
+    cliDocuments: cliSearchCatalog.documents,
+    globalWorkDocuments: globalWorkSearchDocuments,
+    workDocuments: workSearchDocuments,
+    searchText,
+    focusedProjectPath,
+    openKfx,
+    openWork: openWorkSurface,
+    openProject: openProjectSearch,
+    notify: notificationCenter.show,
+    clearSearch: () => setSearchText(''),
+  });
+  const currentProjectDisplayName =
+    productSearch.currentProjectName ||
+    lastProjectParamsRef.current?.projectPath
+      ?.split(/[\\/]/u)
+      .filter(Boolean)
+      .at(-1) ||
+    '';
+  const allStatusItems = buildStatusBarItems({
+    runtime,
+    runtimeStatus,
+    profileId: profile.id,
+    enabled,
+    historyItem: exitHistoryStatusItem(
+      historyStatus,
+      productRoleEntry(enabled, 'devtool')
+        ? {
+            kind: 'open-kfx',
+            kfxId: productRoleEntry(enabled, 'devtool')?.id ?? '',
+          }
+        : undefined,
+    ),
+    registered: statusBarRegistry.items,
+  });
+  useShellOverlayShortcuts({
+    settingsOpen,
+    workspaceOpen,
+    setSettingsOpen,
+    setWorkspaceOpen,
+  });
+
+  const onboardingProps: React.ComponentProps<
+    typeof AgentFirstOnboardingPanel
+  > | null = onboardingOpen
+    ? {
+        entry: agentFirstEntry,
+        onPersist: persistOnboarding,
+        onInstallCli: installOnboardingCli,
+        onOpenLab: () => setShellSurface('agent-work-lab'),
+        onOpenTour: () => {
+          setShellSurface('agent-work-lab');
+          notificationCenter.show({
+            level: 'info',
+            title: 'Guided Project Tour',
+            message:
+              'Create the Starter Project in Agent Work Lab, then follow its Work actions. Kungfu will leave the Project available for continued work.',
+          });
+        },
+        onContinue: () =>
+          initialFocusedProjectPath
+            ? openWorkSurface({
+                projectPath: initialFocusedProjectPath,
+                projectSection: 'files',
+              })
+            : setShellSurface('projects'),
+      }
+    : null;
+  const retainedSurfaceProps: React.ComponentProps<
+    typeof RetainedCoreSurfaceStack
+  > = {
+    visible: visibleRetainedCoreSurface,
+    retained: retainedCoreSurfaces,
+    projects,
+    focusedPath: focusedProjectPath,
+    onCatalog: productSearch.handleCatalog,
+    onOpenProject: handleOpenProject,
+    onOpenExistingProject: () => void workspaceBridge.open(),
+    onRestoreProject: restoreProjectWork,
+    lab: agentWorkLab,
+    startup,
+    onOpenWork: () => openWorkSurface(),
+    onOpenLabExistingProject: () => setShellSurface('projects'),
+    onLabComplete: labOnboarding.completeLab,
+    onOpenStarterProject: labOnboarding.openStarterProject,
+    work: runtime.assignmentRuntime ? (
+      <ProjectWorkControlView
+        projects={projects}
+        shell={shell}
+        assignmentRuntime={runtime.assignmentRuntime}
+      />
+    ) : null,
+  };
+  const activeKfxProps: React.ComponentProps<typeof ActiveKfxSurface> | null =
+    shellSurface === 'kfx'
+      ? {
+          runtime,
+          activeKfx,
+          caps,
+          shell,
+          active,
+          entryCount: loaded.entries.length,
+          discoveredKfxCount: loaded.discoveredKfxCount,
+          failures: visibleKfxFailures,
+        }
+      : null;
 
   const appStyle = {
-    '--kf-ui-font-family': resolvedUiFontFamily(uiConfig.fontFamily),
-    '--kf-mono-font-family': resolvedMonoFontFamily(uiConfig.fontFamily),
-    '--kf-font-size': `${uiConfig.fontSize}px`,
+    '--kf-ui-font-family': resolvedUiFontFamily(guiConfig.ui.fontFamily),
+    '--kf-mono-font-family': resolvedMonoFontFamily(guiConfig.ui.fontFamily),
+    '--kf-font-size': `${guiConfig.ui.fontSize}px`,
     fontFamily: 'var(--kf-ui-font-family)',
     fontSize: 'var(--kf-font-size)',
     color: '#cccccc',
@@ -2242,17 +2292,6 @@ function App() {
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
-  } as React.CSSProperties;
-
-  const chromeBodyStyle = {
-    flex: 1,
-    minHeight: 0,
-    padding: '14px 16px 12px',
-    boxSizing: 'border-box',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
     overflow: 'hidden',
   } as React.CSSProperties;
 
@@ -2267,8 +2306,8 @@ function App() {
           activeKfxTitle: activeKfx?.title,
         })}
         searchText={searchText}
-        searchResults={searchResults}
-        searchStatus={searchCatalogStatus}
+        searchResults={productSearch.results}
+        searchStatus={cliSearchCatalog.status}
         settingsOpen={settingsOpen}
         activeViewId={shellSurfaceActiveViewId({
           surface: shellSurface,
@@ -2279,7 +2318,7 @@ function App() {
         advancedItems={advancedNav}
         failures={visibleKfxFailures}
         onSearchChange={setSearchText}
-        onSearchActivate={activateSearchResult}
+        onSearchActivate={productSearch.activate}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenAllWork={() => openWorkSurface()}
         currentProjectTitle={
@@ -2300,91 +2339,29 @@ function App() {
         onOpenView={(id) => shell.open(id)}
         onWindowControl={controlWindow}
       />
-      <div style={chromeBodyStyle}>
-        <div
-          style={{
-            display: 'flex',
-            gap: 12,
-            flex: 1,
-            minHeight: 0,
-            overflow: 'hidden',
-          }}
-        >
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            {onboardingOpen ? (
-              <AgentFirstOnboardingPanel
-                entry={agentFirstEntry}
-                onPersist={persistOnboarding}
-                onInstallCli={installOnboardingCli}
-                onOpenLab={() => setShellSurface('agent-work-lab')}
-                onOpenTour={() => {
-                  setShellSurface('agent-work-lab');
-                  showNotification({
-                    level: 'info',
-                    title: 'Guided Project Tour',
-                    message:
-                      'Create the Starter Project in Agent Work Lab, then follow its Work actions. Kungfu will leave the Project available for continued work.',
-                  });
-                }}
-                onContinue={() => {
-                  if (initialFocusedProjectPath) {
-                    openWorkSurface({
-                      projectPath: initialFocusedProjectPath,
-                      projectSection: 'files',
-                    });
-                  } else {
-                    setShellSurface('projects');
-                  }
-                }}
-              />
-            ) : (
-              <>
-                <RetainedCoreSurfaceStack
-                  visible={visibleRetainedCoreSurface}
-                  retained={retainedCoreSurfaces}
-                  projects={projects}
-                  focusedPath={focusedProjectPath}
-                  onCatalog={handleProjectsCatalog}
-                  onOpenProject={handleOpenProject}
-                  onOpenExistingProject={() => void workspaceBridge.open()}
-                  onRestoreProject={restoreProjectWork}
-                  lab={agentWorkLab}
-                  startup={startup}
-                  onOpenWork={() => openWorkSurface()}
-                  onOpenLabExistingProject={() => setShellSurface('projects')}
-                  onLabComplete={labOnboarding.completeLab}
-                  onOpenStarterProject={labOnboarding.openStarterProject}
-                  work={
-                    runtime.assignmentRuntime ? (
-                      <ProjectWorkControlView
-                        projects={projects}
-                        shell={shell}
-                        assignmentRuntime={runtime.assignmentRuntime}
-                      />
-                    ) : null
-                  }
-                />
-                {shellSurface === 'kfx' ? (
-                  <ActiveKfxSurface
-                    runtime={runtime}
-                    activeKfx={activeKfx}
-                    caps={caps}
-                    shell={shell}
-                    active={active}
-                    entryCount={loaded.entries.length}
-                    discoveredKfxCount={loaded.discoveredKfxCount}
-                    failures={visibleKfxFailures}
-                  />
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-      {notificationToasts}
-      {workspaceOverlay}
-      {settingsOverlay}
-      {statusBar}
+      <ShellWorkspaceContent
+        onboarding={onboardingProps}
+        retained={retainedSurfaceProps}
+        activeKfx={activeKfxProps}
+      />
+      <NotificationToasts
+        notifications={notificationCenter.notifications}
+        dismiss={notificationCenter.dismiss}
+        runCommand={notificationCenter.runCommand}
+      />
+      <ShellOverlays
+        workspaceOpen={workspaceOpen}
+        settingsOpen={settingsOpen}
+        closeWorkspace={() => setWorkspaceOpen(false)}
+        closeSettings={() => setSettingsOpen(false)}
+        settingsKfx={settingsKfx}
+        settingsCaps={settingsCaps}
+        shell={shell}
+      />
+      <StatusBarView
+        items={allStatusItems}
+        runCommand={notificationCenter.runCommand}
+      />
     </div>
   );
 }

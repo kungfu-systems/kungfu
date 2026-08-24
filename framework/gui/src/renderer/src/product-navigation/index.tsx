@@ -9,7 +9,16 @@ import {
   kungfuAgentFirstPrompt,
   shouldShowKungfuOnboarding,
 } from '@kungfu-tech/api/capability';
-import { type ShellNotificationInput, mono } from '@kungfu-tech/kfx';
+import type {
+  KfxCapabilities,
+  KfxEntry,
+  Shell,
+  ShellCommand,
+  ShellNotification,
+  ShellNotificationInput,
+  StatusBarItem,
+} from '@kungfu-tech/kfx';
+import { mono } from '@kungfu-tech/kfx';
 import React from 'react';
 import {
   ONBOARDING_INSTALL_CLI_CHANNEL,
@@ -18,6 +27,8 @@ import {
   WINDOW_CHROME_GET_CHANNEL,
   WINDOW_CHROME_STATE_CHANNEL,
 } from '../../../sandbox/channels';
+import { KfxErrorBoundary, WorkspacePanel } from '../projects-panel';
+import { notificationColor, statusColor } from '../shell-state';
 
 export type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';
 export type WindowChromeConfig = {
@@ -682,5 +693,354 @@ export function AgentFirstOnboardingPanel({
         </div>
       </section>
     </main>
+  );
+}
+
+export function NotificationToasts({
+  notifications,
+  dismiss,
+  runCommand,
+}: {
+  notifications: ShellNotification[];
+  dismiss: (id: string) => void;
+  runCommand: (command: ShellCommand | undefined) => void;
+}) {
+  if (notifications.length === 0) return null;
+  return (
+    <div
+      aria-live="polite"
+      style={{
+        position: 'fixed',
+        right: 16,
+        bottom: 36,
+        zIndex: 900,
+        width: 'min(360px, calc(100vw - 32px))',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        pointerEvents: 'none',
+      }}
+    >
+      {notifications.map((item) => (
+        <section
+          key={item.id}
+          style={{
+            border: '1px solid #3c3c3c',
+            borderLeft: `3px solid ${notificationColor(item.level)}`,
+            borderRadius: 6,
+            background: '#252526',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.36)',
+            pointerEvents: 'auto',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+              padding: '10px 10px 8px 12px',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{item.title}</div>
+              {item.message ? (
+                <div
+                  style={{
+                    ...mono,
+                    marginTop: 4,
+                    color: '#cccccc',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {item.message}
+                </div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              onClick={() => dismiss(item.id)}
+              style={{
+                ...mono,
+                width: 22,
+                height: 22,
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+                background: 'transparent',
+                color: '#cccccc',
+              }}
+            >
+              ×
+            </button>
+          </div>
+          {item.actions?.length ? (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8,
+                padding: '0 10px 10px 12px',
+              }}
+            >
+              {item.actions.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => runCommand(action.command)}
+                  style={{
+                    ...mono,
+                    border: '1px solid #3c3c3c',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    background: '#1e1e1e',
+                    color: '#cccccc',
+                    padding: '4px 8px',
+                  }}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function StatusBarItemView({
+  item,
+  runCommand,
+}: {
+  item: StatusBarItem;
+  runCommand: (command: ShellCommand | undefined) => void;
+}) {
+  const color = statusColor(item.severity);
+  const content = (
+    <>
+      {item.icon ? <span style={{ color }}>{item.icon}</span> : null}
+      <span
+        style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {item.text}
+      </span>
+    </>
+  );
+  const style: React.CSSProperties = {
+    ...mono,
+    height: 24,
+    maxWidth: 260,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    padding: '0 8px',
+    boxSizing: 'border-box',
+    border: 'none',
+    borderRadius: 0,
+    background: 'transparent',
+    color: '#ffffff',
+    cursor: item.command ? 'pointer' : 'default',
+    overflow: 'hidden',
+    flexShrink: 0,
+  };
+  return item.command ? (
+    <button
+      type="button"
+      title={item.tooltip}
+      onClick={() => runCommand(item.command)}
+      style={style}
+    >
+      {content}
+    </button>
+  ) : (
+    <span title={item.tooltip} style={style}>
+      {content}
+    </span>
+  );
+}
+
+export function StatusBarView({
+  items,
+  runCommand,
+}: {
+  items: StatusBarItem[];
+  runCommand: (command: ShellCommand | undefined) => void;
+}) {
+  const section = (side: 'left' | 'right') => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: side === 'right' ? 'flex-end' : undefined,
+        overflow: 'hidden',
+        minWidth: 0,
+      }}
+    >
+      {items
+        .filter((item) => (item.side ?? 'left') === side)
+        .map((item) => (
+          <StatusBarItemView
+            key={item.id}
+            item={item}
+            runCommand={runCommand}
+          />
+        ))}
+    </div>
+  );
+  return (
+    <footer
+      style={{
+        width: '100%',
+        height: 24,
+        padding: '0 8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        flexShrink: 0,
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        borderTop: '1px solid #0e639c',
+        background: '#007acc',
+        color: '#ffffff',
+      }}
+    >
+      {section('left')}
+      {section('right')}
+    </footer>
+  );
+}
+
+export function ShellOverlays({
+  workspaceOpen,
+  settingsOpen,
+  closeWorkspace,
+  closeSettings,
+  settingsKfx,
+  settingsCaps,
+  shell,
+}: {
+  workspaceOpen: boolean;
+  settingsOpen: boolean;
+  closeWorkspace: () => void;
+  closeSettings: () => void;
+  settingsKfx: KfxEntry | null;
+  settingsCaps: KfxCapabilities | null;
+  shell: Shell;
+}) {
+  return (
+    <>
+      {workspaceOpen ? (
+        <div
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeWorkspace();
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            background: 'rgba(0, 0, 0, 0.5)',
+            boxSizing: 'border-box',
+          }}
+        >
+          <WorkspacePanel />
+        </div>
+      ) : null}
+      {settingsOpen ? (
+        <div
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeSettings();
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            background: 'rgba(0, 0, 0, 0.42)',
+            boxSizing: 'border-box',
+          }}
+        >
+          <dialog
+            open
+            aria-label="Settings"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 'min(980px, 100%)',
+              maxHeight: 'min(720px, calc(100vh - 48px))',
+              minHeight: 420,
+              margin: 0,
+              padding: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              border: '1px solid #3c3c3c',
+              borderRadius: 8,
+              background: '#252526',
+              boxShadow: '0 20px 80px rgba(0, 0, 0, 0.45)',
+            }}
+          >
+            <header
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderBottom: '1px solid #3c3c3c',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Settings</div>
+              <button
+                type="button"
+                aria-label="Close settings"
+                onClick={closeSettings}
+                style={{
+                  ...mono,
+                  width: 28,
+                  height: 28,
+                  border: '1px solid #3c3c3c',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  background: '#1e1e1e',
+                  color: '#cccccc',
+                }}
+              >
+                ×
+              </button>
+            </header>
+            <div
+              style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 14 }}
+            >
+              {settingsKfx && settingsCaps ? (
+                <KfxErrorBoundary kfxId={settingsKfx.id}>
+                  <settingsKfx.View caps={settingsCaps} shell={shell} />
+                </KfxErrorBoundary>
+              ) : (
+                <div style={{ ...mono, color: '#f48771' }}>
+                  settings kfx unavailable
+                </div>
+              )}
+            </div>
+          </dialog>
+        </div>
+      ) : null}
+    </>
   );
 }

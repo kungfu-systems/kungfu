@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { resolveProjectsInput } from './projects-view/index.js';
+import { workWindowInputAction } from './work-window/index.js';
 
 test('Projects input resolves browse aliases and gives modals precedence', () => {
   const cases = [
@@ -208,7 +209,13 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   assert.match(projectWork, /receipt\.nextActions/);
   assert.match(projectWork, /<ProjectFileTreeNavigation/);
   assert.match(projectWork, /focused=\{fileTreeFocused\}/);
-  assert.match(projectWork, /value === 't'/);
+  assert.deepEqual(
+    workWindowInputAction('t', {
+      planPending: false,
+      retainedAgentReviewable: false,
+    }),
+    { kind: 'focus-file-tree' },
+  );
   assert.doesNotMatch(projectWork, /projectSection === 'files'/);
   assert.match(projectWork, /LOADING PROJECT WORK/);
   assert.match(projectWork, /<ProjectWorkDock/);
@@ -251,9 +258,21 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     projectWork,
     /continueRetainedWork[\s\S]*?projects[\s\S]*?\.refreshRun\(visibleRun\.id\)[\s\S]*?current\.session\?\.live[\s\S]*?projects\.endRun\(current\.id\)/,
   );
-  assert.match(
-    projectWork,
-    /if \(value === '\\r' && retainedAgentReviewable\)[\s\S]*?continueRetainedWork\(\);[\s\S]*?if \(session\?\.controllable === false\) return/,
+  assert.deepEqual(
+    workWindowInputAction('\r', {
+      planPending: false,
+      retainedAgentReviewable: true,
+      sessionControllable: false,
+    }),
+    { kind: 'continue-retained-work' },
+  );
+  assert.deepEqual(
+    workWindowInputAction('r', {
+      planPending: false,
+      retainedAgentReviewable: false,
+      sessionControllable: false,
+    }),
+    { kind: 'none' },
   );
   assert.match(
     projectWork,

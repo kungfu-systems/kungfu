@@ -187,8 +187,8 @@ test('the title-bar search shares Help, Command, Work, and view sources', () => 
   assert.match(source, /GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL/);
   assert.match(source, /globalWorkSearchDocuments/);
   assert.match(source, /workSearchDocuments/);
-  assert.match(source, /viewSearchDocuments/);
-  assert.match(source, /searchProductDocuments\(searchDocuments, searchText\)/);
+  assert.match(source, /const viewDocuments = React\.useMemo/);
+  assert.match(source, /searchProductDocuments\(documents, searchText\)/);
   assert.match(source, /Search Help, Commands, Work/);
   assert.doesNotMatch(source, /Search views/);
   assert.doesNotMatch(source, /<datalist/);
@@ -246,10 +246,7 @@ test('global keyboard callbacks keep unique semantic identities', () => {
 
 test('Work activation reaches the declared Work view and selects the exact result', () => {
   assert.match(source, /productRoleEntry\(enabled, 'profile-view'\)/);
-  assert.match(
-    source,
-    /openWorkSurface\(\{ workId: result\.action\.workId \}\)/,
-  );
+  assert.match(source, /openWork\(\{ workId: result\.action\.workId \}\)/);
   assert.match(
     source,
     /workEntry[\s\S]*openKfx\(workEntry\.id, restoredParams\)/,
@@ -267,7 +264,7 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
   assert.match(source, /onOpenAllWork=\{\(\) => openWorkSurface\(\)\}/);
   assert.match(
     source,
-    /<RetainedCoreSurfaceStack[\s\S]*work=\{[\s\S]*runtime\.assignmentRuntime \? \([\s\S]*<ProjectWorkControlView[\s\S]*projects=\{projects\}[\s\S]*assignmentRuntime=\{runtime\.assignmentRuntime\}/,
+    /const retainedSurfaceProps[\s\S]*work: runtime\.assignmentRuntime \? \([\s\S]*<ProjectWorkControlView[\s\S]*projects=\{projects\}[\s\S]*assignmentRuntime=\{runtime\.assignmentRuntime\}/,
   );
   assert.match(
     projectsPanelSource,
@@ -342,7 +339,7 @@ test('Lab and workspace transitions select one shell surface explicitly', () => 
     source,
     /onOpenLab=\{\(\) => setShellSurface\('agent-work-lab'\)\}/,
   );
-  assert.match(source, /onOpenWork=\{\(\) => openWorkSurface\(\)\}/);
+  assert.match(source, /onOpenWork: \(\) => openWorkSurface\(\)/);
 });
 
 test('All Work restores the last Project and section after other navigation', () => {
@@ -354,7 +351,7 @@ test('All Work restores the last Project and section after other navigation', ()
   assert.match(source, /lastWorkParamsRef\.current = nextParams/);
   assert.match(
     source,
-    /openWorkSurface\(\{ projectPath, projectSection: section \}\)/,
+    /openWork\(\{ projectPath, projectSection: section \}\)/,
   );
   assert.match(workViewSource, /const projectViewMemory = new Map/);
   assert.match(workViewSource, /initialProjectMemory\?\.selectedFile/);

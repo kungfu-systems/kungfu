@@ -13,7 +13,7 @@ const ROOT = path.resolve(
   '../..',
 );
 const DEFAULT_GIT_TIMEOUT_MS = Number(
-  process.env.KUNGFU_GIT_COMMAND_TIMEOUT_MS || 10_000,
+  process.env.KUNGFU_GIT_COMMAND_TIMEOUT_MS || 30_000,
 );
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const REVISION_PATTERN = /^[0-9a-f]{40}$/u;
