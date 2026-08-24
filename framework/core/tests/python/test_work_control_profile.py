@@ -679,6 +679,7 @@ def test_initiative_assignment_capabilities_are_native_and_preserve_pursuit():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
+    assert callable(domain.work_control.ensure_profile_contract)
     capabilities = domain.work_control.capabilities()
     pursuit = work_profile.capabilities_python(conformance=True)
 

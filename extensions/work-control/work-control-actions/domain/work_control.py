@@ -99,6 +99,7 @@ from .work_control_runtime import (
     contract_materialization_plan as contract_materialization_plan,
     create_assignment as create_assignment,
     create_initiative as create_initiative,
+    ensure_profile_contract as ensure_profile_contract,
     list_assignment_relation_events as list_assignment_relation_events,
     list_assignments as list_assignments,
     list_domain_records as list_domain_records,
