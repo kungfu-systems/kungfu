@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "07da2875cdfc6a233aaab0dc20998052b13724c9",
-  "changeRoot": "sha256:6d498b941c7cb56fccb2ff095224e880ae04841f599943a8d4e2f11ecb56258d",
+  "changeRoot": "sha256:d7c243c5605c09c43ee6205baa3ed3ffad5f5f5e8a6a97b2d713f4e1b3e821d7",
   "changes": [
     {
       "baseContentRoot": "sha256:57f2836190465ffa85abd59415d4da86205d3eac34f3cf51a0e25cc11cc8733e",
@@ -17,13 +17,13 @@
     },
     {
       "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
-      "contentRoot": "sha256:68049cdab8b0f0a833358ea56370a58ed16086883d5b8fb40f92f5664b79ce43",
+      "contentRoot": "sha256:276cf2ce484d2087c57829fec39d633167be5cf33c6a7deabadc3a6cf2ad1be1",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:4287e4d0bbded3c3ba17d62e837424419875be71d46d4304af8479a2aee4d0a3",
-      "contentRoot": "sha256:83a30f413b5f84c6ea64865885afad6bfc13de1ec66276616ce3f44300b599eb",
+      "contentRoot": "sha256:8ea968ca68efe55ebc93e1a225e70c6877bd6f8e4724b88c89560001229904be",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
@@ -71,7 +71,7 @@
     },
     {
       "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
-      "contentRoot": "sha256:68049cdab8b0f0a833358ea56370a58ed16086883d5b8fb40f92f5664b79ce43",
+      "contentRoot": "sha256:276cf2ce484d2087c57829fec39d633167be5cf33c6a7deabadc3a6cf2ad1be1",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
@@ -79,6 +79,24 @@
       "baseContentRoot": "sha256:bb50b6d4052d92442034ce71e2a0e46b922c91f8ba34261276014880311392a3",
       "contentRoot": "sha256:cd3308bcf8e0e5ef668206d45de624148c49c9f46dfc2e456796383041da1cf1",
       "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9c3a6b11d9ece0e80f1b7dc0df74569850c8f453a097843cf0411cc6d3e5747f",
+      "contentRoot": "sha256:32effce886ef5acdf98bfc8a19337899819f7cba1cc19053160050113e2d6d17",
+      "path": "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1faf7747d61c8e52c2c44490641f47f6296686c80faa05a29e4f0b699dcf6793",
+      "contentRoot": "sha256:11640e965793af1c958ce8f6e7f0c3d88414a377e1681732182661a8a65986d9",
+      "path": "docs/architecture/adr-map.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:43947e7ce6a514677788f0c63c66362371a8f960d4ff0e0e17f0716d51b83f38",
+      "contentRoot": "sha256:e46dfeccde42b22d83cd4e838b0b60150ffe521cc4a442da33501bc03b96cca7",
+      "path": "docs/architecture/adr-map.md",
       "status": "modified"
     },
     {
@@ -140,11 +158,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "Internal Work Control and provenance complexity refactor preserves KFX site bundle inputs and public behavior.",
+  "rationale": "The Work Control and release-provenance decomposition preserves public behavior, contracts, and reader journeys while only moving internal Python decision paths behind cohesive private helpers.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:a0bc0a882d1bfc3ee61b0059369aadd7a36b19aab84b8a68a92d50b3fa90ef84"
+  "proofRoot": "sha256:9d064e3675d1432582088a40c82637c4795dcc086f2d5c5dab62a7eee89c836e"
 }
