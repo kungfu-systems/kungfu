@@ -8,6 +8,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import {
+  bindPublicationPlatformEvidence,
   bindPublicationReleaseAssets,
   existingReleaseAssetIsWinner,
   publicationArtifactDrift,
@@ -144,6 +145,102 @@ test('publication binds channel URLs to exact uploaded release bytes', () => {
       releaseTag,
     }),
     [],
+  );
+});
+
+test('publication binds signed release bytes through retained passport authority', () => {
+  const releaseTag = 'v4.0.0-alpha.3';
+  const unsignedDigest = `sha256:${'a'.repeat(64)}`;
+  const signedDigest = `sha256:${'b'.repeat(64)}`;
+  const admission = {
+    manifests: [
+      {
+        platform: 'darwin',
+        architecture: 'arm64',
+        manifest: {
+          artifacts: [
+            {
+              kind: 'desktop',
+              url: `${releaseBase(releaseTag)}/Kungfu%20Episodes-4.0.0-alpha.3-arm64-mac.zip`,
+              size: 41,
+              digest: unsignedDigest,
+              signature: 'buildchain-retained:pre-signing#desktop',
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const releaseAssets = [
+    {
+      name: 'Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip',
+      state: 'uploaded',
+      size: 42,
+      digest: signedDigest,
+    },
+  ];
+  const releasePassport = {
+    artifacts: [
+      {
+        group: 'release',
+        kind: 'release-asset',
+        name: 'Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip',
+        platform: 'darwin-arm64',
+        digest: signedDigest,
+        evidence: 'artifact-evidence.json',
+      },
+    ],
+  };
+  const [desktop] = bindPublicationReleaseAssets({
+    admission,
+    releaseAssets,
+    releaseTag,
+    releasePassport,
+  }).manifests[0].manifest.artifacts;
+  assert.deepEqual(desktop, {
+    kind: 'desktop',
+    url: `${releaseBase(releaseTag)}/Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip`,
+    size: 42,
+    digest: signedDigest,
+    signature:
+      'buildchain-retained:artifact-evidence.json#Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip',
+  });
+});
+
+test('publication upgrades local platform evidence through the final passport', () => {
+  const sha256 = 'c'.repeat(64);
+  const admission = {
+    manifests: [
+      {
+        platform: 'linux',
+        architecture: 'arm64',
+        manifest: {
+          qualificationEvidenceRef: 'unqualified-local-build:source',
+          artifacts: [
+            {
+              kind: 'runtime',
+              signature: 'unqualified-local-build',
+            },
+            {
+              kind: 'cli',
+              signature: 'unqualified-local-build',
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const result = bindPublicationPlatformEvidence({
+    admission,
+    releasePassport: {
+      platformArtifactManifests: [{ platform: 'linux-arm64', sha256 }],
+    },
+  }).manifests[0].manifest;
+  const evidence = `buildchain-retained:buildchain.release.json#platformArtifactManifests/linux-arm64/${sha256}`;
+  assert.equal(result.qualificationEvidenceRef, evidence);
+  assert.deepEqual(
+    result.artifacts.map(({ signature }) => signature),
+    [`${evidence}#runtime`, `${evidence}#cli`],
   );
 });
 

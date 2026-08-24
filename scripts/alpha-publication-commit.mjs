@@ -269,10 +269,48 @@ export function bindPublicationReleaseAssets({
   admission,
   releaseAssets,
   releaseTag,
+  releasePassport = null,
 }) {
   const candidates = (releaseAssets || []).filter(
     (asset) => asset?.state === 'uploaded',
   );
+  const retainedAssets = Array.isArray(releasePassport?.artifacts)
+    ? releasePassport.artifacts.filter(
+        (asset) =>
+          asset?.group === 'release' &&
+          asset?.kind === 'release-asset' &&
+          typeof asset?.name === 'string' &&
+          /^sha256:[a-f0-9]{64}$/u.test(asset?.digest || ''),
+      )
+    : [];
+  const publicPlatform = (entry) =>
+    `${entry.platform === 'win32' ? 'windows' : entry.platform}-${entry.architecture}`;
+  const artifactFormat = (name) => {
+    const match = String(name).match(
+      /(\.tar\.gz|\.AppImage|\.dmg|\.exe|\.zip)$/u,
+    );
+    return match?.[1] || '';
+  };
+  const retainedArtifactMatches = (entry, artifact, authority) => {
+    const format = artifactFormat(
+      releaseArtifactName(artifact.url, releaseTag),
+    );
+    if (!format || artifactFormat(authority.name) !== format) return false;
+    const platform = publicPlatform(entry);
+    if (artifact.kind === 'cli') {
+      return authority.name === `kungfu-episodes-cli-${platform}${format}`;
+    }
+    if (artifact.kind !== 'desktop') return false;
+    if (entry.platform === 'darwin') {
+      return (
+        authority.platform === platform &&
+        authority.name.startsWith('Kungfu-Episodes-')
+      );
+    }
+    if (entry.platform === 'linux') return format === '.AppImage';
+    if (entry.platform === 'win32') return format === '.exe';
+    return false;
+  };
   return {
     ...admission,
     manifests: admission.manifests.map((entry) => ({
@@ -285,18 +323,85 @@ export function bindPublicationReleaseAssets({
             (asset) =>
               asset.size === artifact.size && asset.digest === artifact.digest,
           );
-          if (matches.length !== 1) {
+          if (matches.length === 1) {
+            return {
+              ...artifact,
+              url: `${releaseBaseUrl(releaseTag)}/${encodeURIComponent(matches[0].name)}`,
+            };
+          }
+          const authorities = retainedAssets.filter((authority) =>
+            retainedArtifactMatches(entry, artifact, authority),
+          );
+          const retainedMatches = authorities.flatMap((authority) =>
+            candidates
+              .filter((asset) => asset.digest === authority.digest)
+              .map((asset) => ({ asset, authority })),
+          );
+          if (retainedMatches.length !== 1) {
             throw new Error(
               `release artifact bytes do not resolve to one uploaded asset: ${entry.platform}/${entry.architecture}/${artifact.kind}`,
             );
           }
+          const [{ asset, authority }] = retainedMatches;
           return {
             ...artifact,
-            url: `${releaseBaseUrl(releaseTag)}/${encodeURIComponent(matches[0].name)}`,
+            url: `${releaseBaseUrl(releaseTag)}/${encodeURIComponent(asset.name)}`,
+            size: asset.size,
+            digest: asset.digest,
+            signature: `buildchain-retained:${authority.evidence || 'artifact-evidence.json'}#${encodeURIComponent(authority.name)}`,
           };
         }),
       },
     })),
+  };
+}
+
+export function bindPublicationPlatformEvidence({
+  admission,
+  releasePassport,
+}) {
+  const retainedManifests = Array.isArray(
+    releasePassport?.platformArtifactManifests,
+  )
+    ? releasePassport.platformArtifactManifests
+    : [];
+  return {
+    ...admission,
+    manifests: admission.manifests.map((entry) => {
+      const platform = `${
+        entry.platform === 'darwin'
+          ? 'macos'
+          : entry.platform === 'win32'
+            ? 'windows'
+            : entry.platform
+      }-${entry.architecture}`;
+      const authorities = retainedManifests.filter(
+        (authority) =>
+          authority?.platform === platform &&
+          /^[a-f0-9]{64}$/u.test(authority?.sha256 || ''),
+      );
+      if (authorities.length !== 1) {
+        throw new Error(
+          `release passport must retain one platform artifact manifest: ${platform}`,
+        );
+      }
+      const evidence = `buildchain-retained:buildchain.release.json#platformArtifactManifests/${platform}/${authorities[0].sha256}`;
+      return {
+        ...entry,
+        manifest: {
+          ...entry.manifest,
+          qualificationEvidenceRef: evidence,
+          artifacts: entry.manifest.artifacts.map((artifact) => ({
+            ...artifact,
+            signature: String(artifact.signature || '').startsWith(
+              'unqualified-local-build',
+            )
+              ? `${evidence}#${artifact.kind}`
+              : artifact.signature,
+          })),
+        },
+      };
+    }),
   };
 }
 
@@ -586,6 +691,7 @@ export function prepareAlphaPublication({
   trustDocument,
   outputDir,
   releaseAssets = null,
+  releasePassport = null,
   previousChannelIndex = null,
   now = new Date(),
 }) {
@@ -615,11 +721,18 @@ export function prepareAlphaPublication({
         admission: manifestSet,
         releaseAssets,
         releaseTag: `v${version}`,
+        releasePassport,
       })
     : manifestSet;
+  const retainedAdmission = releasePassport
+    ? bindPublicationPlatformEvidence({
+        admission: releaseBoundAdmission,
+        releasePassport,
+      })
+    : releaseBoundAdmission;
   const publicAdmission = {
-    ...releaseBoundAdmission,
-    manifests: releaseBoundAdmission.manifests.map((entry) => ({
+    ...retainedAdmission,
+    manifests: retainedAdmission.manifests.map((entry) => ({
       ...entry,
       manifest: bindProductReleaseCut(entry.manifest, {
         parentReleaseCutRoots: [],
@@ -1077,17 +1190,20 @@ async function main() {
   const temporaryRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-alpha-publication-'),
   );
+  const releasePassport = readJson(
+    environment.releasePassportPath,
+    'final release passport',
+  );
   const prepared = prepareAlphaPublication({
     ...environment,
     sourceSha: environment.candidateSourceSha,
     candidatePassportPath,
     trustDocument,
     releaseAssets,
+    releasePassport,
     previousChannelIndex: previous?.index || null,
     outputDir: path.join(temporaryRoot, 'prepared'),
-    now: publicationTimestamp(
-      readJson(environment.releasePassportPath, 'final release passport'),
-    ),
+    now: publicationTimestamp(releasePassport),
   });
   ensureLauncherTag(environment);
   const packageMetadata = readJson(
