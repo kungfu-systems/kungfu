@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6312,
+  "generation": 6313,
   "fencingCounter": 642,
   "policy": {
     "agingSeconds": 900,
@@ -66,12 +66,15 @@
     "sourceWorkflowRunId": 32676681484,
     "deliveryClass": "native-proof-required",
     "generation": 642,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:8a1e651322b8ea321cc618acf975239e950550328f0f68320cecee73494fbcbe",
     "issuedAt": "2026-08-24T01:35:18.306Z",
     "expiresAt": "2026-08-24T03:50:04.110Z",
     "fencingToken": "sha256:86da8d1347438d5bab6335d3100f2b8161feace809aea36dd8312ad03ebeb5d0",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:9c60209a249b8be0e27975393769315d6cce905956407e4aeace6e10289eda10",
+    "nativeProofReuseRoot": "sha256:f612b132b20e083bd82eb93bc2a05627fe339cd4d153f04e413de845435136e0",
+    "qualifiedAt": "2026-08-24T02:20:09.723Z"
   },
   "candidates": [
     {
@@ -45221,10 +45224,10 @@
       "sourceWorkflowRunId": 32676681484,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-24T01:11:46.430Z",
-      "updatedAt": "2026-08-24T02:20:04.110Z",
+      "updatedAt": "2026-08-24T02:20:09.723Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json",
@@ -45263,6 +45266,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-24T02:20:04.110Z",
-  "stateRoot": "sha256:08d5a5387907a9b62b397144879c5e97a98fcbcf9563c1a09f20fe87c6ed75be"
+  "updatedAt": "2026-08-24T02:20:09.723Z",
+  "stateRoot": "sha256:82b9b5383d618134a4a1f22888ccfa651e7c4048ccd38bfcea775a037f78ac56"
 }
