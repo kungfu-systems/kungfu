@@ -337,7 +337,7 @@
       "current": {
         "physicalLines": 1910,
         "responsibilities": 66,
-        "functionRisk": { "functions": 70, "total": 847, "maximum": 57 }
+        "functionRisk": { "functions": 70, "total": 814, "maximum": 57 }
       },
       "ownerFiles": [
         "framework/core/src/python/kungfu/cli/commands/assignment_review/__init__.py"
