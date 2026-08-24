@@ -377,8 +377,9 @@ jobs:
         .buildchain/kfd/kfd-1/documentation-pack.witness.json
       release-passport-kfd-2-claim-jsons: |
         .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
-        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
         .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+        .buildchain/kfd/kfd-2/claims/agent-work-state-contract.json
+        .buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json
       release-passport-kfd-3-prebuild-witness-jsons: |
         .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
       release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
@@ -481,8 +482,9 @@ jobs:
         .buildchain/kfd/kfd-1/documentation-pack.witness.json
       release-passport-kfd-2-claim-jsons: |
         .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
-        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
         .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+        .buildchain/kfd/kfd-2/claims/agent-work-state-contract.json
+        .buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json
       release-passport-kfd-3-prebuild-witness-jsons: |
         .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
       release-passport-kfd-3-artifact-verify-command: node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --write --json >/dev/null && node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --artifact-witness --json

@@ -25,3 +25,32 @@ test('release verification binds KFD-2 claims to the canonical prebuild witness'
   assert.match(verify, /KFD-2 release claims check requires source\.sourceSha/);
   assert.equal(releaseClaims.release.sourceSha, witness.source.sourceSha);
 });
+
+test('release workflows publish the complete canonical KFD-2 claim set', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/release-new-version.yml'),
+    'utf8',
+  );
+  const releaseClaims = readJson('.buildchain/kfd/kfd-2/release-claims.json');
+  const expectedPaths = releaseClaims.claims
+    .map(({ id }) => `.buildchain/kfd/kfd-2/claims/${id}.json`)
+    .sort();
+  const claimBlocks = [
+    ...workflow.matchAll(
+      /release-passport-kfd-2-claim-jsons: \|\n((?:\s+\.buildchain\/kfd\/kfd-2\/claims\/[^\n]+\.json\n?)+)/g,
+    ),
+  ];
+
+  assert.equal(claimBlocks.length, 2);
+  for (const [, block] of claimBlocks) {
+    const actualPaths = block
+      .trim()
+      .split('\n')
+      .map((entry) => entry.trim())
+      .sort();
+    assert.deepEqual(actualPaths, expectedPaths);
+    for (const relativePath of actualPaths) {
+      assert.equal(fs.existsSync(path.join(ROOT, relativePath)), true);
+    }
+  }
+});
