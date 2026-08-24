@@ -575,6 +575,29 @@ function metricsFor(source, family) {
   };
 }
 
+function pythonFunctionEnd(lines, starts, stripped, index, match, multiline) {
+  const indent = match[1].replaceAll('\t', '    ').length;
+  const signatureOpen = starts[index] + lines[index].indexOf('(', match.index);
+  const signatureClose = matchingBrace(stripped, signatureOpen, '(', ')');
+  const signatureTail = stripped.slice(signatureClose);
+  let end = multiline
+    ? lineAt(
+        starts,
+        signatureClose + Math.max(0, signatureTail.search(/:\s*(?:\n|$)/u)),
+      )
+    : index + 1;
+  const boundary = new RegExp(
+    `^ {0,${indent}}${multiline ? '\\S' : '[^\\s@#]'}`,
+    'u',
+  );
+  while (
+    end < lines.length &&
+    !boundary.test(lines[end].replaceAll('\t', '    '))
+  )
+    end += 1;
+  return end;
+}
+
 function pythonFunctions(source, stripped, options = {}) {
   const lines = stripped.split('\n');
   const original = source.split('\n');
@@ -585,31 +608,15 @@ function pythonFunctions(source, stripped, options = {}) {
       lines[index],
     );
     if (!match) continue;
-    const indent = match[1].replaceAll('\t', '    ').length;
     const multiline = options.extractorAlgorithm === 'python-multiline-v2';
-    const signatureOpen =
-      starts[index] + lines[index].indexOf('(', match.index);
-    const signatureClose = matchingBrace(stripped, signatureOpen, '(', ')');
-    const signatureTail = stripped.slice(signatureClose);
-    let end = multiline
-      ? lineAt(
-          starts,
-          signatureClose + Math.max(0, signatureTail.search(/:\s*(?:\n|$)/u)),
-        )
-      : index + 1;
-    while (end < lines.length) {
-      if (!lines[end].trim()) {
-        end += 1;
-        continue;
-      }
-      const nextIndent = (lines[end].match(/^\s*/u)?.[0] || '').replaceAll(
-        '\t',
-        '    ',
-      ).length;
-      if (nextIndent <= indent && (multiline || !/^\s*[@#]/u.test(lines[end])))
-        break;
-      end += 1;
-    }
+    const end = pythonFunctionEnd(
+      lines,
+      starts,
+      stripped,
+      index,
+      match,
+      multiline,
+    );
     const selected = lines.slice(index, end);
     results.push({
       symbol: match[2],
