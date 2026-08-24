@@ -141,6 +141,24 @@ def _find_values(value: Any, key: str) -> list[Any]:
     return found
 
 
+def _bind_command_lease(
+    arguments: dict[str, Any], command: Mapping[str, Any], operation: str
+) -> None:
+    lease = command.get("lease")
+    if not isinstance(lease, Mapping):
+        return
+    if str(command.get("type") or "") not in _LEASE_COMMANDS:
+        return
+    if operation == "claim-assignment":
+        arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
+    if operation == "advance-assignment":
+        return
+    arguments.setdefault("leaseId", lease.get("leaseId"))
+    attempt = command.get("attempt")
+    if isinstance(attempt, Mapping):
+        arguments.setdefault("attemptId", attempt.get("attemptId"))
+
+
 class LocalRuntimeError(RuntimeError):
     """Stable public Runtime error."""
 
@@ -488,44 +506,12 @@ class WorkControlAuthority:
         claims = status.get("execution_claims") or status.get("executionClaims") or []
         if not claims:
             return None
-        active_lease = status.get("active_lease") or status.get("activeLease")
-        if isinstance(active_lease, Mapping):
-            active_attempt_id = str(
-                active_lease.get("attempt_id") or active_lease.get("attemptId") or ""
-            )
-            active_claim_id = str(
-                active_lease.get("claim_id") or active_lease.get("claimId") or ""
-            )
-            matches = [
-                dict(candidate)
-                for candidate in claims
-                if str(candidate.get("attempt_id") or candidate.get("attemptId") or "")
-                == active_attempt_id
-                and (
-                    not active_claim_id
-                    or str(candidate.get("claim_id") or candidate.get("claimId") or "")
-                    == active_claim_id
-                )
-            ]
-            if len(matches) != 1:
-                raise LocalRuntimeError(
-                    "ambiguous-identity",
-                    "Active Work lease does not bind exactly one execution Attempt",
-                )
-            claim = matches[0]
-        else:
-            claim = dict(claims[0])
+        claim = dict(claims[-1])
         phase = str(status.get("phase") or "claimed")
         state = phase if phase in {"claimed", "executing", "settled"} else "claimed"
         return {
-            "attemptId": str(
-                claim.get("attempt_id")
-                or claim.get("attemptId")
-                or claim.get("claim_id")
-                or claim.get("claimId")
-                or ""
-            ),
-            "claimId": str(claim.get("claim_id") or claim.get("claimId") or ""),
+            "attemptId": str(claim.get("attempt_id") or claim.get("claim_id") or ""),
+            "claimId": str(claim.get("claim_id") or ""),
             "state": state,
         }
 
@@ -568,18 +554,7 @@ class WorkControlAuthority:
             raise LocalRuntimeError(
                 "malformed-identity", "Runtime Assignment routing identity drifted"
             )
-        lease = command.get("lease")
-        if (
-            isinstance(lease, Mapping)
-            and str(command.get("type") or "") in _LEASE_COMMANDS
-        ):
-            if operation == "claim-assignment":
-                arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
-            if operation != "advance-assignment":
-                arguments.setdefault("leaseId", lease.get("leaseId"))
-                attempt = command.get("attempt")
-                if isinstance(attempt, Mapping):
-                    arguments.setdefault("attemptId", attempt.get("attemptId"))
+        _bind_command_lease(arguments, command, operation)
         try:
             receipt = self._invoke(operation, arguments, write=True)
         except LocalRuntimeError:

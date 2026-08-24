@@ -196,9 +196,6 @@ def _work_semantics_action(
 def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
     work_control = domain.work_control
 
-    if operation.startswith("work-"):
-        return _work_semantics_action(domain, operation, runtime_dir, values)
-
     if operation == "create-initiative":
         _only(
             values,
@@ -569,7 +566,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         )
         affected = [receipt["initiative_subject"]]
     else:
-        raise ValueError(f"unsupported Work Control action: {operation}")
+        return _work_semantics_action(domain, operation, runtime_dir, values)
     return {
         "coreReceipt": receipt,
         "affected": {

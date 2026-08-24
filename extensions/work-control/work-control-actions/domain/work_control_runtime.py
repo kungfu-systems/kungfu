@@ -1689,7 +1689,6 @@ def assignment_orchestration_status(
     assignment_id: str,
     storage_source_id: str = "kungfu",
     now: str = "",
-    include_work_semantics: bool = True,
 ) -> dict[str, Any]:
     """Fold append-only orchestration facts into one deterministic Assignment phase."""
 
@@ -1726,6 +1725,15 @@ def assignment_orchestration_status(
             > instant
         )
     ]
+    active_lease = (
+        max(active_leases, key=lambda row: str(row["lease_expires_at"]))
+        if active_leases
+        else None
+    )
+    active_claim_id = str((active_lease or {}).get("claim_id") or "")
+    execution_claims.sort(
+        key=lambda row: str(row.get("claim_id") or "") == active_claim_id
+    )
     phase = "admitted"
     if execution_claims:
         phase = "claimed"
@@ -1743,11 +1751,7 @@ def assignment_orchestration_status(
         "assignment_subject": assignment_subject,
         "assignment": assignment["payload"]["record"],
         "phase": phase,
-        "active_lease": (
-            max(active_leases, key=lambda row: str(row["lease_expires_at"]))
-            if active_leases
-            else None
-        ),
+        "active_lease": active_lease,
         "execution_claims": execution_claims,
         "phase_transitions": transitions,
         "completion_claim_count": len(completion_claims),
@@ -1758,27 +1762,26 @@ def assignment_orchestration_status(
         "continuation_decisions": decisions,
         "query_proof_root": state["query_proof_root"],
     }
-    if include_work_semantics:
-        from . import work_semantics
+    from . import work_semantics
 
-        semantic_records = [
-            row.get("payload", {}).get("record", {})
-            for row in linked
-            if row.get("payload", {}).get("record", {}).get("record_type")
-            in work_semantics.RECORD_TYPES
-        ]
-        semantic_records.sort(
-            key=lambda row: (
-                int(row.get("recorded_at_system_time") or 0),
-                str(row.get("record_root") or ""),
-            )
+    semantic_records = [
+        row.get("payload", {}).get("record", {})
+        for row in linked
+        if row.get("payload", {}).get("record", {}).get("record_type")
+        in work_semantics.RECORD_TYPES
+    ]
+    semantic_records.sort(
+        key=lambda row: (
+            int(row.get("recorded_at_system_time") or 0),
+            str(row.get("record_root") or ""),
         )
-        result["work_semantics"] = work_semantics.project(
-            semantic_records,
-            phase=phase,
-            active_lease=result["active_lease"],
-            query_proof_root=state["query_proof_root"],
-        )
+    )
+    result["work_semantics"] = work_semantics.project(
+        semantic_records,
+        phase=phase,
+        active_lease=result["active_lease"],
+        query_proof_root=state["query_proof_root"],
+    )
     return result
 
 

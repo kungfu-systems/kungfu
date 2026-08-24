@@ -232,20 +232,8 @@ def status(
         initiative_id=initiative_id,
         assignment_id=assignment_id,
         storage_source_id=storage_source_id,
-        include_work_semantics=False,
     )
-    _, _, records = _linked_records(
-        runtime_dir,
-        initiative_id=initiative_id,
-        assignment_id=assignment_id,
-        storage_source_id=storage_source_id,
-    )
-    return project(
-        records,
-        phase=str(lifecycle["phase"]),
-        active_lease=lifecycle.get("active_lease"),
-        query_proof_root=str(lifecycle["query_proof_root"]),
-    )
+    return dict(lifecycle["work_semantics"])
 
 
 def _execution_context(

@@ -445,18 +445,6 @@ class LocalAssignmentRuntimeApplication:
             )
         return _copy_json(lifecycle)
 
-    def work_semantics_status(
-        self, initiative_id: str, assignment_id: str
-    ) -> dict[str, Any]:
-        lifecycle = self.status(initiative_id, assignment_id)
-        semantics = lifecycle.get("work_semantics")
-        if not isinstance(semantics, Mapping):
-            raise LocalRuntimeError(
-                "backend-unavailable",
-                "Assignment Runtime snapshot omitted the Work semantics projection",
-            )
-        return _copy_json(semantics)
-
     def recovery_plan(self) -> dict[str, Any]:
         with self._runtime() as runtime:
             client = EmbeddedAssignmentRuntimeClient(

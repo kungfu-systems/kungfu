@@ -182,11 +182,13 @@ def _ensure_profile(runtime_dir, authorized_by):
     elif state.get("profile_suite_root") != desired_root:
         actions = ["upgrade", "qualify", "activate"]
     else:
-        actions = ["qualify"] * int(not state.get("qualified")) + ["activate"] * int(
-            not state.get("activated")
-        )
+        actions = []
+        if not state.get("qualified"):
+            actions.append("qualify")
+        if not state.get("activated"):
+            actions.append("activate")
     for action in actions:
-        values = {"activate": {"granted_permissions": ["storage"]}}.get(action, {})
+        values = {"granted_permissions": ["storage"]} if action == "activate" else {}
         plan = profile_sdk.lifecycle_plan(runtime_dir, action, source, **values)
         answer = profile_sdk.answer_decision(
             plan["decisionCard"], "approve", authorized_by
@@ -194,12 +196,7 @@ def _ensure_profile(runtime_dir, authorized_by):
         receipts.append(
             profile_sdk.authorized_lifecycle_apply(runtime_dir, plan, answer)
         )
-    domain = profile_sdk.load_member_python_package(
-        source, "work-control-actions", "domain"
-    )
-    contract = domain.work_control.contract_materialization_plan(
-        str(runtime_dir), str(source)
-    )
+    contract = profile_composition.contract_materialization_plan(source, runtime_dir)
     if contract["operations"]:
         answer = profile_sdk.answer_decision(
             contract["decisionCard"], "approve", authorized_by
@@ -256,18 +253,13 @@ def _prepare_resume_profile(runtime_dir, actor):
 
 
 def _profile_read(runtime_dir, operation, values):
-    application = LocalAssignmentRuntimeApplication(
+    if operation != "assignment-status":
+        raise ValueError(f"unsupported Assignment Runtime read: {operation}")
+    return LocalAssignmentRuntimeApplication(
         runtime_dir,
         client_id="kungfu.work.cli",
         kind="cli",
-    )
-    method_name = {
-        "assignment-status": "status",
-        "work-semantics-status": "work_semantics_status",
-    }[operation]
-    return getattr(application, method_name)(
-        values.get("initiativeId"), values.get("assignmentId")
-    )
+    ).status(values.get("initiativeId"), values.get("assignmentId"))
 
 
 def _profile_action(runtime_dir, intent_id, values, authorized_by):
@@ -1764,11 +1756,6 @@ def _json_action(name, intent_id):
 claim_completion = _json_action("claim-completion", "claim-completion")
 review = _json_action("review", "review-completion")
 decide = _json_action("decide", "decide-continuation")
-record_input = _json_action("record-input", "work-input-snapshot")
-record_run = _json_action("record-run", "work-managed-run")
-authorize_effect = _json_action("authorize-effect", "work-effect-authorize")
-record_effect_attempt = _json_action("record-effect-attempt", "work-effect-attempt")
-record_effect_outcome = _json_action("record-effect-outcome", "work-effect-outcome")
 
 
 @assignment.command(
