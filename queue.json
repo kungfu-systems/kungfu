@@ -3,15 +3,61 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6462,
-  "fencingCounter": 647,
+  "generation": 6463,
+  "fencingCounter": 648,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:6c9ce06a1164f8898fa12984ede7173713bcd2f730848cd864cd95f2581f9303",
+    "pullRequestNumber": 3407,
+    "sourceHead": "b763f49beaeb724fffde5044a2d691c399e08cee",
+    "assignmentRoot": "sha256:8aca7b3386c600c60485ef1420563a2936d981fd65bed6c3bcbb6e043dbbcb4f",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:98e943954f92bc530df3d4c521d741d0e07d840189142236d2a2cb9b9aeb990d",
+    "sourcePatchRoot": "sha256:2a70a4136573c650edceea3e0fade01753c72ce7c06f365e374aa17261e6b890",
+    "sourceProofRoot": "sha256:a96825d6ef48acfa9030591f9bb5cda207c51380139de2cac1619c796f72f5b6",
+    "planRoot": "sha256:f4001545e503b0fc1c072498ec55310b2e1992ab4ccd684cb22c4c5b75e153c3",
+    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+    "dependencyRoot": "sha256:3ed893a2cd5ba7f5d5030b77fa4b3cffc56df63a48d2bfecfc9bc4119f3d5134",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+    "affectedPaths": [
+      ".buildchain/kfd/kfd-2/release-claims.json",
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      ".buildchain/kfd/support-matrix.json",
+      "developer/sdk/kfd/kfd-2/release-claims.json",
+      "developer/sdk/kfd/support-matrix.json",
+      "docs/adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md",
+      "docs/adr/KF-ADR-019fb2de-4a59-7bf4-8231-b32b62aa7e9b.md",
+      "framework/gui/src/agent-work-lab.test.ts",
+      "framework/gui/src/product-search.test.ts",
+      "framework/gui/src/renderer/src/main.tsx",
+      "framework/gui/src/renderer/src/product-navigation/index.tsx",
+      "framework/maintainability/source-analysis-kernel.mjs",
+      "framework/tui/src/projects-view.test.ts",
+      "framework/tui/src/starter-project-view.test.ts",
+      "framework/tui/src/starter-project-view/index.tsx",
+      "framework/tui/src/work-window.test.ts",
+      "framework/tui/src/work-window/index.tsx",
+      "scripts/code-complexity-budget.test.mjs"
+    ],
+    "sourceWorkflowRunId": 32699291435,
+    "deliveryClass": "non-native-fast",
+    "generation": 648,
+    "phase": "provisional",
+    "expectedOldStateRoot": "sha256:70c8405e77a6c919c3a5fc4cf4cf98be521ef3cd10a30f7339ab7aa21f6a2fbc",
+    "issuedAt": "2026-08-24T07:03:31.664Z",
+    "expiresAt": "2026-08-24T08:33:31.664Z",
+    "fencingToken": "sha256:8d120dcc78b533fd7dc142c04afd363441eca07b46ad3c336fc42bb63e8c3cc3",
+    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -45526,10 +45572,10 @@
       "sourceWorkflowRunId": 32699291435,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-24T07:03:25.500Z",
-      "updatedAt": "2026-08-24T07:03:25.500Z",
+      "updatedAt": "2026-08-24T07:03:31.664Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
@@ -45553,6 +45599,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-24T07:03:25.500Z",
-  "stateRoot": "sha256:70c8405e77a6c919c3a5fc4cf4cf98be521ef3cd10a30f7339ab7aa21f6a2fbc"
+  "updatedAt": "2026-08-24T07:03:31.664Z",
+  "stateRoot": "sha256:41dbfc33784198d7919eac9bddf00d10568af09a88247c36b71227c675a2f672"
 }
