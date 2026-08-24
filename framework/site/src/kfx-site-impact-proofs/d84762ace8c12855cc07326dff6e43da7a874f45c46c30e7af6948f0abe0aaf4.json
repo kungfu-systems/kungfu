@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
-  "baseRevision": "ac6b40d3c723565d5daf33efd889380f06e8c81a",
-  "changeRoot": "sha256:447c251cbf1a9ca465f57a53c21ca1ca37711643462349dda42777266ecd6163",
+  "baseRevision": "ea26e274b37f8abf0f214aece9a895584cb1636a",
+  "changeRoot": "sha256:84f12e4984d2c179a89fc89fe866602dd25a03335cf594a02531b3424e7e7e21",
   "changes": [
     {
       "baseContentRoot": "sha256:57f2836190465ffa85abd59415d4da86205d3eac34f3cf51a0e25cc11cc8733e",
@@ -17,31 +17,31 @@
     },
     {
       "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
-      "contentRoot": "sha256:c311a88070c1dda5da528765da42518791dd4b9f7657b80218f134e563b911b0",
+      "contentRoot": "sha256:ea7c6becba700e141fd9e2f25f757ffb4c88ab0de08e3b00dcf66d7513822ab7",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:f2323967a3c245d429b70fb3bf157043da8cc0809512c5aa86dec08383debf1e",
-      "contentRoot": "sha256:4c257bb399dd256bc92c5683776199eeaee1e185e62c76a648cbef9e243413ab",
+      "baseContentRoot": "sha256:4287e4d0bbded3c3ba17d62e837424419875be71d46d4304af8479a2aee4d0a3",
+      "contentRoot": "sha256:80ad58a21646b91ccc58de6a6c3944cdff63e942b548594ce76359261f158b1e",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:8e86908d906dcb0fa00c29f299f2160725597380bba08e04ec395ad13307c8d8",
-      "contentRoot": "sha256:4afada520d6147b3ca6e5ebfaac08f954458bf5e2b8863bedaa63edc6b10813c",
+      "contentRoot": "sha256:83f1f382bac76b16755a217f96a25378acaa3487538143a2628c535deda708ce",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:447afc85cf4259610c550fe567d86a738361af8c86e24bf3920aa1264bd2888f",
-      "contentRoot": "sha256:1f9e9b68f1e4c556005ff31ac5064c557031fc8d780a3e8937f4fc7f240f1455",
+      "baseContentRoot": "sha256:665b4b5cb9d1e632e7b0cff40f2de076816c5e77b00a75c9d37538cb1a8c2788",
+      "contentRoot": "sha256:397d20e17b25c1ad3314a4a838d5436c0378c97e99204c99e8fdaa40bdef04d1",
       "path": ".xinfa/portable-atlas-classification.json.gz",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:916cc1c9e53ac6f486a8f63370f9102690cd668d6e2dbc0c79ac169ffba03654",
-      "contentRoot": "sha256:283e25ada012dc83a4fcf5b3ac62fae2c16626dd2a2ab74cf7cd9539cd865e60",
+      "baseContentRoot": "sha256:6322c025fd9f102498d014ea2831be17381bc4409c3ab8ad9fb8d2451aca8416",
+      "contentRoot": "sha256:39e0c8d3fbc954796a56fed8717a94ec24fbc04cc9a565f672cdd9a2f25cf6be",
       "path": ".xinfa/product-atlas-bundle.json",
       "status": "modified"
     },
@@ -71,13 +71,13 @@
     },
     {
       "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
-      "contentRoot": "sha256:c311a88070c1dda5da528765da42518791dd4b9f7657b80218f134e563b911b0",
+      "contentRoot": "sha256:ea7c6becba700e141fd9e2f25f757ffb4c88ab0de08e3b00dcf66d7513822ab7",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:bb50b6d4052d92442034ce71e2a0e46b922c91f8ba34261276014880311392a3",
-      "contentRoot": "sha256:ff38740c62204b733b45c76c10576afaa1ad1fb48cde219b15300da46fff8035",
+      "contentRoot": "sha256:0d478c782d34ad2f089732a17bc9c27cdb4512d5ac1d028ab65ac4554fc3c352",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -140,11 +140,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "Internal Python complexity refactor and explicit provenance owner mapping preserve public contracts, diagnostics, behavior, and all documented reader journeys.",
+  "rationale": "Internal Work Control and provenance complexity refactor preserves KFX site bundle inputs and public behavior.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:b392b112925f919549b85186cbb1ae1c6b3e09166836b061601079a550742215"
+  "proofRoot": "sha256:d84762ace8c12855cc07326dff6e43da7a874f45c46c30e7af6948f0abe0aaf4"
 }
