@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "07da2875cdfc6a233aaab0dc20998052b13724c9",
-  "changeRoot": "sha256:d7c243c5605c09c43ee6205baa3ed3ffad5f5f5e8a6a97b2d713f4e1b3e821d7",
+  "changeRoot": "sha256:b57dd08ad26000166ebfa7e5f0f13eff1df6809fb6e5d22b64e96e3ebd840fb9",
   "changes": [
     {
       "baseContentRoot": "sha256:57f2836190465ffa85abd59415d4da86205d3eac34f3cf51a0e25cc11cc8733e",
@@ -29,7 +29,7 @@
     },
     {
       "baseContentRoot": "sha256:8e86908d906dcb0fa00c29f299f2160725597380bba08e04ec395ad13307c8d8",
-      "contentRoot": "sha256:346b71c3268fe999a45f299c63b47facaeeeae32e6fcdbbed55bcbabc4950225",
+      "contentRoot": "sha256:519a6e4fd174bac1d33ecb0568a9566ccb38f014912085879738f04c53be5631",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -77,7 +77,7 @@
     },
     {
       "baseContentRoot": "sha256:bb50b6d4052d92442034ce71e2a0e46b922c91f8ba34261276014880311392a3",
-      "contentRoot": "sha256:cd3308bcf8e0e5ef668206d45de624148c49c9f46dfc2e456796383041da1cf1",
+      "contentRoot": "sha256:a4924302023e50424208c66411f8223e663f517dedd5da39b5a2fedb094283c3",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -164,5 +164,5 @@
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:9d064e3675d1432582088a40c82637c4795dcc086f2d5c5dab62a7eee89c836e"
+  "proofRoot": "sha256:7def691c21fb9abcbdc24af01df4b9359b55bbff3d59b1b45b3b3b1d47f3a2e0"
 }
