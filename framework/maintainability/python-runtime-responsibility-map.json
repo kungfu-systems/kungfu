@@ -1,0 +1,244 @@
+{
+  "schema": "kungfu.python-runtime-responsibility-map/v1",
+  "functionRiskAlgorithmVersion": "qualified-occurrence-v2",
+  "functionExtractorAlgorithmVersion": "python-multiline-v2",
+  "baselineRevision": "c5239f60d64751c8cd01acf72ddd4634612bcb97",
+  "owner": "core/package",
+  "measurement": {
+    "functionRisk": "framework/maintainability/source-analysis-kernel.mjs python-multiline-v2 plus function-risk.mjs qualified-occurrence-v2 analyzeTransition over the exact same-owner facade-plus-owner path set",
+    "physicalLines": "UTF-8 source splitlines over sourcePaths plus ownerFiles",
+    "responsibilities": "top-level classes/functions plus distinct kungfu imports over sourcePaths plus ownerFiles"
+  },
+  "lineageAudit": {
+    "predecessorBase": "c019142e10150ff472a509d319e24d17860be4b0",
+    "predecessorHead": "f475ab43ebdabcb879444e74921fbe67fed1a139",
+    "predecessorPullRequest": 3348,
+    "reviewedSuccessorBase": "b6469e38226de39ec920bedc7f35bcce03850bcc",
+    "reviewedSuccessorHead": "9b896a1d0114bebc8a07c0eb4ca401d7ed05e2d9",
+    "protectedDriftIntersection": [
+      ".xinfa/portable-atlas-classification.json.gz",
+      ".xinfa/product-atlas-bundle.json",
+      "framework/maintainability/function-risk.test.mjs",
+      "framework/maintainability/source-analysis-kernel.mjs"
+    ],
+    "businessPathIntersection": [],
+    "invariant": "Every replayed Runtime business source has the same exact-base blob across the protected baseline and reviewed predecessor lineage; overlapping analyzers are three-way composed on the latest protected implementation, while projections, admission, queue evidence, and seals are rebuilt rather than replayed."
+  },
+  "sourcePaths": [
+    "framework/core/src/python/kungfu/runtime_service.py",
+    "framework/core/src/python/kungfu/cli/commands/runtime.py"
+  ],
+  "ownerFiles": [
+    "framework/core/src/python/kungfu/runtime_processes.py"
+  ],
+  "baselineSources": [
+    {
+      "path": "framework/core/src/python/kungfu/runtime_service.py",
+      "sha256": "053e7347f8e3d30b9c9ed7f3eb41f6db4ff8f5e091e169b2ff14c24683a687c8",
+      "predecessorBaseSha256": "053e7347f8e3d30b9c9ed7f3eb41f6db4ff8f5e091e169b2ff14c24683a687c8"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "sha256": "de9652613403756466ca15d8658e2bcb4e390112fdd5e423a337d869fee925ec",
+      "predecessorBaseSha256": "de9652613403756466ca15d8658e2bcb4e390112fdd5e423a337d869fee925ec"
+    }
+  ],
+  "currentSources": [
+    {
+      "path": "framework/core/src/python/kungfu/runtime_service.py",
+      "sha256": "acd6f26c85c3629de8f904ccfa8dcb00ebb1a7b1d8a5a6a4a5e4382eae1e45e5"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/runtime_processes.py",
+      "sha256": "d1eafd4b9f83d2353b0e912d8f2fc80282d673268c21898cd76192d7d4e6a636"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "sha256": "de9652613403756466ca15d8658e2bcb4e390112fdd5e423a337d869fee925ec"
+    },
+    {
+      "path": "framework/core/tests/python/test_runtime_cli.py",
+      "sha256": "5874de5462a21abd3dd2b288352ef26cea820b3929fd22e6ed6e091d8e2a205c"
+    },
+    {
+      "path": "framework/core/tests/python/test_runtime_service.py",
+      "sha256": "0b16b3b8ee06e0ea90cd8964cbf43ad1b066ad314132036c92f51936ff13db58"
+    }
+  ],
+  "baseline": {
+    "physicalLines": 3023,
+    "responsibilities": 148,
+    "functionRisk": {
+      "functions": 157,
+      "baseRisk": 2193,
+      "changeRisk": 2193,
+      "maximum": 265
+    }
+  },
+  "current": {
+    "physicalLines": 3029,
+    "responsibilities": 147,
+    "functionRisk": {
+      "functions": 155,
+      "baseRisk": 2179,
+      "changeRisk": 2191,
+      "maximum": 265
+    }
+  },
+  "transitionContribution": {
+    "linked": {
+      "functions": 155,
+      "previousBaseRisk": 2184,
+      "currentBaseRisk": 2179,
+      "currentChangeRisk": 2191
+    },
+    "new": {
+      "functions": 0,
+      "currentBaseRisk": 0,
+      "currentChangeRisk": 0
+    },
+    "retired": {
+      "functions": 2,
+      "previousBaseRisk": 9,
+      "symbols": [
+        "_empty_routes",
+        "_supervisor_always_on"
+      ]
+    }
+  },
+  "processIdentityContinuity": [
+    "_terminate_process_if_matches",
+    "_terminate_process_tree_if_matches"
+  ],
+  "publicImports": [
+    "kungfu.runtime_service.RuntimeEngineRequest",
+    "kungfu.runtime_service.RuntimeEngineReceipt",
+    "kungfu.runtime_service.AssessmentExecutor",
+    "kungfu.runtime_service.CoordinatorProcess",
+    "kungfu.runtime_service.AdoptedCoordinatorProcess",
+    "kungfu.runtime_service.CoordinatorEngine",
+    "kungfu.runtime_service.Coordinator",
+    "kungfu.runtime_service.ProcessRuntimeHost",
+    "kungfu.runtime_service.run_coordinator",
+    "kungfu.runtime_service.status",
+    "kungfu.runtime_service.route_status",
+    "kungfu.runtime_service.run_supervisor",
+    "kungfu.runtime_service.ensure_coordinator",
+    "kungfu.runtime_service.stop_supervisor",
+    "kungfu.runtime_service.supervisor_status",
+    "kungfu.runtime_service.service_plan",
+    "kungfu.runtime_service.install_service",
+    "kungfu.runtime_service.uninstall_service",
+    "kungfu.runtime_service.service_status"
+  ],
+  "cliContract": {
+    "module": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+    "renderer": "_plain_status",
+    "exactOutputTests": [
+      "test_runtime_status_preserves_the_plain_line_contract",
+      "test_runtime_status_preserves_falsy_product_and_handle_fallbacks",
+      "test_runtime_status_preserves_error_line_and_trailing_newline_contract"
+    ],
+    "invariant": "Every Click command/group name, decorator, argument, option, default, and Python signature remains AST-identical to the exact baseline; exact plain output bytes, including empty and multiline actionable errors, are golden-tested."
+  },
+  "persistenceContract": {
+    "constants": [
+      "SCHEMA_STATUS",
+      "SCHEMA_ROUTES",
+      "SCHEMA_ASSESSMENT_SUBSCRIPTION",
+      "SCHEMA_COORDINATOR_CONTINUITY",
+      "LEGACY_SCHEMA_ROUTES",
+      "COORDINATOR_WIRE_NAMESPACE",
+      "COORDINATOR_WIRE_NAME",
+      "LEGACY_STATE_DIR_NAME"
+    ],
+    "pathFunctions": [
+      "state_dir",
+      "legacy_state_dir",
+      "supervisor_pid_path",
+      "coordinator_pid_path",
+      "legacy_coordinator_pid_path",
+      "state_path",
+      "coordinator_continuity_path",
+      "legacy_state_path",
+      "supervisor_state_path",
+      "routes_path",
+      "coordinator_log_path",
+      "assessment_subscription_path"
+    ],
+    "invariant": "Schema strings, wire identity, legacy directory name, and path construction remain AST-identical to the exact baseline."
+  },
+  "sideEffectOrder": [
+    "_json_write",
+    "allocate_coordinator_authority",
+    "ProcessRuntimeHost.run_foreground",
+    "ProcessRuntimeHost.spawn_coordinator",
+    "ProcessRuntimeHost.spawn_supervisor",
+    "ProcessRuntimeHost.activate_with_generation",
+    "ProcessRuntimeHost.drain",
+    "run_supervisor",
+    "ensure_coordinator",
+    "_wait_for_coordinator"
+  ],
+  "nativeInterface": [
+    "CoordinatorProcess",
+    "CoordinatorEngine",
+    "Coordinator",
+    "ProcessRuntimeHost"
+  ],
+  "facadeAliases": {
+    "_terminate_process_if_matches": "_runtime_processes._terminate_process_if_matches",
+    "_terminate_process_tree_if_matches": "_runtime_processes._terminate_process_tree_if_matches"
+  },
+  "serviceLocalDefinitions": [
+    "_terminate_and_reap_child"
+  ],
+  "ownedDefinitions": {
+    "moduleFunctions": [
+      "_terminate_process_if_matches",
+      "_terminate_process_tree_if_matches"
+    ]
+  },
+  "crossLanguageInterface": {
+    "invariant": "No C++, public C ABI, Node binding implementation, runtime protocol, or dependency file is changed by this responsibility split.",
+    "protectedSurfaces": [
+      "framework/core/src/libkungfu/",
+      "framework/core/src/libyijinjing/",
+      "framework/core/src/bindings/",
+      "framework/core/src/node/",
+      "framework/core/stubs/pykungfu/",
+      "pnpm-lock.yaml",
+      "package.json",
+      "framework/core/package.json",
+      "framework/core/pyproject.toml"
+    ]
+  },
+  "modificationSurface": {
+    "baselineProcessOwner": "framework/core/src/python/kungfu/runtime_service.py",
+    "baselineOwnerPhysicalLines": 2014,
+    "currentProcessOwner": "framework/core/src/python/kungfu/runtime_processes.py",
+    "currentOwnerPhysicalLines": 59,
+    "baselineOwnerKungfuImports": 13,
+    "currentOwnerKungfuImports": 0,
+    "baselineHotspot": {
+      "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "name": "_plain_status",
+      "baseRisk": 55
+    },
+    "currentHotspot": {
+      "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "name": "_plain_status",
+      "baseRisk": 55
+    },
+    "semanticAmplificationInvariant": "maintainability:amplification remains pass with zero blocking issues and introduces no authority, projection, compatibility-reader, platform branch, or duplicate policy surface."
+  },
+  "responsibility": "runtime_service retains routing, leases, persisted state, coordinator policy, and orchestration; runtime_processes solely owns portable PID identity fences and bounded process-tree termination/reaping; the CLI retains the exact Click surface and output bytes.",
+  "nonWrapperEvidence": [
+    "Two private PID-identity termination responsibilities move under their original symbols to one cohesive core/package owner while public CoordinatorProcess, the PID identity probes, and service child lifecycle keep their exact runtime_service identities; both moved functions retain renamed-file previousIds and no new function resets risk continuity.",
+    "runtime_processes substantively owns PID-reuse-fenced signalling, reverse descendant ordering, bounded wait/kill, and process-tree shutdown inside the original functions; service-local _terminate_and_reap_child retains its exact baseline body because it directly coordinates ProcessRuntimeHost and CoordinatorProcess child lifecycle. No function forwards back to runtime_service and no wrapper class or temporary helper remains.",
+    "The original _plain_status bodyRoot and baseRisk remain exact at 55; falsy product/handle and empty or multiline actionable error output bytes remain golden-tested.",
+    "The single-use _supervisor_always_on and _empty_routes responsibilities are absorbed into their sole decision owners with ordinary control flow; child presence still short-circuits environment and route access, each eligible idle check dynamically reads the environment, route scanning keeps insertion-order short-circuiting, and lock/read/write/JSON/PID ordering remains unchanged.",
+    "The moved PID-identity functions and service-local child lifecycle function preserve their exact baseline bodies, including NoSuchProcess-success versus other-error-failure behavior, with exact tests for both outcomes.",
+    "Under python-multiline-v2 and qualified-occurrence-v2, aggregate baseRisk falls 2193 to 2179, changeRisk falls 2193 to 2191, functions fall 157 to 155, and measured responsibilities falls 148 to 147 across the exact same-owner facade-plus-owner scope; maximum risk remains 265."
+  ]
+}
