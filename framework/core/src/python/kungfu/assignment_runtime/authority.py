@@ -277,6 +277,47 @@ def _interrupted_command_rejection(
     return diagnostic, details
 
 
+def _profile_sdk_runtime_error(
+    error: Exception,
+    *,
+    code: str,
+    operation: str,
+    write: bool,
+) -> LocalRuntimeError:
+    cause = error.__cause__
+    if (
+        write
+        and code == "member-adapter-invoke-failed"
+        and isinstance(cause, ValueError)
+    ):
+        return LocalRuntimeError(
+            "invalid-command",
+            str(cause),
+            details={"operation": operation},
+        )
+    if code in {
+        "member-resolution-failed",
+        "profile-member-ambiguous",
+        "profile-source-ambiguous",
+    }:
+        return LocalRuntimeError(
+            "ambiguous-identity",
+            "Work Control authority does not resolve exactly once",
+        )
+    return LocalRuntimeError(
+        "backend-unavailable",
+        "Work Control authority is unavailable",
+        diagnostics=[
+            {
+                "code": "work-control-unavailable",
+                "message": "The exact active Work Control Profile could not be invoked",
+                "severity": "error",
+                "recovery": ["diagnostics.get", "recovery.plan"],
+            }
+        ],
+    )
+
+
 class AssignmentAuthority(Protocol):
     """Private adapter boundary to the one native transition authority."""
 
@@ -323,37 +364,11 @@ class WorkControlAuthority:
             )
         except profile_sdk.ProfileSdkError as error:
             code = str(error.diagnosis.get("code") or "")
-            cause = error.__cause__
-            if (
-                write
-                and code == "member-adapter-invoke-failed"
-                and isinstance(cause, ValueError)
-            ):
-                raise LocalRuntimeError(
-                    "invalid-command",
-                    str(cause),
-                    details={"operation": operation},
-                ) from error
-            if code in {
-                "member-resolution-failed",
-                "profile-member-ambiguous",
-                "profile-source-ambiguous",
-            }:
-                raise LocalRuntimeError(
-                    "ambiguous-identity",
-                    "Work Control authority does not resolve exactly once",
-                ) from error
-            raise LocalRuntimeError(
-                "backend-unavailable",
-                "Work Control authority is unavailable",
-                diagnostics=[
-                    {
-                        "code": "work-control-unavailable",
-                        "message": "The exact active Work Control Profile could not be invoked",
-                        "severity": "error",
-                        "recovery": ["diagnostics.get", "recovery.plan"],
-                    }
-                ],
+            raise _profile_sdk_runtime_error(
+                error,
+                code=code,
+                operation=operation,
+                write=write,
             ) from error
 
     @staticmethod

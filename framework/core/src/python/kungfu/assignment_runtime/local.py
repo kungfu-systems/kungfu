@@ -341,18 +341,7 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             return
         before = dict(pending.get("beforeRevision") or {})
         if revision.get("root") == before.get("root"):
-            try:
-                authority_result = self.authority.apply(dict(pending["command"]))
-            except LocalRuntimeError as error:
-                if error.code != "invalid-command":
-                    raise
-                self._reject_pending_before_authority(pending, error)
-                return
-            pending = {**dict(pending), "authorityResult": authority_result}
-            self._state["pending"] = pending
-            self._save_state()
-            snapshot, revision = self._observe_snapshot(record_event=False)
-            self._finalize_pending(pending, snapshot, revision, recovered=True)
+            self._resume_pending_before_authority(pending)
             return
         diagnostic = {
             "code": "interrupted-write-ambiguous",
@@ -365,6 +354,20 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             diagnostics.append(diagnostic)
         self._state["diagnostics"] = diagnostics
         self._save_state()
+
+    def _resume_pending_before_authority(self, pending: Mapping[str, Any]) -> None:
+        try:
+            authority_result = self.authority.apply(dict(pending["command"]))
+        except LocalRuntimeError as error:
+            if error.code != "invalid-command":
+                raise
+            self._reject_pending_before_authority(pending, error)
+            return
+        pending = {**dict(pending), "authorityResult": authority_result}
+        self._state["pending"] = pending
+        self._save_state()
+        snapshot, revision = self._observe_snapshot(record_event=False)
+        self._finalize_pending(pending, snapshot, revision, recovered=True)
 
     def _reject_pending_before_authority(
         self, pending: Mapping[str, Any], error: LocalRuntimeError
