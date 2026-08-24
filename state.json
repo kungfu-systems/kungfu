@@ -54118,7 +54118,7 @@
     },
     "github_release": {
       "status": "complete",
-      "action": "created",
+      "action": "reused",
       "tag": "v4.0.0-alpha.3",
       "url": "https://github.com/kungfu-systems/kungfu/releases/tag/v4.0.0-alpha.3",
       "assetCount": 24
@@ -54126,5 +54126,5 @@
   },
   "resume_command": "",
   "created_at": "2026-08-24T03:43:04.880Z",
-  "updated_at": "2026-08-24T20:28:27.077Z"
+  "updated_at": "2026-08-24T20:29:12.911Z"
 }
