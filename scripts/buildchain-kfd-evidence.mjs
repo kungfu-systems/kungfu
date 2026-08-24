@@ -28,6 +28,7 @@ import {
   renderKfdJson,
   resolveGitBoundKfdEvidenceSourceSha,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
+import { syncKfdAdopterRelease } from '../framework/release/kfd-adopter-release.mjs';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   assertKfdEvidenceSourceBinding,
@@ -96,13 +97,9 @@ const KFD3_ARTIFACT_WITNESS_PATH = path.join(
   'collaboration-interface.artifact.json',
 );
 const KFD3_QUERY_PATH = path.join(KFD3_OUTPUT_DIR, 'capability-query.json');
-const KFD_SUPPORT_MATRIX_PATH = path.join(
-  BUILDCHAIN_DIR,
-  'kfd',
-  'support-matrix.json',
-);
-const KFD_PRODUCT_GATE_RUNTIME_DIR = path.join(
-  BUILDCHAIN_DIR,
+const buildchainPath = (...parts) => path.join(BUILDCHAIN_DIR, ...parts);
+const KFD_SUPPORT_MATRIX_PATH = buildchainPath('kfd', 'support-matrix.json');
+const KFD_PRODUCT_GATE_RUNTIME_DIR = buildchainPath(
   'runtime',
   'kfd-product-gates',
 );
@@ -117,11 +114,7 @@ const KFD_SUPPORT_PROJECTION_PATH = path.join(
   KFD_PRODUCT_GATE_RUNTIME_DIR,
   'kfd-support.json',
 );
-const SUMMARY_PATH = path.join(
-  BUILDCHAIN_DIR,
-  'kfd',
-  'buildchain-kfd-summary.json',
-);
+const SUMMARY_PATH = buildchainPath('kfd', 'buildchain-kfd-summary.json');
 const AGENT_REGISTRY_PATH = path.join(
   ROOT,
   'framework',
@@ -181,7 +174,7 @@ const CONTRACT_REGISTRY_PATH = path.join(
 const KFD2_REGISTRY_PATH = path.join(ROOT, BUILDCHAIN_KFD2_REGISTRY_PATH);
 const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
 const ARTIFACT_VERIFY_COMMAND =
-  'node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
+  'node scripts/buildchain-kfd-evidence.mjs --write --json >/dev/null && node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
 const STRICT_KFD3_MODE = 'strict-buildchain-managed-registry';
 function usage() {
   return `Usage:
@@ -210,6 +203,7 @@ Writes:
   .buildchain/kfd/buildchain-kfd-summary.json
   .buildchain/runtime/kfd-product-gates/kfd-{4,5,7}/gate.json
   .buildchain/runtime/kfd-product-gates/kfd-support.json
+  .buildchain/runtime/kfd-adopter/{manifest,gate}.json
 `;
 }
 function parseArgs(argv) {
@@ -1711,7 +1705,7 @@ function buildSummary({
         ),
         kfd3PrebuildWitnessJsons: [rel(KFD3_PREBUILD_WITNESS_PATH)],
         kfd3ArtifactVerifyCommand: ARTIFACT_VERIFY_COMMAND,
-        kfdSupportMatrixJson: rel(KFD_SUPPORT_MATRIX_PATH),
+        kfdAdopterManifestJson: '.buildchain/runtime/kfd-adopter/manifest.json',
         kfdProductGateJsons: KFD_PRODUCT_GATE_PATHS.map(rel),
       },
     },
@@ -1879,6 +1873,14 @@ async function runCheckOrWrite(options) {
     sourceSha,
     checkedAt,
   });
+  syncKfdAdopterRelease(
+    ROOT,
+    runtime,
+    sourceSha,
+    checkedAt,
+    productGates,
+    options.write,
+  );
   const summary = buildSummary({
     registry,
     upstreamAggregate,

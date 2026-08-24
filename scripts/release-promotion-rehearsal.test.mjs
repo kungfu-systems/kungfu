@@ -198,7 +198,7 @@ test('publication and recovery clear activation commands while preserving public
       job,
       name === 'recover'
         ? /release-passport-kfd-3-artifact-verify-command: node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --write --json >\/dev\/null && node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --artifact-witness --json/u
-        : /release-passport-kfd-3-artifact-verify-command: node scripts\/buildchain-kfd-evidence\.mjs --artifact-witness --json/u,
+        : /release-passport-kfd-3-artifact-verify-command: node scripts\/buildchain-kfd-evidence\.mjs --write --json >\/dev\/null && node scripts\/buildchain-kfd-evidence\.mjs --artifact-witness --json/u,
       name,
     );
     assert.match(

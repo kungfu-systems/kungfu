@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { resolveKfd10AdopterWitnessPath } from '../framework/release/kfd-adopter-release.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'kfd-support-matrix.mjs');
@@ -22,6 +23,63 @@ const KFD3_QUERY = path.join(
 );
 const BASE = JSON.parse(readFileSync(AUTHORITY, 'utf8'));
 const BASE_QUERY = JSON.parse(readFileSync(KFD3_QUERY, 'utf8'));
+
+test('binds the exact legacy KFD-10 evidence from sealed candidates', () => {
+  assert.equal(
+    resolveKfd10AdopterWitnessPath({
+      implementation: { status: 'partial' },
+      verification: {
+        status: 'non-conforming-evidence',
+        evidenceRoots: [
+          {
+            path: 'framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json',
+          },
+        ],
+      },
+    }),
+    'framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json',
+  );
+  assert.throws(
+    () =>
+      resolveKfd10AdopterWitnessPath({
+        implementation: { status: 'partial' },
+        verification: {
+          status: 'non-conforming-evidence',
+          evidenceRoots: [
+            {
+              path: 'framework/agent-work/evidence/kfd-7/other.json',
+            },
+          ],
+        },
+      }),
+    /KFD-10 legacy adopter witness declaration drifted/,
+  );
+});
+
+test('requires the exact KFD-10 witness when the candidate declares it', () => {
+  const path = 'framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json';
+  assert.equal(
+    resolveKfd10AdopterWitnessPath({
+      implementation: { status: 'implemented-specialized-witness' },
+      verification: {
+        status: 'non-conforming-evidence',
+        evidenceRoots: [{ path }],
+      },
+    }),
+    path,
+  );
+  assert.throws(
+    () =>
+      resolveKfd10AdopterWitnessPath({
+        implementation: { status: 'implemented-specialized-witness' },
+        verification: {
+          status: 'non-conforming-evidence',
+          evidenceRoots: [],
+        },
+      }),
+    /KFD-10 specialized adopter witness declaration drifted/,
+  );
+});
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));

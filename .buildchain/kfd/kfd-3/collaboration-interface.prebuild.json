@@ -32,7 +32,7 @@
     "digest": "sha256:d2bdbb324c94a5307dd157bc416033d08b41e838ad332f33ec6b6057d985e926"
   },
   "expectedArtifactVerification": {
-    "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
+    "command": "node scripts/buildchain-kfd-evidence.mjs --write --json >/dev/null && node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
   "collaborationInterfaceDigest": "sha256:475aad1369fbf800bb7f5fefe0a429b335ab43e3d29fb285cf4ddc3e29760d73",
   "collaborationInterface": {
