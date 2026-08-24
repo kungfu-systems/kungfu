@@ -32,6 +32,9 @@ ROLLBACK_CONTRACT = (
 
 CURRENT = "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404"
 HISTORICAL = "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490"
+ALPHA3_CANDIDATE = (
+    "sha256:cb12a8b2ac4a4752e1a5075d6e8a5b8ea48fb4ea7261f24a858363f9eecd1a25"
+)
 
 
 def _json(path):
@@ -328,6 +331,20 @@ def test_contract_selection_uses_active_admission_fact_and_buildchain_fact_paths
     assert len(report["receipt"]["buildchainFactRoots"]) == 3
     assert len(report["receipt"]["compatibilityPathReceiptRoots"]) == 3
 
+    alpha3_report = verify_contract_selection(
+        contract=_json(CONTRACT),
+        admission_facts=_json(ADMISSION_FACTS),
+        compatibility_facts=_json(COMPATIBILITY_FACTS),
+        current_contract_lock=_json(ALPHA_LOCK),
+        channel="alpha",
+        accepted_contract_digest=ALPHA3_CANDIDATE,
+        current_contract_digest=CURRENT,
+    )
+    assert alpha3_report["ok"], alpha3_report["receipt"]["reasonCodes"]
+    assert alpha3_report["receipt"]["pathKind"] == "composed"
+    assert len(alpha3_report["receipt"]["buildchainFactRoots"]) == 3
+    assert len(alpha3_report["receipt"]["compatibilityPathReceiptRoots"]) == 3
+
     drift = _case(HISTORICAL)
     historical = next(
         row
@@ -413,5 +430,5 @@ def test_fact_contract_is_mirrored_and_bound_to_protected_buildchain_evidence():
     assert contract["factAuthority"]["buildchainFacts"] == str(
         COMPATIBILITY_FACTS.relative_to(ROOT)
     )
-    assert len(facts["activeProofRoots"]) == len(facts["proofs"]) == 3
+    assert len(facts["activeProofRoots"]) == len(facts["proofs"]) == 4
     assert len(projection["selectedFactRoots"]) == 3
