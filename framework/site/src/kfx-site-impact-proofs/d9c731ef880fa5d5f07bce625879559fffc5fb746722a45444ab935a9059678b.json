@@ -1,0 +1,113 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "07da2875cdfc6a233aaab0dc20998052b13724c9",
+  "changeRoot": "sha256:16b527d600e857d30f734ad953ae86deb21f886151ed3382bfc758ddb540f368",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
+      "contentRoot": "sha256:6acb5ea9e55811bc8a4c026e748e886f9eec72bf7a480d7ca1b19937d564d246",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4287e4d0bbded3c3ba17d62e837424419875be71d46d4304af8479a2aee4d0a3",
+      "contentRoot": "sha256:d7af8646adef61a968396c4ec2e94f6559ada4e209855dcd476812d197842bea",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8e86908d906dcb0fa00c29f299f2160725597380bba08e04ec395ad13307c8d8",
+      "contentRoot": "sha256:5ca795f5f86133aada476c5e3f5f24d390b8143fa5fd47bbf89fa8f4875e27c6",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
+      "contentRoot": "sha256:6acb5ea9e55811bc8a4c026e748e886f9eec72bf7a480d7ca1b19937d564d246",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:bb50b6d4052d92442034ce71e2a0e46b922c91f8ba34261276014880311392a3",
+      "contentRoot": "sha256:5ca795f5f86133aada476c5e3f5f24d390b8143fa5fd47bbf89fa8f4875e27c6",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b2ea93dae124bf4d2e63c942236c4bf14d0148e9cd712012c79f35d8ba439af6",
+      "contentRoot": "sha256:33f9c585fb75a8cecde08fd0cb5292828864afd1bf9406a778a34bc6a42bf575",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f4ae88f905ce2328de1695565ba385320260b506c0de137695baa279e711e687",
+      "contentRoot": "sha256:63e5f4480871228b65b49105253d13f612f75f990596c94665478813c7cab894",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9c3a6b11d9ece0e80f1b7dc0df74569850c8f453a097843cf0411cc6d3e5747f",
+      "contentRoot": "sha256:d0dfa48db478ca4a2402af338a1d099f62536b5fd3f3e59499ce73e7c3478cdd",
+      "path": "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1faf7747d61c8e52c2c44490641f47f6296686c80faa05a29e4f0b699dcf6793",
+      "contentRoot": "sha256:25ad7a64f55bcf0d7c070e4a68807064f8ff4b120f0e31a974c535cb4010c363",
+      "path": "docs/architecture/adr-map.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:43947e7ce6a514677788f0c63c66362371a8f960d4ff0e0e17f0716d51b83f38",
+      "contentRoot": "sha256:b1c263e81bf5480e55c629fb44b47eee6d755ffc5909e6d64a6b5e3408d56122",
+      "path": "docs/architecture/adr-map.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6c2ec8ede243e9b1af7c1a98361f9b63322dbdc4c6b8b908fd30eb4b2d36e3b2",
+      "contentRoot": "sha256:f4f7e9220902a0d3edf42f0c9cfbb98ab87204caaa6e24b7349f1cb9242dd7b2",
+      "path": "framework/core/src/bindings/python/binding/py-runtime.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:63796bedad0c75cfe029aab7b6255cd89912faa6c7e246a1e18d036b505e471d",
+      "contentRoot": "sha256:3ba0633dafd0a8113e124e241002013d1db03a499cb690eaccf975131435da9e",
+      "path": "framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aec37bd56ce055212b9a47c631a0076def7e88e5ca3d12427ae1b4297607f626",
+      "contentRoot": "sha256:ab48b3f3618bb8f6b1f267414cb7e615f8cdabc15d63d07ffef12e0a53e4735f",
+      "path": "framework/core/src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7d8e97295419e00924fdb8f1ec74257867e6c9b3bb6a2d33c45ce3c1ad5ea0c7",
+      "contentRoot": "sha256:704c56d9d8e22ee6567a86556b242a028c618864e62421293f48de2fdca5c882",
+      "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:41d5d6ddadee0031272691d2ebc66c7aa899923f85f3a351659132e8f31cb1fd",
+      "contentRoot": "sha256:e4af2321efeb8481d0686670d77ac0272ef844ec0c363cbe4c6a965eb370a865",
+      "path": "framework/core/src/libkungfu/src/runtime/storage/service_operation_catalog.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a8737dcc0bab9543d1e22e0f32a58a16f95976606db8d9e456170ad781ba46b7",
+      "contentRoot": "sha256:0c6d92d16659bfede7d5340c66d94d783a632e2af256d2e5771cf6b92f2a384a",
+      "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "registry-admission-lifecycle"
+  ],
+  "rationale": "The runtime storage and native binding decomposition preserves public behavior, contracts, and reader journeys while only moving internal C++ dispatch, rendering, catalog, and adapter responsibilities behind existing owners.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:d9c731ef880fa5d5f07bce625879559fffc5fb746722a45444ab935a9059678b"
+}
