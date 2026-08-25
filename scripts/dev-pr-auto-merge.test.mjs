@@ -264,7 +264,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
-    /DELIVERY_CLASS: \$\{\{ needs\.delivery-contract\.outputs\.delivery-class \|\| 'native-proof-required' \}\}[\s\S]*--arg deliveryClass "\$DELIVERY_CLASS"[\s\S]*\$deliveryClass == "source-only" and \.conclusion == "skipped"/u,
+    /DELIVERY_CLASS: \$\{\{ needs\.delivery-contract\.outputs\.delivery-class \|\| 'native-proof-required' \}\}[\s\S]*--arg deliveryClass "\$DELIVERY_CLASS"[\s\S]*--arg priorRunConclusion "\$prior_run_conclusion"[\s\S]*\$priorRunConclusion == "success" and \.conclusion == "skipped"[\s\S]*\$deliveryClass == "source-only" and \.conclusion == "skipped"/u,
   );
   assert.match(
     bridge,
