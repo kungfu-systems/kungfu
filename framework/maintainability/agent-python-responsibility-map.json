@@ -149,8 +149,8 @@
         "cli": {
           "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
           "group": "work",
-          "sha256": "403a9c492d1c6c72291f0066a25b5301a828adfbda54458f90686c96bf6069fb",
-          "invariant": "Command names, option names, defaults, output schemas, and exit behavior remain byte-identical to the exact base."
+          "sha256": "8c678dbe19a89d03f8e701f762e53991918a8df8493ae9657329048495c842e7",
+          "invariant": "Pre-existing command names, option names, defaults, output schemas, and exit behavior remain compatible; domain-neutral Work commands are additive."
         },
         "schemas": [
           "kungfu.assignment-request/v1",
@@ -238,7 +238,7 @@
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
-            "sha256": "403a9c492d1c6c72291f0066a25b5301a828adfbda54458f90686c96bf6069fb"
+            "sha256": "8c678dbe19a89d03f8e701f762e53991918a8df8493ae9657329048495c842e7"
           }
         ],
         "ownerAggregate": {
@@ -261,11 +261,11 @@
               "framework/core/src/python/kungfu/assignment_outcome.py",
               "framework/core/src/python/kungfu/cli/commands/assignment.py"
             ],
-            "responsibilities": 97,
+            "responsibilities": 96,
             "functionRisk": {
           "functions": 113,
-          "baseRisk": 1894,
-          "changeRisk": 2258,
+          "baseRisk": 1843,
+          "changeRisk": 2222,
               "maximum": 254
             }
           }
@@ -335,9 +335,9 @@
         "functionRisk": { "functions": 71, "total": 1022, "maximum": 157 }
       },
       "current": {
-        "physicalLines": 1950,
-        "responsibilities": 67,
-        "functionRisk": { "functions": 70, "total": 865, "maximum": 57 }
+        "physicalLines": 1910,
+        "responsibilities": 66,
+        "functionRisk": { "functions": 70, "total": 814, "maximum": 57 }
       },
       "ownerFiles": [
         "framework/core/src/python/kungfu/cli/commands/assignment_review/__init__.py"

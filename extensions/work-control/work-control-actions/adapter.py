@@ -15,6 +15,25 @@ from typing import Any
 from kungfu import profile_sdk
 
 
+_WORK_SEMANTICS_OPERATIONS = {
+    "work-input-snapshot",
+    "work-managed-run",
+    "work-effect-authorize",
+    "work-effect-attempt",
+    "work-effect-outcome",
+}
+_WORK_STATUS_OPERATIONS = {"assignment-status", "work-semantics-status"}
+_SEMANTIC_COMMON_ALLOWED = {
+    "initiativeId",
+    "assignmentId",
+    "attemptId",
+    "leaseId",
+    "actor",
+    "actorType",
+    "source",
+}
+
+
 def _object(value: Any) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise TypeError("Work Control adapter input must be an object")
@@ -76,6 +95,136 @@ def _assignment_cards(
             or row.get("initiative_subject") == initiative_id
         )
     ]
+
+
+def _semantic_common(values: Mapping[str, Any]) -> dict[str, str]:
+    return {
+        "initiative_id": _text(values, "initiativeId"),
+        "assignment_id": _text(values, "assignmentId"),
+        "attempt_id": _text(values, "attemptId"),
+        "lease_id": _text(values, "leaseId"),
+        "actor": _text(values, "actor"),
+        "actor_type": _text(values, "actorType", "agent"),
+        "storage_source_id": _text(values, "source", "kungfu"),
+    }
+
+
+def _record_input(semantics, runtime_dir: str, values: Mapping[str, Any]):
+    return semantics.record_input_snapshot(
+        runtime_dir,
+        snapshot_id=_text(values, "snapshotId"),
+        input_root=_text(values, "inputRoot"),
+        evidence_roots=_string_rows(values, "evidenceRoots"),
+        **_semantic_common(values),
+    )
+
+
+def _record_run(semantics, runtime_dir: str, values: Mapping[str, Any]):
+    return semantics.record_managed_run(
+        runtime_dir,
+        run_id=_text(values, "runId"),
+        input_snapshot_root=_text(values, "inputSnapshotRoot"),
+        role=_text(values, "role"),
+        result_state=_text(values, "resultState"),
+        result_root=_text(values, "resultRoot"),
+        evidence_roots=_string_rows(values, "evidenceRoots"),
+        **_semantic_common(values),
+    )
+
+
+def _authorize_effect(semantics, runtime_dir: str, values: Mapping[str, Any]):
+    return semantics.authorize_effect(
+        runtime_dir,
+        authorization_id=_text(values, "authorizationId"),
+        effect_id=_text(values, "effectId"),
+        effect_kind=_text(values, "effectKind"),
+        input_snapshot_root=_text(values, "inputSnapshotRoot"),
+        scope_root=_text(values, "scopeRoot"),
+        evidence_roots=_string_rows(values, "evidenceRoots"),
+        **_semantic_common(values),
+    )
+
+
+def _record_effect_attempt(semantics, runtime_dir: str, values: Mapping[str, Any]):
+    return semantics.record_effect_attempt(
+        runtime_dir,
+        effect_attempt_id=_text(values, "effectAttemptId"),
+        authorization_root=_text(values, "authorizationRoot"),
+        transport_request_root=_text(values, "transportRequestRoot"),
+        **_semantic_common(values),
+    )
+
+
+def _record_effect_outcome(semantics, runtime_dir: str, values: Mapping[str, Any]):
+    return semantics.record_effect_outcome(
+        runtime_dir,
+        effect_attempt_root=_text(values, "effectAttemptRoot"),
+        transport_state=_text(values, "transportState"),
+        business_state=_text(values, "businessState"),
+        outcome_root=_text(values, "outcomeRoot"),
+        evidence_roots=_string_rows(values, "evidenceRoots"),
+        **_semantic_common(values),
+    )
+
+
+_SEMANTIC_ACTIONS = {
+    "work-input-snapshot": (
+        _record_input,
+        {"snapshotId", "inputRoot", "evidenceRoots"},
+    ),
+    "work-managed-run": (
+        _record_run,
+        {
+            "runId",
+            "inputSnapshotRoot",
+            "role",
+            "resultState",
+            "resultRoot",
+            "evidenceRoots",
+        },
+    ),
+    "work-effect-authorize": (
+        _authorize_effect,
+        {
+            "authorizationId",
+            "effectId",
+            "effectKind",
+            "inputSnapshotRoot",
+            "scopeRoot",
+            "evidenceRoots",
+        },
+    ),
+    "work-effect-attempt": (
+        _record_effect_attempt,
+        {"effectAttemptId", "authorizationRoot", "transportRequestRoot"},
+    ),
+    "work-effect-outcome": (
+        _record_effect_outcome,
+        {
+            "effectAttemptRoot",
+            "transportState",
+            "businessState",
+            "outcomeRoot",
+            "evidenceRoots",
+        },
+    ),
+}
+
+
+def _work_semantics_action(
+    domain, operation: str, runtime_dir: str, values: Mapping[str, Any]
+):
+    action, allowed = _SEMANTIC_ACTIONS[operation]
+    _only(values, _SEMANTIC_COMMON_ALLOWED | allowed, operation)
+    receipt = action(domain.work_semantics, runtime_dir, values)
+    return {
+        "coreReceipt": receipt,
+        "affected": {
+            "profileId": "kungfu.work-control",
+            "entityKeys": [receipt["receipt"]["subject_key"]],
+            "queryKeys": ["assignment-status", "work-semantics-status"],
+        },
+    }
 
 
 def _create_initiative(domain, runtime_dir: str, values: Mapping[str, Any]):
@@ -490,7 +639,9 @@ def invoke(
     domain = _domain(context)
     return domain.work_control._with_profile_source(
         str(context["source"]),
-        lambda: _invoke(operation, runtime_dir, input_value, context, domain),
+        lambda: _WORK_OPERATION_INVOKERS.get(operation, _invoke)(
+            operation, runtime_dir, input_value, context, domain
+        ),
     )
 
 
@@ -589,3 +740,43 @@ def _invoke(
             now=str(values.get("now") or ""),
         )
     raise ValueError(f"unsupported Work Control adapter operation: {operation}")
+
+
+def _invoke_work_semantics(
+    operation: str,
+    runtime_dir: str,
+    input_value: Any,
+    context: Mapping[str, Any],
+    domain: Any,
+):
+    values = _object(input_value)
+    if operation in _WORK_SEMANTICS_OPERATIONS:
+        if context.get("invocationMode") != "authorized-action":
+            raise ValueError(
+                "Work Control writes require the Profile intent authorization path"
+            )
+        return _work_semantics_action(domain, operation, runtime_dir, values)
+    common = _status_common(values)
+    if operation == "assignment-status":
+        _only(values, {"initiativeId", "assignmentId", "source", "now"}, operation)
+        return domain.work_semantics.lifecycle_status(
+            runtime_dir,
+            now=_text(values, "now"),
+            **common,
+        )
+    _only(values, {"initiativeId", "assignmentId", "source"}, operation)
+    return domain.work_semantics.status(runtime_dir, **common)
+
+
+def _status_common(values: Mapping[str, Any]) -> dict[str, str]:
+    return {
+        "initiative_id": _text(values, "initiativeId"),
+        "assignment_id": _text(values, "assignmentId"),
+        "storage_source_id": _text(values, "source", "kungfu"),
+    }
+
+
+_WORK_OPERATION_INVOKERS = {
+    operation: _invoke_work_semantics
+    for operation in _WORK_SEMANTICS_OPERATIONS | _WORK_STATUS_OPERATIONS
+}

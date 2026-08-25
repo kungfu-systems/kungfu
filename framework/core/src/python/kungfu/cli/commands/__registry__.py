@@ -15,6 +15,7 @@ from . import rewind
 from . import schema
 from . import cut
 from . import assignment
+from . import work_semantics
 from . import dogfood
 from . import storage
 from . import query
@@ -62,6 +63,7 @@ __all__ = [
     "schema",
     "cut",
     "assignment",
+    "work_semantics",
     "dogfood",
     "storage",
     "query",

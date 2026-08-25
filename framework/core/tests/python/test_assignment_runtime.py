@@ -7,6 +7,8 @@ import hashlib
 import importlib.util
 import json
 import os
+import sys
+import types
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from io import StringIO
@@ -72,6 +74,75 @@ def test_profile_source_resolves_installed_bundled_root(monkeypatch, tmp_path):
 
     assert profile_source() == source
     assert observed == [("kungfu.work-control", [bundled])]
+
+
+def test_work_profile_ensure_uses_profile_owned_retained_history_compatibility(
+    monkeypatch, tmp_path
+):
+    from kungfu.cli.commands import assignment as work_commands
+
+    runtime = tmp_path / "runtime"
+    monkeypatch.setattr(work_commands, "profile_source", lambda: PROFILE_SOURCE)
+    monkeypatch.setattr(
+        profile_sdk,
+        "validate_source",
+        lambda _source, _runtime: {
+            "inspection": {
+                "profile": {"id": "kungfu.work-control"},
+                "profile_suite_root": ROOT_A,
+            }
+        },
+    )
+    monkeypatch.setattr(
+        work_commands.storage_service,
+        "profile_lifecycle",
+        lambda _runtime, operation, **_values: (
+            {
+                "profiles": [
+                    {
+                        "profile_id": "kungfu.work-control",
+                        "profile_suite_root": ROOT_A,
+                        "qualified": True,
+                        "activated": True,
+                        "removed": False,
+                    }
+                ]
+            }
+            if operation == "list"
+            else {}
+        ),
+    )
+    compatibility = {
+        "schema": "kungfu.work-control.profile-contract/v1",
+        "status": "retained-history-compatible",
+        "retained_source_authorities": ["atlas-adapter"],
+    }
+    domain = types.SimpleNamespace(
+        work_control=types.SimpleNamespace(
+            ensure_profile_contract=lambda _runtime, _source, _actor: [
+                {
+                    "schema": "kungfu.work.profile-contract-compatibility-receipt/v1",
+                    "profileContract": compatibility,
+                    "writeOccurred": False,
+                }
+            ]
+        )
+    )
+    monkeypatch.setattr(
+        profile_sdk,
+        "load_member_python_package",
+        lambda _source, _member, _package: domain,
+    )
+
+    receipts = work_commands._ensure_profile(runtime, "test-agent")
+
+    assert receipts == [
+        {
+            "schema": "kungfu.work.profile-contract-compatibility-receipt/v1",
+            "profileContract": compatibility,
+            "writeOccurred": False,
+        }
+    ]
 
 
 def test_profile_source_prefers_bundled_root_before_dev_overrides(
@@ -759,6 +830,264 @@ def test_work_control_authority_normalizes_legacy_completion_context_roots(
         },
         "write": True,
     }
+
+
+def test_work_semantics_commands_bind_exact_runtime_attempt_and_lease(
+    tmp_path, monkeypatch
+):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+    captured = {}
+
+    def invoke(_source, _runtime, member, operation, values, *, authorized_action):
+        captured.update(
+            member=member,
+            operation=operation,
+            values=values,
+            write=authorized_action,
+        )
+        return {"result": {"coreReceipt": {"status": "admitted"}}}
+
+    monkeypatch.setattr(authority, "_profile_source", lambda: str(PROFILE_SOURCE))
+    monkeypatch.setattr(profile_sdk, "invoke_member_adapter", invoke)
+    command = {
+        "type": "work.input.snapshot",
+        "target": {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+        },
+        "attempt": {"attemptId": "attempt-a", "state": "executing"},
+        "lease": {"leaseId": "lease-a", "state": "active"},
+        "arguments": {
+            "snapshotId": "snapshot-a",
+            "inputRoot": ROOT_A,
+            "actor": "agent-a",
+        },
+    }
+
+    authority.apply(command)
+
+    assert captured == {
+        "member": "work-control-actions",
+        "operation": "work-input-snapshot",
+        "values": {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+            "snapshotId": "snapshot-a",
+            "inputRoot": ROOT_A,
+            "actor": "agent-a",
+            "attemptId": "attempt-a",
+            "leaseId": "lease-a",
+        },
+        "write": True,
+    }
+
+
+def test_work_control_authority_binds_attempt_from_active_lease():
+    status = {
+        "phase": "executing",
+        "execution_claims": [
+            {"attempt_id": "attempt-new", "claim_id": "claim-new"},
+            {"attempt_id": "attempt-middle", "claim_id": "claim-middle"},
+            {"attempt_id": "attempt-old", "claim_id": "claim-old"},
+        ],
+        "active_lease": {
+            "attempt_id": "attempt-new",
+            "claim_id": "claim-new",
+            "lease_id": "lease-new",
+        },
+    }
+
+    assert WorkControlAuthority._attempt(status) == {
+        "attemptId": "attempt-new",
+        "claimId": "claim-new",
+        "state": "executing",
+    }
+
+
+def test_work_control_authority_rejects_active_lease_without_exact_attempt():
+    status = {
+        "phase": "executing",
+        "execution_claims": [
+            {"attempt_id": "attempt-old", "claim_id": "claim-old"},
+        ],
+        "active_lease": {
+            "attempt_id": "attempt-new",
+            "claim_id": "claim-new",
+            "lease_id": "lease-new",
+        },
+    }
+
+    with pytest.raises(LocalRuntimeError, match="does not bind exactly one") as error:
+        WorkControlAuthority._attempt(status)
+
+    assert error.value.code == "ambiguous-identity"
+
+
+def test_work_semantics_projection_invalidates_stale_inputs_and_forbids_blind_retry():
+    domain_path = PROFILE_SOURCE / "work-control-actions" / "domain"
+    package_name = "test_work_semantics_domain"
+    package = types.ModuleType(package_name)
+    package.__path__ = [str(domain_path)]
+    sys.modules[package_name] = package
+    sys.modules[f"{package_name}.work_control_runtime"] = types.ModuleType(
+        f"{package_name}.work_control_runtime"
+    )
+    spec = importlib.util.spec_from_file_location(
+        f"{package_name}.work_semantics", domain_path / "work_semantics.py"
+    )
+    assert spec is not None and spec.loader is not None
+    semantics = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = semantics
+    spec.loader.exec_module(semantics)
+    project = semantics.project
+    lease = {"attempt_id": "attempt-a", "lease_id": "lease-a"}
+    snapshot_a = {
+        "record_type": "work-input-snapshot",
+        "record_root": ROOT_A,
+        "recorded_at_system_time": 1,
+    }
+    run_a = {
+        "record_type": "work-managed-run",
+        "record_root": ROOT_B,
+        "input_snapshot_root": ROOT_A,
+        "result_state": "succeeded",
+        "recorded_at_system_time": 2,
+    }
+    authorization_a = {
+        "record_type": "work-effect-authorization",
+        "record_root": "sha256:" + "c" * 64,
+        "effect_id": "effect-a",
+        "input_snapshot_root": ROOT_A,
+        "recorded_at_system_time": 3,
+    }
+    attempt_a = {
+        "record_type": "work-effect-attempt",
+        "record_root": "sha256:" + "d" * 64,
+        "authorization_root": authorization_a["record_root"],
+        "recorded_at_system_time": 4,
+    }
+    ambiguous = {
+        "record_type": "work-effect-outcome",
+        "record_root": "sha256:" + "e" * 64,
+        "effect_attempt_root": attempt_a["record_root"],
+        "transport_state": "accepted",
+        "business_state": "unknown",
+        "recorded_at_system_time": 5,
+    }
+    status = project(
+        [snapshot_a, run_a, authorization_a, attempt_a, ambiguous],
+        phase="executing",
+        active_lease=lease,
+        query_proof_root=ROOT_A,
+    )
+    assert status["blind_retry_allowed"] is False
+    assert status["completion_eligible"] is False
+    assert status["next_actions"] == [
+        {
+            "action": "reconcile-effect-outcome",
+            "reason": "business-outcome-unrecorded",
+        }
+    ]
+
+    snapshot_b = {
+        "record_type": "work-input-snapshot",
+        "record_root": "sha256:" + "f" * 64,
+        "recorded_at_system_time": 6,
+    }
+    invalidated = project(
+        [snapshot_a, run_a, authorization_a, attempt_a, ambiguous, snapshot_b],
+        phase="executing",
+        active_lease=lease,
+        query_proof_root=ROOT_B,
+    )
+    assert invalidated["current_input_snapshot"] == snapshot_b
+    assert invalidated["managed_runs"] == []
+    assert invalidated["effect_authorizations"] == []
+    assert invalidated["next_actions"] == [
+        {"action": "record-managed-run", "reason": "current-input-not-executed"}
+    ]
+
+
+def test_work_semantics_fault_matrix_rejects_stale_attempt_lease_and_input(
+    monkeypatch,
+):
+    domain_path = PROFILE_SOURCE / "work-control-actions" / "domain"
+    package_name = "test_work_semantics_fault_domain"
+    package = types.ModuleType(package_name)
+    package.__path__ = [str(domain_path)]
+    sys.modules[package_name] = package
+    runtime_module = types.ModuleType(f"{package_name}.work_control_runtime")
+    sys.modules[runtime_module.__name__] = runtime_module
+    spec = importlib.util.spec_from_file_location(
+        f"{package_name}.work_semantics", domain_path / "work_semantics.py"
+    )
+    assert spec is not None and spec.loader is not None
+    semantics = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = semantics
+    spec.loader.exec_module(semantics)
+    lifecycle = {
+        "phase": "executing",
+        "active_lease": {
+            "attempt_id": "attempt-current",
+            "lease_id": "lease-current",
+            "agent": "agent-a",
+        },
+    }
+    monkeypatch.setattr(
+        runtime_module,
+        "assignment_orchestration_status",
+        lambda *_args, **_kwargs: lifecycle,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        runtime_module,
+        "_root_id",
+        lambda value, *_args, **_kwargs: value,
+        raising=False,
+    )
+    common = {
+        "runtime_dir": "/fixture",
+        "initiative_id": "initiative-a",
+        "assignment_id": "assignment-a",
+        "snapshot_id": "snapshot-a",
+        "input_root": ROOT_A,
+        "actor": "agent-a",
+    }
+    with pytest.raises(ValueError, match="attempt changed"):
+        semantics.record_input_snapshot(
+            **common,
+            attempt_id="attempt-stale",
+            lease_id="lease-current",
+        )
+    with pytest.raises(ValueError, match="lease changed"):
+        semantics.record_input_snapshot(
+            **common,
+            attempt_id="attempt-current",
+            lease_id="lease-stale",
+        )
+
+    monkeypatch.setattr(
+        semantics,
+        "_execution_context",
+        lambda *_args, **_kwargs: {
+            **lifecycle,
+            "work_semantics": {"current_input_snapshot": {"record_root": ROOT_A}},
+        },
+    )
+    with pytest.raises(ValueError, match="input snapshot changed"):
+        semantics.record_managed_run(
+            runtime_dir="/fixture",
+            initiative_id="initiative-a",
+            assignment_id="assignment-a",
+            attempt_id="attempt-current",
+            lease_id="lease-current",
+            run_id="run-a",
+            input_snapshot_root=ROOT_B,
+            role="executor",
+            result_state="succeeded",
+            result_root=ROOT_A,
+            actor="agent-a",
+        )
 
 
 def test_work_control_authority_rejects_conflicting_completion_context_roots(
@@ -1629,6 +1958,67 @@ def test_invalid_completion_evidence_is_rejected_before_pending_write(
         assert authority._read()["effects"] == []
 
 
+def test_rejected_pending_replay_keeps_manual_recovery_reachable(tmp_path):
+    runtime_dir = tmp_path / "rejected-replay" / ".kungfu" / "runtime"
+
+    class RejectingReplayAuthority(FakeAuthority):
+        def apply(self, command):
+            raise LocalRuntimeError("backend-unavailable", "deterministic rejection")
+
+    authority = RejectingReplayAuthority(runtime_dir)
+    runtime = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    snapshot = _handle(
+        runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+    )
+    command = _command(snapshot["revision"])
+    runtime._state["pending"] = {
+        "commandRoot": _root(command),
+        "command": command,
+        "beforeRevision": snapshot["revision"],
+        "requestId": "rejected.pending.replay",
+    }
+    runtime._save_state()
+    runtime.close()
+
+    restarted = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    try:
+        assert restarted._state["pending"]["commandRoot"] == _root(command)
+        assert restarted._state["diagnostics"][-1] == {
+            "code": "interrupted-write-retry-failed",
+            "message": (
+                "The interrupted command could not be replayed; its authority "
+                "outcome remains unknown"
+            ),
+            "severity": "error",
+            "recovery": ["diagnostics.get", "recovery.plan"],
+            "details": {"causeCode": "backend-unavailable"},
+        }
+        blocked = restarted.handle(
+            _request("assignment.snapshot", "assignment.snapshot.read")
+        )
+        assert blocked["error"]["code"] == "backend-unavailable"
+
+        plan = _handle(restarted, _request("recovery.plan", "assignment.recovery.plan"))
+        assert plan["result"]["status"] == "manual-review-required"
+        assert plan["result"]["operatorResolution"]["commandRoot"] == _root(command)
+    finally:
+        restarted.close()
+
+
 def test_restart_rejects_legacy_invalid_executor_pending_before_authority(tmp_path):
     runtime_dir = tmp_path / "legacy-invalid-executor" / ".kungfu" / "runtime"
     authority = FakeAuthority(runtime_dir)
@@ -2060,5 +2450,174 @@ def test_production_adapter_reaches_existing_work_control_authority(
         assert assignment["phase"] == "claimed"
         assert assignment["attempt"]["attemptId"] == command["attempt"]["attemptId"]
         assert assignment["lease"] == command["lease"]
+
+        def submit_work(command_type, suffix, arguments):
+            current = _handle(
+                runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+            )
+            current_assignment = current["result"]["assignments"][0]
+            work_command = _command(
+                current["revision"],
+                command_id=f"command.{suffix}",
+                idempotency_key=f"idem.{suffix}",
+                command_type=command_type,
+                expected_phase=current_assignment["phase"],
+                to_phase="executing",
+            )
+            work_command["attempt"] = current_assignment["attempt"]
+            work_command["lease"] = current_assignment["lease"]
+            work_command["arguments"] = arguments
+            response = _handle(
+                runtime,
+                _request(
+                    "command.submit",
+                    "assignment.command.submit",
+                    payload=work_command,
+                    request_id=f"request.{suffix}",
+                ),
+            )
+            assert response["status"] == "ok", json.dumps(response, indent=2)
+            return response["result"]["authorityReceipt"]["result"]["coreReceipt"]
+
+        submit_work(
+            "assignment.stage",
+            "execute",
+            {
+                "actor": "agent-a",
+                "reason": "enter the generic Work protocol",
+                "expectedPhase": "claimed",
+                "toPhase": "executing",
+            },
+        )
+        before_input = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )
+        input_receipt = submit_work(
+            "work.input.snapshot",
+            "input",
+            {
+                "snapshotId": "snapshot-a",
+                "inputRoot": ROOT_A,
+                "actor": "agent-a",
+                "evidenceRoots": [ROOT_B],
+            },
+        )
+        input_root = input_receipt["record"]["record_root"]
+
+        stale_command = _command(
+            before_input["revision"],
+            command_id="command.stale-run",
+            idempotency_key="idem.stale-run",
+            command_type="work.run.record",
+        )
+        stale_command["attempt"] = assignment["attempt"]
+        stale_command["lease"] = assignment["lease"]
+        stale_command["arguments"] = {
+            "runId": "run-stale",
+            "inputSnapshotRoot": input_root,
+            "role": "executor",
+            "resultState": "succeeded",
+            "resultRoot": ROOT_B,
+            "actor": "agent-a",
+        }
+        stale = _handle(
+            runtime,
+            _request(
+                "command.submit",
+                "assignment.command.submit",
+                payload=stale_command,
+                request_id="request.stale-run",
+            ),
+        )
+        assert stale["error"]["code"] == "stale-revision"
+
+        submit_work(
+            "work.run.record",
+            "run",
+            {
+                "runId": "run-a",
+                "inputSnapshotRoot": input_root,
+                "role": "executor",
+                "resultState": "succeeded",
+                "resultRoot": ROOT_B,
+                "actor": "agent-a",
+                "evidenceRoots": [ROOT_A],
+            },
+        )
+        authorization = submit_work(
+            "work.effect.authorize",
+            "authorize",
+            {
+                "authorizationId": "authorization-a",
+                "effectId": "effect-a",
+                "effectKind": "external-delivery",
+                "inputSnapshotRoot": input_root,
+                "scopeRoot": ROOT_A,
+                "actor": "agent-a",
+                "evidenceRoots": [ROOT_B],
+            },
+        )
+        effect_attempt = submit_work(
+            "work.effect.attempt",
+            "effect-attempt",
+            {
+                "effectAttemptId": "effect-attempt-a",
+                "authorizationRoot": authorization["record"]["record_root"],
+                "transportRequestRoot": ROOT_B,
+                "actor": "agent-a",
+            },
+        )
+        submit_work(
+            "work.effect.outcome",
+            "ambiguous-outcome",
+            {
+                "effectAttemptRoot": effect_attempt["record"]["record_root"],
+                "transportState": "accepted",
+                "businessState": "unknown",
+                "outcomeRoot": ROOT_A,
+                "actor": "agent-a",
+                "evidenceRoots": [ROOT_B],
+            },
+        )
+        ambiguous = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )["result"]["assignments"][0]["lifecycle"]["work_semantics"]
+        assert ambiguous["blind_retry_allowed"] is False
+        assert ambiguous["next_actions"] == [
+            {
+                "action": "reconcile-effect-outcome",
+                "reason": "business-outcome-unrecorded",
+            }
+        ]
+
+        submit_work(
+            "work.effect.outcome",
+            "settled-outcome",
+            {
+                "effectAttemptRoot": effect_attempt["record"]["record_root"],
+                "transportState": "accepted",
+                "businessState": "accepted",
+                "outcomeRoot": ROOT_B,
+                "actor": "agent-a",
+                "evidenceRoots": [ROOT_A],
+            },
+        )
+        settled = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )["result"]["assignments"][0]["lifecycle"]["work_semantics"]
+        assert settled["completion_eligible"] is True
+        settled_root = settled["effect_outcomes"][-1]["record_root"]
+
+    with EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+    ) as restarted:
+        restored = _handle(
+            restarted, _request("assignment.snapshot", "assignment.snapshot.read")
+        )["result"]["assignments"][0]["lifecycle"]["work_semantics"]
+        assert restored["completion_eligible"] is True
+        assert restored["effect_outcomes"][-1]["record_root"] == settled_root
 
     assert runtime_dir.is_relative_to(home)

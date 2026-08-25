@@ -23,6 +23,13 @@ a continuation decision remain separate facts. Portfolio reports completion
 only when the accepted decision and applicable Project Cut settlement are both
 present.
 
+Workspaces that contain pre-cutover `atlas-adapter` observations on the v1
+Initiative or Assignment surfaces retain those immutable facts as history. The
+current Profile may read them and append only through `kungfu-user` or
+`kungfu-agent`; this narrow compatibility state neither restores the removed
+adapter nor claims that an authority migration occurred. Any other retired or
+unknown source authority remains a fail-closed migration requirement.
+
 Portfolio keeps three state coordinates separate: the source record's
 `source_status`, the native Assignment `orchestration_phase`, and the derived
 `portfolio_state`. The default active-and-attention view treats compatibility
@@ -30,6 +37,50 @@ statuses `complete`, `completed`, `merged`, `archived`, and `closed` as
 terminal; `--include-settled` retains their exact canonical rows. A
 `stage-ready` Assignment is therefore visible as unfinished until review,
 continuation decision, and Project Cut settlement actually complete it.
+
+## Domain-neutral Work semantics
+
+An executing Assignment may opt into a generic protocol for input freshness,
+managed execution, and external effects. The adopter keeps its domain payload;
+Kungfu stores only stable identities, enums, and SHA-256 content roots.
+
+The ordered records are:
+
+1. `work-input-snapshot` binds the current opaque input root to the exact
+   Assignment Attempt and lease. A successor snapshot makes every earlier run
+   and effect authorization stale.
+2. `work-managed-run` binds one role, result state, result root, and evidence
+   set to that exact snapshot and Attempt.
+3. `work-effect-authorization` binds one effect identity, generic kind, and
+   opaque scope root after a successful run.
+4. `work-effect-attempt` is appended before transport. Once it exists, blind
+   retry is forbidden.
+5. `work-effect-outcome` records transport acceptance separately from the
+   business outcome. An unknown transport result or an accepted transport with
+   an unrecorded business result yields `reconcile-effect-outcome`, never a
+   repeat instruction.
+
+All writes pass through `kungfu.assignment-runtime/v1` with exact revision,
+generation, Attempt, and active lease fencing. The folded
+`work_semantics.next_actions` projection survives process restart and rebuilds
+from the native append-only facts. When protocol records exist, completion is
+refused until the latest effect attempts are settled and the completion claim
+binds the current snapshot, run, and outcome roots.
+
+The installed CLI accepts JSON containing only those public fields:
+
+```text
+kungfu work record-input INPUT.json --workspace <path> --authorized-by <actor>
+kungfu work record-run INPUT.json --workspace <path> --authorized-by <actor>
+kungfu work authorize-effect INPUT.json --workspace <path> --authorized-by <actor>
+kungfu work record-effect-attempt INPUT.json --workspace <path> --authorized-by <actor>
+kungfu work record-effect-outcome INPUT.json --workspace <path> --authorized-by <actor>
+kungfu work status --workspace <path> --initiative-id <id> --assignment-id <id>
+```
+
+The protocol deliberately has no email, contact, HTTP, payment, or other
+adopter-specific field. Private values remain behind adopter-owned content
+roots and transport adapters.
 
 Repeated Initiative subjects are rendered as one deterministic presentation
 group. An authority-distinct group lists every canonical root and workspace
@@ -102,6 +153,8 @@ mismatched parents fail visibly.
 kungfu work capture <request.json>
 kungfu profile work-control --help
 kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>
+kungfu work record-input --help
+kungfu work authorize-effect --help
 kungfu work gate --help
 ```
 
