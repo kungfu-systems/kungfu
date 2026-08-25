@@ -113,6 +113,56 @@
       ]
     },
     {
+      "id": "work-input-snapshot",
+      "title": "Record one opaque Work input snapshot",
+      "runner": "kfx-member",
+      "operation": "work-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["bind-input-root", "invalidate-stale-continuations"]
+    },
+    {
+      "id": "work-managed-run",
+      "title": "Record one exact-snapshot managed run",
+      "runner": "kfx-member",
+      "operation": "work-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["bind-run-role", "bind-result-root"]
+    },
+    {
+      "id": "work-effect-authorize",
+      "title": "Authorize one opaque external effect",
+      "runner": "kfx-member",
+      "operation": "work-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["bind-effect-scope", "bind-current-input"]
+    },
+    {
+      "id": "work-effect-attempt",
+      "title": "Record one authorized effect attempt before transport",
+      "runner": "kfx-member",
+      "operation": "work-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["consume-effect-authorization", "prevent-blind-repeat"]
+    },
+    {
+      "id": "work-effect-outcome",
+      "title": "Record or reconcile transport and business outcomes",
+      "runner": "kfx-member",
+      "operation": "work-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["separate-transport-outcome", "settle-business-outcome"]
+    },
+    {
       "id": "export-initiative",
       "title": "Export portable Initiative bundle",
       "runner": "kfx-member",

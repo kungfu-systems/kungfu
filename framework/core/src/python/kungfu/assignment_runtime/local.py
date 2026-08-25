@@ -334,17 +334,39 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
     ) -> None:
         try:
             _validate_assignment_create_references(command, snapshot)
-            before = dict(pending.get("beforeRevision") or {})
-            if revision.get("root") == before.get("root"):
-                authority_result = self.authority.apply(dict(pending["command"]))
-                pending = {**dict(pending), "authorityResult": authority_result}
-                self._state["pending"] = pending
-                self._save_state()
-                snapshot, revision = self._observe_snapshot(record_event=False)
-                self._finalize_pending(pending, snapshot, revision, recovered=True)
-                return
         except LocalRuntimeError as error:
             self._reject_pending_before_authority(pending, error)
+            return
+        before = dict(pending.get("beforeRevision") or {})
+        if revision.get("root") == before.get("root"):
+            try:
+                authority_result = self.authority.apply(dict(pending["command"]))
+            except LocalRuntimeError as error:
+                if error.code == "invalid-command":
+                    self._reject_pending_before_authority(pending, error)
+                    return
+                diagnostic = {
+                    "code": "interrupted-write-retry-failed",
+                    "message": (
+                        "The interrupted command could not be replayed; its authority "
+                        "outcome remains unknown"
+                    ),
+                    "severity": "error",
+                    "recovery": ["diagnostics.get", "recovery.plan"],
+                    "details": {"causeCode": error.code},
+                }
+                diagnostics = list(self._state.get("diagnostics") or [])
+                diagnostics_by_root = dict(
+                    map(lambda item: (_root(item), item), [*diagnostics, diagnostic])
+                )
+                self._state["diagnostics"] = list(diagnostics_by_root.values())
+                self._save_state()
+                return
+            pending = {**dict(pending), "authorityResult": authority_result}
+            self._state["pending"] = pending
+            self._save_state()
+            snapshot, revision = self._observe_snapshot(record_event=False)
+            self._finalize_pending(pending, snapshot, revision, recovered=True)
             return
         diagnostic = {
             "code": "interrupted-write-ambiguous",
@@ -647,7 +669,7 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
                 ) from error
             if expires_at.tzinfo is None or expires_at <= datetime.now(UTC):
                 raise LocalRuntimeError("lease-required", "Command lease is expired")
-            if command_type == "assignment.stage":
+            if command_type != "assignment.claim":
                 matches = [
                     row
                     for row in snapshot.get("assignments") or []

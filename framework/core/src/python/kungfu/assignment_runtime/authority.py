@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 import threading
+from functools import partial
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
@@ -71,13 +72,26 @@ _COMMAND_OPERATIONS = {
     "initiative.progress.assess": "assess-progress",
     "assignment.completion.review": "review-completion",
     "assignment.continuation.decide": "decide-continuation",
+    "work.input.snapshot": "work-input-snapshot",
+    "work.run.record": "work-managed-run",
+    "work.effect.authorize": "work-effect-authorize",
+    "work.effect.attempt": "work-effect-attempt",
+    "work.effect.outcome": "work-effect-outcome",
     "assignment.atlas.import": "import-atlas",
     "assignment.authority.activate": "activate-work-control",
     "assignment.authority.restore": "restore-atlas-authority",
     "initiative.bundle.export": "export-initiative",
     "initiative.bundle.import": "import-initiative",
 }
-_LEASE_COMMANDS = {"assignment.claim", "assignment.stage"}
+_LEASE_COMMANDS = {
+    "assignment.claim",
+    "assignment.stage",
+    "work.input.snapshot",
+    "work.run.record",
+    "work.effect.authorize",
+    "work.effect.attempt",
+    "work.effect.outcome",
+}
 _ASSESSMENT_EXECUTOR_PROFILES = {"inline", "thread", "process"}
 _PROCESS_WRITERS: set[str] = set()
 _PROCESS_WRITERS_GUARD = threading.Lock()
@@ -126,6 +140,70 @@ def _find_values(value: Any, key: str) -> list[Any]:
         for child in value:
             found.extend(_find_values(child, key))
     return found
+
+
+def _bind_command_lease(
+    arguments: dict[str, Any], command: Mapping[str, Any], operation: str
+) -> None:
+    lease = command.get("lease")
+    if not isinstance(lease, Mapping):
+        return
+    if str(command.get("type") or "") not in _LEASE_COMMANDS:
+        return
+    if operation == "claim-assignment":
+        arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
+    if operation == "advance-assignment":
+        return
+    arguments.setdefault("leaseId", lease.get("leaseId"))
+    attempt = command.get("attempt")
+    if isinstance(attempt, Mapping):
+        arguments.setdefault("attemptId", attempt.get("attemptId"))
+
+
+def _claim_identity(value: Mapping[str, Any]) -> tuple[str, str]:
+    return (
+        str(value.get("attempt_id") or value.get("attemptId") or ""),
+        str(value.get("claim_id") or value.get("claimId") or ""),
+    )
+
+
+def _claim_matches(active: Mapping[str, Any], candidate: Mapping[str, Any]) -> bool:
+    active_attempt, active_claim = _claim_identity(active)
+    candidate_attempt, candidate_claim = _claim_identity(candidate)
+    return candidate_attempt == active_attempt and (
+        not active_claim or candidate_claim == active_claim
+    )
+
+
+def _exact_active_claim(
+    claims: list[Mapping[str, Any]], active: Mapping[str, Any]
+) -> dict[str, Any]:
+    matches = list(map(dict, filter(partial(_claim_matches, active), claims)))
+    if len(matches) != 1:
+        raise LocalRuntimeError(
+            "ambiguous-identity",
+            "Active Work lease does not bind exactly one execution Attempt",
+        )
+    return matches[0]
+
+
+def _attempt_from_status(status: Mapping[str, Any]) -> dict[str, Any] | None:
+    claims = status.get("execution_claims") or status.get("executionClaims") or []
+    if not claims:
+        return None
+    active_lease = status.get("active_lease") or status.get("activeLease")
+    claim = (
+        _exact_active_claim(list(claims), active_lease)
+        if isinstance(active_lease, Mapping)
+        else dict(claims[-1])
+    )
+    phase = str(status.get("phase") or "claimed")
+    attempt_id, claim_id = _claim_identity(claim)
+    return {
+        "attemptId": attempt_id or claim_id,
+        "claimId": claim_id,
+        "state": phase if phase in {"claimed", "executing", "settled"} else "claimed",
+    }
 
 
 class LocalRuntimeError(RuntimeError):
@@ -489,17 +567,7 @@ class WorkControlAuthority:
 
     @staticmethod
     def _attempt(status: Mapping[str, Any]) -> dict[str, Any] | None:
-        claims = status.get("execution_claims") or status.get("executionClaims") or []
-        if not claims:
-            return None
-        claim = dict(claims[-1])
-        phase = str(status.get("phase") or "claimed")
-        state = phase if phase in {"claimed", "executing", "settled"} else "claimed"
-        return {
-            "attemptId": str(claim.get("attempt_id") or claim.get("claim_id") or ""),
-            "claimId": str(claim.get("claim_id") or ""),
-            "state": state,
-        }
+        return _attempt_from_status(status)
 
     @staticmethod
     def _lease(status: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -540,13 +608,7 @@ class WorkControlAuthority:
             raise LocalRuntimeError(
                 "malformed-identity", "Runtime Assignment routing identity drifted"
             )
-        lease = command.get("lease")
-        if operation == "claim-assignment" and isinstance(lease, Mapping):
-            arguments.setdefault("leaseId", lease.get("leaseId"))
-            arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
-            attempt = command.get("attempt")
-            if isinstance(attempt, Mapping):
-                arguments.setdefault("attemptId", attempt.get("attemptId"))
+        _bind_command_lease(arguments, command, operation)
         try:
             receipt = self._invoke(operation, arguments, write=True)
         except LocalRuntimeError:
