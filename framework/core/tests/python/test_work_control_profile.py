@@ -128,7 +128,7 @@ def test_work_control_accepts_only_exact_retired_atlas_source_history(
     monkeypatch.setattr(
         profile_composition,
         "contract_materialization_plan",
-        lambda _source, _runtime: (_ for _ in ()).throw(migration),
+        lambda _source, _runtime, **_kwargs: (_ for _ in ()).throw(migration),
     )
     monkeypatch.setattr(
         storage_service,
@@ -169,7 +169,7 @@ def test_work_control_rejects_unrecognized_retired_source_history(
     monkeypatch.setattr(
         profile_composition,
         "contract_materialization_plan",
-        lambda _source, _runtime: (_ for _ in ()).throw(migration),
+        lambda _source, _runtime, **_kwargs: (_ for _ in ()).throw(migration),
     )
     monkeypatch.setattr(
         storage_service,

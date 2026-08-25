@@ -318,19 +318,14 @@ def _retained_source_authority_compatibility(
     }
 
 
-def contract_materialization_plan(
-    runtime_dir: str,
-    source: str,
-    *,
-    require_active: bool = True,
-) -> dict[str, Any]:
+def contract_materialization_plan(runtime_dir: str, source: str) -> dict[str, Any]:
     """Resolve the exact Work contract plan and its retained-history boundary."""
 
     try:
         return profile_composition.contract_materialization_plan(
             source,
             runtime_dir,
-            require_active=require_active,
+            require_active=not _INACTIVE_PROJECTION_READ.get(),
         )
     except profile_sdk.ProfileSdkError as error:
         return _retained_source_authority_compatibility(runtime_dir, error)
@@ -371,11 +366,7 @@ def _profile_context(runtime_dir: str) -> dict[str, Any]:
         runtime_dir,
         require_active=require_active,
     )
-    materialization = contract_materialization_plan(
-        runtime_dir,
-        source,
-        require_active=require_active,
-    )
+    materialization = contract_materialization_plan(runtime_dir, source)
     if materialization["operations"]:
         raise profile_sdk.ProfileSdkError(
             "profile-contract-not-materialized",

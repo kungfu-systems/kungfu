@@ -36,6 +36,7 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
     commands = set(kfc.commands["work"].commands)
     assert commands == {
         "admit",
+        "authorize-effect",
         "bind",
         "binding-create",
         "capture",
@@ -58,6 +59,10 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
         "fresh-recovery-plan",
         "gate",
         "kickoff",
+        "record-effect-attempt",
+        "record-effect-outcome",
+        "record-input",
+        "record-run",
         "relation-event",
         "review",
         "review-agent-plan",
