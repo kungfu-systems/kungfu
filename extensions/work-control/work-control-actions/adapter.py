@@ -620,6 +620,7 @@ def invoke(
         lambda: _WORK_OPERATION_INVOKERS.get(operation, _invoke)(
             operation, runtime_dir, input_value, context, domain
         ),
+        inactive_projection_read=context.get("invocationMode") == "projection-read",
     )
 
 

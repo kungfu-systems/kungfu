@@ -36,6 +36,9 @@ _T = TypeVar("_T")
 _BOUND_WORK_CONTROL_SOURCE: ContextVar[str] = ContextVar(
     "kungfu_work_control_profile_source", default=""
 )
+_INACTIVE_PROJECTION_READ: ContextVar[bool] = ContextVar(
+    "kungfu_work_control_inactive_projection_read", default=False
+)
 
 FACT_SURFACES = (INITIATIVE_SURFACE_ID, ASSIGNMENT_SURFACE_ID, CLAIM_SURFACE_ID)
 PROGRESS_CLAIM = "initiative-progress-is-reasonable"
@@ -249,13 +252,18 @@ def work_control_profile_source(runtime_dir: str) -> dict[str, Any]:
     return profile_sdk.discover_source(WORK_CONTROL_PROFILE_ID, runtime_dir)
 
 
-def _with_profile_source(source: str, operation: Callable[[], _T]) -> _T:
-    """Keep one verified adapter invocation on its exact Suite source."""
-
+def _with_profile_source(
+    source: str,
+    operation: Callable[[], _T],
+    *,
+    inactive_projection_read: bool = False,
+) -> _T:
     token = _BOUND_WORK_CONTROL_SOURCE.set(str(Path(source).resolve()))
+    projection_token = _INACTIVE_PROJECTION_READ.set(inactive_projection_read)
     try:
         return operation()
     finally:
+        _INACTIVE_PROJECTION_READ.reset(projection_token)
         _BOUND_WORK_CONTROL_SOURCE.reset(token)
 
 
@@ -310,11 +318,20 @@ def _retained_source_authority_compatibility(
     }
 
 
-def contract_materialization_plan(runtime_dir: str, source: str) -> dict[str, Any]:
+def contract_materialization_plan(
+    runtime_dir: str,
+    source: str,
+    *,
+    require_active: bool = True,
+) -> dict[str, Any]:
     """Resolve the exact Work contract plan and its retained-history boundary."""
 
     try:
-        return profile_composition.contract_materialization_plan(source, runtime_dir)
+        return profile_composition.contract_materialization_plan(
+            source,
+            runtime_dir,
+            require_active=require_active,
+        )
     except profile_sdk.ProfileSdkError as error:
         return _retained_source_authority_compatibility(runtime_dir, error)
 
@@ -348,8 +365,17 @@ def ensure_profile_contract(
 def _profile_context(runtime_dir: str) -> dict[str, Any]:
     discovered = work_control_profile_source(runtime_dir)
     source = discovered["source"]
-    composed = profile_composition.catalog(source, runtime_dir, require_active=True)
-    materialization = contract_materialization_plan(runtime_dir, source)
+    require_active = not _INACTIVE_PROJECTION_READ.get()
+    composed = profile_composition.catalog(
+        source,
+        runtime_dir,
+        require_active=require_active,
+    )
+    materialization = contract_materialization_plan(
+        runtime_dir,
+        source,
+        require_active=require_active,
+    )
     if materialization["operations"]:
         raise profile_sdk.ProfileSdkError(
             "profile-contract-not-materialized",
@@ -582,17 +608,27 @@ def _batched_state_query(
             },
             "definition": query,
         }
+        require_active = not _INACTIVE_PROJECTION_READ.get()
         plan = profile_composition.resolved_query_plan(
-            context["source"], runtime_dir, "initiative-state", resolution
+            context["source"],
+            runtime_dir,
+            "initiative-state",
+            resolution,
+            require_active=require_active,
         )
         receipt = profile_composition.execute_query(
-            context["source"], runtime_dir, plan
+            context["source"], runtime_dir, plan, require_active=require_active
         )
         results.append(receipt["result"])
         receipts.append(receipt)
     if len(results) == 1:
         composed_receipt = profile_composition.compose_query_receipt(
-            context["source"], runtime_dir, "initiative-state", receipts, results[0]
+            context["source"],
+            runtime_dir,
+            "initiative-state",
+            receipts,
+            results[0],
+            require_active=not _INACTIVE_PROJECTION_READ.get(),
         )
         return {
             **results[0],

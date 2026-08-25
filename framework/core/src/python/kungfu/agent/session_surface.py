@@ -209,7 +209,35 @@ def effective_work_ref(envelope):
             effective = binding.get("workRef")
     except (OSError, ValueError):
         pass
-    return effective
+    return _project_work_binding(envelope, effective)
+
+
+def _project_work_binding(envelope, work_ref):
+    """Project one effective Work binding into a public Console envelope."""
+
+    if work_ref is None:
+        return None
+    body = {
+        **{key: value for key, value in envelope.items() if key != "envelopeRoot"},
+        "activeProfiles": [
+            {"id": work_ref["profileId"], "root": work_ref["profileRoot"]}
+        ],
+        "workRef": work_ref,
+    }
+    projected = {**body, "envelopeRoot": semantic_root(body)}
+    try:
+        validated = session_contract.validate_agent_console_envelope(projected)
+    except ValueError:
+        return work_ref
+    envelope.clear()
+    envelope.update(validated)
+    return work_ref
+
+
+def _active_work_profiles(work_ref):
+    if work_ref is None:
+        return []
+    return [{"id": work_ref["profileId"], "root": work_ref["profileRoot"]}]
 
 
 class ReturnCodeResult(Protocol):
@@ -692,7 +720,7 @@ def current_native_console(
         "attemptId": session["sessionAttemptId"],
         "runtimeProfileId": "kungfu.agent-runtime.codex.ambient",
         "provider": "codex",
-        "activeProfiles": [],
+        "activeProfiles": _active_work_profiles(work_ref),
         "workRef": work_ref,
         "entrypoints": {
             "context": [cli_bin, "agent", "context", "--json"],

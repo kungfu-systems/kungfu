@@ -394,6 +394,7 @@ class WorkControlAuthority:
                 operation,
                 adapter_values,
                 authorized_action=write,
+                inactive_projection_read=not write,
             )
         except profile_sdk.ProfileSdkError as error:
             code = str(error.diagnosis.get("code") or "")

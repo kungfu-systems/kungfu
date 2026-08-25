@@ -44,8 +44,10 @@ from . import recover
 from . import exit
 from . import dev
 from . import work_design
+from kungfu.assignment_runtime import fresh_recovery
 
 kfx_authoring.register_authoring_commands(kfx.kfx, kfx.kfx_command_context)
+fresh_recovery.register_commands(assignment)
 
 __all__ = [
     "engage",

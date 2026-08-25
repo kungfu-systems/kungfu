@@ -15,6 +15,7 @@ from kungfu import (
     work_control,
 )
 from kungfu.agent import work_profile
+from kungfu.assignment_runtime.authority import WorkControlAuthority
 from kungfu.rewind import reporting as rewind_reporting
 from kungfu.storage import service as storage_service
 
@@ -600,6 +601,72 @@ def test_native_work_control_receipts_do_not_leak_compatibility_vocabulary(
     assert status["assignment"]["initiative_id"] == "initiative-a"
     assert status["assignment"]["assignment_id"] == "assignment-a"
     assert status["phase"] == "admitted"
+
+
+def test_exact_source_projection_read_survives_removed_profile_but_actions_do_not(
+    tmp_path,
+):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    _materialize_contract(SOURCE, runtime)
+    work_control.create_initiative(
+        str(runtime),
+        initiative_id="retained-initiative",
+        title="Retained initiative",
+        intent="Remain readable after the Session loses its Profile",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    work_control.create_assignment(
+        str(runtime),
+        initiative_id="retained-initiative",
+        assignment_id="retained-assignment",
+        title="Retained assignment",
+        objective="Remain losslessly readable after Profile removal",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    remove = profile_sdk.lifecycle_plan(
+        runtime, "remove", profile_id="kungfu.work-control"
+    )["corePlan"]
+    profile_sdk.lifecycle_apply(runtime, remove, "test:remove")
+
+    snapshot = WorkControlAuthority(runtime, source=SOURCE).inspect()
+
+    assert snapshot["assignments"][0]["assignmentId"] == "retained-assignment"
+    assert snapshot["assignments"][0]["lifecycle"]["phase"] == "admitted"
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.invoke_member_adapter(
+            SOURCE,
+            runtime,
+            "work-control-actions",
+            "runtime-authority-status",
+            {},
+            authorized_action=True,
+            inactive_projection_read=True,
+        )
+    assert raised.value.diagnosis["code"] == "profile-not-active"
+
+
+def test_inactive_projection_read_rejects_a_conflicting_profile_root(tmp_path):
+    installed = _copy_source(tmp_path)
+    (installed / "work-control-actions" / "root-drift.txt").write_text(
+        "different exact member bytes\n", encoding="utf-8"
+    )
+    runtime = tmp_path / "runtime"
+    _activate(installed, runtime)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.invoke_member_adapter(
+            SOURCE,
+            runtime,
+            "work-control-actions",
+            "portfolio",
+            {},
+            inactive_projection_read=True,
+        )
+
+    assert raised.value.diagnosis["code"] == "profile-not-active"
 
 
 def test_public_work_control_adapter_rejects_legacy_completion_root_names(tmp_path):

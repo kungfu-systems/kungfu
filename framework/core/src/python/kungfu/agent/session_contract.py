@@ -148,6 +148,17 @@ def validate_work_ref(
     return result
 
 
+def require_expected_binding(expected, work_ref, session) -> None:
+    """Fail before mutation when a planned native binding has drifted."""
+
+    if expected is None:
+        return
+    if dict(expected.get("workRef") or {}) != work_ref:
+        raise ValueError("native Work binding drifted from expected WorkRef")
+    if dict(expected.get("session") or {}) != session:
+        raise ValueError("native Work binding drifted to another SessionAttempt")
+
+
 def validate_agent_console_envelope(
     value: Mapping[str, Any],
 ) -> dict[str, Any]:
