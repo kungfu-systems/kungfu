@@ -334,19 +334,17 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
     ) -> None:
         try:
             _validate_assignment_create_references(command, snapshot)
+            before = dict(pending.get("beforeRevision") or {})
+            if revision.get("root") == before.get("root"):
+                authority_result = self.authority.apply(dict(pending["command"]))
+                pending = {**dict(pending), "authorityResult": authority_result}
+                self._state["pending"] = pending
+                self._save_state()
+                snapshot, revision = self._observe_snapshot(record_event=False)
+                self._finalize_pending(pending, snapshot, revision, recovered=True)
+                return
         except LocalRuntimeError as error:
-            if error.code != "invalid-command":
-                raise
             self._reject_pending_before_authority(pending, error)
-            return
-        before = dict(pending.get("beforeRevision") or {})
-        if revision.get("root") == before.get("root"):
-            authority_result = self.authority.apply(dict(pending["command"]))
-            pending = {**dict(pending), "authorityResult": authority_result}
-            self._state["pending"] = pending
-            self._save_state()
-            snapshot, revision = self._observe_snapshot(record_event=False)
-            self._finalize_pending(pending, snapshot, revision, recovered=True)
             return
         diagnostic = {
             "code": "interrupted-write-ambiguous",
@@ -355,22 +353,24 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             "recovery": ["diagnostics.get", "recovery.plan"],
         }
         diagnostics = list(self._state.get("diagnostics") or [])
-        if diagnostic not in diagnostics:
-            diagnostics.append(diagnostic)
-        self._state["diagnostics"] = diagnostics
+        diagnostics_by_root = dict(
+            map(lambda item: (_root(item), item), [*diagnostics, diagnostic])
+        )
+        self._state["diagnostics"] = list(diagnostics_by_root.values())
         self._save_state()
 
     def _reject_pending_before_authority(
         self, pending: Mapping[str, Any], error: LocalRuntimeError
     ) -> None:
+        if error.code != "invalid-command":
+            raise error
         revision = dict(
-            pending.get("beforeRevision") or self._state.get("revision") or {}
+            pending.get("beforeRevision") or self._state.get("revision", {})
         )
         diagnostic, event_details = _interrupted_command_rejection(pending, error)
         diagnostics = list(self._state.get("diagnostics") or [])
-        if diagnostic not in diagnostics:
-            diagnostics.append(diagnostic)
-        self._state["diagnostics"] = diagnostics
+        by_root = dict(map(lambda row: (_root(row), row), [*diagnostics, diagnostic]))
+        self._state["diagnostics"] = list(by_root.values())
         self._state["pending"] = None
         self._append_event("command-rejected", revision, event_details)
         self._save_state()
