@@ -108,6 +108,7 @@
       "owner": "release/provenance-object",
       "paths": [
         "framework/core/src/python/kungfu/release_provenance/__init__.py",
+        "framework/core/src/python/kungfu/release_provenance/_v1_graph.py",
         "scripts/release-provenance-object.py",
         "scripts/temporal-provenance-cutover.py"
       ]
