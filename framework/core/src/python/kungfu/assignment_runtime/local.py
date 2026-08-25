@@ -344,7 +344,7 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
                 self._finalize_pending(pending, snapshot, revision, recovered=True)
                 return
         except LocalRuntimeError as error:
-            self._reject_invalid_pending(pending, error)
+            self._reject_pending_before_authority(pending, error)
             return
         diagnostic = {
             "code": "interrupted-write-ambiguous",
@@ -359,24 +359,18 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
         self._state["diagnostics"] = list(diagnostics_by_root.values())
         self._save_state()
 
-    def _reject_invalid_pending(
+    def _reject_pending_before_authority(
         self, pending: Mapping[str, Any], error: LocalRuntimeError
     ) -> None:
         if error.code != "invalid-command":
             raise error
-        self._reject_pending_before_authority(pending, error)
-
-    def _reject_pending_before_authority(
-        self, pending: Mapping[str, Any], error: LocalRuntimeError
-    ) -> None:
         revision = dict(
-            pending.get("beforeRevision") or self._state.get("revision") or {}
+            pending.get("beforeRevision") or self._state.get("revision", {})
         )
         diagnostic, event_details = _interrupted_command_rejection(pending, error)
         diagnostics = list(self._state.get("diagnostics") or [])
-        if diagnostic not in diagnostics:
-            diagnostics.append(diagnostic)
-        self._state["diagnostics"] = diagnostics
+        by_root = dict(map(lambda row: (_root(row), row), [*diagnostics, diagnostic]))
+        self._state["diagnostics"] = list(by_root.values())
         self._state["pending"] = None
         self._append_event("command-rejected", revision, event_details)
         self._save_state()
