@@ -267,8 +267,8 @@ def _interrupted_command_rejection(
     diagnostic = {
         "code": "interrupted-command-rejected",
         "message": (
-            "An interrupted command failed deterministic validation before "
-            "authority execution"
+            "An interrupted command failed deterministic validation without "
+            "an admitted authority mutation"
         ),
         "severity": "warning",
         "recovery": [],
@@ -323,26 +323,43 @@ class WorkControlAuthority:
             )
         except profile_sdk.ProfileSdkError as error:
             code = str(error.diagnosis.get("code") or "")
-            if code in {
-                "member-resolution-failed",
-                "profile-member-ambiguous",
-                "profile-source-ambiguous",
-            }:
-                raise LocalRuntimeError(
+            fallback = {
+                "member-resolution-failed": LocalRuntimeError(
                     "ambiguous-identity",
                     "Work Control authority does not resolve exactly once",
-                ) from error
-            raise LocalRuntimeError(
-                "backend-unavailable",
-                "Work Control authority is unavailable",
-                diagnostics=[
-                    {
-                        "code": "work-control-unavailable",
-                        "message": "The exact active Work Control Profile could not be invoked",
-                        "severity": "error",
-                        "recovery": ["diagnostics.get", "recovery.plan"],
-                    }
-                ],
+                ),
+                "profile-member-ambiguous": LocalRuntimeError(
+                    "ambiguous-identity",
+                    "Work Control authority does not resolve exactly once",
+                ),
+                "profile-source-ambiguous": LocalRuntimeError(
+                    "ambiguous-identity",
+                    "Work Control authority does not resolve exactly once",
+                ),
+            }.get(
+                code,
+                LocalRuntimeError(
+                    "backend-unavailable",
+                    "Work Control authority is unavailable",
+                    diagnostics=[
+                        {
+                            "code": "work-control-unavailable",
+                            "message": "The exact active Work Control Profile could not be invoked",
+                            "severity": "error",
+                            "recovery": ["diagnostics.get", "recovery.plan"],
+                        }
+                    ],
+                ),
+            )
+            raise {
+                (True, "member-adapter-invoke-failed", True): LocalRuntimeError(
+                    "invalid-command",
+                    str(error.__cause__),
+                    details={"operation": operation},
+                )
+            }.get(
+                (write, code, isinstance(error.__cause__, ValueError)),
+                fallback,
             ) from error
 
     @staticmethod

@@ -1,0 +1,212 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "07da2875cdfc6a233aaab0dc20998052b13724c9",
+  "changeRoot": "sha256:c6a5947425d84fce17680ada756ae63aa937420caef7ee70d5a096fd1eb5a1b4",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
+      "contentRoot": "sha256:0c1ff8f1d7205d3a86fec6d8cdc8762fb107ac344a26ffa471ac3ea0118782de",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4287e4d0bbded3c3ba17d62e837424419875be71d46d4304af8479a2aee4d0a3",
+      "contentRoot": "sha256:5677d5ddcb74d96059f2c9f6b8fc583e005bc8d741fe929dc910b32ee22bad6e",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8e86908d906dcb0fa00c29f299f2160725597380bba08e04ec395ad13307c8d8",
+      "contentRoot": "sha256:74843fdb3904c63195dd09e863afad6ff7d4e135f0053f650623055689d87755",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:665b4b5cb9d1e632e7b0cff40f2de076816c5e77b00a75c9d37538cb1a8c2788",
+      "contentRoot": "sha256:484a2685cc585384ab8388b1de34202c56723a5e0fe2d36afbb69421c1ef874e",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6322c025fd9f102498d014ea2831be17381bc4409c3ab8ad9fb8d2451aca8416",
+      "contentRoot": "sha256:d9733618687b26829d3d07ea0b7a3ced6e2d3696d0003c2d5b1d04b97d59eab6",
+      "path": ".xinfa/product-atlas-bundle.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
+      "contentRoot": "sha256:0c1ff8f1d7205d3a86fec6d8cdc8762fb107ac344a26ffa471ac3ea0118782de",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:bb50b6d4052d92442034ce71e2a0e46b922c91f8ba34261276014880311392a3",
+      "contentRoot": "sha256:dc1a7765b58516d81832042f37f56139d9f06ba894dffeeac66f950eae461b63",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b2ea93dae124bf4d2e63c942236c4bf14d0148e9cd712012c79f35d8ba439af6",
+      "contentRoot": "sha256:33f9c585fb75a8cecde08fd0cb5292828864afd1bf9406a778a34bc6a42bf575",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f4ae88f905ce2328de1695565ba385320260b506c0de137695baa279e711e687",
+      "contentRoot": "sha256:63e5f4480871228b65b49105253d13f612f75f990596c94665478813c7cab894",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9c3a6b11d9ece0e80f1b7dc0df74569850c8f453a097843cf0411cc6d3e5747f",
+      "contentRoot": "sha256:25091e16304a5b6e5a65e789740412bed3b0529f265e19b1c29daf5608b6ba08",
+      "path": "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1faf7747d61c8e52c2c44490641f47f6296686c80faa05a29e4f0b699dcf6793",
+      "contentRoot": "sha256:7fdbbd90d45b960bb21f003afb4193b923378683fbb3dfb0849f0fa6280e407c",
+      "path": "docs/architecture/adr-map.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:43947e7ce6a514677788f0c63c66362371a8f960d4ff0e0e17f0716d51b83f38",
+      "contentRoot": "sha256:6c4ad117f8f2b2bb46f44e9cc225d4cd6ee6c72ea157718e74dc36c14f869744",
+      "path": "docs/architecture/adr-map.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6c2ec8ede243e9b1af7c1a98361f9b63322dbdc4c6b8b908fd30eb4b2d36e3b2",
+      "contentRoot": "sha256:f4f7e9220902a0d3edf42f0c9cfbb98ab87204caaa6e24b7349f1cb9242dd7b2",
+      "path": "framework/core/src/bindings/python/binding/py-runtime.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:63796bedad0c75cfe029aab7b6255cd89912faa6c7e246a1e18d036b505e471d",
+      "contentRoot": "sha256:3ba0633dafd0a8113e124e241002013d1db03a499cb690eaccf975131435da9e",
+      "path": "framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aec37bd56ce055212b9a47c631a0076def7e88e5ca3d12427ae1b4297607f626",
+      "contentRoot": "sha256:ab48b3f3618bb8f6b1f267414cb7e615f8cdabc15d63d07ffef12e0a53e4735f",
+      "path": "framework/core/src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7d8e97295419e00924fdb8f1ec74257867e6c9b3bb6a2d33c45ce3c1ad5ea0c7",
+      "contentRoot": "sha256:704c56d9d8e22ee6567a86556b242a028c618864e62421293f48de2fdca5c882",
+      "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:41d5d6ddadee0031272691d2ebc66c7aa899923f85f3a351659132e8f31cb1fd",
+      "contentRoot": "sha256:e4af2321efeb8481d0686670d77ac0272ef844ec0c363cbe4c6a965eb370a865",
+      "path": "framework/core/src/libkungfu/src/runtime/storage/service_operation_catalog.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d5c3a291cf0eff5f89dfa9a4b31ae8c3a06ab9a8d2e34e78c900fef0896a2732",
+      "contentRoot": "sha256:245dada0ce75092ec2f946a2acb36b677c37ce9a0d4318b3f964042033b6e835",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/authority.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8c8aa9e2bb10302b1bfbfb9f2c87a48779e7227d8e55828ff780448a7fb999b4",
+      "contentRoot": "sha256:e7dceb2230a2656c79e3c091c6c3db3038617fa72e73ae6ce9d27d050bfda604",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/local.py",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:d1eafd4b9f83d2353b0e912d8f2fc80282d673268c21898cd76192d7d4e6a636",
+      "path": "framework/core/src/python/kungfu/runtime_processes.py",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:053e7347f8e3d30b9c9ed7f3eb41f6db4ff8f5e091e169b2ff14c24683a687c8",
+      "contentRoot": "sha256:acd6f26c85c3629de8f904ccfa8dcb00ebb1a7b1d8a5a6a4a5e4382eae1e45e5",
+      "path": "framework/core/src/python/kungfu/runtime_service.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:555ea09403d48f98549d0942f9057a595658b4bd801bb6d0d8574ee0b60c975d",
+      "contentRoot": "sha256:c92ba88d9c7a233d2d1af43cc426db340528024c4cf52a1e1db3778a3795f726",
+      "path": "framework/core/tests/python/test_assignment_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:edf6d049892739f15430b3848a7965862db81cf33c40a76f3149332542fc9e63",
+      "contentRoot": "sha256:5874de5462a21abd3dd2b288352ef26cea820b3929fd22e6ed6e091d8e2a205c",
+      "path": "framework/core/tests/python/test_runtime_cli.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:48ef937d4596aaef9191ca7f2a6d78e81c61c9b8ce02497158a041e6000a81ed",
+      "contentRoot": "sha256:0b16b3b8ee06e0ea90cd8964cbf43ad1b066ad314132036c92f51936ff13db58",
+      "path": "framework/core/tests/python/test_runtime_service.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a8737dcc0bab9543d1e22e0f32a58a16f95976606db8d9e456170ad781ba46b7",
+      "contentRoot": "sha256:0c6d92d16659bfede7d5340c66d94d783a632e2af256d2e5771cf6b92f2a384a",
+      "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:025de1a1a93b6e651a43faab1fdb7f2e5ecd5e246448762045eb859a2873a059",
+      "contentRoot": "sha256:edaef5561131a3bde98beced7cb742782f1a17f58368564fa09ab84636cd8c57",
+      "path": "framework/maintainability/function-risk-ratchet.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a173ab1c9b963f7444a8b492b1bc0a5ea15ccfe136ea2411a2837d56ff32fb5d",
+      "contentRoot": "sha256:eefb3a87abc39d9ee2f845638aa69c264b91b7896898a76b96abd48c5498e74e",
+      "path": "framework/maintainability/function-risk-transition.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e67f1d47c0ab60e20fe360bddeb1c2ac08a202d9b5382b439a6d662fc8d5b92e",
+      "contentRoot": "sha256:5351ab35ba511a8b97b387e22ac291ea67b2ed711ad19023e21a6c847a841854",
+      "path": "framework/maintainability/function-risk.test.mjs",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:7d7a41c21bbcf60acfe1f7347240827b56da00310578832ac6c05d4012149a8f",
+      "path": "framework/maintainability/python-runtime-responsibility-map.json",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:5ff1361da513af68f6bb23cb0c7bb2f983c6c5959a247dfec7373f1a7d831d8f",
+      "contentRoot": "sha256:3e026996bb260defb2c95f15996d5a143f64f003c8e0f6bc7d40db3b190cbaae",
+      "path": "framework/maintainability/source-analysis-kernel.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5f45f0e6271d0c6a12473bc0301328b3c2efccb4ed5548b960956b0d4ff99952",
+      "contentRoot": "sha256:7b53868e975a87e914f13445806897c2635b7fbcdefe7f20a2a64723d8d3a221",
+      "path": "framework/maintainability/source-analysis-session.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:96f6eeca0004a535f9e3d1b171b3370b816d2320fe8c05840586335d389e22a2",
+      "contentRoot": "sha256:5bec6cfffe380c4160413ddc6638d71a960d146042974e60647c5ed6593df10f",
+      "path": "scripts/check-code-complexity.test.mjs",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:7e74c518d4239ac76a2c33e447d605752e6a23ad1f986b4bec8350a92c13c007",
+      "path": "scripts/check-python-runtime-responsibility-map.py",
+      "status": "added"
+    }
+  ],
+  "affectedFacets": [
+    "registry-admission-lifecycle"
+  ],
+  "rationale": "The runtime storage and native binding decomposition preserves public behavior, contracts, and reader journeys while only moving internal C++ dispatch, rendering, catalog, and adapter responsibilities behind existing owners.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:7b2192a2eeaeff1a445867e2bf4afa23756d54f7151866526f8650a7b6701b5c"
+}
