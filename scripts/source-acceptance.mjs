@@ -904,6 +904,7 @@ export function sourceAcceptancePlan(
               'scripts/run-shifu-lifecycle.test.mjs',
               'scripts/check-typescript-files.test.mjs',
               'scripts/source-acceptance-git.test.mjs',
+              'scripts/source-acceptance-kfd-runtime.test.mjs',
               'scripts/source-acceptance.test.mjs',
               'scripts/platform-command.test.mjs',
               'product/scripts/dist.test.mjs',
