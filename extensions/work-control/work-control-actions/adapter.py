@@ -184,19 +184,21 @@ def _append_assignment_relation_event(
     )
     receipt = domain.work_control.append_assignment_relation_event(
         runtime_dir,
-        workspace_identity_root=str(values.get("workspaceIdentityRoot") or ""),
-        relation=dict(values.get("relation") or {}),
-        event_type=str(values.get("eventType") or ""),
-        actor=str(values.get("actor") or ""),
-        predecessor_event_roots=[
-            str(row) for row in (values.get("predecessorEventRoots") or [])
-        ],
-        evidence_roots=[str(row) for row in (values.get("evidenceRoots") or [])],
-        known_relations=[dict(row) for row in (values.get("knownRelations") or [])],
-        actor_type=str(values.get("actorType") or "agent"),
+        workspace_identity_root=_text(values, "workspaceIdentityRoot"),
+        relation=_mapping(values, "relation"),
+        event_type=_text(values, "eventType"),
+        actor=_text(values, "actor"),
+        predecessor_event_roots=_string_rows(values, "predecessorEventRoots"),
+        evidence_roots=_string_rows(values, "evidenceRoots"),
+        known_relations=_object_rows(values, "knownRelations"),
+        actor_type=_text(values, "actorType", "agent"),
     )
+    return receipt, _relation_subjects(receipt)
+
+
+def _relation_subjects(receipt: Mapping[str, Any]) -> list[str]:
     relation = receipt["event"]["relation"]
-    return receipt, [relation["source"]["subject"], relation["target"]["subject"]]
+    return [relation["source"]["subject"], relation["target"]["subject"]]
 
 
 def _claim_assignment(domain, runtime_dir: str, values: Mapping[str, Any]):
