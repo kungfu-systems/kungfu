@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784, https://github.com/kungfu-systems/kungfu/pull/3140, https://github.com/kungfu-systems/kungfu/pull/3395]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784, https://github.com/kungfu-systems/kungfu/pull/3140, https://github.com/kungfu-systems/kungfu/pull/3395, https://github.com/kungfu-systems/kungfu/pull/3422]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1784
-qualification_refs: [framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/api/tests/kfx-host.test.ts, framework/gui/src/agent-work-lab.test.ts, framework/tui/src/agent-work-lab-view.test.ts, framework/core/src/libkungfu/tests/native_kfx_service_host_tests.cpp, framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json]
+qualification_refs: [framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/api/tests/kfx-host.test.ts, framework/gui/src/agent-work-lab.test.ts, framework/tui/src/agent-work-lab-view.test.ts, framework/core/src/libkungfu/tests/native_kfx_service_host_tests.cpp, framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp, framework/core/src/bindings/python/binding/py-runtime.cpp, framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -14,7 +14,8 @@ period: 2026-07-15
 theme: surface-neutral-kfx-contributions-thin-bindings
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-08-24
+last_reviewed: 2026-08-25
+ai_provenance: GPT-5 via Codex on 2026-08-25; based on repository contracts, the exact feature diff, local source qualification, and the protected pull request; installed-product, cross-platform artifact, native Warrant, and public release qualification are not claimed
 ---
 
 # KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
@@ -225,6 +226,14 @@ declared rather than inferred.
 - No host evaluates a bundle that Core did not admit for that exact root,
   generation, facet, and capability set.
 - Compatibility aliases contain no independent mutation or trust logic.
+
+Pull request 3422 extends this implemented boundary with a bounded cleanup of
+the native KFX authority bridge and Python runtime binding. The binding remains
+a projection over the C++ runtime and storage owners; it does not acquire an
+independent admission, mutation, or trust decision. Exact-head native, binding,
+KFX impact, full source qualification, protected merge, and post-merge source
+qualification remain required before this pull request becomes implementation
+evidence.
 
 ## Consequences
 

@@ -31,79 +31,193 @@ const char *verification_status_text(yy_enums::SourceVerificationStatus status) 
   return "failed";
 }
 
-storage_query_result query_journal_projection(const storage_query_request &request) {
+storage_query_result query_result_shell(const storage_query_request &request) {
   storage_query_result result{};
   result.query = request.query;
   result.limit = request.limit;
   result.range = request.range;
-  if (!request.entry_kind.empty()) {
+  if (!request.entry_kind.empty())
     result.entry_kind = request.entry_kind;
-  }
+  return result;
+}
 
-  const bool episode_query =
-      request.query == storage_query_kind::Episodes || request.query == storage_query_kind::EpisodeRecords ||
-      request.query == storage_query_kind::EpisodeFrames || request.query == storage_query_kind::EpisodeRefs;
-  if (episode_query) {
-    result.scope = "episode";
-    if (request.episode_id != 0) {
-      result.episode_id = request.episode_id;
-    }
-    result.projection_name = "episode-manifest";
-    result.projection_schema = yy_storage::EPISODE_MANIFEST_SCHEMA_V1;
-    result.rebuildable = false;
+bool is_episode_query(storage_query_kind query) {
+  return query == storage_query_kind::Episodes || query == storage_query_kind::EpisodeRecords ||
+         query == storage_query_kind::EpisodeFrames || query == storage_query_kind::EpisodeRefs;
+}
 
-    const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
-    if (request.query == storage_query_kind::Episodes) {
-      std::vector<yy_storage::episode_current_view> rows;
-      if (request.episode_id != 0) {
-        const auto iter = fold.episodes.find(request.episode_id);
-        if (iter != fold.episodes.end()) {
-          rows.push_back(iter->second);
-        }
-      } else {
-        for (auto iter = fold.episodes.rbegin(); iter != fold.episodes.rend(); ++iter) {
-          rows.push_back(iter->second);
-          if (request.limit != 0 && rows.size() >= request.limit) {
-            break;
-          }
-        }
-      }
-      result.rows = std::move(rows);
-      return result;
-    }
-
-    if (request.episode_id == 0) {
-      throw std::invalid_argument("episode_id is required for " + storage_query_kind_name(request.query));
-    }
+template <typename Fold>
+storage_query_result query_episode_catalog(const storage_query_request &request, const Fold &fold,
+                                           storage_query_result result) {
+  std::vector<yy_storage::episode_current_view> rows;
+  if (request.episode_id != 0) {
     const auto iter = fold.episodes.find(request.episode_id);
-    if (iter == fold.episodes.end()) {
-      result.ok = false;
-      result.errors.push_back({"episode_missing", request.episode_id});
-      result.rows = std::vector<yy_storage::episode_manifest_record>{};
-      return result;
+    if (iter != fold.episodes.end())
+      rows.push_back(iter->second);
+  } else {
+    for (auto iter = fold.episodes.rbegin(); iter != fold.episodes.rend(); ++iter) {
+      rows.push_back(iter->second);
+      if (request.limit != 0 && rows.size() >= request.limit)
+        break;
     }
-    const auto &view = iter->second;
-    std::vector<yy_storage::episode_manifest_record> rows;
-    if (request.query == storage_query_kind::EpisodeRecords) {
-      rows = view.records;
-    } else {
-      const auto &indices = request.query == storage_query_kind::EpisodeFrames ? view.frame_indices : view.ref_indices;
-      rows.reserve(indices.size());
-      for (const auto index : indices) {
-        rows.push_back(view.records.at(index));
-      }
-    }
-    if (request.limit != 0 && rows.size() > request.limit) {
-      rows.resize(request.limit);
-    }
-    result.rows = std::move(rows);
+  }
+  result.rows = std::move(rows);
+  return result;
+}
+
+template <typename Fold>
+storage_query_result query_episode_records(const storage_query_request &request, const Fold &fold,
+                                           storage_query_result result) {
+  if (request.episode_id == 0)
+    throw std::invalid_argument("episode_id is required for " + storage_query_kind_name(request.query));
+  const auto iter = fold.episodes.find(request.episode_id);
+  if (iter == fold.episodes.end()) {
+    result.ok = false;
+    result.errors.push_back({"episode_missing", request.episode_id});
+    result.rows = std::vector<yy_storage::episode_manifest_record>{};
     return result;
   }
-
-  result.scope = request.source_id.empty() ? "all" : "source";
-  if (!request.source_id.empty()) {
-    result.source_id = request.source_id;
+  const auto &view = iter->second;
+  std::vector<yy_storage::episode_manifest_record> rows;
+  if (request.query == storage_query_kind::EpisodeRecords) {
+    rows = view.records;
+  } else {
+    const auto &indices = request.query == storage_query_kind::EpisodeFrames ? view.frame_indices : view.ref_indices;
+    rows.reserve(indices.size());
+    for (const auto index : indices)
+      rows.push_back(view.records.at(index));
   }
+  if (request.limit != 0 && rows.size() > request.limit)
+    rows.resize(request.limit);
+  result.rows = std::move(rows);
+  return result;
+}
+
+storage_query_result query_episode_projection(const storage_query_request &request) {
+  auto result = query_result_shell(request);
+  result.scope = "episode";
+  if (request.episode_id != 0)
+    result.episode_id = request.episode_id;
+  result.projection_name = "episode-manifest";
+  result.projection_schema = yy_storage::EPISODE_MANIFEST_SCHEMA_V1;
+  result.rebuildable = false;
+
+  const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
+  return request.query == storage_query_kind::Episodes ? query_episode_catalog(request, fold, std::move(result))
+                                                       : query_episode_records(request, fold, std::move(result));
+}
+
+template <typename Records>
+storage_query_result query_sources(const storage_query_request &request, const Records &records,
+                                   const std::map<uint64_t, std::vector<size_t>> &manifests_by_source, uint64_t limit,
+                                   storage_query_result result) {
+  std::vector<storage_source_query_row> rows;
+  for (const auto &[source_uid, indices] : manifests_by_source) {
+    const auto &latest = records.manifests.at(indices.back());
+    const auto source_id = latest.source_id.to_string();
+    if (!request.source_id.empty() && source_id != request.source_id)
+      continue;
+    const auto export_count = static_cast<uint64_t>(
+        std::count_if(records.exports.begin(), records.exports.end(),
+                      [source_uid](const auto &receipt) { return receipt.source_uid == source_uid; }));
+    rows.push_back({source_uid,
+                    source_id,
+                    latest.source_type.to_string(),
+                    latest.source_coordinate.to_string(),
+                    latest.manifest_id.to_string(),
+                    latest.source_head.to_string(),
+                    latest.accept_time,
+                    latest.entry_count,
+                    {latest.sync_root_algo.to_string(), latest.sync_root_value.to_string()},
+                    indices.size(),
+                    export_count});
+    if (rows.size() >= limit)
+      break;
+  }
+  result.rows = std::move(rows);
+  return result;
+}
+
+template <typename Records>
+storage_query_result query_manifests(const storage_query_request &request, const Records &records,
+                                     const std::map<uint64_t, std::vector<size_t>> &manifests_by_source, uint64_t limit,
+                                     storage_query_result result) {
+  std::vector<storage_manifest_query_row> rows;
+  for (const auto &[source_uid, indices] : manifests_by_source) {
+    (void)source_uid;
+    const auto source_id = records.manifests.at(indices.back()).source_id.to_string();
+    if (!request.source_id.empty() && source_id != request.source_id)
+      continue;
+    for (const auto index : indices) {
+      const auto &record = records.manifests.at(index);
+      rows.push_back({source_id,
+                      record.manifest_id.to_string(),
+                      record.accept_time,
+                      record.entry_count,
+                      record.entries_hash.to_string(),
+                      {record.sync_root_algo.to_string(), record.sync_root_value.to_string()},
+                      verification_status_text(record.status)});
+      if (rows.size() >= limit)
+        break;
+    }
+    if (rows.size() >= limit)
+      break;
+  }
+  result.rows = std::move(rows);
+  return result;
+}
+
+template <typename Record, typename Header>
+bool storage_entry_matches(const storage_query_request &request, const Record &record, const Header &header,
+                           const storage_entry_query_row &row) {
+  return record.accept_time == header.accept_time &&
+         (request.source_id.empty() || row.storage_source_id == request.source_id) &&
+         (request.entry_kind.empty() || row.kind == request.entry_kind) &&
+         ((request.range.since.empty() && request.range.until.empty()) || !row.source_time.empty()) &&
+         (request.range.since.empty() || row.source_time >= request.range.since) &&
+         (request.range.until.empty() || row.source_time <= request.range.until);
+}
+
+template <typename Records>
+storage_query_result query_entries(const storage_query_request &request, const Records &records, uint64_t limit,
+                                   storage_query_result result) {
+  std::unordered_map<uint64_t, size_t> latest_by_manifest_uid;
+  for (size_t index = 0; index < records.manifests.size(); ++index)
+    latest_by_manifest_uid[records.manifests[index].manifest_uid] = index;
+  std::vector<storage_entry_query_row> rows;
+  for (const auto &record : records.entries) {
+    const auto header_iter = latest_by_manifest_uid.find(record.manifest_uid);
+    if (header_iter == latest_by_manifest_uid.end())
+      continue;
+    const auto &header = records.manifests.at(header_iter->second);
+    storage_entry_query_row row{record.kind.to_string(),
+                                record.entry_source_id.to_string(),
+                                record.source_path.to_string(),
+                                record.source_time.to_string(),
+                                record.entry_schema_version,
+                                record.content_type.to_string(),
+                                record.payload_hash.to_string(),
+                                record.byte_len,
+                                payload_state_text(record.payload_state),
+                                record.entry_index,
+                                record.accept_time,
+                                header.source_id.to_string(),
+                                header.manifest_id.to_string()};
+    if (!storage_entry_matches(request, record, header, row))
+      continue;
+    rows.push_back(std::move(row));
+    if (rows.size() >= limit)
+      break;
+  }
+  result.rows = std::move(rows);
+  return result;
+}
+
+storage_query_result query_catalog_projection(const storage_query_request &request) {
+  auto result = query_result_shell(request);
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty())
+    result.source_id = request.source_id;
   result.projection_name = "manifest-catalog";
   result.projection_schema = yy_storage::MANIFEST_CATALOG_SCHEMA_V1;
   result.rebuildable = true;
@@ -118,118 +232,18 @@ storage_query_result query_journal_projection(const storage_query_request &reque
     manifests_by_source[records.manifests[index].source_uid].push_back(index);
   }
 
-  if (request.query == storage_query_kind::Sources) {
-    std::vector<storage_source_query_row> rows;
-    for (const auto &[source_uid, indices] : manifests_by_source) {
-      const auto &latest = records.manifests.at(indices.back());
-      const auto source_id = latest.source_id.to_string();
-      if (!request.source_id.empty() && source_id != request.source_id) {
-        continue;
-      }
-      uint64_t export_count = 0;
-      for (const auto &receipt : records.exports) {
-        export_count += receipt.source_uid == source_uid ? 1 : 0;
-      }
-      rows.push_back({source_uid,
-                      source_id,
-                      latest.source_type.to_string(),
-                      latest.source_coordinate.to_string(),
-                      latest.manifest_id.to_string(),
-                      latest.source_head.to_string(),
-                      latest.accept_time,
-                      latest.entry_count,
-                      {latest.sync_root_algo.to_string(), latest.sync_root_value.to_string()},
-                      indices.size(),
-                      export_count});
-      if (rows.size() >= limit) {
-        break;
-      }
-    }
-    result.rows = std::move(rows);
-    return result;
-  }
+  if (request.query == storage_query_kind::Sources)
+    return query_sources(request, records, manifests_by_source, limit, std::move(result));
+  if (request.query == storage_query_kind::Manifests)
+    return query_manifests(request, records, manifests_by_source, limit, std::move(result));
 
-  if (request.query == storage_query_kind::Manifests) {
-    std::vector<storage_manifest_query_row> rows;
-    for (const auto &[source_uid, indices] : manifests_by_source) {
-      (void)source_uid;
-      const auto source_id = records.manifests.at(indices.back()).source_id.to_string();
-      if (!request.source_id.empty() && source_id != request.source_id) {
-        continue;
-      }
-      for (const auto index : indices) {
-        const auto &record = records.manifests.at(index);
-        rows.push_back({source_id,
-                        record.manifest_id.to_string(),
-                        record.accept_time,
-                        record.entry_count,
-                        record.entries_hash.to_string(),
-                        {record.sync_root_algo.to_string(), record.sync_root_value.to_string()},
-                        verification_status_text(record.status)});
-        if (rows.size() >= limit) {
-          break;
-        }
-      }
-      if (rows.size() >= limit) {
-        break;
-      }
-    }
-    result.rows = std::move(rows);
-    return result;
-  }
-
-  if (request.query != storage_query_kind::Entries) {
+  if (request.query != storage_query_kind::Entries)
     throw std::invalid_argument("unsupported storage query: " + storage_query_kind_name(request.query));
-  }
-  std::unordered_map<uint64_t, size_t> latest_by_manifest_uid;
-  for (size_t index = 0; index < records.manifests.size(); ++index) {
-    latest_by_manifest_uid[records.manifests[index].manifest_uid] = index;
-  }
-  std::vector<storage_entry_query_row> rows;
-  for (const auto &record : records.entries) {
-    const auto header_iter = latest_by_manifest_uid.find(record.manifest_uid);
-    if (header_iter == latest_by_manifest_uid.end()) {
-      continue;
-    }
-    const auto &header = records.manifests.at(header_iter->second);
-    if (record.accept_time != header.accept_time) {
-      continue;
-    }
-    storage_entry_query_row row{record.kind.to_string(),
-                                record.entry_source_id.to_string(),
-                                record.source_path.to_string(),
-                                record.source_time.to_string(),
-                                record.entry_schema_version,
-                                record.content_type.to_string(),
-                                record.payload_hash.to_string(),
-                                record.byte_len,
-                                payload_state_text(record.payload_state),
-                                record.entry_index,
-                                record.accept_time,
-                                header.source_id.to_string(),
-                                header.manifest_id.to_string()};
-    if (!request.source_id.empty() && row.storage_source_id != request.source_id) {
-      continue;
-    }
-    if (!request.entry_kind.empty() && row.kind != request.entry_kind) {
-      continue;
-    }
-    if ((!request.range.since.empty() || !request.range.until.empty()) && row.source_time.empty()) {
-      continue;
-    }
-    if (!request.range.since.empty() && row.source_time < request.range.since) {
-      continue;
-    }
-    if (!request.range.until.empty() && row.source_time > request.range.until) {
-      continue;
-    }
-    rows.push_back(std::move(row));
-    if (rows.size() >= limit) {
-      break;
-    }
-  }
-  result.rows = std::move(rows);
-  return result;
+  return query_entries(request, records, limit, std::move(result));
+}
+
+storage_query_result query_journal_projection(const storage_query_request &request) {
+  return is_episode_query(request.query) ? query_episode_projection(request) : query_catalog_projection(request);
 }
 
 // Stage 3 deep verification (KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae point 4,
