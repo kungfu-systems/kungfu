@@ -792,6 +792,39 @@ def test_work_control_authority_rejects_conflicting_completion_context_roots(
     assert invoked is False
 
 
+def test_work_control_authority_projects_adapter_value_errors_as_invalid_commands(
+    tmp_path, monkeypatch
+):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+
+    def invoke(*_args, **_kwargs):
+        cause = ValueError("independent review changed before continuation decision")
+        raise profile_sdk.ProfileSdkError(
+            "member-adapter-invoke-failed", str(cause)
+        ) from cause
+
+    monkeypatch.setattr(authority, "_profile_source", lambda: str(PROFILE_SOURCE))
+    monkeypatch.setattr(profile_sdk, "invoke_member_adapter", invoke)
+
+    with pytest.raises(
+        LocalRuntimeError,
+        match="independent review changed before continuation decision",
+    ) as raised:
+        authority.apply(
+            {
+                "type": "assignment.continuation.decide",
+                "target": {
+                    "initiativeId": "initiative-a",
+                    "assignmentId": "assignment-a",
+                },
+                "arguments": {},
+            }
+        )
+
+    assert raised.value.code == "invalid-command"
+    assert raised.value.details == {"operation": "decide-continuation"}
+
+
 def test_work_control_authority_snapshot_avoids_atlas_parity(tmp_path, monkeypatch):
     authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
     operations = []
@@ -1695,6 +1728,67 @@ def test_restart_rejects_invalid_completion_pending_before_authority(tmp_path):
         assert diagnostic["code"] == "interrupted-command-rejected"
         assert diagnostic["details"]["field"] == "evidenceAvailability"
         assert diagnostic["details"]["index"] == 0
+    finally:
+        recovered.close()
+
+
+def test_restart_rejects_deterministic_authority_error_without_sticky_pending(
+    tmp_path, monkeypatch
+):
+    runtime_dir = tmp_path / "invalid-authority-pending" / ".kungfu" / "runtime"
+    authority = FakeAuthority(runtime_dir)
+    runtime = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    snapshot = _handle(
+        runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+    )
+    command = _command(
+        snapshot["revision"],
+        command_type="assignment.continuation.decide",
+    )
+    pending = {
+        "commandRoot": _root(command),
+        "command": command,
+        "beforeRevision": snapshot["revision"],
+        "requestId": "invalid.authority.pending",
+    }
+    runtime._state["pending"] = copy.deepcopy(pending)
+    runtime._save_state()
+    runtime.close()
+
+    def reject(_command):
+        raise LocalRuntimeError(
+            "invalid-command",
+            "independent review changed before continuation decision",
+            details={"operation": "decide-continuation"},
+        )
+
+    monkeypatch.setattr(authority, "apply", reject)
+    recovered = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    try:
+        assert recovered._state["pending"] is None
+        assert recovered._state["events"][-1]["kind"] == "command-rejected"
+        diagnostic = recovered._state["diagnostics"][-1]
+        assert diagnostic["code"] == "interrupted-command-rejected"
+        assert diagnostic["details"] == {
+            "commandId": command["commandId"],
+            "commandRoot": _root(command),
+            "errorCode": "invalid-command",
+            "operation": "decide-continuation",
+        }
     finally:
         recovered.close()
 

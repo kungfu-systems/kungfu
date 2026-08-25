@@ -132,3 +132,46 @@ test('Agent Python responsibility checker fails closed on a missing owner source
   assert.ok(transition > missingGuard);
   assert.match(measure, /new Set\(files\.map\(\(\{ path \}\) => path\)\)/u);
 });
+
+test('Python runtime facade plus process owner reduce aggregate responsibility and risk', () => {
+  const map = readJson(
+    'framework/maintainability/python-runtime-responsibility-map.json',
+  );
+  const checker = spawnSync(
+    pythonCommand(),
+    [path.join(ROOT, 'scripts/check-python-runtime-responsibility-map.py')],
+    { cwd: ROOT, encoding: 'utf8' },
+  );
+  assert.equal(checker.status, 0, checker.stderr || checker.stdout);
+  const report = JSON.parse(checker.stdout);
+  assert.equal(report.status, 'pass');
+  assert.deepEqual(report.baseline, map.baseline);
+  assert.deepEqual(report.current, map.current);
+  assert.deepEqual(
+    new Set(report.requiredOwnerPaths),
+    new Set([...map.sourcePaths, ...map.ownerFiles]),
+  );
+  assert.ok(map.current.responsibilities < map.baseline.responsibilities);
+  assert.ok(
+    map.current.functionRisk.baseRisk < map.baseline.functionRisk.baseRisk,
+  );
+  assert.ok(
+    map.current.functionRisk.changeRisk < map.baseline.functionRisk.changeRisk,
+  );
+});
+
+test('Python runtime responsibility checker counts every required owner source', () => {
+  const checker = fs.readFileSync(
+    path.join(ROOT, 'scripts/check-python-runtime-responsibility-map.py'),
+    'utf8',
+  );
+  const measure = checker.slice(
+    checker.indexOf('function measure(files, paths)'),
+    checker.indexOf('process.stdout.write'),
+  );
+  const missingGuard = measure.indexOf('required owner source paths missing:');
+  const transition = measure.indexOf('const transition = analyzeTransition');
+  assert.ok(missingGuard >= 0);
+  assert.ok(transition > missingGuard);
+  assert.match(measure, /new Set\(files\.map\(\(\{ path \}\) => path\)\)/u);
+});
