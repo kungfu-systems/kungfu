@@ -99,7 +99,7 @@ def _run(operation):
                 "ok": False,
                 "code": "assignment-operation-failed",
                 "message": str(error),
-                "next_actions": [],
+                "next_actions": list(getattr(error, "next_actions", [])),
             }
         )
         raise click.exceptions.Exit(2) from error
@@ -169,8 +169,8 @@ def _reconcile_work_profile(runtime_dir, authorized_by):
 _ensure_profile = _reconcile_work_profile
 
 
-def _prepare_resume_profile(runtime_dir, actor):
-    source = profile_source()
+def _prepare_resume_profile(runtime_dir, actor, source=None):
+    source = profile_lifecycle.resolve_profile_source(source, profile_source)
     validated = profile_sdk.validate_source(source, runtime_dir)
     profile_id = validated["inspection"]["profile"]["id"]
     desired_root = validated["inspection"]["profile_suite_root"]
@@ -185,7 +185,7 @@ def _prepare_resume_profile(runtime_dir, actor):
         ),
         None,
     )
-    receipts = _ensure_profile(runtime_dir, actor)
+    receipts = profile_lifecycle.ensure_work_profile(source, runtime_dir, actor)
     current = storage_service.profile_lifecycle(
         runtime_dir,
         "get",

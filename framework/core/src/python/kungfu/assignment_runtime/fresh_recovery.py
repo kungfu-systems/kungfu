@@ -14,13 +14,21 @@ import click
 
 from kungfu import initiative_family, profile_sdk
 from kungfu.agent import run_agent, session_contract, session_surface
-from kungfu.assignment_runtime import profile_source
+from kungfu.assignment_runtime import LocalAssignmentRuntimeApplication
 from kungfu.storage import service as storage_service
 
 JsonObject = dict[str, Any]
 PLAN_SCHEMA = "kungfu.work.fresh-recovery-plan/v1"
 RECEIPT_SCHEMA = "kungfu.work.fresh-recovery-receipt/v1"
 CONTINUATION_MODE = "resume/new-attempt"
+
+
+class FreshRecoveryError(ValueError):
+    """Fail closed while retaining executable public recovery actions."""
+
+    def __init__(self, message: str, next_actions: list[JsonObject]):
+        super().__init__(message)
+        self.next_actions = next_actions
 
 
 def _now(value: str | None = None) -> datetime:
@@ -137,6 +145,7 @@ def build_plan(
     expected_request_root: str,
     expected_work_definition_root: str,
     expected_profile_root: str,
+    recovery_profile: Mapping[str, Any],
     profile_active: bool,
     now: str | None = None,
 ) -> JsonObject:
@@ -173,6 +182,7 @@ def build_plan(
             "workConsoleId": work_console_id,
         },
         "workRef": work_ref,
+        "recoveryProfile": dict(recovery_profile),
         "effects": _recovery_effects(work_ref, current_attempt, profile_active),
         "forbiddenEffects": ["admit", "claim", "kickoff"],
         "writeOccurred": False,
@@ -192,6 +202,7 @@ def _verify_plan_envelope(
         raise ValueError("fresh recovery plan root does not verify")
     if plan.get("continuationMode") != CONTINUATION_MODE:
         raise ValueError("fresh recovery refuses a first-attempt plan")
+    _verify_recovery_profile_identity(plan)
     effects = [dict(effect) for effect in plan.get("effects") or []]
     stages = [str(effect.get("stage") or "") for effect in effects]
     if stages not in (["bind-new-attempt"], ["activate-profile", "bind-new-attempt"]):
@@ -199,6 +210,19 @@ def _verify_plan_envelope(
     if _now(now) > _now(str(plan.get("expiresAt") or "")):
         raise ValueError("fresh recovery plan expired; create a new plan")
     return actual_root, effects
+
+
+def _verify_recovery_profile_identity(plan: Mapping[str, Any]) -> None:
+    recovery_profile = dict(plan.get("recoveryProfile") or {})
+    if (
+        recovery_profile.get("profileId") != "kungfu.work-control"
+        or recovery_profile.get("profileRoot")
+        != (plan.get("workRef") or {}).get("profileRoot")
+        or not str(recovery_profile.get("sourceContractRoot") or "").startswith(
+            "sha256:"
+        )
+    ):
+        raise ValueError("fresh recovery Profile source identity does not verify")
 
 
 def _binding_coordinates(
@@ -364,6 +388,130 @@ def _profile_is_active(runtime_dir: str, expected_profile_root: str) -> bool:
     )
 
 
+def _retained_profile_source(runtime_dir: str | Path) -> Path:
+    state = storage_service.profile_lifecycle(
+        runtime_dir, "get", profile_id="kungfu.work-control"
+    )
+    closure = dict((state.get("latest_event") or {}).get("closure") or {})
+    profile_path = Path(str(closure.get("profile_path") or "")).expanduser()
+    if not profile_path.is_file():
+        raise FreshRecoveryError(
+            "retained Work Control Profile source is unavailable",
+            _profile_recovery_actions(profile_path.parent),
+        )
+    source = profile_path.resolve().parent
+    inspection = profile_sdk.validate_source(source, runtime_dir)["inspection"]
+    if inspection.get("profile_suite_root") != state.get("profile_suite_root"):
+        raise FreshRecoveryError(
+            "retained Work Control Profile source root changed",
+            _profile_recovery_actions(source),
+        )
+    return source
+
+
+def _retained_status(runtime_dir, initiative_id, assignment_id) -> JsonObject:
+    return LocalAssignmentRuntimeApplication(
+        runtime_dir,
+        client_id="kungfu.work.fresh-recovery",
+        kind="cli",
+        source=_retained_profile_source(runtime_dir),
+    ).status(initiative_id, assignment_id)
+
+
+def _validated_recovery_profile(source: Path, runtime_dir) -> JsonObject:
+    inspection = profile_sdk.validate_source(source, runtime_dir)["inspection"]
+    source_contract = dict(
+        (inspection.get("closure") or {}).get("source_contract") or {}
+    )
+    return {
+        "profileId": str(inspection["profile"]["id"]),
+        "profileRoot": str(inspection["profile_suite_root"]),
+        "sourceContractRoot": str(source_contract.get("root") or ""),
+    }
+
+
+def _profile_recovery_actions(source: Path) -> list[JsonObject]:
+    return [
+        {
+            "action": "inspect-work-control-history",
+            "command": [
+                "kungfu",
+                "profile",
+                "history",
+                "kungfu.work-control",
+                "--json",
+            ],
+        },
+        {
+            "action": "validate-recovery-profile-source",
+            "command": ["kungfu", "profile", "validate", str(source), "--json"],
+        },
+        {
+            "action": "regenerate-fresh-recovery-plan",
+            "command": ["kungfu", "work", "fresh-recovery-plan", "--help"],
+        },
+    ]
+
+
+def _diagnosed_recovery(
+    operation: Callable[[], JsonObject], source: Path
+) -> JsonObject:
+    try:
+        return operation()
+    except FreshRecoveryError:
+        raise
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+        raise FreshRecoveryError(
+            str(error), _profile_recovery_actions(source)
+        ) from error
+
+
+def _diagnosed_plan_from_ports(
+    *, recovery_profile_source: Path, **values
+) -> JsonObject:
+    return _diagnosed_recovery(
+        lambda: _plan_from_ports(
+            recovery_profile_source=recovery_profile_source, **values
+        ),
+        recovery_profile_source,
+    )
+
+
+def _diagnosed_apply_from_ports(
+    *, recovery_profile_source: Path, **values
+) -> JsonObject:
+    return _diagnosed_recovery(
+        lambda: _apply_from_ports(
+            recovery_profile_source=recovery_profile_source, **values
+        ),
+        recovery_profile_source,
+    )
+
+
+def _recovery_plan_authority(
+    runtime_dir,
+    initiative_id: str,
+    assignment_id: str,
+    recovery_profile_source: Path,
+    expected_profile_root: str,
+) -> tuple[JsonObject, JsonObject]:
+    current_status = _retained_status(runtime_dir, initiative_id, assignment_id)
+    recovery_profile = _validated_recovery_profile(recovery_profile_source, runtime_dir)
+    if recovery_profile["profileRoot"] != expected_profile_root:
+        raise ValueError(
+            "fresh recovery Profile source root does not match expected root"
+        )
+    return current_status, recovery_profile
+
+
+def _verify_recovery_profile_source(
+    plan: Mapping[str, Any], recovery_profile_source: Path, runtime_dir
+) -> None:
+    recovery_profile = _validated_recovery_profile(recovery_profile_source, runtime_dir)
+    if recovery_profile != dict(plan.get("recoveryProfile") or {}):
+        raise ValueError("fresh recovery Profile source differs from the plan")
+
+
 def _plan_from_ports(
     *,
     ctx,
@@ -375,22 +523,26 @@ def _plan_from_ports(
     expected_request_root,
     expected_work_definition_root,
     expected_profile_root,
+    recovery_profile_source,
     out,
     runtime,
     status,
     write_immutable_json,
 ) -> JsonObject:
     identity, runtime_dir, _ = runtime(workspace_root, home, "read-only")
-    current_status = status(runtime_dir, initiative_id, assignment_id)
-    inspection = profile_sdk.validate_source(profile_source(), runtime_dir)[
-        "inspection"
-    ]
+    current_status, recovery_profile = _recovery_plan_authority(
+        runtime_dir,
+        initiative_id,
+        assignment_id,
+        recovery_profile_source,
+        expected_profile_root,
+    )
     work_ref = session_contract.validate_work_ref(
         {
             "schema": "kungfu.work-ref/v1",
             "workspaceId": identity.workspace_id,
-            "profileId": inspection["profile"]["id"],
-            "profileRoot": inspection["profile_suite_root"],
+            "profileId": recovery_profile["profileId"],
+            "profileRoot": recovery_profile["profileRoot"],
             "entityType": "assignment",
             "entityId": assignment_id,
             "entityRoot": _root(current_status["assignment"]),
@@ -414,6 +566,7 @@ def _plan_from_ports(
         expected_request_root=expected_request_root,
         expected_work_definition_root=expected_work_definition_root,
         expected_profile_root=expected_profile_root,
+        recovery_profile=recovery_profile,
         profile_active=_profile_is_active(runtime_dir, expected_profile_root),
     )
     return {**plan, "outputPath": write_immutable_json(out, plan)}
@@ -425,6 +578,7 @@ def _apply_from_ports(
     plan_file: Path,
     expected_plan_root: str,
     authorized_by: str,
+    recovery_profile_source: Path,
     runtime,
     status,
     prepare_resume_profile,
@@ -440,13 +594,18 @@ def _apply_from_ports(
         "id"
     ) or identity.identity_root != workspace.get("identityRoot"):
         raise ValueError("fresh recovery workspace identity changed")
+    _verify_recovery_profile_source(plan, recovery_profile_source, runtime_dir)
     return apply_plan(
         plan,
         expected_plan_root=expected_plan_root,
         authorized_by=authorized_by,
-        status_reader=lambda: status(runtime_dir, initiative_id, assignment_id),
+        status_reader=lambda: _retained_status(
+            runtime_dir, initiative_id, assignment_id
+        ),
         session_reader=lambda: _current_session(str(ctx.runtime_dir)),
-        prepare_profile=lambda actor: prepare_resume_profile(runtime_dir, actor),
+        prepare_profile=lambda actor: prepare_resume_profile(
+            runtime_dir, actor, recovery_profile_source
+        ),
         bind_work=lambda expected: (
             run_agent.bind_current_native_work(
                 str(ctx.runtime_dir),
@@ -480,13 +639,18 @@ def _create_plan_command(
     @click.option("--expected-request-root", required=True)
     @click.option("--expected-work-definition-root", required=True)
     @click.option("--expected-profile-root", required=True)
+    @click.option(
+        "--recovery-profile-source",
+        required=True,
+        type=click.Path(exists=True, file_okay=False, path_type=Path),
+    )
     @click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
     @assignment_context
     @surface(id="kungfu.work.fresh-recovery.plan")
     def command(ctx, **values):
         emit(
             run(
-                lambda: _plan_from_ports(
+                lambda: _diagnosed_plan_from_ports(
                     ctx=ctx,
                     runtime=runtime,
                     status=status,
@@ -514,12 +678,17 @@ def _create_apply_command(
     )
     @click.option("--expected-plan-root", required=True)
     @click.option("--authorized-by", required=True)
+    @click.option(
+        "--recovery-profile-source",
+        required=True,
+        type=click.Path(exists=True, file_okay=False, path_type=Path),
+    )
     @assignment_context
     @surface(id="kungfu.work.fresh-recovery.apply")
     def command(ctx, **values):
         emit(
             run(
-                lambda: _apply_from_ports(
+                lambda: _diagnosed_apply_from_ports(
                     ctx=ctx,
                     runtime=runtime,
                     status=status,

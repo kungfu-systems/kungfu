@@ -149,7 +149,7 @@
         "cli": {
           "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
           "group": "work",
-          "sha256": "8c678dbe19a89d03f8e701f762e53991918a8df8493ae9657329048495c842e7",
+          "sha256": "55445c5d3b03ad2bb7d826dd0422f76f203b775f3decbda6e31b98fecf99f74a",
           "invariant": "Pre-existing command names, option names, defaults, output schemas, and exit behavior remain compatible; domain-neutral Work commands are additive."
         },
         "schemas": [
@@ -238,7 +238,7 @@
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
-            "sha256": "8c678dbe19a89d03f8e701f762e53991918a8df8493ae9657329048495c842e7"
+            "sha256": "55445c5d3b03ad2bb7d826dd0422f76f203b775f3decbda6e31b98fecf99f74a"
           }
         ],
         "ownerAggregate": {
@@ -265,7 +265,7 @@
             "functionRisk": {
           "functions": 113,
           "baseRisk": 1843,
-          "changeRisk": 2222,
+          "changeRisk": 2228,
               "maximum": 254
             }
           }
