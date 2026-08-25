@@ -117,16 +117,31 @@ std::string fact_id(const std::string &kind, const std::string &identity) {
   return "fact:" + sha256("kungfu-kfx-domain-profile:" + kind + ":" + identity).substr(0, 32);
 }
 
-} // namespace
+void require_core_subset(const std::vector<std::string> &requested, const std::vector<std::string> &ceiling,
+                         const char *label) {
+  for (const auto &value : requested)
+    if (std::find(ceiling.begin(), ceiling.end(), value) == ceiling.end())
+      refuse("KF_KFX_CAPABILITY_POLICY_REJECTED",
+             std::string(label) + " is outside the embedded Core policy ceiling: " + value);
+}
 
-json assess(const json &package, const std::string &registry_root, const json &request) {
-  const auto operation = required_text(request, "operation", "request");
-  const auto purpose = required_text(request, "purpose", "request");
-  const auto cut = required_text(request, "cut", "request");
-  static const std::set<std::string> operations = {"inspect", "install",        "update",     "enable",   "activate",
-                                                   "qualify", "host-placement", "capability", "migration"};
-  validate_enum(operation, operations, "admission operation");
+struct admission_policy {
+  json requested;
+  json core;
+  int64_t assessment_time;
+  std::vector<std::string> allowed_issuers;
+  std::vector<std::string> allowed_publishers;
+  std::vector<std::string> allowed_contracts;
+  std::vector<std::string> allowed_verifier_roots;
+  std::vector<std::string> allowed_capabilities;
+  std::vector<std::string> auto_operations;
+  std::vector<std::string> high_consequence_capabilities;
+  std::vector<std::string> core_auto_operations;
+  std::vector<std::string> core_high_consequence_capabilities;
+  std::vector<std::string> residual_risk;
+};
 
+admission_policy read_admission_policy(const json &request) {
   const auto policy = object_or_empty(request, "policy");
   if (policy.empty() || policy.value("schema", "") != "kungfu.kfx-admission-policy/v1")
     refuse("KF_KFX_SCHEMA_INVALID", "assessment requires kungfu.kfx-admission-policy/v1");
@@ -139,164 +154,203 @@ json assess(const json &package, const std::string &registry_root, const json &r
   const auto assessment_time = request.at("assessmentTime").get<int64_t>();
   if (assessment_time < 0)
     refuse("KF_KFX_SCHEMA_INVALID", "assessmentTime must be a non-negative integer");
-  const auto allowed_issuers = string_array_or_empty(policy, "allowedIssuers");
-  const auto allowed_publishers = string_array_or_empty(policy, "allowedPublishers");
-  const auto allowed_contracts = string_array_or_empty(policy, "allowedContracts");
-  const auto allowed_verifier_roots = string_array_or_empty(policy, "allowedVerifierRoots");
-  const auto allowed_capabilities = string_array_or_empty(policy, "allowedCapabilities");
-  const auto requested_auto_operations = string_array_or_empty(policy, "autoOperations");
-  const auto requested_high_consequence_capabilities = string_array_or_empty(policy, "highConsequenceCapabilities");
-  const auto residual_risk = string_array_or_empty(policy, "residualRisk");
-  if (allowed_issuers.empty() || allowed_publishers.empty() || allowed_contracts.empty() ||
-      allowed_verifier_roots.empty())
-    refuse("KF_KFX_SCHEMA_INVALID",
-           "admission policy requires non-empty issuer, publisher, contract, and verifier allowlists");
+
   const auto native_contract = native_kfx_contract();
   const auto core_policy = object_or_empty(native_contract, "coreCapabilityPolicy");
   if (core_policy.value("schema", "") != "kungfu.kfx-core-capability-policy/v1")
     refuse("KF_KFX_SCHEMA_INVALID", "native contract does not contain the Core capability policy");
+  admission_policy result{policy,
+                          core_policy,
+                          assessment_time,
+                          string_array_or_empty(policy, "allowedIssuers"),
+                          string_array_or_empty(policy, "allowedPublishers"),
+                          string_array_or_empty(policy, "allowedContracts"),
+                          string_array_or_empty(policy, "allowedVerifierRoots"),
+                          string_array_or_empty(policy, "allowedCapabilities"),
+                          string_array_or_empty(policy, "autoOperations"),
+                          string_array_or_empty(policy, "highConsequenceCapabilities"),
+                          string_array_or_empty(core_policy, "autoOperations"),
+                          string_array_or_empty(core_policy, "highConsequenceCapabilities"),
+                          string_array_or_empty(policy, "residualRisk")};
+  if (result.allowed_issuers.empty() || result.allowed_publishers.empty() || result.allowed_contracts.empty() ||
+      result.allowed_verifier_roots.empty())
+    refuse("KF_KFX_SCHEMA_INVALID",
+           "admission policy requires non-empty issuer, publisher, contract, and verifier allowlists");
   const auto core_allowed_capabilities = string_array_or_empty(core_policy, "allowedCapabilities");
-  const auto core_auto_operations = string_array_or_empty(core_policy, "autoOperations");
-  const auto core_high_consequence_capabilities = string_array_or_empty(core_policy, "highConsequenceCapabilities");
-  const auto require_core_subset = [](const std::vector<std::string> &requested,
-                                      const std::vector<std::string> &ceiling, const char *label) {
-    for (const auto &value : requested) {
-      if (std::find(ceiling.begin(), ceiling.end(), value) == ceiling.end())
-        refuse("KF_KFX_CAPABILITY_POLICY_REJECTED",
-               std::string(label) + " is outside the embedded Core policy ceiling: " + value);
-    }
-  };
-  require_core_subset(allowed_capabilities, core_allowed_capabilities, "allowed capability");
-  require_core_subset(requested_auto_operations, core_auto_operations, "automatic operation");
+  require_core_subset(result.allowed_capabilities, core_allowed_capabilities, "allowed capability");
+  require_core_subset(result.auto_operations, result.core_auto_operations, "automatic operation");
+  return result;
+}
 
+struct trust_assessment {
   json reasons = json::array();
   json evidence_dependencies = json::array();
   json trust_input = json::object();
   json kfd_assessment_key = nullptr;
   json kfd_report_root = nullptr;
   std::string supply_chain_grade = "unverified";
-  const auto package_root = package.at("packageRoot").get<std::string>();
+};
+
+bool attestation_roots_match(const json &bindings, const json &trust_input, const std::string &package_root,
+                             const json &subject, const json &artifact, json &evidence_dependencies) {
+  static const std::vector<std::string> root_fields = {"packageRoot",       "sourceRoot",    "dependencyRoot",
+                                                       "buildPlanRoot",     "toolchainRoot", "artifactRoot",
+                                                       "qualificationRoot", "verifierRoot"};
+  for (const auto &field : root_fields) {
+    if (!bindings.contains(field) || !bindings.at(field).is_string() || !trust_input.contains(field) ||
+        !trust_input.at(field).is_string() || !is_content_root(bindings.at(field).get<std::string>()) ||
+        bindings.at(field) != trust_input.at(field))
+      return false;
+    evidence_dependencies.push_back(trust_input.at(field));
+  }
+  const auto subject_digest = subject.value("digest", "");
+  return trust_input.value("packageRoot", "") == package_root && bindings.value("artifactRoot", "") == subject_digest &&
+         subject_digest == artifact.value("digest", "");
+}
+
+bool append_fact_surface_roots(const json &report, json &evidence_dependencies) {
+  if (!report.contains("fact_surfaces") || !report.at("fact_surfaces").is_array())
+    return false;
+  for (const auto &surface : report.at("fact_surfaces")) {
+    if (!surface.is_object() || !is_content_root(surface.value("root", "")))
+      return false;
+    evidence_dependencies.push_back(surface.at("root"));
+  }
+  return true;
+}
+
+void assess_kfd_report(const json &request, const std::string &purpose, trust_assessment &result) {
+  const auto assessment = object_or_empty(request, "kfdAssessment");
+  const auto report = object_or_empty(assessment, "report");
+  const auto assessment_key = assessment.value("assessment_key", "");
+  const auto report_hash = report.value("report_hash", "");
+  const auto query_proof_root = report.value("query_proof_root", "");
+  const auto contract_world = object_or_empty(report, "contract_world");
+  const auto policy = object_or_empty(report, "policy");
+  bool valid = assessment.value("schema", "") == "kungfu.trust.assessment/v1" &&
+               assessment.value("state", "") == "fresh" && report.value("state", "") == "fresh" &&
+               report.value("purpose", "") == purpose && is_content_root(assessment_key) &&
+               is_content_root(report_hash) && is_content_root(query_proof_root) &&
+               is_content_root(contract_world.value("root", "")) && is_content_root(policy.value("root", "")) &&
+               result.trust_input.value("qualificationRoot", "") == report_hash;
+  const bool surfaces_valid = append_fact_surface_roots(report, result.evidence_dependencies);
+  valid = valid && surfaces_valid;
+  if (!valid) {
+    result.reasons.push_back("KF_KFX_KFD_ASSESSMENT_INVALID");
+    return;
+  }
+  result.kfd_assessment_key = assessment_key;
+  result.kfd_report_root = report_hash;
+  for (const auto &root : {assessment_key, report_hash, query_proof_root, contract_world.at("root").get<std::string>(),
+                           policy.at("root").get<std::string>()})
+    result.evidence_dependencies.push_back(root);
+}
+
+void assess_attestation_principal(const json &bindings, const json &policy, trust_assessment &result) {
+  const auto issuer = bindings.value("issuer", "");
+  const auto publisher = bindings.value("publisher", "");
+  const auto contract_version = bindings.value("contractVersion", "");
+  const auto verifier_root = bindings.value("verifierRoot", "");
+  if (issuer.empty() || publisher.empty() || contract_version.empty() || verifier_root.empty() ||
+      result.trust_input.value("issuer", "") != issuer || result.trust_input.value("publisher", "") != publisher ||
+      result.trust_input.value("contractVersion", "") != contract_version ||
+      !contains_text(policy.value("allowedIssuers", json::array()), issuer) ||
+      !contains_text(policy.value("allowedPublishers", json::array()), publisher) ||
+      !contains_text(policy.value("allowedContracts", json::array()), contract_version) ||
+      !contains_text(policy.value("allowedVerifierRoots", json::array()), verifier_root))
+    result.reasons.push_back("KF_KFX_ATTESTATION_PRINCIPAL_REJECTED");
+}
+
+void assess_attestation_time(const json &attestation, int64_t assessment_time, trust_assessment &result) {
+  const bool shaped = attestation.contains("issuedAt") && attestation.at("issuedAt").is_number_integer() &&
+                      attestation.contains("expiresAt") && attestation.at("expiresAt").is_number_integer() &&
+                      attestation.contains("revoked") && attestation.at("revoked").is_boolean();
+  const auto issued_at = shaped ? attestation.at("issuedAt").get<int64_t>() : int64_t{-1};
+  const auto expires_at = shaped ? attestation.at("expiresAt").get<int64_t>() : int64_t{-1};
+  if (shaped && attestation.at("revoked").get<bool>())
+    result.reasons.push_back("KF_KFX_ATTESTATION_REVOKED");
+  if (!shaped || issued_at < 0 || expires_at < issued_at || assessment_time < issued_at ||
+      assessment_time >= expires_at)
+    result.reasons.push_back("KF_KFX_ATTESTATION_EXPIRED");
+}
+
+trust_assessment assess_trust(const json &request, const std::string &package_root, const std::string &purpose,
+                              const json &policy, int64_t assessment_time) {
+  trust_assessment result;
   const auto attestation = object_or_empty(request, "attestation");
   const auto identity = object_or_empty(request, "identity");
   if (!attestation.empty() && !identity.empty())
     refuse("KF_KFX_SCHEMA_INVALID", "assessment must choose attestation or identity evidence, not both");
   if (attestation.empty() && (request.contains("trustInputs") || request.contains("kfdAssessment")))
     refuse("KF_KFX_SCHEMA_INVALID", "trust inputs and KFD assessment require Buildchain attestation evidence");
-  if (!attestation.empty()) {
-    trust_input = object_or_empty(request, "trustInputs");
-    if (trust_input.empty() || trust_input.value("schema", "") != "kungfu.kfx-trust-inputs/v1")
-      refuse("KF_KFX_SCHEMA_INVALID", "Buildchain assessment requires kungfu.kfx-trust-inputs/v1");
-    require_exact_fields(trust_input,
-                         {"schema", "packageRoot", "sourceRoot", "dependencyRoot", "buildPlanRoot", "toolchainRoot",
-                          "artifactRoot", "qualificationRoot", "verifierRoot", "issuer", "publisher",
-                          "contractVersion"},
-                         "KFX trust inputs");
-    const auto bindings = object_or_empty(attestation, "bindings");
-    const auto subject = object_or_empty(attestation, "subject");
-    const auto passport = object_or_empty(attestation, "passport");
-    const auto verification = object_or_empty(passport, "verification");
-    const auto match = object_or_empty(attestation, "match");
-    const auto artifact = object_or_empty(match, "artifact");
-    const auto kfd_assessment = object_or_empty(request, "kfdAssessment");
-    const auto kfd_report = object_or_empty(kfd_assessment, "report");
-    const bool verifier_ok = attestation.value("contract", "") == "kungfu-buildchain-artifact-verification" &&
-                             attestation.value("schemaVersion", 0) == 1 && attestation.value("outcome", "") == "pass" &&
-                             attestation.value("ok", false) && attestation.value("trust", "") == "pass" &&
-                             verification.value("ok", false) && verification.value("trust", "") == "pass";
-    if (!verifier_ok)
-      reasons.push_back("KF_KFX_ATTESTATION_INVALID");
-
-    static const std::vector<std::string> root_fields = {"packageRoot",       "sourceRoot",    "dependencyRoot",
-                                                         "buildPlanRoot",     "toolchainRoot", "artifactRoot",
-                                                         "qualificationRoot", "verifierRoot"};
-    bool roots_ok = true;
-    for (const auto &field : root_fields) {
-      if (!bindings.contains(field) || !bindings.at(field).is_string() || !trust_input.contains(field) ||
-          !trust_input.at(field).is_string() || !is_content_root(bindings.at(field).get<std::string>()) ||
-          bindings.at(field) != trust_input.at(field)) {
-        roots_ok = false;
-        break;
-      }
-      evidence_dependencies.push_back(trust_input.at(field));
-    }
-    const auto subject_digest = subject.value("digest", "");
-    const auto matched_digest = artifact.value("digest", "");
-    if (!roots_ok || trust_input.value("packageRoot", "") != package_root ||
-        bindings.value("artifactRoot", "") != subject_digest || subject_digest != matched_digest)
-      reasons.push_back("KF_KFX_ATTESTATION_ROOT_MISMATCH");
-
-    const auto assessment_key = kfd_assessment.value("assessment_key", "");
-    const auto report_hash = kfd_report.value("report_hash", "");
-    const auto query_proof_root = kfd_report.value("query_proof_root", "");
-    const auto contract_world = object_or_empty(kfd_report, "contract_world");
-    const auto assessment_policy = object_or_empty(kfd_report, "policy");
-    bool kfd_assessment_ok = kfd_assessment.value("schema", "") == "kungfu.trust.assessment/v1" &&
-                             kfd_assessment.value("state", "") == "fresh" && kfd_report.value("state", "") == "fresh" &&
-                             kfd_report.value("purpose", "") == purpose && is_content_root(assessment_key) &&
-                             is_content_root(report_hash) && is_content_root(query_proof_root) &&
-                             is_content_root(contract_world.value("root", "")) &&
-                             is_content_root(assessment_policy.value("root", "")) &&
-                             trust_input.value("qualificationRoot", "") == report_hash;
-    if (kfd_report.contains("fact_surfaces") && kfd_report.at("fact_surfaces").is_array()) {
-      for (const auto &surface : kfd_report.at("fact_surfaces")) {
-        if (!surface.is_object() || !is_content_root(surface.value("root", ""))) {
-          kfd_assessment_ok = false;
-          break;
-        }
-        evidence_dependencies.push_back(surface.at("root"));
-      }
-    } else {
-      kfd_assessment_ok = false;
-    }
-    if (!kfd_assessment_ok) {
-      reasons.push_back("KF_KFX_KFD_ASSESSMENT_INVALID");
-    } else {
-      kfd_assessment_key = assessment_key;
-      kfd_report_root = report_hash;
-      evidence_dependencies.push_back(assessment_key);
-      evidence_dependencies.push_back(report_hash);
-      evidence_dependencies.push_back(query_proof_root);
-      evidence_dependencies.push_back(contract_world.at("root"));
-      evidence_dependencies.push_back(assessment_policy.at("root"));
-    }
-
-    const auto issuer = bindings.value("issuer", "");
-    const auto publisher = bindings.value("publisher", "");
-    const auto contract_version = bindings.value("contractVersion", "");
-    const auto verifier_root = bindings.value("verifierRoot", "");
-    if (issuer.empty() || publisher.empty() || contract_version.empty() || verifier_root.empty() ||
-        trust_input.value("issuer", "") != issuer || trust_input.value("publisher", "") != publisher ||
-        trust_input.value("contractVersion", "") != contract_version ||
-        !contains_text(policy.value("allowedIssuers", json::array()), issuer) ||
-        !contains_text(policy.value("allowedPublishers", json::array()), publisher) ||
-        !contains_text(policy.value("allowedContracts", json::array()), contract_version) ||
-        !contains_text(policy.value("allowedVerifierRoots", json::array()), verifier_root))
-      reasons.push_back("KF_KFX_ATTESTATION_PRINCIPAL_REJECTED");
-
-    const bool time_shape_ok = attestation.contains("issuedAt") && attestation.at("issuedAt").is_number_integer() &&
-                               attestation.contains("expiresAt") && attestation.at("expiresAt").is_number_integer() &&
-                               attestation.contains("revoked") && attestation.at("revoked").is_boolean();
-    const auto issued_at = time_shape_ok ? attestation.at("issuedAt").get<int64_t>() : int64_t{-1};
-    const auto expires_at = time_shape_ok ? attestation.at("expiresAt").get<int64_t>() : int64_t{-1};
-    if (time_shape_ok && attestation.at("revoked").get<bool>())
-      reasons.push_back("KF_KFX_ATTESTATION_REVOKED");
-    if (!time_shape_ok || issued_at < 0 || expires_at < issued_at || assessment_time < issued_at ||
-        assessment_time >= expires_at)
-      reasons.push_back("KF_KFX_ATTESTATION_EXPIRED");
-    if (reasons.empty())
-      supply_chain_grade = "kfd-attested";
-    evidence_dependencies.push_back(root_of(attestation));
-  } else {
+  if (attestation.empty()) {
     if (!identity.empty() && identity.value("verified", false) && identity.value("artifactRoot", "") == package_root &&
         contains_text(policy.value("allowedPublishers", json::array()), identity.value("publisher", ""))) {
-      supply_chain_grade = "identity-verified";
-      trust_input = identity;
-      evidence_dependencies.push_back(root_of(identity));
+      result.supply_chain_grade = "identity-verified";
+      result.trust_input = identity;
+      result.evidence_dependencies.push_back(root_of(identity));
     } else {
-      reasons.push_back("KF_KFX_ATTESTATION_MISSING");
+      result.reasons.push_back("KF_KFX_ATTESTATION_MISSING");
     }
+    return result;
   }
 
+  result.trust_input = object_or_empty(request, "trustInputs");
+  if (result.trust_input.empty() || result.trust_input.value("schema", "") != "kungfu.kfx-trust-inputs/v1")
+    refuse("KF_KFX_SCHEMA_INVALID", "Buildchain assessment requires kungfu.kfx-trust-inputs/v1");
+  require_exact_fields(result.trust_input,
+                       {"schema", "packageRoot", "sourceRoot", "dependencyRoot", "buildPlanRoot", "toolchainRoot",
+                        "artifactRoot", "qualificationRoot", "verifierRoot", "issuer", "publisher", "contractVersion"},
+                       "KFX trust inputs");
+  const auto bindings = object_or_empty(attestation, "bindings");
+  const auto subject = object_or_empty(attestation, "subject");
+  const auto verification = object_or_empty(object_or_empty(attestation, "passport"), "verification");
+  const auto artifact = object_or_empty(object_or_empty(attestation, "match"), "artifact");
+  const bool verifier_ok = attestation.value("contract", "") == "kungfu-buildchain-artifact-verification" &&
+                           attestation.value("schemaVersion", 0) == 1 && attestation.value("outcome", "") == "pass" &&
+                           attestation.value("ok", false) && attestation.value("trust", "") == "pass" &&
+                           verification.value("ok", false) && verification.value("trust", "") == "pass";
+  if (!verifier_ok)
+    result.reasons.push_back("KF_KFX_ATTESTATION_INVALID");
+  if (!attestation_roots_match(bindings, result.trust_input, package_root, subject, artifact,
+                               result.evidence_dependencies))
+    result.reasons.push_back("KF_KFX_ATTESTATION_ROOT_MISMATCH");
+  assess_kfd_report(request, purpose, result);
+  assess_attestation_principal(bindings, policy, result);
+  assess_attestation_time(attestation, assessment_time, result);
+  if (result.reasons.empty())
+    result.supply_chain_grade = "kfd-attested";
+  result.evidence_dependencies.push_back(root_of(attestation));
+  return result;
+}
+
+} // namespace
+
+json assess(const json &package, const std::string &registry_root, const json &request) {
+  const auto operation = required_text(request, "operation", "request");
+  const auto purpose = required_text(request, "purpose", "request");
+  const auto cut = required_text(request, "cut", "request");
+  static const std::set<std::string> operations = {"inspect", "install",        "update",     "enable",   "activate",
+                                                   "qualify", "host-placement", "capability", "migration"};
+  validate_enum(operation, operations, "admission operation");
+
+  const auto policy_evidence = read_admission_policy(request);
+  const auto &policy = policy_evidence.requested;
+  const auto &core_policy = policy_evidence.core;
+  const auto assessment_time = policy_evidence.assessment_time;
+  const auto &allowed_capabilities = policy_evidence.allowed_capabilities;
+  const auto &requested_auto_operations = policy_evidence.auto_operations;
+  const auto &core_auto_operations = policy_evidence.core_auto_operations;
+  const auto &core_high_consequence_capabilities = policy_evidence.core_high_consequence_capabilities;
+  const auto &residual_risk = policy_evidence.residual_risk;
+
+  auto trust = assess_trust(request, package.at("packageRoot").get<std::string>(), purpose, policy, assessment_time);
+  auto reasons = std::move(trust.reasons);
+  auto evidence_dependencies = std::move(trust.evidence_dependencies);
+  auto trust_input = std::move(trust.trust_input);
+  auto kfd_assessment_key = std::move(trust.kfd_assessment_key);
+  auto kfd_report_root = std::move(trust.kfd_report_root);
+  const auto supply_chain_grade = std::move(trust.supply_chain_grade);
   const std::string admission_grade = supply_chain_grade;
 
   const auto requested_capabilities = string_array_or_empty(request, "requestedCapabilities");
