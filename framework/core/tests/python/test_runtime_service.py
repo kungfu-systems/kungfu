@@ -68,7 +68,12 @@ def _install_fake_pykungfu():
 
 _install_fake_pykungfu()
 
-from kungfu import runtime_broker, runtime_service, runtime_service_config  # noqa: E402
+from kungfu import (  # noqa: E402
+    runtime_broker,
+    runtime_processes,
+    runtime_service,
+    runtime_service_config,
+)
 
 
 ROOT = Path(__file__).parents[4]
@@ -90,6 +95,34 @@ def test_runtime_service_config_preserves_compatibility_exports():
         "supervisor_log_path",
     ):
         assert getattr(runtime_service, name) is getattr(runtime_service_config, name)
+
+
+def test_runtime_process_control_preserves_the_runtime_service_facade():
+    assert runtime_service.CoordinatorProcess.__name__ == "CoordinatorProcess"
+    assert runtime_service.CoordinatorProcess.__qualname__ == "CoordinatorProcess"
+    assert runtime_service.CoordinatorProcess.__module__ == runtime_service.__name__
+    assert (
+        runtime_service._terminate_process_if_matches
+        is runtime_processes._terminate_process_if_matches
+    )
+    assert (
+        runtime_service._terminate_process_tree_if_matches
+        is runtime_processes._terminate_process_tree_if_matches
+    )
+    assert runtime_service._terminate_and_reap_child.__name__ == (
+        "_terminate_and_reap_child"
+    )
+    assert runtime_service._terminate_and_reap_child.__qualname__ == (
+        "_terminate_and_reap_child"
+    )
+    assert (
+        runtime_service._terminate_and_reap_child.__module__ == runtime_service.__name__
+    )
+    assert not hasattr(runtime_processes, "_terminate_and_reap_child")
+    assert runtime_service._is_pid_running.__module__ == runtime_service.__name__
+    assert (
+        runtime_service._process_start_identity.__module__ == runtime_service.__name__
+    )
 
 
 def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch):
@@ -192,6 +225,34 @@ def test_windows_process_tree_stop_reaps_descendants(monkeypatch):
         ("wait", [43], 5.0),
     ]
 
+    class _ExitedParent(_Process):
+        def terminate(self):
+            raise runtime_service.psutil.NoSuchProcess(self.pid)
+
+    monkeypatch.setattr(
+        runtime_service.psutil,
+        "Process",
+        lambda pid: _ExitedParent(pid),
+    )
+    assert runtime_service._terminate_process_tree_if_matches(42, "42.000000")
+
+    class _DeniedParent(_Process):
+        def terminate(self):
+            raise runtime_service.psutil.AccessDenied(self.pid)
+
+    monkeypatch.setattr(
+        runtime_service.psutil,
+        "Process",
+        lambda pid: _DeniedParent(pid),
+    )
+    assert not runtime_service._terminate_process_tree_if_matches(42, "42.000000")
+
+    def _denied_process(pid):
+        raise runtime_service.psutil.AccessDenied(pid=pid)
+
+    monkeypatch.setattr(runtime_service.psutil, "Process", _denied_process)
+    assert not runtime_service._terminate_process_tree_if_matches(42, "42.000000")
+
 
 def test_forced_coordinator_stop_waits_until_process_is_reaped():
     events = []
@@ -285,6 +346,15 @@ def test_forced_coordinator_stop_reaps_descendants_before_cleanup(monkeypatch):
         ("descendant-wait", [43], 2.5),
     ]
 
+    events.clear()
+
+    def _denied_process(pid):
+        raise runtime_service.psutil.AccessDenied(pid=pid)
+
+    monkeypatch.setattr(runtime_service.psutil, "Process", _denied_process)
+    runtime_service._terminate_and_reap_child(_Host(), _Child(), timeout=2.5)
+    assert events == ["coordinator-terminate", ("coordinator-wait", 2.5)]
+
 
 def test_pid_liveness_probe_never_sends_a_signal(monkeypatch):
     monkeypatch.setattr(runtime_service.psutil, "pid_exists", lambda pid: pid == 42)
@@ -296,6 +366,17 @@ def test_pid_liveness_probe_never_sends_a_signal(monkeypatch):
 
     assert runtime_service._is_pid_running(42) is True
     assert runtime_service._is_pid_running(43) is False
+
+    def _denied_pid_exists(pid):
+        raise runtime_service.psutil.AccessDenied(pid=pid)
+
+    def _denied_process(pid):
+        raise runtime_service.psutil.AccessDenied(pid=pid)
+
+    monkeypatch.setattr(runtime_service.psutil, "pid_exists", _denied_pid_exists)
+    monkeypatch.setattr(runtime_service.psutil, "Process", _denied_process)
+    assert runtime_service._is_pid_running(42) is False
+    assert runtime_service._process_start_identity(42) is None
 
 
 def _activation_snapshot(workspace, supervisor_pid, coordinator_pid):
@@ -644,6 +725,13 @@ def test_adopted_coordinator_rejects_reused_pid_without_signalling(monkeypatch):
     assert adopted.poll() == 0
     assert delivered == []
 
+    def _denied_process(pid):
+        raise runtime_service.psutil.AccessDenied(pid=pid)
+
+    monkeypatch.setattr(runtime_service.psutil, "Process", _denied_process)
+    assert not runtime_service._terminate_process_if_matches(42, "100.000000")
+    assert delivered == []
+
 
 def test_concurrent_activation_spawns_one_supervisor(tmp_path, monkeypatch):
     config_home = tmp_path / "config"
@@ -793,12 +881,111 @@ def test_always_on_supervisor_does_not_retire_empty_routes(tmp_path, monkeypatch
     config_home = str(tmp_path / "config")
     monkeypatch.setenv(runtime_service.SUPERVISOR_ALWAYS_ON_ENV, "1")
 
+    def fail_route_read(_config_home):
+        raise AssertionError("always-on short-circuit must not read routes")
+
+    monkeypatch.setattr(runtime_service, "read_routes", fail_route_read)
+
     assert not runtime_service._retire_idle_routes(
         config_home,
         has_children=False,
         supervisor_pid=4300,
         supervisor_start_identity="always-on-start",
     )
+
+
+def test_idle_route_retirement_does_not_read_env_when_children_exist(
+    tmp_path, monkeypatch
+):
+    original_get = runtime_service.os.environ.get
+
+    def fail_route_read(_config_home):
+        raise AssertionError("child short-circuit must not read routes")
+
+    def env_get(key, default=None):
+        if key == runtime_service.SUPERVISOR_ALWAYS_ON_ENV:
+            raise AssertionError("child short-circuit must not read the always-on env")
+        return original_get(key, default)
+
+    monkeypatch.setattr(runtime_service.os.environ, "get", env_get)
+    monkeypatch.setattr(runtime_service, "read_routes", fail_route_read)
+
+    assert not runtime_service._retire_idle_routes(
+        str(tmp_path / "config"),
+        has_children=True,
+        supervisor_pid=4301,
+        supervisor_start_identity="has-children-start",
+    )
+
+
+def test_idle_route_retirement_reads_env_on_every_call(tmp_path, monkeypatch):
+    original_get = runtime_service.os.environ.get
+    values = iter(["1", ""])
+    calls = []
+
+    def env_get(key, default=None):
+        if key == runtime_service.SUPERVISOR_ALWAYS_ON_ENV:
+            calls.append((key, default))
+            return next(values)
+        return original_get(key, default)
+
+    monkeypatch.setattr(runtime_service.os.environ, "get", env_get)
+    config_home = str(tmp_path / "config")
+
+    assert not runtime_service._retire_idle_routes(
+        config_home,
+        has_children=False,
+        supervisor_pid=4302,
+        supervisor_start_identity="dynamic-env-start",
+    )
+    assert runtime_service._retire_idle_routes(
+        config_home,
+        has_children=False,
+        supervisor_pid=4302,
+        supervisor_start_identity="dynamic-env-start",
+    )
+    assert calls == [
+        (runtime_service.SUPERVISOR_ALWAYS_ON_ENV, ""),
+        (runtime_service.SUPERVISOR_ALWAYS_ON_ENV, ""),
+    ]
+
+
+def test_idle_route_retirement_checks_routes_in_insertion_order(tmp_path, monkeypatch):
+    accesses = []
+
+    class _TrackedRoute(dict):
+        def __init__(self, label, desired):
+            super().__init__(desired=desired)
+            self.label = label
+
+        def get(self, key, default=None):
+            accesses.append((self.label, key))
+            if self.label == "second":
+                raise AssertionError(
+                    "route scan must stop after the first desired route"
+                )
+            return super().get(key, default)
+
+    monkeypatch.delenv(runtime_service.SUPERVISOR_ALWAYS_ON_ENV, raising=False)
+    monkeypatch.setattr(
+        runtime_service,
+        "read_routes",
+        lambda _config_home: {
+            "schema": runtime_service.SCHEMA_ROUTES,
+            "routes": {
+                "first": _TrackedRoute("first", True),
+                "second": _TrackedRoute("second", True),
+            },
+        },
+    )
+
+    assert not runtime_service._retire_idle_routes(
+        str(tmp_path / "config"),
+        has_children=False,
+        supervisor_pid=4303,
+        supervisor_start_identity="route-order-start",
+    )
+    assert accesses == [("first", "desired")]
 
 
 def test_stop_supervisor_refuses_unverified_process_identity(tmp_path, monkeypatch):

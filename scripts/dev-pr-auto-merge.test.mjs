@@ -264,6 +264,10 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
+    /DELIVERY_CLASS: \$\{\{ needs\.delivery-contract\.outputs\.delivery-class \|\| 'native-proof-required' \}\}[\s\S]*--arg deliveryClass "\$DELIVERY_CLASS"[\s\S]*\$deliveryClass == "source-only" and \.conclusion == "skipped"/u,
+  );
+  assert.match(
+    bridge,
     /schema:"kungfu\.dev-delivery-native-check-rerun\/v1"[\s\S]*sourceWorkflowRunId:\$sourceWorkflowRunId[\s\S]*sourceWorkflowRunPriorAttempt:\$sourceWorkflowRunPriorAttempt[\s\S]*sourceWorkflowRunAttempt:\$sourceWorkflowRunAttempt[\s\S]*rerunTriggered:\$rerunTriggered[\s\S]*producerWorkflowRunId:\$producerWorkflowRunId[\s\S]*producerRunAttempt:\$producerRunAttempt[\s\S]*generatedAt:\$generatedAt[\s\S]*sourceCheckRunPrior:\{id:\$priorCheckRunId,conclusion:\$priorCheckConclusion\}[\s\S]*appId:\$checkRun\[0\]\.app\.id/u,
   );
   assert.match(

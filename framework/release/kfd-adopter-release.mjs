@@ -19,6 +19,24 @@ const GATE_RELATIVE_PATH = '.buildchain/runtime/kfd-adopter/gate.json';
 const WARRANT_RELATIVE_PATH =
   'framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json';
 
+export function resolveKfd10AdopterWitnessPath(support) {
+  const evidencePaths = (support?.verification?.evidenceRoots || []).map(
+    (entry) => entry?.path,
+  );
+  const specialized =
+    support?.implementation?.status === 'implemented-specialized-witness' ||
+    evidencePaths.includes(WARRANT_RELATIVE_PATH);
+  if (!specialized) return null;
+  if (
+    support?.verification?.status !== 'non-conforming-evidence' ||
+    evidencePaths.length !== 1 ||
+    evidencePaths[0] !== WARRANT_RELATIVE_PATH
+  ) {
+    throw new Error('KFD-10 specialized adopter witness declaration drifted');
+  }
+  return WARRANT_RELATIVE_PATH;
+}
+
 function fileRoot(filePath) {
   return `sha256:${createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')}`;
 }
@@ -80,7 +98,8 @@ export function syncKfdAdopterRelease(
   const rows = new Map(
     (readJson(supportMatrixPath).rows || []).map((row) => [row.id, row]),
   );
-  const sourcePaths = [WARRANT_RELATIVE_PATH];
+  const kfd10WitnessPath = resolveKfd10AdopterWitnessPath(rows.get('KFD-10'));
+  const sourcePaths = kfd10WitnessPath ? [kfd10WitnessPath] : [];
   for (const id of REQUIRED_DECISIONS) {
     const row = rows.get(id);
     const implementationPath = row?.implementation?.surfaces?.[0];
@@ -152,15 +171,17 @@ export function syncKfdAdopterRelease(
   kfd6.state = 'unsupported';
   kfd6.usage = 'unused';
   kfd6.gaps = ['Kungfu does not claim KFD-6 support in this cut.'];
-  manifest = runtime.adopter.addAdopterWitness(manifest, {
-    decisionId: 'KFD-10',
-    profileId: 'kfd-warrant-evidence',
-    witnessCoordinate: `git+https://github.com/${REPOSITORY}@${sourceSha}#${WARRANT_RELATIVE_PATH}`,
-    witnessRoot: fileRoot(path.join(root, WARRANT_RELATIVE_PATH)),
-    packageArtifactRoot,
-    verifiedAt: checkedAt,
-    maxAgeSeconds: 86400,
-  });
+  if (kfd10WitnessPath) {
+    manifest = runtime.adopter.addAdopterWitness(manifest, {
+      decisionId: 'KFD-10',
+      profileId: 'kfd-warrant-evidence',
+      witnessCoordinate: `git+https://github.com/${REPOSITORY}@${sourceSha}#${kfd10WitnessPath}`,
+      witnessRoot: fileRoot(path.join(root, kfd10WitnessPath)),
+      packageArtifactRoot,
+      verifiedAt: checkedAt,
+      maxAgeSeconds: 86400,
+    });
+  }
   const manifestGate = runtime.adopter.createKfdAdopterManifestGate({
     manifest,
     packageArtifactRoot,

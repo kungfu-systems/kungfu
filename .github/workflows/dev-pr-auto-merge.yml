@@ -638,6 +638,7 @@ jobs:
           EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
           SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
           TARGET_BRANCH: ${{ needs.resolve-target.outputs.target-branch }}
+          DELIVERY_CLASS: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
         run: |
           set -euo pipefail
           evidence=.buildchain/native-check-bridge/warrant
@@ -788,10 +789,15 @@ jobs:
             "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" \
             > "$source_jobs"
           jq -e \
+            --arg deliveryClass "$DELIVERY_CLASS" \
             '[.jobs[] | select(.name == "Provisional Delivery Warrant admission / linux")]
              | select(length == 1)
              | .[0]
-             | select(.status == "completed" and .conclusion == "success")' \
+             | select(
+                 .status == "completed" and
+                 (.conclusion == "success" or
+                  ($deliveryClass == "source-only" and .conclusion == "skipped"))
+               )' \
             "$source_jobs" >/dev/null
           jq -e \
             '[.jobs[] | select(.name == "affected-native / linux")]
