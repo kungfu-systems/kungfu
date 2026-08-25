@@ -44,6 +44,16 @@ from .authority import (
 )
 from .recovery import AssignmentRuntimeRecoveryMixin
 
+_RETRY_FAILED = {
+    "code": "interrupted-write-retry-failed",
+    "message": (
+        "The interrupted command could not be replayed; its authority outcome "
+        "remains unknown"
+    ),
+    "severity": "error",
+    "recovery": ["diagnostics.get", "recovery.plan"],
+}
+
 
 class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
     """One embedded Runtime writer for one logical realm generation."""
@@ -334,39 +344,17 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
     ) -> None:
         try:
             _validate_assignment_create_references(command, snapshot)
+            before = dict(pending.get("beforeRevision") or {})
+            if revision.get("root") == before.get("root"):
+                authority_result = self.authority.apply(dict(pending["command"]))
+                pending = {**dict(pending), "authorityResult": authority_result}
+                self._state["pending"] = pending
+                self._save_state()
+                snapshot, revision = self._observe_snapshot(record_event=False)
+                self._finalize_pending(pending, snapshot, revision, recovered=True)
+                return
         except LocalRuntimeError as error:
             self._reject_pending_before_authority(pending, error)
-            return
-        before = dict(pending.get("beforeRevision") or {})
-        if revision.get("root") == before.get("root"):
-            try:
-                authority_result = self.authority.apply(dict(pending["command"]))
-            except LocalRuntimeError as error:
-                if error.code == "invalid-command":
-                    self._reject_pending_before_authority(pending, error)
-                    return
-                diagnostic = {
-                    "code": "interrupted-write-retry-failed",
-                    "message": (
-                        "The interrupted command could not be replayed; its authority "
-                        "outcome remains unknown"
-                    ),
-                    "severity": "error",
-                    "recovery": ["diagnostics.get", "recovery.plan"],
-                    "details": {"causeCode": error.code},
-                }
-                diagnostics = list(self._state.get("diagnostics") or [])
-                diagnostics_by_root = dict(
-                    map(lambda item: (_root(item), item), [*diagnostics, diagnostic])
-                )
-                self._state["diagnostics"] = list(diagnostics_by_root.values())
-                self._save_state()
-                return
-            pending = {**dict(pending), "authorityResult": authority_result}
-            self._state["pending"] = pending
-            self._save_state()
-            snapshot, revision = self._observe_snapshot(record_event=False)
-            self._finalize_pending(pending, snapshot, revision, recovered=True)
             return
         diagnostic = {
             "code": "interrupted-write-ambiguous",
@@ -385,14 +373,14 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
         self, pending: Mapping[str, Any], error: LocalRuntimeError
     ) -> None:
         if error.code != "invalid-command":
-            raise error
+            diagnostic = dict(_RETRY_FAILED, details={"causeCode": error.code})
+            self._state["diagnostics"].append(diagnostic)
+            return self._save_state()
         revision = dict(
             pending.get("beforeRevision") or self._state.get("revision", {})
         )
         diagnostic, event_details = _interrupted_command_rejection(pending, error)
-        diagnostics = list(self._state.get("diagnostics") or [])
-        by_root = dict(map(lambda row: (_root(row), row), [*diagnostics, diagnostic]))
-        self._state["diagnostics"] = list(by_root.values())
+        self._state["diagnostics"].append(diagnostic)
         self._state["pending"] = None
         self._append_event("command-rejected", revision, event_details)
         self._save_state()

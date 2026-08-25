@@ -81,6 +81,192 @@ def _linked_records(
     return state, assignment, records
 
 
+def _records_by_type(
+    records: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    return {
+        record_type: [row for row in records if row.get("record_type") == record_type]
+        for record_type in RECORD_TYPES
+    }
+
+
+def _fresh_records(
+    grouped: Mapping[str, list[dict[str, Any]]], snapshot_root: str
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    runs = [
+        row
+        for row in grouped[MANAGED_RUN]
+        if row.get("input_snapshot_root") == snapshot_root
+    ]
+    authorizations_by_effect = {
+        str(row.get("effect_id") or ""): row
+        for row in grouped[EFFECT_AUTHORIZATION]
+        if row.get("input_snapshot_root") == snapshot_root
+    }
+    authorizations = sorted(
+        authorizations_by_effect.values(),
+        key=lambda row: (
+            int(row.get("recorded_at_system_time") or 0),
+            str(row.get("record_root") or ""),
+        ),
+    )
+    return runs, authorizations
+
+
+def _effect_records(
+    grouped: Mapping[str, list[dict[str, Any]]],
+    authorizations: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    authorization_roots = {str(row["record_root"]) for row in authorizations}
+    attempts = [
+        row
+        for row in grouped[EFFECT_ATTEMPT]
+        if row.get("authorization_root") in authorization_roots
+    ]
+    attempt_roots = {str(row["record_root"]) for row in attempts}
+    outcomes = [
+        row
+        for row in grouped[EFFECT_OUTCOME]
+        if row.get("effect_attempt_root") in attempt_roots
+    ]
+    return attempts, outcomes
+
+
+def _current_records(
+    grouped: Mapping[str, list[dict[str, Any]]],
+) -> tuple[
+    dict[str, Any] | None,
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
+    snapshots = grouped[INPUT_SNAPSHOT]
+    current_snapshot = snapshots[-1] if snapshots else None
+    snapshot_root = str((current_snapshot or {}).get("record_root") or "")
+    runs, authorizations = _fresh_records(grouped, snapshot_root)
+    attempts, outcomes = _effect_records(grouped, authorizations)
+    return current_snapshot, runs, authorizations, attempts, outcomes
+
+
+def _unsettled_reason(outcome: Mapping[str, Any] | None) -> str:
+    if outcome is None:
+        return "transport-outcome-missing"
+    if outcome.get("transport_state") == "unknown":
+        return "transport-outcome-ambiguous"
+    if (
+        outcome.get("transport_state") == "accepted"
+        and outcome.get("business_state") == "unknown"
+    ):
+        return "business-outcome-unrecorded"
+    return ""
+
+
+def _settlement_groups(
+    attempts: list[dict[str, Any]], outcomes: list[dict[str, Any]]
+) -> tuple[list[str], list[dict[str, Any]], list[dict[str, Any]]]:
+    latest = {str(row["effect_attempt_root"]): row for row in outcomes}
+    resolved = [latest.get(str(row.get("record_root") or "")) for row in attempts]
+    unresolved = [_unsettled_reason(row) for row in resolved]
+    unresolved = [reason for reason in unresolved if reason]
+    rejected = [
+        row for row in resolved if row and row.get("business_state") != "accepted"
+    ]
+    accepted = [
+        row for row in resolved if row and row.get("business_state") == "accepted"
+    ]
+    return unresolved, rejected, accepted
+
+
+def _settlement_action(
+    attempts: list[dict[str, Any]], outcomes: list[dict[str, Any]]
+) -> tuple[dict[str, str], bool]:
+    unresolved, rejected, accepted = _settlement_groups(attempts, outcomes)
+    if unresolved:
+        return {
+            "action": "reconcile-effect-outcome",
+            "reason": min(unresolved),
+        }, False
+    if rejected:
+        return {
+            "action": "authorize-effect",
+            "reason": "retry-requires-new-authorization",
+        }, False
+    return {
+        "action": "claim-completion",
+        "reason": "effects-settled-and-accepted",
+    }, len(accepted) == len(attempts)
+
+
+def _next_action(
+    snapshot: Mapping[str, Any] | None,
+    runs: list[dict[str, Any]],
+    authorizations: list[dict[str, Any]],
+    attempts: list[dict[str, Any]],
+    outcomes: list[dict[str, Any]],
+) -> tuple[dict[str, str], bool]:
+    if snapshot is None:
+        return {
+            "action": "record-input-snapshot",
+            "reason": "no-current-input-snapshot",
+        }, False
+    if not runs or runs[-1].get("result_state") != "succeeded":
+        reason = (
+            "current-input-not-executed" if not runs else "latest-run-did-not-succeed"
+        )
+        return {"action": "record-managed-run", "reason": reason}, False
+    if not authorizations:
+        return {
+            "action": "authorize-effect",
+            "reason": "no-fresh-effect-authorization",
+        }, False
+    if not attempts:
+        return {
+            "action": "record-effect-attempt",
+            "reason": "authorized-effect-not-attempted",
+        }, False
+    return _settlement_action(attempts, outcomes)
+
+
+def _projection_identity(
+    phase: str,
+    active_lease: Mapping[str, Any] | None,
+    query_proof_root: str,
+) -> dict[str, Any]:
+    lease = dict(active_lease or {})
+    return {
+        "schema": "kungfu.work-semantics.status/v1",
+        "phase": phase,
+        "query_proof_root": query_proof_root,
+        "active_attempt_id": str(lease.get("attempt_id") or ""),
+        "active_lease_id": str(lease.get("lease_id") or ""),
+    }
+
+
+def _projection_history(
+    current: tuple[
+        dict[str, Any] | None,
+        list[dict[str, Any]],
+        list[dict[str, Any]],
+        list[dict[str, Any]],
+        list[dict[str, Any]],
+    ],
+    completion_eligible: bool,
+    next_action: dict[str, str],
+) -> dict[str, Any]:
+    snapshot, runs, authorizations, attempts, outcomes = current
+    return {
+        "current_input_snapshot": snapshot,
+        "managed_runs": runs,
+        "effect_authorizations": authorizations,
+        "effect_attempts": attempts,
+        "effect_outcomes": outcomes,
+        "completion_eligible": completion_eligible,
+        "blind_retry_allowed": False if attempts else None,
+        "next_actions": [next_action],
+    }
+
+
 def project(
     records: list[dict[str, Any]],
     *,
@@ -90,134 +276,60 @@ def project(
 ) -> dict[str, Any]:
     """Fold protocol records into deterministic next actions."""
 
-    snapshots = [row for row in records if row.get("record_type") == INPUT_SNAPSHOT]
-    runs = [row for row in records if row.get("record_type") == MANAGED_RUN]
-    authorizations = [
-        row for row in records if row.get("record_type") == EFFECT_AUTHORIZATION
-    ]
-    attempts = [row for row in records if row.get("record_type") == EFFECT_ATTEMPT]
-    outcomes = [row for row in records if row.get("record_type") == EFFECT_OUTCOME]
-    current_snapshot = snapshots[-1] if snapshots else None
-    current_snapshot_root = str((current_snapshot or {}).get("record_root") or "")
-    current_runs = [
-        row for row in runs if row.get("input_snapshot_root") == current_snapshot_root
-    ]
-    matching_authorizations = [
-        row
-        for row in authorizations
-        if row.get("input_snapshot_root") == current_snapshot_root
-    ]
-    latest_authorization_by_effect = {
-        str(row.get("effect_id") or ""): row for row in matching_authorizations
-    }
-    current_authorizations = sorted(
-        latest_authorization_by_effect.values(),
-        key=lambda row: (
-            int(row.get("recorded_at_system_time") or 0),
-            str(row.get("record_root") or ""),
-        ),
-    )
-    current_authorization_roots = {
-        str(row.get("record_root") or "") for row in current_authorizations
-    }
-    current_attempts = [
-        row
-        for row in attempts
-        if row.get("authorization_root") in current_authorization_roots
-    ]
-    current_attempt_roots = {
-        str(row.get("record_root") or "") for row in current_attempts
-    }
-    current_outcomes = [
-        row
-        for row in outcomes
-        if row.get("effect_attempt_root") in current_attempt_roots
-    ]
-    latest_outcome_by_attempt = {
-        str(row["effect_attempt_root"]): row for row in current_outcomes
-    }
-
-    next_actions: list[dict[str, str]] = []
-    completion_eligible = False
-    if current_snapshot is None:
-        next_actions.append(
-            {"action": "record-input-snapshot", "reason": "no-current-input-snapshot"}
-        )
-    elif not current_runs:
-        next_actions.append(
-            {"action": "record-managed-run", "reason": "current-input-not-executed"}
-        )
-    elif current_runs[-1].get("result_state") != "succeeded":
-        next_actions.append(
-            {"action": "record-managed-run", "reason": "latest-run-did-not-succeed"}
-        )
-    elif not current_authorizations:
-        next_actions.append(
-            {"action": "authorize-effect", "reason": "no-fresh-effect-authorization"}
-        )
-    elif not current_attempts:
-        next_actions.append(
-            {
-                "action": "record-effect-attempt",
-                "reason": "authorized-effect-not-attempted",
-            }
-        )
-    else:
-        unresolved = []
-        rejected = []
-        accepted = []
-        for attempt in current_attempts:
-            outcome = latest_outcome_by_attempt.get(
-                str(attempt.get("record_root") or "")
-            )
-            if outcome is None:
-                unresolved.append("transport-outcome-missing")
-            elif outcome.get("transport_state") == "unknown":
-                unresolved.append("transport-outcome-ambiguous")
-            elif (
-                outcome.get("transport_state") == "accepted"
-                and outcome.get("business_state") == "unknown"
-            ):
-                unresolved.append("business-outcome-unrecorded")
-            elif outcome.get("business_state") == "accepted":
-                accepted.append(outcome)
-            else:
-                rejected.append(outcome)
-        if unresolved:
-            next_actions.append(
-                {
-                    "action": "reconcile-effect-outcome",
-                    "reason": min(unresolved),
-                }
-            )
-        elif rejected:
-            next_actions.append(
-                {
-                    "action": "authorize-effect",
-                    "reason": "retry-requires-new-authorization",
-                }
-            )
-        elif accepted and len(accepted) == len(current_attempts):
-            completion_eligible = True
-            next_actions.append(
-                {"action": "claim-completion", "reason": "effects-settled-and-accepted"}
-            )
-
+    current = _current_records(_records_by_type(records))
+    next_action, completion_eligible = _next_action(*current)
     return {
-        "schema": "kungfu.work-semantics.status/v1",
-        "phase": phase,
-        "query_proof_root": query_proof_root,
-        "active_attempt_id": str((active_lease or {}).get("attempt_id") or ""),
-        "active_lease_id": str((active_lease or {}).get("lease_id") or ""),
-        "current_input_snapshot": current_snapshot,
-        "managed_runs": current_runs,
-        "effect_authorizations": current_authorizations,
-        "effect_attempts": current_attempts,
-        "effect_outcomes": current_outcomes,
-        "completion_eligible": completion_eligible,
-        "blind_retry_allowed": False if current_attempts else None,
-        "next_actions": next_actions,
+        **_projection_identity(phase, active_lease, query_proof_root),
+        **_projection_history(current, completion_eligible, next_action),
     }
+
+
+def lifecycle_status(
+    runtime_dir: str,
+    *,
+    initiative_id: str,
+    assignment_id: str,
+    storage_source_id: str = "kungfu",
+    now: str = "",
+) -> dict[str, Any]:
+    lifecycle = runtime.assignment_orchestration_status(
+        runtime_dir,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        storage_source_id=storage_source_id,
+        now=now,
+    )
+    return _attach_work_semantics(
+        runtime_dir,
+        lifecycle=lifecycle,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        storage_source_id=storage_source_id,
+    )
+
+
+def _attach_work_semantics(
+    runtime_dir: str,
+    *,
+    lifecycle: Mapping[str, Any],
+    initiative_id: str,
+    assignment_id: str,
+    storage_source_id: str,
+) -> dict[str, Any]:
+    _, _, records = _linked_records(
+        runtime_dir,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        storage_source_id=storage_source_id,
+    )
+    lifecycle = dict(lifecycle)
+    lifecycle["work_semantics"] = project(
+        records,
+        phase=str(lifecycle["phase"]),
+        active_lease=lifecycle.get("active_lease"),
+        query_proof_root=str(lifecycle["query_proof_root"]),
+    )
+    return lifecycle
 
 
 def status(
@@ -227,7 +339,7 @@ def status(
     assignment_id: str,
     storage_source_id: str = "kungfu",
 ) -> dict[str, Any]:
-    lifecycle = runtime.assignment_orchestration_status(
+    lifecycle = lifecycle_status(
         runtime_dir,
         initiative_id=initiative_id,
         assignment_id=assignment_id,
@@ -245,6 +357,7 @@ def _execution_context(
     lease_id: str,
     actor: str,
     storage_source_id: str,
+    include_semantics: bool = False,
 ) -> dict[str, Any]:
     lifecycle = runtime.assignment_orchestration_status(
         runtime_dir,
@@ -268,6 +381,14 @@ def _execution_context(
         raise ValueError("lease changed before Work semantics write")
     if lease.get("agent") != expected["actor"]:
         raise ValueError("actor is not the active Assignment agent")
+    if include_semantics:
+        return _attach_work_semantics(
+            runtime_dir,
+            lifecycle=lifecycle,
+            initiative_id=initiative_id,
+            assignment_id=assignment_id,
+            storage_source_id=storage_source_id,
+        )
     return lifecycle
 
 
@@ -385,6 +506,7 @@ def record_managed_run(
         lease_id=lease_id,
         actor=actor,
         storage_source_id=storage_source_id,
+        include_semantics=True,
     )
     current = lifecycle["work_semantics"]["current_input_snapshot"]
     expected_snapshot = _root(input_snapshot_root, "input_snapshot_root")
@@ -438,6 +560,7 @@ def authorize_effect(
         lease_id=lease_id,
         actor=actor,
         storage_source_id=storage_source_id,
+        include_semantics=True,
     )
     semantics = lifecycle["work_semantics"]
     snapshot_root = _root(input_snapshot_root, "input_snapshot_root")
@@ -492,6 +615,7 @@ def record_effect_attempt(
         lease_id=lease_id,
         actor=actor,
         storage_source_id=storage_source_id,
+        include_semantics=True,
     )
     auth_root = _root(authorization_root, "authorization_root")
     authorizations = lifecycle["work_semantics"]["effect_authorizations"]
@@ -549,6 +673,7 @@ def record_effect_outcome(
         lease_id=lease_id,
         actor=actor,
         storage_source_id=storage_source_id,
+        include_semantics=True,
     )
     effect_root = _root(effect_attempt_root, "effect_attempt_root")
     effect_attempt = next(

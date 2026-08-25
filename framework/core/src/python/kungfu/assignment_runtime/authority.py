@@ -92,6 +92,20 @@ _LEASE_COMMANDS = {
     "work.effect.attempt",
     "work.effect.outcome",
 }
+_COMMAND_BINDINGS = {
+    "assignment.claim": (
+        ("leaseId", "lease", "leaseId"),
+        ("leaseExpiresAt", "lease", "expiresAt"),
+        ("attemptId", "attempt", "attemptId"),
+    ),
+    **{
+        command_type: (
+            ("leaseId", "lease", "leaseId"),
+            ("attemptId", "attempt", "attemptId"),
+        )
+        for command_type in _LEASE_COMMANDS - {"assignment.claim", "assignment.stage"}
+    },
+}
 _ASSESSMENT_EXECUTOR_PROFILES = {"inline", "thread", "process"}
 _PROCESS_WRITERS: set[str] = set()
 _PROCESS_WRITERS_GUARD = threading.Lock()
@@ -140,24 +154,6 @@ def _find_values(value: Any, key: str) -> list[Any]:
         for child in value:
             found.extend(_find_values(child, key))
     return found
-
-
-def _bind_command_lease(
-    arguments: dict[str, Any], command: Mapping[str, Any], operation: str
-) -> None:
-    lease = command.get("lease")
-    if not isinstance(lease, Mapping):
-        return
-    if str(command.get("type") or "") not in _LEASE_COMMANDS:
-        return
-    if operation == "claim-assignment":
-        arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
-    if operation == "advance-assignment":
-        return
-    arguments.setdefault("leaseId", lease.get("leaseId"))
-    attempt = command.get("attempt")
-    if isinstance(attempt, Mapping):
-        arguments.setdefault("attemptId", attempt.get("attemptId"))
 
 
 def _claim_identity(value: Mapping[str, Any]) -> tuple[str, str]:
@@ -565,9 +561,7 @@ class WorkControlAuthority:
             "diagnostics": diagnostics,
         }
 
-    @staticmethod
-    def _attempt(status: Mapping[str, Any]) -> dict[str, Any] | None:
-        return _attempt_from_status(status)
+    _attempt = staticmethod(_attempt_from_status)
 
     @staticmethod
     def _lease(status: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -596,33 +590,40 @@ class WorkControlAuthority:
         runtime_initiative_id = arguments.pop("_runtimeInitiativeId", None)
         runtime_assignment_id = arguments.pop("_runtimeAssignmentId", None)
         target = dict(command.get("target") or {})
-        if runtime_initiative_id is None:
-            arguments.setdefault("initiativeId", target.get("initiativeId"))
-        elif runtime_initiative_id != target.get("initiativeId"):
-            raise LocalRuntimeError(
-                "malformed-identity", "Runtime Initiative routing identity drifted"
-            )
-        if runtime_assignment_id is None:
-            arguments.setdefault("assignmentId", target.get("assignmentId"))
-        elif runtime_assignment_id != target.get("assignmentId"):
-            raise LocalRuntimeError(
-                "malformed-identity", "Runtime Assignment routing identity drifted"
-            )
-        _bind_command_lease(arguments, command, operation)
+        routing = (
+            ("initiativeId", "Initiative", runtime_initiative_id),
+            ("assignmentId", "Assignment", runtime_assignment_id),
+        )
+        for key, label, runtime_value in routing:
+            if runtime_value is None:
+                arguments.setdefault(key, target.get(key))
+            elif runtime_value != target.get(key):
+                raise LocalRuntimeError(
+                    "malformed-identity", f"Runtime {label} routing identity drifted"
+                )
+        command_type = str(command.get("type") or "")
+        for argument_key, section, source_key in _COMMAND_BINDINGS.get(
+            command_type, ()
+        ):
+            source = command.get(section)
+            if isinstance(source, Mapping):
+                arguments.setdefault(argument_key, source.get(source_key))
         try:
             receipt = self._invoke(operation, arguments, write=True)
         except LocalRuntimeError:
             raise
         except (TypeError, ValueError) as error:
             message = str(error).lower()
-            if "lease" in message:
-                code = "lease-required"
-            elif "warrant" in message:
-                code = "warrant-invalid"
-            elif "phase changed" in message or "transition" in message:
-                code = "stale-revision"
-            else:
-                code = "invalid-command"
+            code = "invalid-command"
+            for marker, candidate in (
+                ("lease", "lease-required"),
+                ("warrant", "warrant-invalid"),
+                ("phase changed", "stale-revision"),
+                ("transition", "stale-revision"),
+            ):
+                if marker in message:
+                    code = candidate
+                    break
             raise LocalRuntimeError(
                 code, "Native authority rejected the command"
             ) from error
@@ -630,9 +631,11 @@ class WorkControlAuthority:
         episode_refs = []
         from kungfu.storage import service as storage_service
 
-        for episode_id in sorted(
-            {str(value) for value in _find_values(receipt, "episode_id") if str(value)}
-        ):
+        episode_ids = set()
+        for value in _find_values(receipt, "episode_id"):
+            if str(value):
+                episode_ids.add(str(value))
+        for episode_id in sorted(episode_ids):
             try:
                 inspected = storage_service.episode_inspect(
                     self.runtime_dir, episode_id=int(episode_id)
@@ -640,20 +643,17 @@ class WorkControlAuthority:
             except (KeyError, OSError, RuntimeError, TypeError, ValueError):
                 continue
             roots = _find_values(inspected, "root_value")
-            episode_root = next(
-                (
-                    value if str(value).startswith("sha256:") else f"sha256:{value}"
-                    for value in roots
-                    if re.fullmatch(r"(?:sha256:)?[0-9a-f]{64}", str(value))
-                ),
-                "",
-            )
+            episode_root = ""
+            for value in roots:
+                candidate = str(value)
+                if not candidate.startswith("sha256:"):
+                    candidate = f"sha256:{candidate}"
+                if _ROOT.fullmatch(candidate):
+                    episode_root = candidate
+                    break
             if episode_root:
                 episode_refs.append({"episodeRoot": episode_root})
-        return {
-            "authorityReceipt": receipt,
-            "episodeRefs": episode_refs,
-        }
+        return {"authorityReceipt": receipt, "episodeRefs": episode_refs}
 
     def diagnostics(self) -> list[dict[str, Any]]:
         try:
