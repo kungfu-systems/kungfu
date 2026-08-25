@@ -624,7 +624,7 @@
       "surface": "assignment-runtime",
       "id": "kungfu-assignment-runtime",
       "schema": "kungfu.assignment-runtime.contract/v1",
-      "contractSchemaRoot": "sha256:ddfc4b048da57aca366a56e16314c51d067aa75d7b34265f708b9d7036d89e4c",
+      "contractSchemaRoot": "sha256:a3f5b9082d1872bfe643fd31ce9385a4cdbc01c8121c68eee72702a9d43f1dfe",
       "weldedSurface": "assignment-runtime-contract",
       "env": "KUNGFU_ASSIGNMENT_RUNTIME_CONTRACT",
       "file": "kungfu-assignment-runtime.contract.json",
