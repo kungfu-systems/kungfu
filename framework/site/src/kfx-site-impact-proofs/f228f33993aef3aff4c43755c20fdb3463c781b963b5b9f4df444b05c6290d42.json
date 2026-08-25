@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
-  "baseRevision": "07da2875cdfc6a233aaab0dc20998052b13724c9",
-  "changeRoot": "sha256:c533faeb28bd83c8af3f7c8c19e8fea52f75c16d497512ca79a14566443399ba",
+  "baseRevision": "f9627e00f25806090b6b926d3b08ab179e8bfb31",
+  "changeRoot": "sha256:0b6a9f37e509b688645fb04e457d66d5a6b9c1db84c71a21908622b65c6aa235",
   "changes": [
     {
       "baseContentRoot": "sha256:57f2836190465ffa85abd59415d4da86205d3eac34f3cf51a0e25cc11cc8733e",
@@ -16,31 +16,31 @@
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
-      "contentRoot": "sha256:1ef12d4147308ba7748f70024a22bda7a9b299ac4a0d1864f404601ce14bb201",
+      "baseContentRoot": "sha256:ad02c1d974a00139f5dc76493da31d37a0780d50204b5d381087fd82061524b4",
+      "contentRoot": "sha256:1283592b773909743a087ed20bb9a70431020395cc789e8499791ea55bdc892e",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:4287e4d0bbded3c3ba17d62e837424419875be71d46d4304af8479a2aee4d0a3",
-      "contentRoot": "sha256:18ea18f365f91c0b60f9e099cb3a8e79aed288293a819808bab467d897d775ac",
+      "baseContentRoot": "sha256:5812e23b29530393de9869a65742be3cff7ca581a67ab617e5eeb6860545263c",
+      "contentRoot": "sha256:65b02e67d15704293cd21c5f9f5b07b2c309592bc554b53ad3ad7486c7f34d35",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:8e86908d906dcb0fa00c29f299f2160725597380bba08e04ec395ad13307c8d8",
-      "contentRoot": "sha256:bd1f71a2b297bcb0796212f5b9a47b813b2880d8d33629251f0ef73620bc071d",
+      "baseContentRoot": "sha256:664de3e21748906789f0677d619a2ab832d9a5038a2f22a379a2a7668e59963d",
+      "contentRoot": "sha256:2db66a64ffcc3a39a8864053bba78b382ffc68a6de4da28cd08f1a68caf4bf7e",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:665b4b5cb9d1e632e7b0cff40f2de076816c5e77b00a75c9d37538cb1a8c2788",
+      "baseContentRoot": "sha256:484a2685cc585384ab8388b1de34202c56723a5e0fe2d36afbb69421c1ef874e",
       "contentRoot": "sha256:836dac2b624932df8a5c4e9ecbb7b6fa8c192cfd9246a1a87717a2421744ba21",
       "path": ".xinfa/portable-atlas-classification.json.gz",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:6322c025fd9f102498d014ea2831be17381bc4409c3ab8ad9fb8d2451aca8416",
+      "baseContentRoot": "sha256:d9733618687b26829d3d07ea0b7a3ced6e2d3696d0003c2d5b1d04b97d59eab6",
       "contentRoot": "sha256:ef9e8ec22c5f965c01195074cca534715d42c12576e8823e25c64ceda84cb181",
       "path": ".xinfa/product-atlas-bundle.json",
       "status": "modified"
@@ -70,31 +70,31 @@
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:0379d22f083c1f6ea5e34a222babeec64ea0cbf3de121c3999071b20816bd1ca",
-      "contentRoot": "sha256:1ef12d4147308ba7748f70024a22bda7a9b299ac4a0d1864f404601ce14bb201",
+      "baseContentRoot": "sha256:ad02c1d974a00139f5dc76493da31d37a0780d50204b5d381087fd82061524b4",
+      "contentRoot": "sha256:1283592b773909743a087ed20bb9a70431020395cc789e8499791ea55bdc892e",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:bb50b6d4052d92442034ce71e2a0e46b922c91f8ba34261276014880311392a3",
-      "contentRoot": "sha256:b3ab8f4ac1bea60d23554e2592e938696bdff8700e38f16ed532f0761731b743",
+      "baseContentRoot": "sha256:51f6d88ffcf76b7857b233fac96741968160d08710dfffb8f53fc8a55114e2d2",
+      "contentRoot": "sha256:4c9d305354724c85a644f8070d4a85cc17f5f0fe44e98060094c88b310856c5d",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:9c3a6b11d9ece0e80f1b7dc0df74569850c8f453a097843cf0411cc6d3e5747f",
+      "baseContentRoot": "sha256:92d30630a37e82714c6b92e1f88b393ee21f46d350fb79219eb0dbb88009fa92",
       "contentRoot": "sha256:e6a57b29f7fc0e75580d6800f6a1d412705591aee61cfe712ffe9df87f40843b",
       "path": "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:1faf7747d61c8e52c2c44490641f47f6296686c80faa05a29e4f0b699dcf6793",
+      "baseContentRoot": "sha256:9fcd8ab9c0e5f3410bb07a5b9cb922663f76340ad34c8113edd9b890db0e8b3e",
       "contentRoot": "sha256:d7dfd0a90d10d158fa4f8bf543fb70c1f13dbff4d725f1abf51310b19b73e941",
       "path": "docs/architecture/adr-map.json",
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:43947e7ce6a514677788f0c63c66362371a8f960d4ff0e0e17f0716d51b83f38",
+      "baseContentRoot": "sha256:3fe91b6f7682701c2b980402ab5969a01539430fd4890304a69ac91064177563",
       "contentRoot": "sha256:df35f2ce2238b8cd113588d0d6725ff3f1f1ad7ad9f9af17904d1342533f0ccc",
       "path": "docs/architecture/adr-map.md",
       "status": "modified"
@@ -124,18 +124,6 @@
       "status": "modified"
     },
     {
-      "baseContentRoot": "sha256:d5c3a291cf0eff5f89dfa9a4b31ae8c3a06ab9a8d2e34e78c900fef0896a2732",
-      "contentRoot": "sha256:245dada0ce75092ec2f946a2acb36b677c37ce9a0d4318b3f964042033b6e835",
-      "path": "framework/core/src/python/kungfu/assignment_runtime/authority.py",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:8c8aa9e2bb10302b1bfbfb9f2c87a48779e7227d8e55828ff780448a7fb999b4",
-      "contentRoot": "sha256:e7dceb2230a2656c79e3c091c6c3db3038617fa72e73ae6ce9d27d050bfda604",
-      "path": "framework/core/src/python/kungfu/assignment_runtime/local.py",
-      "status": "modified"
-    },
-    {
       "baseContentRoot": "sha256:b93577d9ef4c3a7f6e6782ac5a3c7ecd16b553f9eea519e5c798291ec5eb0c16",
       "contentRoot": "sha256:7f5389779106eec02eb28caf7b7a5cad34d0a6e8922f9e7b87c9ca7e24a654f2",
       "path": "framework/core/src/python/kungfu/release_provenance/__init__.py",
@@ -147,73 +135,9 @@
       "status": "added"
     },
     {
-      "contentRoot": "sha256:d1eafd4b9f83d2353b0e912d8f2fc80282d673268c21898cd76192d7d4e6a636",
-      "path": "framework/core/src/python/kungfu/runtime_processes.py",
-      "status": "added"
-    },
-    {
-      "baseContentRoot": "sha256:053e7347f8e3d30b9c9ed7f3eb41f6db4ff8f5e091e169b2ff14c24683a687c8",
-      "contentRoot": "sha256:acd6f26c85c3629de8f904ccfa8dcb00ebb1a7b1d8a5a6a4a5e4382eae1e45e5",
-      "path": "framework/core/src/python/kungfu/runtime_service.py",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:555ea09403d48f98549d0942f9057a595658b4bd801bb6d0d8574ee0b60c975d",
-      "contentRoot": "sha256:c92ba88d9c7a233d2d1af43cc426db340528024c4cf52a1e1db3778a3795f726",
-      "path": "framework/core/tests/python/test_assignment_runtime.py",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:edf6d049892739f15430b3848a7965862db81cf33c40a76f3149332542fc9e63",
-      "contentRoot": "sha256:5874de5462a21abd3dd2b288352ef26cea820b3929fd22e6ed6e091d8e2a205c",
-      "path": "framework/core/tests/python/test_runtime_cli.py",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:48ef937d4596aaef9191ca7f2a6d78e81c61c9b8ce02497158a041e6000a81ed",
-      "contentRoot": "sha256:0b16b3b8ee06e0ea90cd8964cbf43ad1b066ad314132036c92f51936ff13db58",
-      "path": "framework/core/tests/python/test_runtime_service.py",
-      "status": "modified"
-    },
-    {
       "baseContentRoot": "sha256:f91f6877fa8b1be0bec2fa05960744d2c6c2eb9b7456577743440bf9e4fa0f2b",
       "contentRoot": "sha256:903326111da88680d23a4e71aaa761874bdd4e744717f90ecd44770fd3d0024e",
       "path": "framework/maintainability/abstraction-integrity.manifest.json",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:025de1a1a93b6e651a43faab1fdb7f2e5ecd5e246448762045eb859a2873a059",
-      "contentRoot": "sha256:edaef5561131a3bde98beced7cb742782f1a17f58368564fa09ab84636cd8c57",
-      "path": "framework/maintainability/function-risk-ratchet.mjs",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:a173ab1c9b963f7444a8b492b1bc0a5ea15ccfe136ea2411a2837d56ff32fb5d",
-      "contentRoot": "sha256:eefb3a87abc39d9ee2f845638aa69c264b91b7896898a76b96abd48c5498e74e",
-      "path": "framework/maintainability/function-risk-transition.mjs",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:e67f1d47c0ab60e20fe360bddeb1c2ac08a202d9b5382b439a6d662fc8d5b92e",
-      "contentRoot": "sha256:5351ab35ba511a8b97b387e22ac291ea67b2ed711ad19023e21a6c847a841854",
-      "path": "framework/maintainability/function-risk.test.mjs",
-      "status": "modified"
-    },
-    {
-      "contentRoot": "sha256:7d7a41c21bbcf60acfe1f7347240827b56da00310578832ac6c05d4012149a8f",
-      "path": "framework/maintainability/python-runtime-responsibility-map.json",
-      "status": "added"
-    },
-    {
-      "baseContentRoot": "sha256:5ff1361da513af68f6bb23cb0c7bb2f983c6c5959a247dfec7373f1a7d831d8f",
-      "contentRoot": "sha256:3e026996bb260defb2c95f15996d5a143f64f003c8e0f6bc7d40db3b190cbaae",
-      "path": "framework/maintainability/source-analysis-kernel.mjs",
-      "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:5f45f0e6271d0c6a12473bc0301328b3c2efccb4ed5548b960956b0d4ff99952",
-      "contentRoot": "sha256:7b53868e975a87e914f13445806897c2635b7fbcdefe7f20a2a64723d8d3a221",
-      "path": "framework/maintainability/source-analysis-session.mjs",
       "status": "modified"
     },
     {
@@ -227,17 +151,6 @@
       "contentRoot": "sha256:02dccd799ab55154cb5172c7a956153e09b5096064e53ab0ba03b33bcab02a07",
       "path": "package.json",
       "status": "modified"
-    },
-    {
-      "baseContentRoot": "sha256:96f6eeca0004a535f9e3d1b171b3370b816d2320fe8c05840586335d389e22a2",
-      "contentRoot": "sha256:5bec6cfffe380c4160413ddc6638d71a960d146042974e60647c5ed6593df10f",
-      "path": "scripts/check-code-complexity.test.mjs",
-      "status": "modified"
-    },
-    {
-      "contentRoot": "sha256:7e74c518d4239ac76a2c33e447d605752e6a23ad1f986b4bec8350a92c13c007",
-      "path": "scripts/check-python-runtime-responsibility-map.py",
-      "status": "added"
     }
   ],
   "affectedFacets": [
@@ -251,5 +164,5 @@
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:b767f5a117ac10f10ef984d235276cc2a61f26a01006d2a1ca2f3daa92d2eaf4"
+  "proofRoot": "sha256:f228f33993aef3aff4c43755c20fdb3463c781b963b5b9f4df444b05c6290d42"
 }
