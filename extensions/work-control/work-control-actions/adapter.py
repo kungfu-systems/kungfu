@@ -97,24 +97,37 @@ def _assignment_cards(
     ]
 
 
-def _semantic_common(values: Mapping[str, Any]) -> dict[str, str]:
+def _semantic_identity(values: Mapping[str, Any]) -> dict[str, str]:
     return {
-        "initiative_id": _text(values, "initiativeId"),
-        "assignment_id": _text(values, "assignmentId"),
-        "attempt_id": _text(values, "attemptId"),
-        "lease_id": _text(values, "leaseId"),
-        "actor": _text(values, "actor"),
-        "actor_type": _text(values, "actorType", "agent"),
-        "storage_source_id": _text(values, "source", "kungfu"),
+        "initiative_id": str(values.get("initiativeId") or ""),
+        "assignment_id": str(values.get("assignmentId") or ""),
+        "attempt_id": str(values.get("attemptId") or ""),
+        "lease_id": str(values.get("leaseId") or ""),
     }
+
+
+def _semantic_actor(values: Mapping[str, Any]) -> dict[str, str]:
+    return {
+        "actor": str(values.get("actor") or ""),
+        "actor_type": str(values.get("actorType") or "agent"),
+        "storage_source_id": str(values.get("source") or "kungfu"),
+    }
+
+
+def _semantic_common(values: Mapping[str, Any]) -> dict[str, str]:
+    return {**_semantic_identity(values), **_semantic_actor(values)}
+
+
+def _semantic_evidence(values: Mapping[str, Any]) -> list[str]:
+    return [str(row) for row in values.get("evidenceRoots", [])]
 
 
 def _record_input(semantics, runtime_dir: str, values: Mapping[str, Any]):
     return semantics.record_input_snapshot(
         runtime_dir,
-        snapshot_id=_text(values, "snapshotId"),
-        input_root=_text(values, "inputRoot"),
-        evidence_roots=_string_rows(values, "evidenceRoots"),
+        snapshot_id=str(values.get("snapshotId") or ""),
+        input_root=str(values.get("inputRoot") or ""),
+        evidence_roots=_semantic_evidence(values),
         **_semantic_common(values),
     )
 
@@ -761,7 +774,7 @@ def _invoke_work_semantics(
         _only(values, {"initiativeId", "assignmentId", "source", "now"}, operation)
         return domain.work_semantics.lifecycle_status(
             runtime_dir,
-            now=_text(values, "now"),
+            now=str(values.get("now") or ""),
             **common,
         )
     _only(values, {"initiativeId", "assignmentId", "source"}, operation)
