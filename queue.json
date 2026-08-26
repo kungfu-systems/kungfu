@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6948,
+  "generation": 6949,
   "fencingCounter": 673,
   "policy": {
     "agingSeconds": 900,
@@ -47354,8 +47354,38 @@
         "scripts/source-acceptance.mjs",
         "scripts/source-acceptance.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3441,
+      "assignmentRoot": "sha256:2cab877fdab44b9550031637dc50bbd5cd9d7ac62506f71fcdd533e356eebd45",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:f092a1533376aa2c7c47f7f9b4fef1069aeaf30e3cee85f2108b68c152304f22",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:a4c3420cfaadf5318b666771abdb7b3a911f0a5084e6cd55070f43be4ad78044",
+      "sourceHead": "2c67139946c44051339da49ef255d31f05ebd952",
+      "sourcePatchRoot": "sha256:31299f62643f54d400740d58b2840f4048f94bb129d4e3049eb65ecfb0ad8af0",
+      "sourceProofRoot": "sha256:c613be07cd9923e99e7298a2cadfd7f46fd607de45e9b0b5543fb0ef394a2300",
+      "planRoot": "sha256:6155f71c99ed0339db508808fbfd8afb993c79034bed4fed3b2082a9481fd6b3",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:fa4bf82655b06a30165601d223cf1d0a46f998caf50e4ef03bc65cca74ab7439",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32949858208,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-26T09:29:10.134Z",
+      "updatedAt": "2026-08-26T09:29:10.134Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "product/scripts/bootstrap-installer.mjs",
+        "product/scripts/bootstrap-installer.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-26T09:26:51.954Z",
-  "stateRoot": "sha256:1983d392c4c82d6f4f12a075e7098cbf6a21f4723674d1c679f773d90a09e0b6"
+  "updatedAt": "2026-08-26T09:29:10.134Z",
+  "stateRoot": "sha256:045092ede69be5b55331e3a7d45ea9cfe1d16237efff93d4f0a36c4a3ce7441a"
 }
