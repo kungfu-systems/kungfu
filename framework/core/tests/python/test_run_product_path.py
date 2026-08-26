@@ -1901,6 +1901,7 @@ def test_prompt_only_agent_console_uses_exact_project_workspace_identity(
     environment = launched[0]["env"]
     envelope = json.loads(environment["KUNGFU_AGENT_CONSOLE_ENVELOPE"])
     assert environment["KUNGFU_WORKSPACE_ROOT"] == str(project)
+    # Prompt-only Consoles must share the qualified Project authority runtime.
     assert environment["KUNGFU_AGENT_RUNTIME_DIR"] == str(project_target.runtime_dir)
     assert envelope["workspaceId"] == project_target.identity.workspace_id
     assert envelope["consoleId"].startswith(
