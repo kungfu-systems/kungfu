@@ -23,6 +23,27 @@ const WORK_DESIGN_FIXTURE = path.join(
   'fixtures',
   'installed-preflight-request.json',
 );
+const AMBIENT_RUNTIME_OVERRIDES = new Set([
+  'KF_BUNDLED_EXTENSION_ROOT',
+  'KF_CACHE_HOME',
+  'KF_CONFIG_HOME',
+  'KF_EXTENSION_PATH',
+  'KF_HOME',
+  'KF_INSTANCE_HOME',
+  'KF_RUNTIME_DIR',
+  'KF_SKILL_PATH',
+  'KUNGFU_AS_VARIANT',
+  'KUNGFU_DIR',
+  'KUNGFU_INSTALL_SOURCE',
+  'KUNGFU_NODE_VARIANT_ENTRY',
+  'KUNGFU_UPGRADE_MANIFEST',
+  'NODE_OPTIONS',
+  'NODE_PATH',
+  'PYTHONHOME',
+  'PYTHONPATH',
+  'PYTHONPYCACHEPREFIX',
+  'PYTHONDONTWRITEBYTECODE',
+]);
 
 function fail(message) {
   throw new Error(`product cache qualification: ${message}`);
@@ -203,20 +224,24 @@ export function qualifyProductCacheHome(options = {}) {
   );
   const ambientEnv = Object.fromEntries(
     Object.entries(process.env).filter(
-      ([key]) =>
-        key !== 'PYTHONDONTWRITEBYTECODE' && key !== 'PYTHONPYCACHEPREFIX',
+      ([key]) => !AMBIENT_RUNTIME_OVERRIDES.has(key.toUpperCase()),
     ),
   );
+  const instanceHome = path.join(cacheHome, 'instance');
   const env = {
     ...ambientEnv,
     HOME: path.join(cacheHome, 'home'),
     KF_CACHE_HOME: cacheHome,
-    KF_INSTANCE_HOME: path.join(cacheHome, 'instance'),
+    KF_CONFIG_HOME: path.join(cacheHome, 'config'),
+    KF_HOME: instanceHome,
+    KF_INSTANCE_HOME: instanceHome,
+    KF_RUNTIME_DIR: path.join(instanceHome, 'runtime'),
     KUNGFU_UPGRADE_MANIFEST: manifest,
     NODE_OPTIONS: '',
     NODE_PATH: '',
+    PYTHONHOME: '',
+    PYTHONPATH: '',
   };
-  const instanceHome = path.join(cacheHome, 'instance');
   const invocation = runCommand(cli, ['agent', 'brief'], {
     cwd: cacheHome,
     env,
@@ -288,20 +313,14 @@ export function qualifyProductCacheHome(options = {}) {
     ].join('\n'),
   );
   const nativeNodeEnv = {
-    ...Object.fromEntries(
-      Object.entries(ambientEnv).filter(
-        ([key]) =>
-          ![
-            'KF_CACHE_HOME',
-            'KF_INSTANCE_HOME',
-            'PYTHONPYCACHEPREFIX',
-            'KUNGFU_UPGRADE_MANIFEST',
-          ].includes(key),
-      ),
-    ),
+    ...ambientEnv,
     HOME: nativeNodeHome,
     KUNGFU_AS_VARIANT: 'node',
     KUNGFU_NODE_VARIANT_ENTRY: nativeNodeProbe,
+    NODE_OPTIONS: '',
+    NODE_PATH: '',
+    PYTHONHOME: '',
+    PYTHONPATH: '',
   };
   const nativeNodeInvocation = runCommand(
     cli,
