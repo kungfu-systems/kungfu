@@ -35,8 +35,12 @@ function fixtureApp() {
   return app;
 }
 
-function successfulRunCommand(app, { mutateWorkDesign = false } = {}) {
+function successfulRunCommand(
+  app,
+  { inspectEnv = () => {}, mutateWorkDesign = false } = {},
+) {
   return (_command, args, options) => {
+    inspectEnv(options.env);
     const nativeNode = options.env.KUNGFU_AS_VARIANT === 'node';
     const workDesign = args.includes('work-design');
     const manualWorkDesign =
@@ -115,6 +119,73 @@ test('qualification rejects a Work Design preflight that changes the app tree', 
       }),
     /application tree changed after CLI use/u,
   );
+});
+
+test('qualification strips hostile ambient runtime and module injection', () => {
+  const app = fixtureApp();
+  const hostile = path.join(path.dirname(app), 'hostile-development-tree');
+  const names = [
+    'KF_BUNDLED_EXTENSION_ROOT',
+    'KF_CACHE_HOME',
+    'KF_CONFIG_HOME',
+    'KF_EXTENSION_PATH',
+    'KF_HOME',
+    'KF_INSTANCE_HOME',
+    'KF_RUNTIME_DIR',
+    'KF_SKILL_PATH',
+    'KUNGFU_AS_VARIANT',
+    'KUNGFU_DIR',
+    'KUNGFU_INSTALL_SOURCE',
+    'KUNGFU_NODE_VARIANT_ENTRY',
+    'KUNGFU_UPGRADE_MANIFEST',
+    'NODE_OPTIONS',
+    'NODE_PATH',
+    'PYTHONHOME',
+    'PYTHONPATH',
+    'Kf_Extension_Path',
+    'PythonPath',
+  ];
+  const previous = new Map(names.map((name) => [name, process.env[name]]));
+  for (const name of names) process.env[name] = hostile;
+  try {
+    const inspected = [];
+    const report = qualifyProductCacheHome({
+      app,
+      verifySignature: false,
+      runCommand: successfulRunCommand(app, {
+        inspectEnv: (env) => inspected.push(env),
+      }),
+    });
+    assert.equal(report.qualified, true);
+    assert.ok(inspected.length >= 5);
+    for (const env of inspected) {
+      assert.equal(env.PYTHONPATH, '');
+      assert.equal(env.PYTHONHOME, '');
+      assert.equal(env.NODE_PATH, '');
+      assert.equal(env.NODE_OPTIONS, '');
+      assert.notEqual(env.KUNGFU_DIR, hostile);
+      assert.notEqual(env.KF_BUNDLED_EXTENSION_ROOT, hostile);
+      assert.notEqual(env.KF_EXTENSION_PATH, hostile);
+      assert.notEqual(env.KF_SKILL_PATH, hostile);
+      assert.ok(
+        env.KUNGFU_AS_VARIANT === undefined || env.KUNGFU_AS_VARIANT === 'node',
+      );
+      assert.notEqual(env.KUNGFU_NODE_VARIANT_ENTRY, hostile);
+      assert.notEqual(env.KF_HOME, hostile);
+      assert.notEqual(env.KF_CACHE_HOME, hostile);
+      assert.notEqual(env.KF_CONFIG_HOME, hostile);
+      assert.notEqual(env.KF_INSTANCE_HOME, hostile);
+      assert.notEqual(env.KF_RUNTIME_DIR, hostile);
+      assert.notEqual(env.KUNGFU_UPGRADE_MANIFEST, hostile);
+      assert.equal(env.Kf_Extension_Path, undefined);
+      assert.equal(env.PythonPath, undefined);
+    }
+  } finally {
+    for (const [name, value] of previous) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
 });
 
 test('qualification rejects bytecode shipped inside the app', () => {
