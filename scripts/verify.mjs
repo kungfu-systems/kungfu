@@ -840,12 +840,72 @@ function verifyContractRegistry(kungfuBin) {
   }
 }
 
+function findWorkDesignRuntime(root) {
+  const matches = [];
+  const pending = [root];
+  while (pending.length) {
+    const directory = pending.pop();
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const candidate = path.join(directory, entry.name);
+      if (entry.isDirectory()) pending.push(candidate);
+      else if (
+        entry.name === 'work-design-runtime.json' &&
+        path.basename(directory) === 'work_design_runtime'
+      )
+        matches.push(directory);
+    }
+  }
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function verifyWorkDesignRuntime(kungfuBin) {
+  const distRoot = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
+  const runtimeRoot = findWorkDesignRuntime(distRoot);
+  if (!runtimeRoot) {
+    fail(
+      'kungfu Work Design installed smoke',
+      'expected exactly one assembled Work Design runtime',
+    );
+    return;
+  }
+  const qualification = spawnSync(
+    process.execPath,
+    [
+      path.join(__dirname, 'qualify-installed-work-design.mjs'),
+      '--binary',
+      kungfuBin,
+      '--runtime-root',
+      runtimeRoot,
+      '--surface',
+      'assembled-product',
+    ],
+    { cwd: ROOT, encoding: 'utf8' },
+  );
+  if (qualification.status === 0)
+    pass('kungfu Work Design installed smoke', qualification.stdout.trim());
+  else
+    fail(
+      'kungfu Work Design installed smoke',
+      `${qualification.stdout || ''}${qualification.stderr || ''}`.trim() ||
+        `qualification exited ${qualification.status}`,
+    );
+}
+
 function failMissingKungfuRuntime() {
   fail('kungfu runtime smoke', 'no kungfu executable, skipped');
   fail('kungfu config contract smoke', 'no kungfu executable, skipped');
   fail('kungfu kfx contract smoke', 'no kungfu executable, skipped');
   fail('kungfu skill contract smoke', 'no kungfu executable, skipped');
   fail('kungfu contract registry smoke', 'no kungfu executable, skipped');
+}
+
+function failMissingWorkDesignRuntime() {
+  fail('kungfu Work Design installed smoke', 'no kungfu executable, skipped');
+}
+
+function failMissingInstalledRuntimes() {
+  failMissingKungfuRuntime();
+  failMissingWorkDesignRuntime();
 }
 
 function verifyKungfuRuntime(kungfuBin, version) {
@@ -857,8 +917,9 @@ function verifyKungfuRuntime(kungfuBin, version) {
     verifyKfxContract(kungfuBin);
     verifySkillContract(kungfuBin);
     verifyContractRegistry(kungfuBin);
+    verifyWorkDesignRuntime(kungfuBin);
   } else {
-    failMissingKungfuRuntime();
+    failMissingInstalledRuntimes();
   }
   runEpisodeQualificationSmoke();
 }

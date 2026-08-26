@@ -1,0 +1,12 @@
+{
+  "schema": "kungfu.work-design.runtime-closure/v1",
+  "entrypoint": "work-design-preflight/tooling/work-design-preflight.mjs",
+  "files": [
+    "project-cut/src/json-scanner.mjs",
+    "project-cut/src/project-cut.mjs",
+    "work-design-advisor/src/work-design-advisor.mjs",
+    "work-design-preflight/src/work-design-preflight.mjs",
+    "work-design-preflight/tooling/work-design-preflight.mjs",
+    "work-history-selector/src/work-history-selector.mjs"
+  ]
+}
