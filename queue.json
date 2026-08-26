@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 6955,
+  "generation": 6956,
   "fencingCounter": 674,
   "policy": {
     "agingSeconds": 900,
@@ -47393,8 +47393,39 @@
         "product/scripts/bootstrap-installer.mjs",
         "product/scripts/bootstrap-installer.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3443,
+      "assignmentRoot": "sha256:fbc5cbcf8fa6ed49456afa2f6b7c51907c20913fd9399123ea414e879271581d",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:322e8797c36c47e3bb5c8aed7828159696452b77ce4391c0786001bb43247c5f",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:223ca8fa3428e0db26c632272c5985148e90e23a6ae51ff5cc344c79642e7766",
+      "sourceHead": "0fb42a07c809633b3a77c93a8579994adf48cdd9",
+      "sourcePatchRoot": "sha256:d6a624b06e08e1a81f37e1b844c45f9f31230f823a47386e2aed43ac21e42625",
+      "sourceProofRoot": "sha256:f1ab074001c5b07ee0365236acecace6683e03aa84be32feaff50b6af843efe2",
+      "planRoot": "sha256:5ef48584a72c4b35e042271fbc75bd583b29b3eb6fb89de0632ac32ab3263ea1",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:050d46ea16bcf6d270c9a7242c50612ffa46f99bc8239c651660dbb273957f4c",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32957904800,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-26T10:30:07.401Z",
+      "updatedAt": "2026-08-26T10:30:07.401Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
+        "framework/core/src/python/kungfu/assignment_runtime/profile_lifecycle.py",
+        "framework/core/tests/python/test_work_authority_surface.py"
+      ]
     }
   ],
-  "updatedAt": "2026-08-26T09:45:15.281Z",
-  "stateRoot": "sha256:6a6810bf98ce73e486514aace30ba1ac3042871769a678d84ae9ce8a77bc1c35"
+  "updatedAt": "2026-08-26T10:30:07.401Z",
+  "stateRoot": "sha256:f8b284145f2093977dc6be8526035c88d612e38b8ffbd83f08986cc96b319499"
 }
