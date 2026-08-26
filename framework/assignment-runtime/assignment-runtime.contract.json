@@ -25,6 +25,7 @@
       "schemas",
       "concurrency",
       "idempotency",
+      "workSemantics",
       "events",
       "errors",
       "localRuntimeProfile",
@@ -80,6 +81,9 @@
         "type": "object"
       },
       "idempotency": {
+        "type": "object"
+      },
+      "workSemantics": {
         "type": "object"
       },
       "events": {
@@ -268,6 +272,29 @@
     "unknownOutcome": "An operator may abandon only the local pending projection under exact command, plan, revision, actor, reason, and evidence roots; the authority outcome remains unknown and the original command identity can never be replayed.",
     "retention": "The realm advertises the bounded replay window through capability discovery."
   },
+  "workSemantics": {
+    "schema": "kungfu.work-semantics.status/v1",
+    "commandTypes": [
+      "work.input.snapshot",
+      "work.run.record",
+      "work.effect.authorize",
+      "work.effect.attempt",
+      "work.effect.outcome"
+    ],
+    "recordTypes": [
+      "work-input-snapshot",
+      "work-managed-run",
+      "work-effect-authorization",
+      "work-effect-attempt",
+      "work-effect-outcome"
+    ],
+    "publicFields": "Stable logical identities, enums, revisions, receipts, and SHA-256 content roots only; adopter payloads and transport details remain private.",
+    "freshness": "A successor input snapshot invalidates every run and effect authorization bound to an earlier snapshot.",
+    "attemptFence": "Every write binds the exact Assignment, Attempt, active lease, realm generation, and expected revision before authority mutation.",
+    "effectSettlement": "Authorization, attempt-before-transport, transport outcome, business outcome, and accepted completion are distinct records.",
+    "ambiguousOutcome": "A missing or unknown transport outcome, or transport acceptance without a known business outcome, requires reconciliation and never permits blind repeat.",
+    "completion": "When Work semantics records exist, completion requires settled accepted effects and proof roots for the current input snapshot, managed run, and effect outcomes."
+  },
   "events": {
     "cursor": [
       "streamId",
@@ -358,13 +385,14 @@
   },
   "implementationStatus": {
     "r0Contract": "proved-by-schema-fixtures-and-source-audit",
-    "localRuntime": "deferred-r1",
-    "guiRuntimeClient": "deferred-r2",
-    "cliAgentKfxConvergence": "deferred-r3",
+    "localRuntime": "implemented-r1",
+    "guiRuntimeClient": "implemented-r2",
+    "cliAgentKfxConvergence": "implemented-r3",
+    "workSemantics": "implemented-domain-neutral-v1",
     "clusterRuntime": "not-started-out-of-scope"
   },
   "nonClaims": [
-    "This contract does not implement a Runtime server or client.",
+    "The contract document alone does not certify an installed Runtime build or adopter integration.",
     "This contract does not migrate, initialize, or mutate a real Home Workspace.",
     "This contract does not qualify PostgreSQL, distributed scheduling, multi-host recovery, high availability, sharding, or capacity.",
     "Registering the contract does not prove that existing GUI, CLI, Agent, or KFX paths already consume it."

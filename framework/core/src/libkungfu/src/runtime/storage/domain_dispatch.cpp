@@ -3,6 +3,7 @@
 #include "service_internal.h"
 
 #include <algorithm>
+#include <array>
 #include <stdexcept>
 #include <unordered_set>
 #include <utility>
@@ -25,6 +26,14 @@ namespace kungfu::runtime::storage_service_api::detail {
 
 namespace yy_storage = kungfu::yijinjing::storage;
 namespace yy_enums = kungfu::yijinjing::enums;
+
+bool is_kfx_registry_action(const std::string &action) {
+  static const std::string actions =
+      "|list|inspect|resolve|plan|status|assess|apply|authorize-host|history|runtime-warrant-issue|"
+      "runtime-warrant-adopt|runtime-warrant-heartbeat|runtime-warrant-revoke|runtime-warrant-settle|"
+      "runtime-warrant-recover|kfd-10-witness|";
+  return actions.contains("|" + action + "|");
+}
 
 class file_storage_json_edge_service {
 public:
@@ -260,8 +269,7 @@ public:
       return kfx::validate_native_kfx_document(text_or(options.operation_options, "kind"),
                                                object_or_empty(options.operation_options, "document"));
     }
-    if (action == "list" || action == "inspect" || action == "resolve" || action == "plan" || action == "status" ||
-        action == "assess" || action == "apply" || action == "authorize-host" || action == "history") {
+    if (is_kfx_registry_action(action)) {
       return kfx::query_native_kfx_registry(action, object_or_empty(options.operation_options, "request"),
                                             options.runtime_dir);
     }
@@ -792,126 +800,111 @@ const file_storage_json_edge_service &storage_json_edge_service_instance() {
   return service;
 }
 
+using json_edge_method = nlohmann::json (file_storage_json_edge_service::*)(const storage_service_options &) const;
+
+struct json_edge_dispatch_entry {
+  storage_operation operation;
+  json_edge_method method;
+};
+
+constexpr std::array direct_json_edge_operations{
+    json_edge_dispatch_entry{storage_operation::Status, &file_storage_json_edge_service::status},
+    json_edge_dispatch_entry{storage_operation::Fsck, &file_storage_json_edge_service::fsck},
+    json_edge_dispatch_entry{storage_operation::RepairPlan, &file_storage_json_edge_service::repair_plan},
+    json_edge_dispatch_entry{storage_operation::RepairFetch, &file_storage_json_edge_service::repair_fetch},
+    json_edge_dispatch_entry{storage_operation::RepairApply, &file_storage_json_edge_service::repair_apply},
+    json_edge_dispatch_entry{storage_operation::ExportBundle, &file_storage_json_edge_service::export_bundle},
+    json_edge_dispatch_entry{storage_operation::ImportBundle, &file_storage_json_edge_service::import_bundle},
+    json_edge_dispatch_entry{storage_operation::EpisodeAdmission, &file_storage_json_edge_service::episode_admission},
+    json_edge_dispatch_entry{storage_operation::RebuildIndex, &file_storage_json_edge_service::rebuild_index},
+    json_edge_dispatch_entry{storage_operation::GcPlan, &file_storage_json_edge_service::gc_plan},
+    json_edge_dispatch_entry{storage_operation::CompactPlan, &file_storage_json_edge_service::compact_plan},
+    json_edge_dispatch_entry{storage_operation::VerifySync, &file_storage_json_edge_service::verify_sync},
+    json_edge_dispatch_entry{storage_operation::QueryPlan, &file_storage_json_edge_service::query_plan},
+    json_edge_dispatch_entry{storage_operation::FactQuery, &file_storage_json_edge_service::fact_query},
+    json_edge_dispatch_entry{storage_operation::FactChangelog, &file_storage_json_edge_service::fact_changelog},
+    json_edge_dispatch_entry{storage_operation::SavedQueryCatalog,
+                             &file_storage_json_edge_service::saved_query_catalog},
+    json_edge_dispatch_entry{storage_operation::ProfileLifecycle, &file_storage_json_edge_service::profile_lifecycle},
+    json_edge_dispatch_entry{storage_operation::ActionRuntime, &file_storage_json_edge_service::action_runtime},
+    json_edge_dispatch_entry{storage_operation::KfxRuntime, &file_storage_json_edge_service::kfx_runtime},
+    json_edge_dispatch_entry{storage_operation::FactKernel, &file_storage_json_edge_service::fact_kernel},
+    json_edge_dispatch_entry{storage_operation::FactContract, &file_storage_json_edge_service::fact_contract},
+    json_edge_dispatch_entry{storage_operation::FactDeclareWorld, &file_storage_json_edge_service::fact_declare_world},
+    json_edge_dispatch_entry{storage_operation::FactDeclareSurface,
+                             &file_storage_json_edge_service::fact_declare_surface},
+    json_edge_dispatch_entry{storage_operation::FactObserve, &file_storage_json_edge_service::fact_observe},
+    json_edge_dispatch_entry{storage_operation::FactState, &file_storage_json_edge_service::fact_state},
+    json_edge_dispatch_entry{storage_operation::FactLibraryContract,
+                             &file_storage_json_edge_service::fact_library_contract},
+    json_edge_dispatch_entry{storage_operation::FactTypeCreate, &file_storage_json_edge_service::fact_type_create},
+    json_edge_dispatch_entry{storage_operation::FactTypeList, &file_storage_json_edge_service::fact_type_list},
+    json_edge_dispatch_entry{storage_operation::FactMaterialPut, &file_storage_json_edge_service::fact_material_put},
+    json_edge_dispatch_entry{storage_operation::FactMaterialList, &file_storage_json_edge_service::fact_material_list},
+    json_edge_dispatch_entry{storage_operation::FactLibraryExport,
+                             &file_storage_json_edge_service::fact_library_export},
+    json_edge_dispatch_entry{storage_operation::FactLibraryImport,
+                             &file_storage_json_edge_service::fact_library_import},
+    json_edge_dispatch_entry{storage_operation::AssessmentContract,
+                             &file_storage_json_edge_service::assessment_contract},
+    json_edge_dispatch_entry{storage_operation::AssessmentRequest, &file_storage_json_edge_service::assessment_request},
+    json_edge_dispatch_entry{storage_operation::AssessmentExecute, &file_storage_json_edge_service::assessment_execute},
+    json_edge_dispatch_entry{storage_operation::AssessmentStatus, &file_storage_json_edge_service::assessment_status},
+    json_edge_dispatch_entry{storage_operation::AssessmentList, &file_storage_json_edge_service::assessment_list},
+    json_edge_dispatch_entry{storage_operation::AssessmentInvalidate,
+                             &file_storage_json_edge_service::assessment_invalidate},
+    json_edge_dispatch_entry{storage_operation::TrustRequire, &file_storage_json_edge_service::trust_require},
+    json_edge_dispatch_entry{storage_operation::Layout, &file_storage_json_edge_service::layout},
+    json_edge_dispatch_entry{storage_operation::EpisodeList, &file_storage_json_edge_service::episode_list},
+    json_edge_dispatch_entry{storage_operation::EpisodeInspect, &file_storage_json_edge_service::episode_inspect},
+    json_edge_dispatch_entry{storage_operation::EpisodeProjectionRebuild,
+                             &file_storage_json_edge_service::episode_projection_rebuild},
+    json_edge_dispatch_entry{storage_operation::SourceRegister, &file_storage_json_edge_service::source_register},
+    json_edge_dispatch_entry{storage_operation::SourceUpdateHead, &file_storage_json_edge_service::source_update_head},
+    json_edge_dispatch_entry{storage_operation::SourceRecordAcceptedRange,
+                             &file_storage_json_edge_service::source_record_accepted_range},
+    json_edge_dispatch_entry{storage_operation::SourceList, &file_storage_json_edge_service::source_list},
+    json_edge_dispatch_entry{storage_operation::SourceInspect, &file_storage_json_edge_service::source_inspect},
+    json_edge_dispatch_entry{storage_operation::SourceRegistryFsck,
+                             &file_storage_json_edge_service::source_registry_fsck},
+    json_edge_dispatch_entry{storage_operation::SourceRegistryRebuild,
+                             &file_storage_json_edge_service::source_registry_rebuild},
+};
+
+constexpr std::array backend_operations{storage_operation::BackendStatus, storage_operation::BackendSwitch,
+                                        storage_operation::BackendRollback};
+constexpr std::array episode_control_operations{
+    storage_operation::EpisodeBegin,
+    storage_operation::EpisodeHeartbeat,
+    storage_operation::EpisodeEnd,
+    storage_operation::EpisodeAbort,
+    storage_operation::EpisodeAttachFrame,
+    storage_operation::EpisodeAttachRef,
+    storage_operation::EpisodeRecover,
+    storage_operation::EpisodeRecoveryPlan,
+    storage_operation::EpisodeRecoveryExecute,
+};
+
+template <size_t Size>
+bool contains_operation(const std::array<storage_operation, Size> &operations, storage_operation operation) {
+  return std::find(operations.begin(), operations.end(), operation) != operations.end();
+}
+
+json_edge_method direct_json_edge_method(storage_operation operation) {
+  const auto found = std::find_if(direct_json_edge_operations.begin(), direct_json_edge_operations.end(),
+                                  [operation](const auto &entry) { return entry.operation == operation; });
+  return found == direct_json_edge_operations.end() ? nullptr : found->method;
+}
+
 nlohmann::json dispatch_json_edge_operation(storage_operation operation, const storage_service_options &options) {
-  const auto &parsed_options = options;
-  switch (operation) {
-  case storage_operation::Status:
-    return storage_json_edge_service_instance().status(parsed_options);
-  case storage_operation::Fsck:
-    return storage_json_edge_service_instance().fsck(parsed_options);
-  case storage_operation::RepairPlan:
-    return storage_json_edge_service_instance().repair_plan(parsed_options);
-  case storage_operation::RepairFetch:
-    return storage_json_edge_service_instance().repair_fetch(parsed_options);
-  case storage_operation::RepairApply:
-    return storage_json_edge_service_instance().repair_apply(parsed_options);
-  case storage_operation::ExportBundle:
-    return storage_json_edge_service_instance().export_bundle(parsed_options);
-  case storage_operation::ImportBundle:
-    return storage_json_edge_service_instance().import_bundle(parsed_options);
-  case storage_operation::EpisodeAdmission:
-    return storage_json_edge_service_instance().episode_admission(parsed_options);
-  case storage_operation::RebuildIndex:
-    return storage_json_edge_service_instance().rebuild_index(parsed_options);
-  case storage_operation::GcPlan:
-    return storage_json_edge_service_instance().gc_plan(parsed_options);
-  case storage_operation::CompactPlan:
-    return storage_json_edge_service_instance().compact_plan(parsed_options);
-  case storage_operation::VerifySync:
-    return storage_json_edge_service_instance().verify_sync(parsed_options);
-  case storage_operation::BackendStatus:
-  case storage_operation::BackendSwitch:
-  case storage_operation::BackendRollback:
-    return dispatch_backend_operation(operation, parsed_options);
-  case storage_operation::Query:
-    return render_storage_query_result(default_storage_service().query(parse_storage_query_request(parsed_options)));
-  case storage_operation::QueryPlan:
-    return storage_json_edge_service_instance().query_plan(parsed_options);
-  case storage_operation::FactQuery:
-    return storage_json_edge_service_instance().fact_query(parsed_options);
-  case storage_operation::FactChangelog:
-    return storage_json_edge_service_instance().fact_changelog(parsed_options);
-  case storage_operation::SavedQueryCatalog:
-    return storage_json_edge_service_instance().saved_query_catalog(parsed_options);
-  case storage_operation::ProfileLifecycle:
-    return storage_json_edge_service_instance().profile_lifecycle(parsed_options);
-  case storage_operation::ActionRuntime:
-    return storage_json_edge_service_instance().action_runtime(parsed_options);
-  case storage_operation::KfxRuntime:
-    return storage_json_edge_service_instance().kfx_runtime(parsed_options);
-  case storage_operation::FactKernel:
-    return storage_json_edge_service_instance().fact_kernel(parsed_options);
-  case storage_operation::FactContract:
-    return storage_json_edge_service_instance().fact_contract(parsed_options);
-  case storage_operation::FactDeclareWorld:
-    return storage_json_edge_service_instance().fact_declare_world(parsed_options);
-  case storage_operation::FactDeclareSurface:
-    return storage_json_edge_service_instance().fact_declare_surface(parsed_options);
-  case storage_operation::FactObserve:
-    return storage_json_edge_service_instance().fact_observe(parsed_options);
-  case storage_operation::FactState:
-    return storage_json_edge_service_instance().fact_state(parsed_options);
-  case storage_operation::FactLibraryContract:
-    return storage_json_edge_service_instance().fact_library_contract(parsed_options);
-  case storage_operation::FactTypeCreate:
-    return storage_json_edge_service_instance().fact_type_create(parsed_options);
-  case storage_operation::FactTypeList:
-    return storage_json_edge_service_instance().fact_type_list(parsed_options);
-  case storage_operation::FactMaterialPut:
-    return storage_json_edge_service_instance().fact_material_put(parsed_options);
-  case storage_operation::FactMaterialList:
-    return storage_json_edge_service_instance().fact_material_list(parsed_options);
-  case storage_operation::FactLibraryExport:
-    return storage_json_edge_service_instance().fact_library_export(parsed_options);
-  case storage_operation::FactLibraryImport:
-    return storage_json_edge_service_instance().fact_library_import(parsed_options);
-  case storage_operation::AssessmentContract:
-    return storage_json_edge_service_instance().assessment_contract(parsed_options);
-  case storage_operation::AssessmentRequest:
-    return storage_json_edge_service_instance().assessment_request(parsed_options);
-  case storage_operation::AssessmentExecute:
-    return storage_json_edge_service_instance().assessment_execute(parsed_options);
-  case storage_operation::AssessmentStatus:
-    return storage_json_edge_service_instance().assessment_status(parsed_options);
-  case storage_operation::AssessmentList:
-    return storage_json_edge_service_instance().assessment_list(parsed_options);
-  case storage_operation::AssessmentInvalidate:
-    return storage_json_edge_service_instance().assessment_invalidate(parsed_options);
-  case storage_operation::TrustRequire:
-    return storage_json_edge_service_instance().trust_require(parsed_options);
-  case storage_operation::Layout:
-    return storage_json_edge_service_instance().layout(parsed_options);
-  case storage_operation::EpisodeBegin:
-  case storage_operation::EpisodeHeartbeat:
-  case storage_operation::EpisodeEnd:
-  case storage_operation::EpisodeAbort:
-  case storage_operation::EpisodeAttachFrame:
-  case storage_operation::EpisodeAttachRef:
-  case storage_operation::EpisodeRecover:
-  case storage_operation::EpisodeRecoveryPlan:
-  case storage_operation::EpisodeRecoveryExecute:
-    return dispatch_episode_control_operation(operation, parsed_options);
-  case storage_operation::EpisodeList:
-    return storage_json_edge_service_instance().episode_list(parsed_options);
-  case storage_operation::EpisodeInspect:
-    return storage_json_edge_service_instance().episode_inspect(parsed_options);
-  case storage_operation::EpisodeProjectionRebuild:
-    return storage_json_edge_service_instance().episode_projection_rebuild(parsed_options);
-  case storage_operation::SourceRegister:
-    return storage_json_edge_service_instance().source_register(parsed_options);
-  case storage_operation::SourceUpdateHead:
-    return storage_json_edge_service_instance().source_update_head(parsed_options);
-  case storage_operation::SourceRecordAcceptedRange:
-    return storage_json_edge_service_instance().source_record_accepted_range(parsed_options);
-  case storage_operation::SourceList:
-    return storage_json_edge_service_instance().source_list(parsed_options);
-  case storage_operation::SourceInspect:
-    return storage_json_edge_service_instance().source_inspect(parsed_options);
-  case storage_operation::SourceRegistryFsck:
-    return storage_json_edge_service_instance().source_registry_fsck(parsed_options);
-  case storage_operation::SourceRegistryRebuild:
-    return storage_json_edge_service_instance().source_registry_rebuild(parsed_options);
-  }
+  if (const auto method = direct_json_edge_method(operation); method != nullptr)
+    return (storage_json_edge_service_instance().*method)(options);
+  if (contains_operation(backend_operations, operation))
+    return dispatch_backend_operation(operation, options);
+  if (operation == storage_operation::Query)
+    return render_storage_query_result(default_storage_service().query(parse_storage_query_request(options)));
+  if (contains_operation(episode_control_operations, operation))
+    return dispatch_episode_control_operation(operation, options);
   throw std::invalid_argument("unknown storage operation");
 }
 

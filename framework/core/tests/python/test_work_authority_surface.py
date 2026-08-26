@@ -7,11 +7,18 @@ from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from kungfu import assignment_close, assignment_evidence, assignment_review_lifecycle
+from kungfu import (
+    assignment_close,
+    assignment_evidence,
+    assignment_review_lifecycle,
+)
+from kungfu.assignment_runtime import fresh_recovery as assignment_fresh_recovery
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import assignment_review
 from kungfu.cli.commands import kfc
 from kungfu.agent import run_agent, session_contract
+
+assignment_command = importlib.import_module("kungfu.cli.commands.assignment")
 
 
 def test_click_tree_exposes_one_work_family_and_no_assignment_alias():
@@ -31,6 +38,7 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
     commands = set(kfc.commands["work"].commands)
     assert commands == {
         "admit",
+        "authorize-effect",
         "bind",
         "binding-create",
         "capture",
@@ -49,13 +57,21 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
         "family-verify",
         "family-verify-v2",
         "finalize-agent-session",
+        "fresh-recover",
+        "fresh-recovery-plan",
         "gate",
         "kickoff",
+        "record-effect-attempt",
+        "record-effect-outcome",
+        "record-input",
+        "record-run",
         "relation-event",
         "review",
         "review-agent-plan",
         "review-agent-run",
         "resume-prepare",
+        "runtime-recovery-plan",
+        "runtime-recovery-resolve",
         "runtime-host",
         "seal",
         "stage",
@@ -701,3 +717,358 @@ def test_starter_close_plan_binds_one_fit_review_and_hides_technical_seal(
         "seal",
     ]
     assert plan["review"]["allowedActions"] == ["approve", "close"]
+
+
+def _fresh_recovery_fixture():
+    def root(digit):
+        return f"sha256:{digit * 64}"
+
+    status = {
+        "schema": "kungfu.assignment-orchestration.status/v1",
+        "phase": "completion-claimed",
+        "query_proof_root": root("5"),
+        "completion_claim_count": 1,
+        "completion_claims": [{"claim_id": "claim:one", "root": root("6")}],
+        "independent_review_count": 0,
+        "independent_reviews": [],
+        "continuation_decision_count": 0,
+        "continuation_decisions": [],
+        "next_actions": [{"action": "review"}],
+        "assignment": {
+            "initiative_id": "initiative:test",
+            "assignment_id": "assignment:test",
+            "request_root": root("1"),
+            "work_definition_root": root("2"),
+            "evidence_episode_roots": [root("7")],
+        },
+    }
+    work_ref = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "project:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": root("3"),
+        "entityType": "assignment",
+        "entityId": "assignment:test",
+        "entityRoot": assignment_fresh_recovery._root(status["assignment"]),
+        "purpose": "continue-project-assignment",
+        "systemTimeCut": root("5"),
+        "initiativeId": "initiative:test",
+    }
+    binding = {
+        "workRef": work_ref,
+        "session": {
+            "workConsoleId": "assistant:project:test",
+            "sessionAttemptId": "native:new",
+        },
+    }
+    plan = assignment_fresh_recovery.build_plan(
+        workspace={
+            "id": "project:test",
+            "root": "/project",
+            "identityRoot": root("4"),
+        },
+        status=status,
+        binding=binding,
+        previous_attempt_id="native:old",
+        expected_request_root=root("1"),
+        expected_work_definition_root=root("2"),
+        expected_profile_root=root("3"),
+        recovery_profile={
+            "profileId": "kungfu.work-control",
+            "profileRoot": root("3"),
+            "sourceContractRoot": root("6"),
+        },
+        profile_active=False,
+        now="2026-08-25T09:00:00Z",
+    )
+    return status, binding, plan
+
+
+def test_fresh_recovery_plan_is_resume_new_attempt_without_lifecycle_replay():
+    status, binding, plan = _fresh_recovery_fixture()
+
+    assert plan["continuationMode"] == "resume/new-attempt"
+    assert plan["attempt"] == {
+        "previousSessionAttemptId": "native:old",
+        "newSessionAttemptId": "native:new",
+        "workConsoleId": "assistant:project:test",
+    }
+    assert plan["workRef"] == binding["workRef"]
+    assert plan["recoveryProfile"] == {
+        "profileId": "kungfu.work-control",
+        "profileRoot": binding["workRef"]["profileRoot"],
+        "sourceContractRoot": f"sha256:{'6' * 64}",
+    }
+    assert [effect["stage"] for effect in plan["effects"]] == [
+        "activate-profile",
+        "bind-new-attempt",
+    ]
+    assert set(plan["forbiddenEffects"]) == {"admit", "claim", "kickoff"}
+    assert plan["work"]["phase"] == status["phase"]
+    assert plan["writeOccurred"] is False
+
+
+def test_fresh_recovery_separates_retained_authority_from_target_profile(
+    tmp_path, monkeypatch
+):
+    retained = tmp_path / "retained"
+    retained.mkdir()
+    (retained / "profile.json").write_text("{}", encoding="utf-8")
+    target = tmp_path / "target"
+    target.mkdir()
+    retained_root = f"sha256:{'a' * 64}"
+    target_root = f"sha256:{'b' * 64}"
+    source_contract_root = f"sha256:{'c' * 64}"
+
+    def lifecycle(_runtime, operation, **_values):
+        assert operation == "get"
+        return {
+            "profile_suite_root": retained_root,
+            "latest_event": {
+                "closure": {"profile_path": str(retained / "profile.json")}
+            },
+        }
+
+    def validate(source, _runtime):
+        resolved = source.resolve()
+        if resolved == retained.resolve():
+            return {"inspection": {"profile_suite_root": retained_root}}
+        assert resolved == target.resolve()
+        return {
+            "inspection": {
+                "profile": {"id": "kungfu.work-control"},
+                "profile_suite_root": target_root,
+                "closure": {"source_contract": {"root": source_contract_root}},
+            }
+        }
+
+    monkeypatch.setattr(
+        assignment_fresh_recovery.storage_service, "profile_lifecycle", lifecycle
+    )
+    monkeypatch.setattr(
+        assignment_fresh_recovery.profile_sdk, "validate_source", validate
+    )
+
+    assert assignment_fresh_recovery._retained_profile_source(tmp_path) == retained
+    assert assignment_fresh_recovery._validated_recovery_profile(target, tmp_path) == {
+        "profileId": "kungfu.work-control",
+        "profileRoot": target_root,
+        "sourceContractRoot": source_contract_root,
+    }
+
+
+def test_resume_prepare_reconciles_the_explicit_recovery_source(tmp_path, monkeypatch):
+    source = tmp_path / "historical-work-control"
+    source.mkdir()
+    desired_root = f"sha256:{'d' * 64}"
+    previous_root = f"sha256:{'e' * 64}"
+    reconciled = []
+
+    monkeypatch.setattr(
+        assignment_command.profile_sdk,
+        "validate_source",
+        lambda actual, _runtime: (
+            {
+                "inspection": {
+                    "profile": {"id": "kungfu.work-control"},
+                    "profile_suite_root": desired_root,
+                }
+            }
+            if actual == source.resolve()
+            else (_ for _ in ()).throw(AssertionError("unexpected Profile source"))
+        ),
+    )
+
+    def lifecycle(_runtime, operation, **_values):
+        if operation == "list":
+            return {
+                "profiles": [
+                    {
+                        "profile_id": "kungfu.work-control",
+                        "profile_suite_root": previous_root,
+                        "removed": False,
+                    }
+                ]
+            }
+        assert operation == "get"
+        return {
+            "profile_suite_root": desired_root,
+            "qualified": True,
+            "activated": True,
+        }
+
+    monkeypatch.setattr(
+        assignment_command.storage_service, "profile_lifecycle", lifecycle
+    )
+    monkeypatch.setattr(
+        assignment_command.profile_lifecycle,
+        "ensure_work_profile",
+        lambda actual, runtime, actor: (
+            reconciled.append((actual, runtime, actor)) or [{"status": "activated"}]
+        ),
+    )
+
+    receipt = assignment_command._prepare_resume_profile(
+        tmp_path / "runtime", "maintainer:test", source
+    )
+
+    assert reconciled == [(source.resolve(), tmp_path / "runtime", "maintainer:test")]
+    assert receipt["previousProfileSuiteRoot"] == previous_root
+    assert receipt["profileSuiteRoot"] == desired_root
+
+
+def test_fresh_recovery_failure_keeps_public_executable_next_actions(
+    tmp_path, monkeypatch
+):
+    emitted = []
+    source = tmp_path / "missing-profile-source"
+    failure = assignment_fresh_recovery.FreshRecoveryError(
+        "WorkRef is unavailable",
+        assignment_fresh_recovery._profile_recovery_actions(source),
+    )
+    monkeypatch.setattr(assignment_command, "_emit", emitted.append)
+
+    with __import__("pytest").raises(__import__("click").exceptions.Exit):
+        assignment_command._run(lambda: (_ for _ in ()).throw(failure))
+
+    assert emitted[0]["ok"] is False
+    assert emitted[0]["message"] == "WorkRef is unavailable"
+    assert emitted[0]["next_actions"] == failure.next_actions
+    assert emitted[0]["next_actions"][0]["command"] == [
+        "kungfu",
+        "profile",
+        "history",
+        "kungfu.work-control",
+        "--json",
+    ]
+    assert emitted[0]["next_actions"][1]["command"] == [
+        "kungfu",
+        "profile",
+        "validate",
+        str(source),
+        "--json",
+    ]
+
+
+def test_fresh_recovery_apply_preserves_complete_lifecycle_state():
+    status, binding, plan = _fresh_recovery_fixture()
+    events = []
+
+    receipt = assignment_fresh_recovery.apply_plan(
+        plan,
+        expected_plan_root=plan["planRoot"],
+        authorized_by="maintainer:test",
+        status_reader=lambda: json.loads(json.dumps(status)),
+        session_reader=lambda: dict(binding["session"]),
+        prepare_profile=lambda actor: (
+            events.append(("profile", actor))
+            or {
+                "status": "reconciled",
+                "profileSuiteRoot": plan["workRef"]["profileRoot"],
+            }
+        ),
+        bind_work=lambda expected: (
+            events.append(("bind", expected))
+            or {
+                "workRef": dict(expected["workRef"]),
+                "receipt": {"receiptRoot": f"sha256:{'8' * 64}"},
+            }
+        ),
+        now="2026-08-25T09:01:00Z",
+    )
+
+    assert receipt["ok"] is True
+    assert receipt["continuationMode"] == "resume/new-attempt"
+    assert receipt["assignmentWrites"] == []
+    assert receipt["preservation"]["phase"] == "completion-claimed"
+    assert [event[0] for event in events] == ["profile", "bind"]
+
+
+def test_fresh_recovery_fails_closed_on_attempt_plan_or_state_drift():
+    status, binding, plan = _fresh_recovery_fixture()
+    with __import__("pytest").raises(ValueError, match="new SessionAttempt"):
+        assignment_fresh_recovery.build_plan(
+            workspace=plan["workspace"],
+            status=status,
+            binding=binding,
+            previous_attempt_id="native:new",
+            expected_request_root=status["assignment"]["request_root"],
+            expected_work_definition_root=status["assignment"]["work_definition_root"],
+            expected_profile_root=plan["workRef"]["profileRoot"],
+            recovery_profile=plan["recoveryProfile"],
+            profile_active=True,
+        )
+    drifted = json.loads(json.dumps(status))
+    drifted["completion_claim_count"] = 2
+    with __import__("pytest").raises(ValueError, match="lifecycle state changed"):
+        assignment_fresh_recovery.apply_plan(
+            plan,
+            expected_plan_root=plan["planRoot"],
+            authorized_by="maintainer:test",
+            status_reader=lambda: drifted,
+            session_reader=lambda: dict(binding["session"]),
+            prepare_profile=lambda _actor: {},
+            bind_work=lambda expected: {"workRef": dict(expected["workRef"])},
+            now="2026-08-25T09:01:00Z",
+        )
+    forged = {**plan, "continuationMode": "first-attempt"}
+    with __import__("pytest").raises(ValueError, match="root does not verify"):
+        assignment_fresh_recovery.apply_plan(
+            forged,
+            expected_plan_root=plan["planRoot"],
+            authorized_by="maintainer:test",
+            status_reader=lambda: status,
+            session_reader=lambda: dict(binding["session"]),
+            prepare_profile=lambda _actor: {},
+            bind_work=lambda expected: {"workRef": dict(expected["workRef"])},
+            now="2026-08-25T09:01:00Z",
+        )
+
+
+def test_fresh_recovery_rejects_expiry_attempt_drift_and_unknown_effects():
+    status, binding, plan = _fresh_recovery_fixture()
+    mutations = []
+    common = {
+        "authorized_by": "maintainer:test",
+        "status_reader": lambda: status,
+        "prepare_profile": lambda _actor: mutations.append("profile") or {},
+        "bind_work": lambda expected: (
+            mutations.append("bind") or {"workRef": dict(expected["workRef"])}
+        ),
+    }
+    with __import__("pytest").raises(ValueError, match="expired"):
+        assignment_fresh_recovery.apply_plan(
+            plan,
+            expected_plan_root=plan["planRoot"],
+            session_reader=lambda: dict(binding["session"]),
+            now="2026-08-25T09:11:00Z",
+            **common,
+        )
+    with __import__("pytest").raises(ValueError, match="another current"):
+        assignment_fresh_recovery.apply_plan(
+            plan,
+            expected_plan_root=plan["planRoot"],
+            session_reader=lambda: {
+                **binding["session"],
+                "sessionAttemptId": "native:other",
+            },
+            now="2026-08-25T09:01:00Z",
+            **common,
+        )
+    forged_body = {
+        **{key: value for key, value in plan.items() if key != "planRoot"},
+        "effects": [*plan["effects"], {"stage": "admit"}],
+    }
+    forged = {
+        **forged_body,
+        "planRoot": assignment_fresh_recovery._root(forged_body),
+    }
+    with __import__("pytest").raises(ValueError, match="effect sequence"):
+        assignment_fresh_recovery.apply_plan(
+            forged,
+            expected_plan_root=forged["planRoot"],
+            session_reader=lambda: dict(binding["session"]),
+            now="2026-08-25T09:01:00Z",
+            **common,
+        )
+    assert mutations == []

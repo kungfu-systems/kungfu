@@ -198,7 +198,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:f7a40a41a0fd27627949f00e50e784b4d2b73f908c4d401e2565cb7c1d6f0401"
+          "sourceRoot": "sha256:f2c777415f61cd9b543dd04ad60acd9f0245378ac3aadab78f50cab1b9a22383"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -343,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:efaf8463f1dae8adb237b95ce5330f87f1d0155e8809fcd08e6546a6001ce249"
+          "sourceRoot": "sha256:fb030e9a8318c50e516ff828d16a809992374f71771f87e45661afb72927d579"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:99b71d04eae3f56691d86cdbc5bb1559055c165b433fe42f6f064b5950df2437"
+  "registryRoot": "sha256:ab8a3b91d075325503af192c89b8cc30b34ecf23ba0065dd356e7c27f44b9a02"
 }

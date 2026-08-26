@@ -2,6 +2,6 @@
 
 """Native Work Control Suite domain."""
 
-from . import initiative_bundle, native_state, work_control
+from . import initiative_bundle, native_state, work_control, work_semantics
 
-__all__ = ["initiative_bundle", "native_state", "work_control"]
+__all__ = ["initiative_bundle", "native_state", "work_control", "work_semantics"]

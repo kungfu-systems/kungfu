@@ -18,7 +18,49 @@ import {
   buildWorkWindowModel,
   cycleWorkSort,
   formatWorkUpdatedAt,
+  workWindowInputAction,
 } from './work-window/index.js';
+
+test('project Work input interpreter separates text, composer, and run commands', () => {
+  const base = {
+    planPending: false,
+    retainedAgentReviewable: false,
+  };
+  assert.deepEqual(
+    workWindowInputAction('\b', { ...base, agentReply: 'answer' }),
+    { kind: 'set-agent-reply', value: 'answe' },
+  );
+  assert.deepEqual(
+    workWindowInputAction('\r', {
+      ...base,
+      composer: {
+        step: 'objective',
+        objective: 'Ship the change',
+        acceptanceCriterion: '',
+      },
+    }),
+    {
+      kind: 'set-composer',
+      value: {
+        step: 'acceptance',
+        objective: 'Ship the change',
+        acceptanceCriterion: '',
+      },
+      message: 'Define the result that independent review should check.',
+    },
+  );
+  assert.deepEqual(workWindowInputAction('n', { ...base, planPending: true }), {
+    kind: 'cancel-plan',
+  });
+  assert.deepEqual(
+    workWindowInputAction('\r', { ...base, retainedAgentReviewable: true }),
+    { kind: 'continue-retained-work' },
+  );
+  assert.deepEqual(
+    workWindowInputAction('r', { ...base, attentionKind: 'blocked' }),
+    { kind: 'retry-agent-attempt' },
+  );
+});
 
 test('Agent bootstrap projection names pending, verified, and degraded states', () => {
   const base = {

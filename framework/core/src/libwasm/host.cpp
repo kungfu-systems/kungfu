@@ -12,6 +12,8 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
@@ -19,9 +21,11 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 #if defined(_WIN32)
@@ -322,6 +326,114 @@ nlohmann::json receipt_json(const options &opts, const std::string &engine,
           {"guest_result", receipt.guest_result}};
 }
 
+class runtime_warrant_lease {
+public:
+  runtime_warrant_lease(const options &opts, nlohmann::json adoption) : opts_(opts), adoption_(std::move(adoption)) {
+    const auto &warrant = adoption_.at("runtimeWarrant");
+    const auto &state = adoption_.at("leaseState");
+    if (adoption_.value("schema", "") != "kungfu.kfx.runtime-warrant-adoption/v1" ||
+        !adoption_.value("executionAllowed", false) || warrant.at("packageKey") != opts_.package_key ||
+        warrant.at("host") != "wasm" || warrant.at("capabilityGrantRoot") != opts_.capability_grant_root ||
+        warrant.at("hostAuthorizationRoot") != opts_.authorization_root ||
+        warrant.at("warrantRoot") == warrant.at("capabilityGrantRoot") ||
+        warrant.at("warrantRoot") == warrant.at("mutationWarrantRoot") ||
+        state.at("warrantRoot") != warrant.at("warrantRoot") || state.at("holder") != warrant.at("holder") ||
+        state.at("state") != "active") {
+      throw std::runtime_error("Core Runtime Warrant adoption identity does not match the WASM host launch");
+    }
+    heartbeat_thread_ = std::thread([this] { heartbeat_loop(); });
+  }
+
+  runtime_warrant_lease(const runtime_warrant_lease &) = delete;
+  runtime_warrant_lease &operator=(const runtime_warrant_lease &) = delete;
+
+  ~runtime_warrant_lease() {
+    stop_heartbeat();
+    if (!settled_ && heartbeat_error().empty()) {
+      try {
+        settle_transition("failed");
+      } catch (...) {
+      }
+    }
+  }
+
+  void settle(const std::string &outcome) {
+    stop_heartbeat();
+    const auto failure = heartbeat_error();
+    if (!failure.empty()) {
+      throw std::runtime_error("Runtime Warrant heartbeat failed closed: " + failure);
+    }
+    settle_transition(outcome);
+    settled_ = true;
+  }
+
+private:
+  nlohmann::json fence_request(int64_t recorded_at) const {
+    const auto &warrant = adoption_.at("runtimeWarrant");
+    const auto &state = adoption_.at("leaseState");
+    return {{"packageKey", warrant.at("packageKey")},
+            {"host", warrant.at("host")},
+            {"holder", warrant.at("holder")},
+            {"expectedWarrantRoot", warrant.at("warrantRoot")},
+            {"expectedGeneration", state.at("generation")},
+            {"expectedFencingToken", state.at("fencingToken")},
+            {"recordedAt", recorded_at}};
+  }
+
+  void heartbeat_loop() {
+    std::unique_lock<std::mutex> lock(wait_mutex_);
+    while (!wait_cv_.wait_for(lock, std::chrono::seconds(2), [this] { return stopping_; })) {
+      lock.unlock();
+      try {
+        const auto transition = kungfu::runtime::kfx::query_native_kfx_registry(
+            "runtime-warrant-heartbeat", fence_request(yy::time::now_in_nano()), opts_.runtime_dir);
+        if (transition.at("leaseState").at("state") != "active")
+          throw std::runtime_error("Core did not retain the active lease state");
+      } catch (const std::exception &error) {
+        std::lock_guard<std::mutex> failure_lock(failure_mutex_);
+        failure_ = error.what();
+        return;
+      }
+      lock.lock();
+    }
+  }
+
+  void stop_heartbeat() {
+    {
+      std::lock_guard<std::mutex> lock(wait_mutex_);
+      stopping_ = true;
+    }
+    wait_cv_.notify_all();
+    if (heartbeat_thread_.joinable())
+      heartbeat_thread_.join();
+  }
+
+  std::string heartbeat_error() const {
+    std::lock_guard<std::mutex> lock(failure_mutex_);
+    return failure_;
+  }
+
+  void settle_transition(const std::string &outcome) {
+    auto request = fence_request(yy::time::now_in_nano());
+    request["outcome"] = outcome;
+    request["residualResponsibilityDisposition"] = "retained-by-kungfu-core";
+    const auto transition =
+        kungfu::runtime::kfx::query_native_kfx_registry("runtime-warrant-settle", request, opts_.runtime_dir);
+    if (transition.at("leaseState").at("state") != "settled")
+      throw std::runtime_error("Core did not retain terminal Runtime Warrant settlement");
+  }
+
+  const options &opts_;
+  nlohmann::json adoption_;
+  std::thread heartbeat_thread_;
+  mutable std::mutex failure_mutex_;
+  std::mutex wait_mutex_;
+  std::condition_variable wait_cv_;
+  std::string failure_;
+  bool stopping_ = false;
+  bool settled_ = false;
+};
+
 int run_self_test(const char *argv0) {
   const auto adapters = executable_dir(argv0) / "libwasm";
   auto results = nlohmann::json::object();
@@ -360,8 +472,9 @@ int main(int argc, char **argv) {
     if (opts.world != WORLD_V1 || opts.capabilities != KF_LIBWASM_CAP_JOURNAL_READ_BATCH) {
       throw std::invalid_argument("unsupported world or capability grant");
     }
-    const auto host_authorization = kungfu::runtime::kfx::query_native_kfx_registry(
-        "authorize-host",
+    const auto issued_at = yy::time::now_in_nano();
+    const auto adoption = kungfu::runtime::kfx::query_native_kfx_registry(
+        "runtime-warrant-adopt",
         {{"packageKey", opts.package_key},
          {"host", "wasm"},
          {"expectedCutRoot", opts.cut_root},
@@ -370,10 +483,17 @@ int main(int argc, char **argv) {
          {"expectedPackageRoot", opts.package_root},
          {"expectedCapabilityGrantRoot", opts.capability_grant_root},
          {"expectedAuthorizationRoot", opts.authorization_root},
-         {"expectedGrantedCapabilities", nlohmann::json::array({"journal.read.batch"})}},
+         {"expectedGrantedCapabilities", nlohmann::json::array({"journal.read.batch"})},
+         {"holder", "kungfu-wasm-host:" + std::to_string(issued_at)},
+         {"purpose", "execute the authorized WASM product adapter"},
+         {"leaseNonce", root_hash(opts.package_key + ":" + std::to_string(issued_at))},
+         {"issuedAt", issued_at},
+         {"expiresAt", issued_at + 3600LL * 1000LL * 1000LL * 1000LL},
+         {"heartbeatTtl", 5LL * 1000LL * 1000LL * 1000LL},
+         {"residualResponsibility", "retained-by-kungfu-core"},
+         {"requestedCapabilities", nlohmann::json::array({"journal.read.batch"})}},
         opts.runtime_dir);
-    if (!host_authorization.value("executionAllowed", false))
-      throw std::invalid_argument("Core refused the exact KFX host authorization");
+    runtime_warrant_lease runtime_lease(opts, adoption);
     if (opts.qualification_seed) {
       seed_qualification_journal(opts);
     }
@@ -439,6 +559,7 @@ int main(int argc, char **argv) {
     execution_body["admission_event_id"] = admission.at("admission_event_id");
     const auto execution_fact = record_fact(opts.runtime_dir, "execution", actual_hash, execution_body);
     execution_body["execution_admission_event_id"] = execution_fact.at("admission_event_id");
+    runtime_lease.settle(status == KF_LIBWASM_OK ? "completed" : "failed");
     std::cout << execution_body.dump() << std::endl;
     return status == KF_LIBWASM_OK ? 0 : status;
   } catch (const std::exception &error) {

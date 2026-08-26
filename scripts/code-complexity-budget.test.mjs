@@ -74,14 +74,14 @@ test('retired complexity signing residues fail closed with exact identifiers', (
   );
 });
 
-test('git probes fail fast with a precise timeout', () => {
+test('git probes remain bounded with a precise timeout', () => {
   assert.throws(
     () =>
       git(['show', 'HEAD:file'], {}, () => ({
         status: null,
         error: { code: 'ETIMEDOUT' },
       })),
-    /timed out after 10000ms/,
+    /timed out after 30000ms/,
   );
 });
 

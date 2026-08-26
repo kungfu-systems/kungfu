@@ -72,6 +72,7 @@ def bind_current_native_work(
     work_workspace_root: str | None = None,
     envelope_override: Mapping[str, Any] | None = None,
     console_workspace_root: str | None = None,
+    expected_binding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Atomically bind the current native attempt before it acts on Work."""
 
@@ -121,12 +122,10 @@ def bind_current_native_work(
             )
         agent_resources.validated_current_bootstrap_receipt(envelope)
 
-    # ``runtime_dir`` belongs to the CLI invocation context. A packaged CLI may
-    # deliberately use ``--home`` while the native attempt is attached to a
-    # Project, so an implicit target must keep using the verified launch
-    # workspace. An explicit ``--workspace`` may select Work in another Project;
-    # bind that exact Project identity while preserving the current Console and
-    # attempt identities.
+    # A packaged --home runtime still retains the verified launch workspace.
+    # Explicit --workspace may bind another exact Project while preserving the
+    # current Console and attempt identities.
+    # The resulting WorkRef remains bound to that explicit Project identity.
     work_runtime_dir = project_runtime_dir
     work_workspace_id = str(envelope["workspaceId"])
     binding_scope = "same-project"
@@ -167,6 +166,7 @@ def bind_current_native_work(
         "workConsoleId": str(envelope["consoleId"]),
         "sessionAttemptId": str(envelope["attemptId"]),
     }
+    session_contract.require_expected_binding(expected_binding, work_ref, session)
     actor_id = os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
 
     def invoke_session(request):

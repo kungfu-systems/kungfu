@@ -655,12 +655,17 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     assert receipt["profileId"] == "kungfu.work-control"
     assert receipt["qualificationSource"] == "release"
     assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
-    assert len(receipt["clientProbes"]) == 11
+    assert len(receipt["clientProbes"]) == 16
     assert all(row["matched"] for row in receipt["clientProbes"])
     assert {
         "claim-assignment",
         "advance-assignment",
         "append-assignment-relation-event",
+        "work-input-snapshot",
+        "work-managed-run",
+        "work-effect-authorize",
+        "work-effect-attempt",
+        "work-effect-outcome",
     }.issubset({row["intentId"] for row in receipt["clientProbes"]})
 
     manifest_path = tmp_path / "profile-kfd3.json"

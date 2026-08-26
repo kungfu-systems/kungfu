@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 from click.testing import CliRunner
 import kungfu
-from kungfu import runtime_broker
+from kungfu import runtime_broker, runtime_service
 
 kungfu.__version__ = "test"
 
@@ -45,6 +45,129 @@ def test_runtime_operations_exposes_the_contract_catalog_as_json(tmp_path):
 
     assert result.exit_code == 0, result.output
     assert json.loads(result.output) == runtime_broker.operation_catalog()
+
+
+def test_runtime_status_preserves_the_plain_line_contract(tmp_path, monkeypatch):
+    payload = {
+        "configHome": "/config",
+        "dataRoot": "/data",
+        "runtimeDir": "/runtime",
+        "product": {
+            "availability": "available",
+            "liveState": "ready",
+            "handle": {
+                "generation": "7",
+                "readiness": {
+                    "state": "ready",
+                    "durableCut": {"sequence": "11"},
+                    "projectionCut": {"sequence": "9"},
+                },
+            },
+            "leases": {"activeCount": 2},
+        },
+        "lifecycle": {"state": "running", "warnings": ["sample-warning"]},
+        "supervisor": {"pid": 101, "running": True},
+        "coordinator": {"pid": 102, "running": False},
+    }
+    monkeypatch.setattr(runtime_service, "route_status", lambda *_args: payload)
+
+    result = CliRunner().invoke(
+        runtime_test_cli,
+        ["--home", str(tmp_path / "home"), "runtime", "status"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.output == (
+        "workspace: available\n"
+        "live runtime: ready\n"
+        "generation: 7\n"
+        "readiness: ready\n"
+        'durable cut: {"sequence": "11"}\n'
+        'projection cut: {"sequence": "9"}\n'
+        "active leases: 2\n"
+        "config: /config\n"
+        "data root: /data\n"
+        "runtime: /runtime\n"
+        "process diagnostics:\n"
+        "  lifecycle: running\n"
+        "  supervisor: 101 (running)\n"
+        "  coordinator: 102 (stopped)\n"
+        "warnings: sample-warning\n"
+    )
+
+
+def test_runtime_status_preserves_falsy_product_and_handle_fallbacks(
+    tmp_path, monkeypatch
+):
+    base_payload = {
+        "configHome": "/config",
+        "dataRoot": "/data",
+        "runtimeDir": "/runtime",
+        "lifecycle": {"state": "stopped"},
+        "supervisor": {"pid": None, "running": False},
+    }
+    expected = (
+        "workspace: unknown\n"
+        "live runtime: unknown\n"
+        "config: /config\n"
+        "data root: /data\n"
+        "runtime: /runtime\n"
+        "process diagnostics:\n"
+        "  lifecycle: stopped\n"
+        "  supervisor: - (stopped)\n"
+    )
+
+    for product in (None, {"handle": None}):
+        payload = {**base_payload, "product": product}
+        monkeypatch.setattr(runtime_service, "route_status", lambda *_args: payload)
+
+        result = CliRunner().invoke(
+            runtime_test_cli,
+            ["--home", str(tmp_path / "home"), "runtime", "status"],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert result.output == expected
+
+
+def test_runtime_status_preserves_error_line_and_trailing_newline_contract(
+    tmp_path, monkeypatch
+):
+    payload = {
+        "configHome": "/config",
+        "dataRoot": "/data",
+        "runtimeDir": "/runtime",
+        "product": {"error": {"code": "not_ready", "message": "details"}},
+        "lifecycle": {"state": "stopped"},
+        "supervisor": {"pid": None, "running": False},
+    }
+    monkeypatch.setattr(runtime_service, "route_status", lambda *_args: payload)
+    prefix = "workspace: unknown\nlive runtime: unknown\nruntime problem:\n"
+    suffix = (
+        "config: /config\n"
+        "data root: /data\n"
+        "runtime: /runtime\n"
+        "process diagnostics:\n"
+        "  lifecycle: stopped\n"
+        "  supervisor: - (stopped)\n"
+    )
+
+    for actionable, indented in (
+        ("", ""),
+        ("first\n\nsecond", "  first\n  \n  second\n"),
+    ):
+        monkeypatch.setattr(
+            "kungfu.cli.commands.runtime.diagnostics.actionable_text",
+            lambda *_args, value=actionable, **_kwargs: value,
+        )
+
+        result = CliRunner().invoke(
+            runtime_test_cli,
+            ["--home", str(tmp_path / "home"), "runtime", "status"],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert result.output == f"{prefix}{indented}{suffix}"
 
 
 def test_runtime_plan_projects_storage_only_without_starting_a_process(tmp_path):

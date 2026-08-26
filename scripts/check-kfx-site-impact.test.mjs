@@ -171,6 +171,17 @@ test('fails closed for an unmapped KFX-owned path', () => {
   );
 });
 
+test('routes the Python storage adapter and native KFX tests through proof eligibility', () => {
+  for (const relativePath of [
+    'framework/core/src/python/kungfu/storage/kfx_service.py',
+    'framework/core/tests/python/test_native_kfx_contract.py',
+  ]) {
+    assertCode('KFX_SITE_BUNDLE_UPDATE_REQUIRED', () =>
+      evaluate({ changes: [change(relativePath)] }),
+    );
+  }
+});
+
 test('requires semantic updates for public KFX SDK changes', () => {
   assertCode('KFX_SITE_BUNDLE_UPDATE_REQUIRED', () =>
     evaluate({ changes: [change('framework/kfx/src/index.ts')] }),

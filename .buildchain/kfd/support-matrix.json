@@ -55,7 +55,7 @@
           },
           {
             "path": "framework/contract/kungfu-contracts.registry.json",
-            "sha256": "sha256:a06f3d96294cfc80aa3f9ada818d46e53db5c00e4874c3e71fbc4757e4d2d7b7"
+            "sha256": "sha256:b59f7069e8b9c203918012ab3b0f57daafb10218a9c8a6dbef218aabc46272e1"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-        "sha256": "sha256:abf7e8d5d4f204ba65e3e9281c16bcfcee420742a62b7f9faf50c016bd9c7997"
+            "sha256": "sha256:24a7a4f3a5f953d32e0c06235cc207d6c57332ca158fd46bf0d23f7b4e0ec5b2"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,7 +152,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:30d6b3c11819a7390ff31a12467f4b4f270b04793156053532d140ad56d1f44a"
+            "sha256": "sha256:f539612d133b55282057c9722978d62b51f197ffde7ad50fd22d48de8f69e644"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:9d98d84d5bdad650cdc7584590b10f37ac1f255b5a49e4ebd98615e13e2fc958"
+            "sha256": "sha256:0625fdb229e60782636b42fbfcaf5ab6077ec32a68221fe9bce62adbd389ff7f"
           }
         ]
       },
@@ -530,17 +530,19 @@
         "documentSha256": "sha256:a2e1cf278c708eb597bfdc83817c6440d9a8b7a8291d67c447a73548427c89c4"
       },
       "implementation": {
-        "status": "partial",
+        "status": "implemented-specialized-witness",
         "surfaces": [
-          "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json"
+          "framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp",
+          "framework/kfx/kungfu-kfx-domain-profile.contract.json",
+          "framework/core/src/python/kungfu/storage/kfx_service.py"
         ]
       },
       "verification": {
         "status": "non-conforming-evidence",
         "evidenceRoots": [
           {
-            "path": "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
-            "sha256": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8"
+            "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
+        "sha256": "sha256:0c6d92d16659bfede7d5340c66d94d783a632e2af256d2e5771cf6b92f2a384a"
           }
         ]
       },
@@ -549,8 +551,8 @@
         "protocol": "none"
       },
       "exposure": {
-        "sdk": "status-schema",
-        "cli": "status-schema",
+        "sdk": "native-kfx-storage-service",
+        "cli": "not-product-exposed",
         "docs": "support-matrix"
       },
       "releaseQualification": {
@@ -560,9 +562,10 @@
       },
       "claimClass": "draft-adopter-evidence",
       "knownLimitations": [
-        "This is adopter evidence for design feedback, not KFD-10 conformance or shipped support."
+        "This is first-party specialized adopter evidence for design feedback, not KFD-10 conformance, activation, independent certification or shipped support.",
+        "Product host adoption is limited to the first-party specialized witness and does not establish independent KFD-10 conformance."
       ],
-      "owner": "kungfu-agent-work",
+      "owner": "kungfu-kfx-control",
       "nextGate": "Keep evidence non-conforming until KFD-10 activation and an adopter qualification contract exist."
     },
     {

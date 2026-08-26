@@ -517,6 +517,203 @@ type StarterProjectStage =
   | 'closing'
   | 'close-result';
 
+export type StarterProjectInputContext = {
+  stage: StarterProjectStage;
+  planExecutable: boolean;
+  reviewPlanExecutable: boolean;
+  reviewReceipt?: WorkReviewReceipt;
+  closePlanExecutable: boolean;
+  closeReceipt?: WorkCloseReceipt;
+  workReceipt?: WorkStartReceipt;
+};
+
+export type StarterProjectInputAction =
+  | { kind: 'none' }
+  | { kind: 'exit' }
+  | { kind: 'open-terminal' }
+  | { kind: 'open-agents' }
+  | { kind: 'select-profile'; delta: -1 | 1 }
+  | { kind: 'preview-start' }
+  | { kind: 'start' }
+  | { kind: 'open-review-agents' }
+  | { kind: 'preview-review' }
+  | { kind: 'run-review' }
+  | { kind: 'reset-review'; stage: 'detail' }
+  | { kind: 'preview-close' }
+  | { kind: 'close-work' }
+  | { kind: 'create-next-work' }
+  | { kind: 'open-projects' }
+  | { kind: 'open-lab' }
+  | { kind: 'select-work'; delta: -1 | 1 }
+  | { kind: 'select-region'; delta: -1 | 1 }
+  | { kind: 'set-stage'; stage: StarterProjectStage; clearError: boolean };
+
+const NO_STARTER_PROJECT_INPUT_ACTION = { kind: 'none' } as const;
+
+function stageNavigationAction(
+  enter: boolean,
+  back: boolean,
+  enterAction: StarterProjectInputAction,
+  backStage: StarterProjectStage,
+): StarterProjectInputAction {
+  if (enter) return enterAction;
+  if (back) return { kind: 'set-stage', stage: backStage, clearError: true };
+  return NO_STARTER_PROJECT_INPUT_ACTION;
+}
+
+function profileSelectionAction(
+  key: ReturnType<typeof decodeShellKey>,
+  enter: boolean,
+  back: boolean,
+  enterAction: StarterProjectInputAction,
+  backStage: StarterProjectStage,
+): StarterProjectInputAction {
+  if (key === 'next-card') return { kind: 'select-profile', delta: 1 };
+  if (key === 'previous-card') return { kind: 'select-profile', delta: -1 };
+  return stageNavigationAction(enter, back, enterAction, backStage);
+}
+
+function reviewResultAction(
+  enter: boolean,
+  back: boolean,
+  reviewReceipt?: WorkReviewReceipt,
+): StarterProjectInputAction {
+  if (enter && reviewReceiptCanResume(reviewReceipt))
+    return { kind: 'set-stage', stage: 'review', clearError: true };
+  if (enter && reviewReceipt?.status === 'review-passed')
+    return { kind: 'preview-close' };
+  if (enter && reviewReceipt?.status === 'revision-required')
+    return { kind: 'reset-review', stage: 'detail' };
+  if (enter || back)
+    return { kind: 'set-stage', stage: 'overview', clearError: true };
+  return NO_STARTER_PROJECT_INPUT_ACTION;
+}
+
+function closeResultAction(
+  input: string,
+  enter: boolean,
+  back: boolean,
+  closeReceipt?: WorkCloseReceipt,
+): StarterProjectInputAction {
+  if (
+    enter &&
+    closeReceipt?.status === 'settlement-interrupted' &&
+    closeReceipt.workPhase === 'continuation-decided'
+  )
+    return { kind: 'preview-close' };
+  if (closeReceipt?.status === 'completed' && (enter || input === 'n'))
+    return { kind: 'create-next-work' };
+  if (back) return { kind: 'set-stage', stage: 'overview', clearError: true };
+  return NO_STARTER_PROJECT_INPUT_ACTION;
+}
+
+function overviewInputAction(
+  input: string,
+  key: ReturnType<typeof decodeShellKey>,
+  enter: boolean,
+  context: StarterProjectInputContext,
+): StarterProjectInputAction {
+  if (enter)
+    return {
+      kind: 'set-stage',
+      stage: starterProjectOverviewEnterStage(
+        context.workReceipt,
+        context.reviewReceipt,
+        context.closeReceipt,
+      ),
+      clearError: true,
+    };
+  if (input === 'n' && context.closeReceipt?.status === 'completed')
+    return { kind: 'create-next-work' };
+  if (input === 'p') return { kind: 'open-projects' };
+  if (key === 'agent-work-lab') return { kind: 'open-lab' };
+  if (key === 'next-card') return { kind: 'select-work', delta: 1 };
+  if (key === 'previous-card') return { kind: 'select-work', delta: -1 };
+  if (key === 'next-region') return { kind: 'select-region', delta: 1 };
+  if (key === 'previous-region') return { kind: 'select-region', delta: -1 };
+  return NO_STARTER_PROJECT_INPUT_ACTION;
+}
+
+export function starterProjectInputAction(
+  input: string,
+  context: StarterProjectInputContext,
+): StarterProjectInputAction {
+  const key = decodeShellKey(input);
+  const enter = input === '\r' || input === '\n';
+  const back =
+    input === '\u001b' || input === '\u007f' || input === '\b' || input === 'b';
+  if (['running', 'reviewing', 'closing'].includes(context.stage))
+    return NO_STARTER_PROJECT_INPUT_ACTION;
+  if (input === 'q' || input === '\u0003') return { kind: 'exit' };
+  if (context.stage === 'overview' && input === 't')
+    return { kind: 'open-terminal' };
+  if (context.stage === 'detail')
+    return stageNavigationAction(
+      enter || input === 's',
+      back,
+      { kind: 'open-agents' },
+      'overview',
+    );
+  if (context.stage === 'agents')
+    return profileSelectionAction(
+      key,
+      enter,
+      back,
+      { kind: 'preview-start' },
+      'detail',
+    );
+  if (context.stage === 'preview')
+    return stageNavigationAction(
+      enter && context.planExecutable,
+      back,
+      { kind: 'start' },
+      'agents',
+    );
+  if (context.stage === 'review') {
+    if (input === 'a') return { kind: 'reset-review', stage: 'detail' };
+    return stageNavigationAction(
+      enter || input === 'r',
+      back,
+      { kind: 'open-review-agents' },
+      'overview',
+    );
+  }
+  if (context.stage === 'review-agents')
+    return profileSelectionAction(
+      key,
+      enter,
+      back,
+      { kind: 'preview-review' },
+      'review',
+    );
+  if (context.stage === 'review-preview')
+    return stageNavigationAction(
+      enter && context.reviewPlanExecutable,
+      back,
+      { kind: 'run-review' },
+      'review-agents',
+    );
+  if (context.stage === 'review-result')
+    return reviewResultAction(enter, back, context.reviewReceipt);
+  if (context.stage === 'close-preview')
+    return stageNavigationAction(
+      enter && context.closePlanExecutable,
+      back,
+      { kind: 'close-work' },
+      'review-result',
+    );
+  if (context.stage === 'close-result')
+    return closeResultAction(input, enter, back, context.closeReceipt);
+  if (context.stage === 'result')
+    return stageNavigationAction(
+      enter && context.workReceipt?.status === 'agent-finished',
+      enter || back,
+      { kind: 'set-stage', stage: 'review', clearError: true },
+      'overview',
+    );
+  return overviewInputAction(input, key, enter, context);
+}
+
 export function starterProjectOverviewEnterStage(
   workReceipt?: WorkStartReceipt,
   reviewReceipt?: WorkReviewReceipt,
@@ -1001,175 +1198,50 @@ export function StarterProjectHost({
     const onData = (chunk: Buffer | string) => {
       if (isInputCaptured()) return;
       const input = String(chunk);
-      const mouseEvents = decodeTerminalMouseInput(input);
-      if (mouseEvents.length > 0) {
-        return;
-      }
-      const key = decodeShellKey(input);
-      const enter = input === '\r' || input === '\n';
-      const back =
-        input === '\u001b' ||
-        input === '\u007f' ||
-        input === '\b' ||
-        input === 'b';
-      if (stage === 'running' || stage === 'reviewing' || stage === 'closing')
-        return;
-      if (input === 'q' || input === '\u0003') return exit();
-      if (stage === 'overview' && input === 't') {
-        return setActiveRegion(0);
-      }
-      if (stage === 'detail') {
-        if (enter || input === 's') return openAgents();
-        if (back) {
-          setError('');
-          return setStage('overview');
-        }
-        return;
-      }
-      if (stage === 'agents') {
-        if (key === 'next-card') {
-          setSelectedProfile((current) =>
-            boundedIndex(current, 1, profiles.length),
-          );
-        } else if (key === 'previous-card') {
-          setSelectedProfile((current) =>
-            boundedIndex(current, -1, profiles.length),
-          );
-        } else if (enter) {
-          preview();
-        } else if (back) {
-          setError('');
-          setStage('detail');
-        }
-        return;
-      }
-      if (stage === 'preview') {
-        if (enter && plan?.executable) return start();
-        if (back) {
-          setError('');
-          return setStage('agents');
-        }
-        return;
-      }
-      if (stage === 'review') {
-        if (input === 'a') {
-          setReviewPlan(undefined);
-          setReviewReceipt(undefined);
-          setError('');
-          return setStage('detail');
-        }
-        if (enter || input === 'r') return openReviewAgents();
-        if (back) {
-          setError('');
-          return setStage('overview');
-        }
-        return;
-      }
-      if (stage === 'review-agents') {
-        if (key === 'next-card') {
-          setSelectedProfile((current) =>
-            boundedIndex(current, 1, profiles.length),
-          );
-        } else if (key === 'previous-card') {
-          setSelectedProfile((current) =>
-            boundedIndex(current, -1, profiles.length),
-          );
-        } else if (enter) {
-          previewReview();
-        } else if (back) {
-          setError('');
-          setStage('review');
-        }
-        return;
-      }
-      if (stage === 'review-preview') {
-        if (enter && reviewPlan?.executable) return runReview();
-        if (back) {
-          setError('');
-          return setStage('review-agents');
-        }
-        return;
-      }
-      if (stage === 'review-result') {
-        if (enter && reviewReceiptCanResume(reviewReceipt)) {
-          setError('');
-          return setStage('review');
-        }
-        if (enter && reviewReceipt?.status === 'review-passed') {
-          return previewClose();
-        }
-        if (enter && reviewReceipt?.status === 'revision-required') {
-          setReviewPlan(undefined);
-          setReviewReceipt(undefined);
-          setError('');
-          return setStage('detail');
-        }
-        if (enter || back) {
-          setError('');
-          return setStage('overview');
-        }
-        return;
-      }
-      if (stage === 'close-preview') {
-        if (enter && closePlan?.executable) return closeWork();
-        if (back) {
-          setError('');
-          return setStage('review-result');
-        }
-        return;
-      }
-      if (stage === 'close-result') {
-        if (
-          enter &&
-          closeReceipt?.status === 'settlement-interrupted' &&
-          closeReceipt.workPhase === 'continuation-decided'
-        ) {
-          return previewClose();
-        }
-        if (closeReceipt?.status === 'completed' && (enter || input === 'n')) {
-          return onCreateNextWork();
-        }
-        if (back) {
-          setError('');
-          return setStage('overview');
-        }
-        return;
-      }
-      if (stage === 'result') {
-        if (enter && workReceipt?.status === 'agent-finished') {
-          setError('');
-          return setStage('review');
-        }
-        if (enter || back) {
-          setError('');
-          return setStage('overview');
-        }
-        return;
-      }
-      if (enter) {
-        setError('');
-        return setStage(
-          starterProjectOverviewEnterStage(
-            workReceipt,
-            reviewReceipt,
-            closeReceipt,
-          ),
+      if (decodeTerminalMouseInput(input).length > 0) return;
+      const action = starterProjectInputAction(input, {
+        stage,
+        planExecutable: Boolean(plan?.executable),
+        reviewPlanExecutable: Boolean(reviewPlan?.executable),
+        reviewReceipt,
+        closePlanExecutable: Boolean(closePlan?.executable),
+        closeReceipt,
+        workReceipt,
+      });
+      if (action.kind === 'none') return;
+      if (action.kind === 'exit') return exit();
+      if (action.kind === 'open-terminal') return setActiveRegion(0);
+      if (action.kind === 'open-agents') return openAgents();
+      if (action.kind === 'select-profile')
+        return setSelectedProfile((current) =>
+          boundedIndex(current, action.delta, profiles.length),
         );
+      if (action.kind === 'preview-start') return preview();
+      if (action.kind === 'start') return start();
+      if (action.kind === 'open-review-agents') return openReviewAgents();
+      if (action.kind === 'preview-review') return previewReview();
+      if (action.kind === 'run-review') return runReview();
+      if (action.kind === 'preview-close') return previewClose();
+      if (action.kind === 'close-work') return closeWork();
+      if (action.kind === 'create-next-work') return onCreateNextWork();
+      if (action.kind === 'open-projects') return onOpenProjects();
+      if (action.kind === 'open-lab') return onOpenLab();
+      if (action.kind === 'select-work')
+        return selectAdjacentWork(action.delta);
+      if (action.kind === 'select-region')
+        return setActiveRegion((current) =>
+          boundedIndex(current, action.delta, 3),
+        );
+      if (action.kind === 'reset-review') {
+        setReviewPlan(undefined);
+        setReviewReceipt(undefined);
       }
-      if (input === 'n' && closeReceipt?.status === 'completed') {
-        return onCreateNextWork();
-      }
-      if (input === 'p') return onOpenProjects();
-      if (key === 'agent-work-lab') return onOpenLab();
-      if (key === 'next-card') {
-        selectAdjacentWork(1);
-      } else if (key === 'previous-card') {
-        selectAdjacentWork(-1);
-      } else if (key === 'next-region') {
-        setActiveRegion((current) => boundedIndex(current, 1, 3));
-      } else if (key === 'previous-region') {
-        setActiveRegion((current) => boundedIndex(current, -1, 3));
-      }
+      if (
+        (action.kind === 'set-stage' && action.clearError) ||
+        action.kind === 'reset-review'
+      )
+        setError('');
+      setStage(action.stage);
     };
     process.stdin.on('data', onData);
     return () => {

@@ -12,13 +12,16 @@
 // binary directly and it speaks the relay through its linked guest proxy
 // (framework/core/src/capability/guest.hpp). Unsupported runtime/platform
 // combinations are refused rather than mis-launched.
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
   type GuestProcess,
+  type KfxRuntimeWarrant,
+  type KfxRuntimeWarrantAdoption,
+  type KfxRuntimeWarrantAuthorization,
   type SandboxedGuest,
-  type ServiceAuthorization,
   type SpawnFn,
   type WindowsSandboxSpawn,
   createInProcessAsyncCaps,
@@ -36,7 +39,16 @@ export type LaunchServiceOptions = {
   // the real capabilities the host resolves the service's relay calls against;
   // only the entry's declared capabilities are reachable.
   caps: Record<string, Record<string, unknown>>;
-  authorization: ServiceAuthorization;
+  authorization: KfxRuntimeWarrantAuthorization;
+  // Product hosts may launch only while holding the Core-issued lease. The
+  // transport is injected so tests and alternate native embeddings retain the
+  // same authority path rather than reimplementing warrant state locally.
+  runtimeWarrant: KfxRuntimeWarrant;
+  runtimeWarrantHolder?: string;
+  runtimeWarrantLeaseMs?: number;
+  runtimeWarrantHeartbeatTtlMs?: number;
+  runtimeWarrantNow?: () => number;
+  runtimeWarrantNonce?: () => string;
   // override the node bootstrap path (defaults to the sibling service-bootstrap).
   bootstrap?: string;
   // injectable for tests; forwarded to launchSandboxedGuest.
@@ -83,7 +95,7 @@ export function resolveServiceRuntime(
     command?: string;
     path?: string;
     shutdownTimeoutMs?: number;
-    authorization?: ServiceAuthorization;
+    authorization?: KfxRuntimeWarrantAuthorization;
   } = {},
 ): {
   kind: 'node' | 'cpp' | 'python';
@@ -168,49 +180,6 @@ export async function launchDiscoveredService(
       'KF_KFX_HOST_NOT_AUTHORIZED: service discovery and authorization do not match',
     );
   }
-  const landing = resolveServiceLanding(opts.authorization);
-
-  if (landing.tier === 'co-resident') {
-    // Integrated execution is an explicit placement in the rooted grant.
-    if (entry.runtimes.includes('node') && entry.entry.node) {
-      const caps = createInProcessAsyncCaps(opts.caps, declared);
-      const bodyPath = join(entry.dir, entry.entry.node);
-      const done = import(pathToFileURL(bodyPath).href)
-        .then((mod: { run: (c: Record<string, unknown>) => Promise<void> }) =>
-          mod.run(caps),
-        )
-        .then(() => null);
-      return { tier: 'co-resident', done, dispose: () => {} };
-    }
-    if (!entry.runtimes.includes('python') || !entry.entry.python) {
-      throw new Error(
-        `integrated service '${entry.id}' has no node or python body`,
-      );
-    }
-    const runtime = resolveServiceRuntime(entry, DEFAULT_BOOTSTRAP, declared, {
-      command: opts.pythonCommand,
-      path: opts.pythonPath,
-      shutdownTimeoutMs: opts.pythonShutdownTimeoutMs,
-      authorization: opts.authorization,
-    });
-    const guest: GuestProcess = await launchIntegratedGuest({
-      runtime,
-      caps: opts.caps,
-      declared,
-      spawn: opts.spawn,
-      inheritEnv: false,
-      gracefulShutdown: {
-        timeoutMs: (opts.pythonShutdownTimeoutMs ?? 5_000) + 1_000,
-      },
-    });
-    return {
-      tier: 'co-resident',
-      done: guest.exited,
-      dispose: guest.dispose,
-    };
-  }
-
-  // Isolated execution is physically confined by the Core-derived profile.
   const runtime = resolveServiceRuntime(
     entry,
     opts.bootstrap ?? DEFAULT_BOOTSTRAP,
@@ -222,23 +191,157 @@ export async function launchDiscoveredService(
       authorization: opts.authorization,
     },
   );
-  const guest: SandboxedGuest = await launchSandboxedGuest({
-    runtime,
-    caps: opts.caps,
-    declared,
-    profile: landing.profile,
-    spawn: opts.spawn,
-    windowsSpawn: opts.windowsSpawn,
-    inheritEnv: runtime.kind !== 'python',
-    gracefulShutdown:
-      runtime.kind === 'python'
-        ? { timeoutMs: (opts.pythonShutdownTimeoutMs ?? 5_000) + 1_000 }
-        : undefined,
+  const expectedHost = `service-${runtime.kind}`;
+  if (opts.authorization.host !== expectedHost) {
+    throw new Error(
+      'KF_KFX_HOST_NOT_AUTHORIZED: service runtime and authorization host do not match',
+    );
+  }
+  const landing = resolveServiceLanding(opts.authorization);
+  const now = opts.runtimeWarrantNow ?? Date.now;
+  const issuedAt = now();
+  const leaseMs = opts.runtimeWarrantLeaseMs ?? 60_000;
+  const heartbeatTtl = opts.runtimeWarrantHeartbeatTtlMs ?? 15_000;
+  const holder =
+    opts.runtimeWarrantHolder ??
+    `kungfu-service-host:${process.pid}:${entry.id}`;
+  const adoption = opts.runtimeWarrant.adopt(opts.authorization, {
+    holder,
+    purpose: `run authorized ${expectedHost} product adapter`,
+    leaseNonce: opts.runtimeWarrantNonce?.() ?? randomUUID(),
+    issuedAt,
+    expiresAt: issuedAt + leaseMs,
+    heartbeatTtl,
+    residualResponsibility: 'retained-by-kungfu-core',
+    requestedCapabilities: [...declared],
   });
+
+  let guestDone: Promise<number | null>;
+  let guestDispose: () => void;
+  let tier: LaunchedService['tier'];
+  let networkConsent: boolean | undefined;
+
+  try {
+    if (landing.tier === 'co-resident') {
+      tier = 'co-resident';
+      // Integrated execution is an explicit placement in the rooted grant.
+      if (runtime.kind === 'node' && entry.entry.node) {
+        const caps = createInProcessAsyncCaps(opts.caps, declared);
+        const bodyPath = join(entry.dir, entry.entry.node);
+        guestDone = import(pathToFileURL(bodyPath).href)
+          .then((mod: { run: (c: Record<string, unknown>) => Promise<void> }) =>
+            mod.run(caps),
+          )
+          .then(() => null);
+        guestDispose = () => {};
+      } else {
+        if (runtime.kind !== 'python') {
+          throw new Error(
+            `integrated service '${entry.id}' has no node or python body`,
+          );
+        }
+        const guest: GuestProcess = await launchIntegratedGuest({
+          runtime,
+          caps: opts.caps,
+          declared,
+          spawn: opts.spawn,
+          inheritEnv: false,
+          gracefulShutdown: {
+            timeoutMs: (opts.pythonShutdownTimeoutMs ?? 5_000) + 1_000,
+          },
+        });
+        guestDone = guest.exited;
+        guestDispose = guest.dispose;
+      }
+    } else {
+      // Isolated execution is physically confined by the Core-derived profile.
+      const guest: SandboxedGuest = await launchSandboxedGuest({
+        runtime,
+        caps: opts.caps,
+        declared,
+        profile: landing.profile,
+        spawn: opts.spawn,
+        windowsSpawn: opts.windowsSpawn,
+        inheritEnv: runtime.kind !== 'python',
+        gracefulShutdown:
+          runtime.kind === 'python'
+            ? { timeoutMs: (opts.pythonShutdownTimeoutMs ?? 5_000) + 1_000 }
+            : undefined,
+      });
+      tier = 'sandbox';
+      guestDone = guest.exited;
+      guestDispose = guest.dispose;
+      networkConsent = landing.networkConsent;
+    }
+  } catch (error) {
+    settleRuntimeWarrant(opts.runtimeWarrant, adoption, now(), 'failed');
+    throw error;
+  }
+
+  let disposed = false;
+  let rejectLease: (reason: unknown) => void = () => {};
+  const leaseFailure = new Promise<never>((_resolve, reject) => {
+    rejectLease = reject;
+  });
+  const interval = setInterval(
+    () => {
+      try {
+        const transition = opts.runtimeWarrant.heartbeat(adoption, now());
+        if (transition.leaseState.state !== 'active') {
+          throw new Error('KFX Runtime Warrant heartbeat was not retained');
+        }
+      } catch (error) {
+        guestDispose();
+        rejectLease(error);
+      }
+    },
+    Math.max(1, Math.floor(heartbeatTtl / 2)),
+  );
+  interval.unref();
+  const done = Promise.race([guestDone, leaseFailure])
+    .then(
+      (exitCode) => {
+        settleRuntimeWarrant(
+          opts.runtimeWarrant,
+          adoption,
+          now(),
+          disposed
+            ? 'cancelled'
+            : exitCode === null || exitCode === 0
+              ? 'completed'
+              : 'failed',
+        );
+        return exitCode;
+      },
+      (error) => {
+        settleRuntimeWarrant(opts.runtimeWarrant, adoption, now(), 'failed');
+        throw error;
+      },
+    )
+    .finally(() => clearInterval(interval));
   return {
-    tier: 'sandbox',
-    done: guest.exited,
-    dispose: guest.dispose,
-    networkConsent: landing.networkConsent,
+    tier,
+    done,
+    dispose: () => {
+      disposed = true;
+      guestDispose();
+    },
+    ...(networkConsent === undefined ? {} : { networkConsent }),
   };
+}
+
+function settleRuntimeWarrant(
+  warrant: KfxRuntimeWarrant,
+  adoption: KfxRuntimeWarrantAdoption,
+  recordedAt: number,
+  outcome: 'completed' | 'failed' | 'cancelled',
+): void {
+  const transition = warrant.settle(adoption, {
+    recordedAt,
+    outcome,
+    residualResponsibilityDisposition: 'retained-by-kungfu-core',
+  });
+  if (transition.leaseState.state !== 'settled') {
+    throw new Error('KFX Runtime Warrant terminal settlement was not retained');
+  }
 }

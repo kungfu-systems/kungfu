@@ -10,6 +10,7 @@ from copy import deepcopy
 from typing import Any
 
 from kungfu.canonical_json import canonical_json_bytes
+from kungfu.release_provenance import _v1_graph
 from kungfu.storage.fact_root_canonical import ROOT_PATTERN, record_root
 
 ENVELOPE_SCHEMA = "kungfu.release-provenance-envelope/v1"
@@ -384,54 +385,47 @@ def build_promotion(
     )
 
 
-def _verify_v1(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Verify roots, relation roles, projection policy, and optional exact inputs."""
+_V1_ENVELOPE_FIELDS = {
+    "schema",
+    "phase",
+    "releaseId",
+    "objectRoot",
+    "object",
+    "subject",
+    "identities",
+    "predicates",
+    "relations",
+    "gitProjection",
+    "gitProjectionRoot",
+    "legacyProjection",
+    "legacyProjectionRoot",
+}
+_V1_IDENTITY_FIELDS = {
+    "subjectRoot",
+    "derivationRoot",
+    "acknowledgementRoot",
+    "qualificationRoot",
+    "authorityRoot",
+    "contractRoot",
+    "scopeRoot",
+    "cutRoot",
+}
 
-    issues: list[str] = []
-    if not isinstance(envelope, dict) or envelope.get("schema") != ENVELOPE_SCHEMA:
-        return {"ok": False, "issues": ["unknown-schema"]}
-    required = {
-        "schema",
-        "phase",
-        "releaseId",
-        "objectRoot",
-        "object",
-        "subject",
-        "identities",
-        "predicates",
-        "relations",
-        "gitProjection",
-        "gitProjectionRoot",
-        "legacyProjection",
-        "legacyProjectionRoot",
-    }
-    if set(envelope) != required:
-        return {"ok": False, "issues": ["invalid-envelope"]}
-    phase_value = envelope.get("phase")
-    phase = phase_value if isinstance(phase_value, str) else ""
-    if phase not in {"candidate", "promotion"}:
+
+def _v1_identities(envelope: dict[str, Any], issues: list[str]) -> dict[str, Any]:
+    value = envelope.get("identities")
+    identities = value if isinstance(value, dict) else {}
+    if not isinstance(value, dict) or set(identities) != _V1_IDENTITY_FIELDS:
         issues.append("invalid-envelope")
-    release_id = envelope.get("releaseId")
-    if not isinstance(release_id, str) or not release_id:
-        issues.append("invalid-envelope")
-    identities_value = envelope.get("identities")
-    identities = identities_value if isinstance(identities_value, dict) else {}
-    if not isinstance(identities_value, dict) or set(identities) != {
-        "subjectRoot",
-        "derivationRoot",
-        "acknowledgementRoot",
-        "qualificationRoot",
-        "authorityRoot",
-        "contractRoot",
-        "scopeRoot",
-        "cutRoot",
-    }:
-        issues.append("invalid-envelope")
-    for field, value in identities.items():
+    for field, root in identities.items():
         try:
-            _require_root(value, f"identities.{field}")
+            _require_root(root, f"identities.{field}")
         except ReleaseProvenanceError:
             issues.append("orphan-root")
+    return identities
+
+
+def _v1_root_issues(envelope: dict[str, Any], issues: list[str]) -> None:
     try:
         if semantic_root(envelope["subject"]) != envelope["identities"]["subjectRoot"]:
             issues.append("subject-root-mismatch")
@@ -447,72 +441,82 @@ def _verify_v1(envelope: Any, expected: dict[str, Any] | None = None) -> dict[st
     except (ReleaseProvenanceError, ValueError, TypeError, KeyError):
         issues.append("invalid-envelope")
 
-    projection_value = envelope.get("gitProjection")
-    projection = projection_value if isinstance(projection_value, dict) else {}
-    if not isinstance(projection_value, dict):
-        issues.append("invalid-git-projection")
-    subject = envelope.get("subject", {})
-    expected_projection_kind = {
-        "candidate": "candidate-parentage",
-        "promotion": "promotion-topology",
-    }.get(phase)
-    expected_subject_kind = phase
-    expected_tree_field = {
-        "candidate": "candidateTree",
-        "promotion": "promotionTree",
-    }.get(phase)
+
+def _v1_subject_issues(
+    subject: Any,
+    projection: dict[str, Any],
+    phase: str,
+    release_id: Any,
+    issues: list[str],
+) -> None:
     if (
         not isinstance(subject, dict)
         or set(subject) != {"schema", "kind", "releaseId", "identity", "sourceTreeRoot"}
         or subject.get("schema") != "kungfu.release-provenance-identity/v1"
-        or subject.get("kind") != expected_subject_kind
+        or subject.get("kind") != phase
         or subject.get("releaseId") != release_id
         or not isinstance(subject.get("identity"), str)
         or not subject.get("identity")
     ):
         issues.append("invalid-identity")
+    tree_field = {"candidate": "candidateTree", "promotion": "promotionTree"}.get(phase)
+    if tree_field is None:
+        issues.append("invalid-git-projection")
+        return
     try:
-        if subject.get("sourceTreeRoot") != _source_tree_root(
-            projection[expected_tree_field]
-        ):
+        if subject.get("sourceTreeRoot") != _source_tree_root(projection[tree_field]):
             issues.append("source-tree-root-mismatch")
     except (KeyError, TypeError, ReleaseProvenanceError):
         issues.append("invalid-git-projection")
 
-    if isinstance(release_id, str) and phase in {"candidate", "promotion"}:
-        expected_scope_root = semantic_root(
-            {
-                "schema": "kungfu.release-provenance-scope/v1",
-                "releaseId": release_id,
-                "phase": phase,
-            }
-        )
-        expected_cut_root = semantic_root(
-            {
-                "schema": "kungfu.release-provenance-cut/v1",
-                "releaseId": release_id,
-                **(
-                    {
-                        "candidateRoot": identities.get("subjectRoot"),
-                        "devCutRoot": identities.get("derivationRoot"),
-                        "previousAlphaRoot": identities.get("acknowledgementRoot"),
-                    }
-                    if phase == "candidate"
-                    else {
-                        "candidateObjectRoot": identities.get("derivationRoot"),
-                        "promotionSubjectRoot": identities.get("subjectRoot"),
-                    }
-                ),
-            }
-        )
-        if identities.get("scopeRoot") != expected_scope_root:
-            issues.append("scope-root-mismatch")
-        if identities.get("cutRoot") != expected_cut_root:
-            issues.append("cut-root-mismatch")
 
-    object_value = envelope.get("object", {})
-    object_record = object_value if isinstance(object_value, dict) else {}
-    if not isinstance(object_value, dict) or set(object_record) != {
+def _v1_scope_issues(
+    phase: str, release_id: Any, identities: dict[str, Any], issues: list[str]
+) -> None:
+    if not isinstance(release_id, str) or phase not in {"candidate", "promotion"}:
+        return
+    expected_scope_root = semantic_root(
+        {
+            "schema": "kungfu.release-provenance-scope/v1",
+            "releaseId": release_id,
+            "phase": phase,
+        }
+    )
+    cut_members = (
+        {
+            "candidateRoot": identities.get("subjectRoot"),
+            "devCutRoot": identities.get("derivationRoot"),
+            "previousAlphaRoot": identities.get("acknowledgementRoot"),
+        }
+        if phase == "candidate"
+        else {
+            "candidateObjectRoot": identities.get("derivationRoot"),
+            "promotionSubjectRoot": identities.get("subjectRoot"),
+        }
+    )
+    expected_cut_root = semantic_root(
+        {
+            "schema": "kungfu.release-provenance-cut/v1",
+            "releaseId": release_id,
+            **cut_members,
+        }
+    )
+    if identities.get("scopeRoot") != expected_scope_root:
+        issues.append("scope-root-mismatch")
+    if identities.get("cutRoot") != expected_cut_root:
+        issues.append("cut-root-mismatch")
+
+
+def _v1_object(
+    envelope: dict[str, Any],
+    phase: str,
+    subject: Any,
+    identities: dict[str, Any],
+    issues: list[str],
+) -> dict[str, Any]:
+    value = envelope.get("object", {})
+    record = value if isinstance(value, dict) else {}
+    fields = {
         "schema",
         "objectId",
         "subjectRoot",
@@ -521,275 +525,218 @@ def _verify_v1(envelope: Any, expected: dict[str, Any] | None = None) -> dict[st
         "cutRoot",
         "authorityRoot",
         "admissionRoots",
-    }:
-        issues.append("invalid-object")
-    else:
-        if object_record.get("schema") != "kungfu.fact.provenance-object/v1":
-            issues.append("invalid-object")
-        expected_object_id = (
-            f"release-provenance:{phase}:{subject.get('identity')}"
-            if isinstance(subject, dict)
-            else None
-        )
-        if object_record.get("objectId") != expected_object_id:
-            issues.append("object-identity-mismatch")
-        if object_record.get("subjectRoot") != identities.get("subjectRoot"):
-            issues.append("object-subject-root-mismatch")
-        if object_record.get("cutRoot") != identities.get("cutRoot"):
-            issues.append("object-cut-root-mismatch")
-        if object_record.get("authorityRoot") != identities.get("authorityRoot"):
-            issues.append("object-authority-root-mismatch")
-        admission_roots = object_record.get("admissionRoots")
-        try:
-            if not isinstance(admission_roots, list) or len(admission_roots) != len(
-                set(admission_roots)
-            ):
-                raise TypeError
-            for root in admission_roots:
-                _require_root(root, "object.admissionRoots")
-        except (ReleaseProvenanceError, TypeError):
-            issues.append("orphan-root")
-        expected_material_roots = [
-            identities.get("subjectRoot"),
-            identities.get("qualificationRoot"),
-            identities.get("contractRoot"),
-            envelope.get("gitProjectionRoot"),
-        ]
-        if object_record.get("materialRoots") != expected_material_roots:
-            issues.append("object-material-roots-mismatch")
-
-    predicate_roots: dict[str, str] = {}
-    predicates_value = envelope.get("predicates")
-    predicates = predicates_value if isinstance(predicates_value, list) else []
-    if not isinstance(predicates_value, list):
-        issues.append("invalid-predicate")
-    for row in predicates:
-        try:
-            record = row["record"]
-            if set(row) != {"root", "record"} or not isinstance(record, dict):
-                raise TypeError
-            if set(record) != {
-                "schema",
-                "predicateId",
-                "operations",
-                "direction",
-                "pathPolicy",
-                "cyclePolicy",
-                "authorityRoot",
-            }:
-                issues.append("invalid-predicate")
-            if row["root"] != record_root(record):
-                issues.append("predicate-root-mismatch")
-            if record.get("authorityRoot") != identities.get("authorityRoot"):
-                issues.append("predicate-authority-mismatch")
-            relation_name = (
-                record["predicateId"]
-                .removeprefix("kungfu.release-provenance:")
-                .removesuffix("/v1")
-            )
-            if (
-                record.get("schema") != "kungfu.fact.temporal-predicate/v1"
-                or record.get("predicateId")
-                != f"kungfu.release-provenance:{relation_name}/v1"
-                or record.get("operations")
-                != ["release-candidate", "release-promotion"]
-                or record.get("direction") != "source-to-target"
-                or record.get("pathPolicy") != "single-explicit-edge"
-                or record.get("cyclePolicy") != "forbidden"
-            ):
-                issues.append("invalid-predicate")
-            if relation_name in predicate_roots:
-                issues.append("ambiguous-predicate")
-            predicate_roots[relation_name] = row["root"]
-        except (AttributeError, ValueError, TypeError, KeyError):
-            issues.append("invalid-predicate")
-
-    relation_rows: dict[str, list[dict[str, Any]]] = {}
-    relations_value = envelope.get("relations")
-    relations = relations_value if isinstance(relations_value, list) else []
-    if not isinstance(relations_value, list):
-        issues.append("invalid-relation")
-    for row in relations:
-        try:
-            record = row["record"]
-            if set(row) != {"root", "record"} or not isinstance(record, dict):
-                raise TypeError
-            if set(record) != {
-                "schema",
-                "relationId",
-                "predicateRoot",
-                "sourceRoot",
-                "targetRoot",
-                "validFromCutRoot",
-                "scopeRoot",
-                "authorityRoot",
-                "admissionRoots",
-            }:
-                issues.append("invalid-relation")
-            if row["root"] != record_root(record):
-                issues.append("relation-root-mismatch")
-            relation_name = record["relationId"].rsplit(":", 1)[-1]
-            if (
-                record.get("schema") != "kungfu.fact.temporal-relation/v1"
-                or record.get("relationId")
-                != f"{object_record.get('objectId')}:{relation_name}"
-            ):
-                issues.append("invalid-relation")
-            relation_rows.setdefault(relation_name, []).append(row)
-        except (AttributeError, ValueError, TypeError, KeyError):
-            issues.append("invalid-relation")
-
-    if set(predicate_roots) != set(REQUIRED_RELATIONS):
-        issues.append("predicate-set-mismatch")
-    if set(relation_rows) != set(REQUIRED_RELATIONS):
-        issues.append("relation-set-mismatch")
-    expected_targets = {
-        "derived-from": identities.get("derivationRoot"),
-        "acknowledges": identities.get("acknowledgementRoot"),
-        "qualified-by": identities.get("qualificationRoot"),
-        "authorized-by": identities.get("authorityRoot"),
-        "implements-contract": identities.get("contractRoot"),
-        "projected-as": envelope.get("gitProjectionRoot"),
     }
-    for relation_name in REQUIRED_RELATIONS:
-        rows = relation_rows.get(relation_name, [])
-        if len(rows) != 1:
-            issues.append(
-                "ambiguous-authority"
-                if relation_name == "authorized-by" and len(rows) > 1
-                else f"{relation_name}-relation-count"
-            )
-            continue
-        record = rows[0]["record"]
-        if record.get("predicateRoot") != predicate_roots.get(relation_name):
-            issues.append(f"{relation_name}-predicate-mismatch")
-        if record.get("sourceRoot") != identities.get("subjectRoot"):
-            issues.append(f"{relation_name}-source-mismatch")
-        if record.get("targetRoot") != expected_targets[relation_name]:
-            issues.append(f"{relation_name}-target-mismatch")
-        if record.get("validFromCutRoot") != identities.get("cutRoot"):
-            issues.append(f"{relation_name}-cut-mismatch")
-        if record.get("scopeRoot") != identities.get("scopeRoot"):
-            issues.append(f"{relation_name}-scope-mismatch")
-        if record.get("authorityRoot") != identities.get("authorityRoot"):
-            issues.append(f"{relation_name}-authority-mismatch")
-        if record.get("admissionRoots") != object_record.get("admissionRoots"):
-            issues.append(f"{relation_name}-admission-mismatch")
-
-    if object_record.get("relationRoots") != [
-        row.get("root") if isinstance(row, dict) else None for row in relations
-    ]:
-        issues.append("object-relation-roots-mismatch")
+    if not isinstance(value, dict) or set(record) != fields:
+        issues.append("invalid-object")
+        return record
+    if record.get("schema") != "kungfu.fact.provenance-object/v1":
+        issues.append("invalid-object")
+    expected_id = (
+        f"release-provenance:{phase}:{subject.get('identity')}"
+        if isinstance(subject, dict)
+        else None
+    )
+    for field, expected, code in (
+        ("objectId", expected_id, "object-identity-mismatch"),
+        ("subjectRoot", identities.get("subjectRoot"), "object-subject-root-mismatch"),
+        ("cutRoot", identities.get("cutRoot"), "object-cut-root-mismatch"),
+        (
+            "authorityRoot",
+            identities.get("authorityRoot"),
+            "object-authority-root-mismatch",
+        ),
+    ):
+        if record.get(field) != expected:
+            issues.append(code)
+    admission_roots = record.get("admissionRoots")
     try:
-        if projection.get("kind") != expected_projection_kind:
-            issues.append("invalid-git-projection")
-        expected_projection_fields = {
-            "schema",
-            "kind",
-            "candidateCommit",
-            "candidateTree",
-            "status",
-            "drift",
-            "policy",
-            *(
-                {
-                    "devCutCommit",
-                    "devCutTree",
-                    "previousAlphaCommit",
-                    "previousAlphaTree",
-                    "expectedParents",
-                    "observedParents",
-                }
-                if phase == "candidate"
-                else {
-                    "promotionCommit",
-                    "promotionTree",
-                    "candidateAncestryObserved",
-                }
-            ),
-        }
-        if set(projection) != expected_projection_fields:
-            issues.append("invalid-git-projection")
-        if projection.get("schema") != PROJECTION_SCHEMA:
-            issues.append("invalid-git-projection")
-        oid_fields = (
-            [
-                "candidateCommit",
-                "candidateTree",
+        if not isinstance(admission_roots, list) or len(admission_roots) != len(
+            set(admission_roots)
+        ):
+            raise TypeError
+        for root in admission_roots:
+            _require_root(root, "object.admissionRoots")
+    except (ReleaseProvenanceError, TypeError):
+        issues.append("orphan-root")
+    expected_material_roots = [
+        identities.get("subjectRoot"),
+        identities.get("qualificationRoot"),
+        identities.get("contractRoot"),
+        envelope.get("gitProjectionRoot"),
+    ]
+    if record.get("materialRoots") != expected_material_roots:
+        issues.append("object-material-roots-mismatch")
+    return record
+
+
+def _v1_projection_shape(
+    projection: dict[str, Any], phase: str, issues: list[str]
+) -> list[str]:
+    expected_kind = {
+        "candidate": "candidate-parentage",
+        "promotion": "promotion-topology",
+    }.get(phase)
+    expected_fields = {
+        "schema",
+        "kind",
+        "candidateCommit",
+        "candidateTree",
+        "status",
+        "drift",
+        "policy",
+        *(
+            {
                 "devCutCommit",
                 "devCutTree",
                 "previousAlphaCommit",
                 "previousAlphaTree",
-            ]
+                "expectedParents",
+                "observedParents",
+            }
             if phase == "candidate"
-            else [
-                "candidateCommit",
-                "candidateTree",
-                "promotionCommit",
-                "promotionTree",
-            ]
-        )
-        for field in oid_fields:
-            _require_oid(projection[field], f"gitProjection.{field}")
-        if phase == "candidate":
-            if projection.get("expectedParents") != [
-                projection.get("devCutCommit"),
-                projection.get("previousAlphaCommit"),
-            ]:
-                issues.append("git-projection-parent-mismatch")
-            observed_parents = projection.get("observedParents")
-            if not isinstance(observed_parents, list):
-                issues.append("invalid-git-projection")
-            else:
-                for parent in observed_parents:
-                    _require_oid(parent, "gitProjection.observedParents")
-        elif not isinstance(projection.get("candidateAncestryObserved"), bool):
+            else {"promotionCommit", "promotionTree", "candidateAncestryObserved"}
+        ),
+    }
+    if projection.get("kind") != expected_kind or set(projection) != expected_fields:
+        issues.append("invalid-git-projection")
+    if projection.get("schema") != PROJECTION_SCHEMA:
+        issues.append("invalid-git-projection")
+    return (
+        [
+            "candidateCommit",
+            "candidateTree",
+            "devCutCommit",
+            "devCutTree",
+            "previousAlphaCommit",
+            "previousAlphaTree",
+        ]
+        if phase == "candidate"
+        else ["candidateCommit", "candidateTree", "promotionCommit", "promotionTree"]
+    )
+
+
+def _v1_projection_topology(
+    projection: dict[str, Any], phase: str, issues: list[str]
+) -> None:
+    if phase == "candidate":
+        if projection.get("expectedParents") != [
+            projection.get("devCutCommit"),
+            projection.get("previousAlphaCommit"),
+        ]:
+            issues.append("git-projection-parent-mismatch")
+        observed_parents = projection.get("observedParents")
+        if not isinstance(observed_parents, list):
             issues.append("invalid-git-projection")
+        else:
+            for parent in observed_parents:
+                _require_oid(parent, "gitProjection.observedParents")
+    elif not isinstance(projection.get("candidateAncestryObserved"), bool):
+        issues.append("invalid-git-projection")
+
+
+def _v1_projection_policy(
+    projection: dict[str, Any], phase: str, drift: list[str], issues: list[str]
+) -> None:
+    policy = projection.get("policy")
+    if not isinstance(policy, dict) or set(policy) != {"failClosedOn"}:
+        issues.append("projection-policy-mismatch")
+        values: list[Any] = []
+    else:
+        value = policy.get("failClosedOn")
+        values = value if isinstance(value, list) else []
+        if (
+            not isinstance(value, list)
+            or len(values) != len(set(values))
+            or any(not isinstance(code, str) for code in values)
+        ):
+            issues.append("projection-policy-mismatch")
+    fail_closed = set(values)
+    mandatory = {
+        "candidate": "candidate-tree-mismatch",
+        "promotion": "promotion-tree-mismatch",
+    }.get(phase)
+    if mandatory not in fail_closed:
+        issues.append("projection-policy-mismatch")
+    issues.extend(code for code in drift if code in fail_closed)
+
+
+def _v1_projection_issues(
+    projection: dict[str, Any], phase: str, issues: list[str]
+) -> None:
+    try:
+        for field in _v1_projection_shape(projection, phase, issues):
+            _require_oid(projection[field], f"gitProjection.{field}")
+        _v1_projection_topology(projection, phase, issues)
         status, drift = _projection_status(projection)
         if status != projection.get("status") or drift != projection.get("drift"):
             issues.append("git-projection-status-mismatch")
-        policy = projection.get("policy")
-        if not isinstance(policy, dict) or set(policy) != {"failClosedOn"}:
-            issues.append("projection-policy-mismatch")
-            fail_closed_values: list[Any] = []
-        else:
-            fail_closed_value = policy.get("failClosedOn")
-            fail_closed_values = (
-                fail_closed_value if isinstance(fail_closed_value, list) else []
-            )
-            if (
-                not isinstance(fail_closed_value, list)
-                or len(fail_closed_values) != len(set(fail_closed_values))
-                or any(not isinstance(code, str) for code in fail_closed_values)
-            ):
-                issues.append("projection-policy-mismatch")
-        fail_closed = set(fail_closed_values)
-        mandatory_failure = {
-            "candidate": "candidate-tree-mismatch",
-            "promotion": "promotion-tree-mismatch",
-        }.get(phase)
-        if mandatory_failure not in fail_closed:
-            issues.append("projection-policy-mismatch")
-        issues.extend(code for code in drift if code in fail_closed)
+        _v1_projection_policy(projection, phase, drift, issues)
     except (ReleaseProvenanceError, KeyError, TypeError):
         issues.append("invalid-git-projection")
 
+
+def _v1_expected_issues(
+    envelope: dict[str, Any],
+    projection: dict[str, Any],
+    expected: dict[str, Any] | None,
+    issues: list[str],
+) -> None:
+    observed = {
+        "phase": envelope.get("phase"),
+        "releaseId": envelope.get("releaseId"),
+        "candidateCommit": projection.get("candidateCommit"),
+        "candidateTree": projection.get("candidateTree"),
+        "devCutCommit": projection.get("devCutCommit"),
+        "devCutTree": projection.get("devCutTree"),
+        "previousAlphaCommit": projection.get("previousAlphaCommit"),
+        "previousAlphaTree": projection.get("previousAlphaTree"),
+        "promotionCommit": projection.get("promotionCommit"),
+        "promotionTree": projection.get("promotionTree"),
+    }
     for key, value in (expected or {}).items():
-        observed = {
-            "phase": envelope.get("phase"),
-            "releaseId": envelope.get("releaseId"),
-            "candidateCommit": projection.get("candidateCommit"),
-            "candidateTree": projection.get("candidateTree"),
-            "devCutCommit": projection.get("devCutCommit"),
-            "devCutTree": projection.get("devCutTree"),
-            "previousAlphaCommit": projection.get("previousAlphaCommit"),
-            "previousAlphaTree": projection.get("previousAlphaTree"),
-            "promotionCommit": projection.get("promotionCommit"),
-            "promotionTree": projection.get("promotionTree"),
-        }.get(key)
-        if observed != value:
+        if observed.get(key) != value:
             issues.append(f"expected-{key}-mismatch")
 
+
+def _verify_v1(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Verify roots, relation roles, projection policy, and optional exact inputs."""
+
+    if not isinstance(envelope, dict) or envelope.get("schema") != ENVELOPE_SCHEMA:
+        return {"ok": False, "issues": ["unknown-schema"]}
+    if set(envelope) != _V1_ENVELOPE_FIELDS:
+        return {"ok": False, "issues": ["invalid-envelope"]}
+    issues: list[str] = []
+    phase_value = envelope.get("phase")
+    phase = phase_value if isinstance(phase_value, str) else ""
+    if phase not in {"candidate", "promotion"}:
+        issues.append("invalid-envelope")
+    release_id = envelope.get("releaseId")
+    if not isinstance(release_id, str) or not release_id:
+        issues.append("invalid-envelope")
+    identities = _v1_identities(envelope, issues)
+    _v1_root_issues(envelope, issues)
+    projection_value = envelope.get("gitProjection")
+    projection = projection_value if isinstance(projection_value, dict) else {}
+    if not isinstance(projection_value, dict):
+        issues.append("invalid-git-projection")
+    subject = envelope.get("subject", {})
+    _v1_subject_issues(subject, projection, phase, release_id, issues)
+    _v1_scope_issues(phase, release_id, identities, issues)
+    object_record = _v1_object(envelope, phase, subject, identities, issues)
+    predicate_roots = _v1_graph.predicate_roots(envelope, identities, issues)
+    relations, relation_rows = _v1_graph.relation_rows(envelope, object_record, issues)
+    _v1_graph.relation_issues(
+        envelope,
+        identities,
+        object_record,
+        predicate_roots,
+        relations,
+        relation_rows,
+        REQUIRED_RELATIONS,
+        issues,
+    )
+    _v1_projection_issues(projection, phase, issues)
+    _v1_expected_issues(envelope, projection, expected, issues)
     return {
         "schema": "kungfu.release-provenance-verification/v1",
         "ok": not issues,
