@@ -350,19 +350,121 @@ function copyWorkDesignRuntime(
   destination,
   repositoryRoot = path.resolve(CORE, '..', '..'),
 ) {
-  const files = [
-    'project-cut/src/project-cut.mjs',
-    'work-history-selector/src/work-history-selector.mjs',
-    'work-design-advisor/src/work-design-advisor.mjs',
-    'work-design-preflight/src/work-design-preflight.mjs',
-    'work-design-preflight/tooling/work-design-preflight.mjs',
-  ];
+  fs.mkdirSync(destination, { recursive: true });
+  fs.copyFileSync(
+    path.join(
+      repositoryRoot,
+      'framework',
+      'work-design-preflight',
+      'work-design-runtime.json',
+    ),
+    path.join(destination, 'work-design-runtime.json'),
+  );
+  const files = workDesignRuntimeFiles(repositoryRoot);
   for (const relative of files) {
     const source = path.join(repositoryRoot, 'framework', relative);
-    const target = path.join(destination, 'framework', relative);
+    const target = workDesignRuntimePath(destination, relative);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(source, target);
   }
+}
+
+/**
+ * Convert manifest-owned POSIX coordinates to a native product path.
+ * @param {string} destination
+ * @param {string} relative
+ * @param {typeof path} pathImplementation
+ */
+function workDesignRuntimePath(
+  destination,
+  relative,
+  pathImplementation = path,
+) {
+  return pathImplementation.join(
+    destination,
+    'framework',
+    ...relative.split('/'),
+  );
+}
+
+/**
+ * Resolve and verify the complete relative static ESM closure used by the
+ * installed Work Design entrypoint.  Both product packagers consume the same
+ * manifest; this verifier makes a newly introduced import fail closed instead
+ * of producing another partially usable installation.
+ *
+ * @param {string} repositoryRoot
+ * @returns {string[]}
+ */
+function workDesignRuntimeFiles(
+  repositoryRoot = path.resolve(CORE, '..', '..'),
+) {
+  const manifestPath = path.join(
+    repositoryRoot,
+    'framework',
+    'work-design-preflight',
+    'work-design-runtime.json',
+  );
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (
+    manifest.schema !== 'kungfu.work-design.runtime-closure/v1' ||
+    typeof manifest.entrypoint !== 'string' ||
+    !Array.isArray(manifest.files)
+  )
+    throw new Error('[freeze] invalid Work Design runtime closure manifest');
+  const declared = new Set(manifest.files);
+  if (!declared.has(manifest.entrypoint))
+    throw new Error(
+      '[freeze] Work Design entrypoint is absent from its closure',
+    );
+  const discovered = new Set();
+  const pending = [manifest.entrypoint];
+  const frameworkRoot = path.resolve(repositoryRoot, 'framework');
+  while (pending.length) {
+    const relative = pending.pop();
+    if (discovered.has(relative)) continue;
+    if (!declared.has(relative))
+      throw new Error(
+        `[freeze] undeclared Work Design runtime dependency: ${relative}`,
+      );
+    const sourcePath = path.resolve(frameworkRoot, ...relative.split('/'));
+    if (
+      sourcePath !== frameworkRoot &&
+      !sourcePath.startsWith(`${frameworkRoot}${path.sep}`)
+    )
+      throw new Error(`[freeze] invalid Work Design runtime path: ${relative}`);
+    const source = fs.readFileSync(sourcePath, 'utf8');
+    discovered.add(relative);
+    for (const specifier of staticEsmSpecifiers(source)) {
+      if (!specifier.startsWith('.')) continue;
+      const dependency = path.posix.normalize(
+        path.posix.join(path.posix.dirname(relative), specifier),
+      );
+      if (dependency === '..' || dependency.startsWith('../'))
+        throw new Error(
+          `[freeze] Work Design import escapes framework: ${relative} -> ${specifier}`,
+        );
+      pending.push(dependency);
+    }
+  }
+  const extras = [...declared].filter((relative) => !discovered.has(relative));
+  if (extras.length)
+    throw new Error(
+      `[freeze] unreachable Work Design runtime files: ${extras.sort().join(', ')}`,
+    );
+  return [...discovered].sort();
+}
+
+/** @param {string} source */
+function staticEsmSpecifiers(source) {
+  const specifiers = [];
+  const patterns = [
+    /(?:^|\n)\s*import\s+(?:[^'";]*?\sfrom\s+)?(['"])([^'"]+)\1/gmu,
+    /(?:^|\n)\s*export\s+[^'";]*?\sfrom\s+(['"])([^'"]+)\1/gmu,
+  ];
+  for (const pattern of patterns)
+    for (const match of source.matchAll(pattern)) specifiers.push(match[2]);
+  return specifiers;
 }
 
 /**
@@ -1169,6 +1271,8 @@ module.exports = {
   assemblySelector,
   copyFirstPartyProfile,
   copyWorkDesignRuntime,
+  workDesignRuntimeFiles,
+  workDesignRuntimePath,
   copyWorkProfileConformance,
   documentationAtlasSource,
   firstPartyProfileFilter,
