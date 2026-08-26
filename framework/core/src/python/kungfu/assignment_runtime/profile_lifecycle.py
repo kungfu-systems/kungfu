@@ -4,11 +4,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from kungfu import profile_sdk
 from kungfu.storage import service as storage_service
+
+
+def resolve_profile_source(
+    source: str | Path | None, fallback: Callable[[], str | Path]
+) -> Path:
+    """Resolve an explicit retained source or the caller's current source."""
+
+    return Path(source).resolve() if source is not None else Path(fallback()).resolve()
 
 
 def _required_actions(state: dict[str, Any] | None, desired_root: str) -> list[str]:

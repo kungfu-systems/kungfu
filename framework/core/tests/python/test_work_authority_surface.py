@@ -18,6 +18,8 @@ from kungfu.cli.commands import assignment_review
 from kungfu.cli.commands import kfc
 from kungfu.agent import run_agent, session_contract
 
+assignment_command = importlib.import_module("kungfu.cli.commands.assignment")
+
 
 def test_click_tree_exposes_one_work_family_and_no_assignment_alias():
     assert "work" in kfc.commands
@@ -771,6 +773,11 @@ def _fresh_recovery_fixture():
         expected_request_root=root("1"),
         expected_work_definition_root=root("2"),
         expected_profile_root=root("3"),
+        recovery_profile={
+            "profileId": "kungfu.work-control",
+            "profileRoot": root("3"),
+            "sourceContractRoot": root("6"),
+        },
         profile_active=False,
         now="2026-08-25T09:00:00Z",
     )
@@ -787,6 +794,11 @@ def test_fresh_recovery_plan_is_resume_new_attempt_without_lifecycle_replay():
         "workConsoleId": "assistant:project:test",
     }
     assert plan["workRef"] == binding["workRef"]
+    assert plan["recoveryProfile"] == {
+        "profileId": "kungfu.work-control",
+        "profileRoot": binding["workRef"]["profileRoot"],
+        "sourceContractRoot": f"sha256:{'6' * 64}",
+    }
     assert [effect["stage"] for effect in plan["effects"]] == [
         "activate-profile",
         "bind-new-attempt",
@@ -794,6 +806,148 @@ def test_fresh_recovery_plan_is_resume_new_attempt_without_lifecycle_replay():
     assert set(plan["forbiddenEffects"]) == {"admit", "claim", "kickoff"}
     assert plan["work"]["phase"] == status["phase"]
     assert plan["writeOccurred"] is False
+
+
+def test_fresh_recovery_separates_retained_authority_from_target_profile(
+    tmp_path, monkeypatch
+):
+    retained = tmp_path / "retained"
+    retained.mkdir()
+    (retained / "profile.json").write_text("{}", encoding="utf-8")
+    target = tmp_path / "target"
+    target.mkdir()
+    retained_root = f"sha256:{'a' * 64}"
+    target_root = f"sha256:{'b' * 64}"
+    source_contract_root = f"sha256:{'c' * 64}"
+
+    def lifecycle(_runtime, operation, **_values):
+        assert operation == "get"
+        return {
+            "profile_suite_root": retained_root,
+            "latest_event": {
+                "closure": {"profile_path": str(retained / "profile.json")}
+            },
+        }
+
+    def validate(source, _runtime):
+        resolved = source.resolve()
+        if resolved == retained.resolve():
+            return {"inspection": {"profile_suite_root": retained_root}}
+        assert resolved == target.resolve()
+        return {
+            "inspection": {
+                "profile": {"id": "kungfu.work-control"},
+                "profile_suite_root": target_root,
+                "closure": {"source_contract": {"root": source_contract_root}},
+            }
+        }
+
+    monkeypatch.setattr(
+        assignment_fresh_recovery.storage_service, "profile_lifecycle", lifecycle
+    )
+    monkeypatch.setattr(
+        assignment_fresh_recovery.profile_sdk, "validate_source", validate
+    )
+
+    assert assignment_fresh_recovery._retained_profile_source(tmp_path) == retained
+    assert assignment_fresh_recovery._validated_recovery_profile(target, tmp_path) == {
+        "profileId": "kungfu.work-control",
+        "profileRoot": target_root,
+        "sourceContractRoot": source_contract_root,
+    }
+
+
+def test_resume_prepare_reconciles_the_explicit_recovery_source(tmp_path, monkeypatch):
+    source = tmp_path / "historical-work-control"
+    source.mkdir()
+    desired_root = f"sha256:{'d' * 64}"
+    previous_root = f"sha256:{'e' * 64}"
+    reconciled = []
+
+    monkeypatch.setattr(
+        assignment_command.profile_sdk,
+        "validate_source",
+        lambda actual, _runtime: (
+            {
+                "inspection": {
+                    "profile": {"id": "kungfu.work-control"},
+                    "profile_suite_root": desired_root,
+                }
+            }
+            if actual == source.resolve()
+            else (_ for _ in ()).throw(AssertionError("unexpected Profile source"))
+        ),
+    )
+
+    def lifecycle(_runtime, operation, **_values):
+        if operation == "list":
+            return {
+                "profiles": [
+                    {
+                        "profile_id": "kungfu.work-control",
+                        "profile_suite_root": previous_root,
+                        "removed": False,
+                    }
+                ]
+            }
+        assert operation == "get"
+        return {
+            "profile_suite_root": desired_root,
+            "qualified": True,
+            "activated": True,
+        }
+
+    monkeypatch.setattr(
+        assignment_command.storage_service, "profile_lifecycle", lifecycle
+    )
+    monkeypatch.setattr(
+        assignment_command.profile_lifecycle,
+        "ensure_work_profile",
+        lambda actual, runtime, actor: (
+            reconciled.append((actual, runtime, actor)) or [{"status": "activated"}]
+        ),
+    )
+
+    receipt = assignment_command._prepare_resume_profile(
+        tmp_path / "runtime", "maintainer:test", source
+    )
+
+    assert reconciled == [(source.resolve(), tmp_path / "runtime", "maintainer:test")]
+    assert receipt["previousProfileSuiteRoot"] == previous_root
+    assert receipt["profileSuiteRoot"] == desired_root
+
+
+def test_fresh_recovery_failure_keeps_public_executable_next_actions(
+    tmp_path, monkeypatch
+):
+    emitted = []
+    source = tmp_path / "missing-profile-source"
+    failure = assignment_fresh_recovery.FreshRecoveryError(
+        "WorkRef is unavailable",
+        assignment_fresh_recovery._profile_recovery_actions(source),
+    )
+    monkeypatch.setattr(assignment_command, "_emit", emitted.append)
+
+    with __import__("pytest").raises(__import__("click").exceptions.Exit):
+        assignment_command._run(lambda: (_ for _ in ()).throw(failure))
+
+    assert emitted[0]["ok"] is False
+    assert emitted[0]["message"] == "WorkRef is unavailable"
+    assert emitted[0]["next_actions"] == failure.next_actions
+    assert emitted[0]["next_actions"][0]["command"] == [
+        "kungfu",
+        "profile",
+        "history",
+        "kungfu.work-control",
+        "--json",
+    ]
+    assert emitted[0]["next_actions"][1]["command"] == [
+        "kungfu",
+        "profile",
+        "validate",
+        str(source),
+        "--json",
+    ]
 
 
 def test_fresh_recovery_apply_preserves_complete_lifecycle_state():
@@ -841,6 +995,7 @@ def test_fresh_recovery_fails_closed_on_attempt_plan_or_state_drift():
             expected_request_root=status["assignment"]["request_root"],
             expected_work_definition_root=status["assignment"]["work_definition_root"],
             expected_profile_root=plan["workRef"]["profileRoot"],
+            recovery_profile=plan["recoveryProfile"],
             profile_active=True,
         )
     drifted = json.loads(json.dumps(status))
