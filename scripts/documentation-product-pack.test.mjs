@@ -183,6 +183,7 @@ test('freeze assembly stages the installed Work Design runtime closure', (t) => 
 
   for (const relative of [
     'project-cut/src/project-cut.mjs',
+    'project-cut/src/json-scanner.mjs',
     'work-history-selector/src/work-history-selector.mjs',
     'work-design-advisor/src/work-design-advisor.mjs',
     'work-design-preflight/src/work-design-preflight.mjs',
