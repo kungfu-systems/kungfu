@@ -462,7 +462,8 @@ The build workflow seals the KFD-1 witness, KFD-2 raw claim files, KFD-3
 prebuild witness, and one artifact witness per supported platform into the
 candidate payload before Verify completes. Promotion passes those immutable
 JSON paths to Buildchain v3; the publish tail neither generates nor repairs KFD
-evidence.
+evidence. Renewing a protected queue cut does not renew or weaken those sealed
+source, candidate, platform, or artifact bindings.
 
 Buildchain owns the passport key, formatting policy, pre-build witness digest,
 and post-build artifact byte checks. Kungfu owns its root
