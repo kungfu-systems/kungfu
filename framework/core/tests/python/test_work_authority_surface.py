@@ -917,6 +917,62 @@ def test_resume_prepare_reconciles_the_explicit_recovery_source(tmp_path, monkey
     assert receipt["profileSuiteRoot"] == desired_root
 
 
+def test_fresh_recovery_prepare_does_not_require_newer_profile_work_hooks(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "historical-work-control"
+    source.mkdir()
+    desired_root = f"sha256:{'d' * 64}"
+    reconciled = []
+
+    monkeypatch.setattr(
+        assignment_command.profile_sdk,
+        "validate_source",
+        lambda actual, _runtime: {
+            "inspection": {
+                "profile": {"id": "kungfu.work-control"},
+                "profile_suite_root": desired_root,
+            }
+        },
+    )
+
+    def lifecycle(_runtime, operation, **_values):
+        if operation == "list":
+            return {"profiles": []}
+        assert operation == "get"
+        return {
+            "profile_suite_root": desired_root,
+            "qualified": True,
+            "activated": True,
+        }
+
+    monkeypatch.setattr(
+        assignment_command.storage_service, "profile_lifecycle", lifecycle
+    )
+    monkeypatch.setattr(
+        assignment_command.profile_lifecycle,
+        "ensure_profile_lifecycle",
+        lambda actual, runtime, actor: (
+            reconciled.append((actual, runtime, actor)) or [{"status": "activated"}]
+        ),
+    )
+    monkeypatch.setattr(
+        assignment_command.profile_lifecycle,
+        "ensure_work_profile",
+        lambda *_args: (_ for _ in ()).throw(
+            AssertionError("fresh recovery must not invoke newer Profile Work hooks")
+        ),
+    )
+
+    receipt = assignment_command.profile_lifecycle.prepare_fresh_recovery_profile(
+        tmp_path / "runtime", "maintainer:test", source
+    )
+
+    assert reconciled == [(source.resolve(), tmp_path / "runtime", "maintainer:test")]
+    assert receipt["profileSuiteRoot"] == desired_root
+    assert receipt["profileContractMutation"] == "not-permitted"
+
+
 def test_fresh_recovery_failure_keeps_public_executable_next_actions(
     tmp_path, monkeypatch
 ):
