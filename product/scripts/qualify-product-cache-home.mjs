@@ -16,6 +16,13 @@ const DEFAULT_APP = path.join(
   'mac-arm64',
   'Kungfu Episodes.app',
 );
+const WORK_DESIGN_FIXTURE = path.join(
+  ROOT,
+  'framework',
+  'work-design-preflight',
+  'fixtures',
+  'installed-preflight-request.json',
+);
 
 function fail(message) {
   throw new Error(`product cache qualification: ${message}`);
@@ -81,6 +88,89 @@ function verifyCodesign(app, runCommand) {
   }
 }
 
+function runWorkDesignPreflight({
+  cli,
+  input,
+  instanceHome,
+  cacheHome,
+  env,
+  expectedOutcome,
+  runCommand,
+}) {
+  const result = runCommand(
+    cli,
+    ['--home', instanceHome, 'work-design', 'preflight', '--input', input],
+    {
+      cwd: cacheHome,
+      env,
+      encoding: 'utf8',
+      timeout: 60_000,
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  );
+  if (result.status !== 0) {
+    fail(
+      `installed Work Design preflight exited ${result.status ?? result.signal}: ${(result.stderr || '').trim()}`,
+    );
+  }
+  let report;
+  try {
+    report = JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`installed Work Design preflight returned invalid JSON: ${error}`);
+  }
+  if (report.outcome !== expectedOutcome) {
+    fail(
+      `installed Work Design preflight returned ${report.outcome || '<missing>'}, expected ${expectedOutcome}`,
+    );
+  }
+  return report;
+}
+
+function qualifyInstalledWorkDesign({
+  cli,
+  instanceHome,
+  cacheHome,
+  env,
+  runCommand,
+}) {
+  const request = JSON.parse(fs.readFileSync(WORK_DESIGN_FIXTURE, 'utf8'));
+  const automaticInput = path.join(cacheHome, 'work-design-automatic.json');
+  const manualInput = path.join(cacheHome, 'work-design-manual.json');
+  fs.writeFileSync(automaticInput, `${JSON.stringify(request)}\n`);
+  fs.writeFileSync(
+    manualInput,
+    `${JSON.stringify({
+      ...request,
+      disposition: {
+        action: 'overridden',
+        decisionAuthority: 'human',
+        rationaleRoot:
+          'sha256:df7186e3f525d9207abfb9a533e300f692cb70703886862698296a6d3e1f6b72',
+      },
+    })}\n`,
+  );
+  const common = { cli, instanceHome, cacheHome, env, runCommand };
+  const automatic = runWorkDesignPreflight({
+    ...common,
+    input: automaticInput,
+    expectedOutcome: 'advisory-auto-adopted',
+  });
+  const manual = runWorkDesignPreflight({
+    ...common,
+    input: manualInput,
+    expectedOutcome: 'manual-capture',
+  });
+  if (
+    automatic.operation?.mutates !== false ||
+    automatic.authority?.assignment !== false ||
+    manual.adoption?.adopted !== false ||
+    manual.fallback?.silentAdoption !== false
+  ) {
+    fail('installed Work Design preflight violated its read-only authority');
+  }
+}
+
 export function qualifyProductCacheHome(options = {}) {
   const app = path.resolve(options.app || DEFAULT_APP);
   const runCommand = options.runCommand || spawnSync;
@@ -119,10 +209,14 @@ export function qualifyProductCacheHome(options = {}) {
   );
   const env = {
     ...ambientEnv,
+    HOME: path.join(cacheHome, 'home'),
     KF_CACHE_HOME: cacheHome,
     KF_INSTANCE_HOME: path.join(cacheHome, 'instance'),
     KUNGFU_UPGRADE_MANIFEST: manifest,
+    NODE_OPTIONS: '',
+    NODE_PATH: '',
   };
+  const instanceHome = path.join(cacheHome, 'instance');
   const invocation = runCommand(cli, ['agent', 'brief'], {
     cwd: cacheHome,
     env,
@@ -135,6 +229,14 @@ export function qualifyProductCacheHome(options = {}) {
       `bundled CLI exited ${invocation.status ?? invocation.signal}: ${(invocation.stderr || '').trim()}`,
     );
   }
+
+  qualifyInstalledWorkDesign({
+    cli,
+    instanceHome,
+    cacheHome,
+    env,
+    runCommand,
+  });
 
   const guiInvocation = runCommand(gui, [], {
     cwd: cacheHome,
@@ -254,6 +356,8 @@ export function qualifyProductCacheHome(options = {}) {
       externalVersionedPythonCache: true,
       nativeNodeWorkerCacheBootstrap: true,
       packagedGuiBoot: true,
+      installedWorkDesignPreflight: true,
+      workDesignManualCaptureExplicit: true,
     },
   };
 }
