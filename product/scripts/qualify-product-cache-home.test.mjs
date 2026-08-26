@@ -35,43 +35,86 @@ function fixtureApp() {
   return app;
 }
 
+function successfulRunCommand(app, { mutateWorkDesign = false } = {}) {
+  return (_command, args, options) => {
+    const nativeNode = options.env.KUNGFU_AS_VARIANT === 'node';
+    const workDesign = args.includes('work-design');
+    const manualWorkDesign =
+      workDesign &&
+      args.some((value) => path.basename(value) === 'work-design-manual.json');
+    const prefix = nativeNode
+      ? path.join(
+          options.env.HOME,
+          'Library',
+          'Caches',
+          'kungfu',
+          'python',
+          'runtime-fixture',
+        )
+      : path.join(options.env.KF_CACHE_HOME, 'python', 'runtime-fixture');
+    fs.mkdirSync(prefix, { recursive: true });
+    fs.writeFileSync(path.join(prefix, 'module.pyc'), 'bytecode');
+    if (workDesign && mutateWorkDesign) {
+      fs.writeFileSync(
+        path.join(app, 'Contents', 'work-design-side-effect'),
+        'unexpected write',
+      );
+    }
+    return {
+      status: 0,
+      stdout: nativeNode
+        ? 'KF_NATIVE_NODE_CACHE_READY\n'
+        : workDesign
+          ? JSON.stringify(
+              manualWorkDesign
+                ? {
+                    outcome: 'manual-capture',
+                    adoption: { adopted: false },
+                    fallback: { silentAdoption: false },
+                  }
+                : {
+                    outcome: 'advisory-auto-adopted',
+                    operation: { mutates: false },
+                    authority: { assignment: false },
+                  },
+            )
+          : args.length === 0
+            ? 'KF_GUI_QUALIFICATION_READY\n'
+            : 'brief',
+      stderr: '',
+    };
+  };
+}
+
 test('qualification proves external bytecode without changing the app tree', () => {
   const app = fixtureApp();
   const before = treeDigest(app);
   const report = qualifyProductCacheHome({
     app,
     verifySignature: false,
-    runCommand: (_command, args, options) => {
-      const nativeNode = options.env.KUNGFU_AS_VARIANT === 'node';
-      const prefix = nativeNode
-        ? path.join(
-            options.env.HOME,
-            'Library',
-            'Caches',
-            'kungfu',
-            'python',
-            'runtime-fixture',
-          )
-        : path.join(options.env.KF_CACHE_HOME, 'python', 'runtime-fixture');
-      fs.mkdirSync(prefix, { recursive: true });
-      fs.writeFileSync(path.join(prefix, 'module.pyc'), 'bytecode');
-      return {
-        status: 0,
-        stdout: nativeNode
-          ? 'KF_NATIVE_NODE_CACHE_READY\n'
-          : args.length === 0
-            ? 'KF_GUI_QUALIFICATION_READY\n'
-            : 'brief',
-        stderr: '',
-      };
-    },
+    runCommand: successfulRunCommand(app),
   });
   assert.equal(report.qualified, true);
   assert.equal(report.appDigest, before);
   assert.equal(report.pythonBytecodeFiles, 1);
   assert.equal(report.checks.packagedGuiBoot, true);
   assert.equal(report.checks.nativeNodeWorkerCacheBootstrap, true);
+  assert.equal(report.checks.installedWorkDesignPreflight, true);
+  assert.equal(report.checks.workDesignManualCaptureExplicit, true);
   assert.equal(treeDigest(app), before);
+});
+
+test('qualification rejects a Work Design preflight that changes the app tree', () => {
+  const app = fixtureApp();
+  assert.throws(
+    () =>
+      qualifyProductCacheHome({
+        app,
+        verifySignature: false,
+        runCommand: successfulRunCommand(app, { mutateWorkDesign: true }),
+      }),
+    /application tree changed after CLI use/u,
+  );
 });
 
 test('qualification rejects bytecode shipped inside the app', () => {
