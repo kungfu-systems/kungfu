@@ -71,6 +71,7 @@ jobs:
       dependency-lock-root: ${{ steps.receipt.outputs.dependency-lock-root }}
       toolchain-root: ${{ steps.receipt.outputs.toolchain-root }}
       policy-root: ${{ steps.receipt.outputs.policy-root }}
+      kfd-source-input-root: ${{ steps.kfd-source.outputs.kfd-source-input-root }}
     steps:
       - name: Check out exact candidate source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -84,6 +85,18 @@ jobs:
         run: |
           set -euo pipefail
           ./shifu check:durable-provenance-authority
+
+      - name: Gate exact-source KFD prebuild evidence
+        id: kfd-source
+        shell: bash
+        env:
+          KUNGFU_EXACT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          ./shifu node scripts/kfd-candidate-evidence.mjs source-check
+          --source-sha "${KUNGFU_EXACT_SOURCE_SHA}"
+          --source-tree "$(git rev-parse 'HEAD^{tree}')"
+          --out .buildchain/kfd-preflight/source-gate.json
+          --github-output "${GITHUB_OUTPUT}"
 
       - name: Admit reusable source and platform probes
         id: receipt
@@ -179,7 +192,7 @@ jobs:
       # signing, notarization, publication, and activation retain their
       # independent protected authorities below this matrix.
       self-hosted-offline-fallback: false
-      install-command: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' || 'node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' }}
+      install-command: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs && node scripts/kfd-candidate-evidence.mjs source --expected-input-root {1}', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto', needs.preflight.outputs.kfd-source-input-root) || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs && node scripts/kfd-candidate-evidence.mjs source --expected-input-root {0}', needs.preflight.outputs.kfd-source-input-root) || format('node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs && node scripts/kfd-candidate-evidence.mjs source --expected-input-root {0}', needs.preflight.outputs.kfd-source-input-root) }}
       fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
       setup-rust: true
       rust-toolchain: "1.96.0"
@@ -198,7 +211,7 @@ jobs:
       github-artifact-attestation-platform-id: linux-x64
       artifact-signing-request-upload-no-proxy: ${{ vars.BUILDCHAIN_ARTIFACT_SIGNING_REQUEST_UPLOAD_NO_PROXY }}
       expected-artifacts-json: >-
-        {"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}
+        {"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/kfd/source-gate.json","product/release/qualification/kfd/candidate-evidence.json"]}
       # Every lane must retain its source-bound qualification summary. The
       # three full-product lanes also fail closed inside lifecycle.verify on
       # their runtime, desktop, invariant, and layer reports; Linux ARM64 is a
@@ -239,7 +252,7 @@ jobs:
       # Functional native qualification stays credential-free. The declarative
       # signing inventory lets Buildchain seal the exact unsigned macOS app and
       # finalize signing and notarization inside its protected authority.
-      verify-command: node scripts/run-shifu-lifecycle.mjs cache-apply-command node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}
+      verify-command: node scripts/kfd-candidate-evidence.mjs run-verify -- node scripts/run-shifu-lifecycle.mjs cache-apply-command node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}
       verify-substage-evidence-path: product/release/qualification/layer-qualification-summary.json
       release-candidate: true
       publish-channel: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}
@@ -278,10 +291,40 @@ jobs:
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
 
+  kfd-candidate-evidence:
+    name: Verify sealed KFD candidate evidence
+    needs: [preflight, build]
+    if: ${{ always() && needs.build.result == 'success' && inputs.platforms-json == '' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check out exact qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.publish-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download the four sealed platform manifests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: kungfu-manifest-*-${{ needs.build.outputs.publish-source-sha }}
+          path: .buildchain/kfd-platform-manifests
+          merge-multiple: false
+
+      - name: Reject missing, incomplete, or root-mismatched KFD evidence
+        run: >-
+          ./shifu node scripts/kfd-candidate-evidence.mjs verify-manifest-set
+          --manifest-root .buildchain/kfd-platform-manifests
+          --source-sha "${{ needs.build.outputs.publish-source-sha }}"
+
   precompute-alpha-publication-tail:
     name: Precompute non-secret Alpha publication tail
-    needs: build
-    if: ${{ needs.build.result == 'success' && startsWith(github.base_ref, 'alpha/') }}
+    needs: [build, kfd-candidate-evidence]
+    if: ${{ needs.build.result == 'success' && needs.kfd-candidate-evidence.result == 'success' && startsWith(github.base_ref, 'alpha/') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

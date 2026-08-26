@@ -29,6 +29,7 @@ import {
   resolveGitBoundKfdEvidenceSourceSha,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
 import { syncKfdAdopterRelease } from '../framework/release/kfd-adopter-release.mjs';
+import { KFD_ARTIFACT_WITNESS_JSONS } from '../framework/release/kfd-candidate-evidence.mjs';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   assertKfdEvidenceSourceBinding,
@@ -173,8 +174,6 @@ const CONTRACT_REGISTRY_PATH = path.join(
 );
 const KFD2_REGISTRY_PATH = path.join(ROOT, BUILDCHAIN_KFD2_REGISTRY_PATH);
 const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
-const ARTIFACT_VERIFY_COMMAND =
-  'node scripts/buildchain-kfd-evidence.mjs --write --json >/dev/null && node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
 const STRICT_KFD3_MODE = 'strict-buildchain-managed-registry';
 function usage() {
   return `Usage:
@@ -998,7 +997,9 @@ function buildKfd3PrebuildWitness(registry, sourceSha) {
     sourceRegistry: registryDescriptor(registry),
     upstreamKfd: registry.upstreamKfd,
     expectedArtifactVerification: {
-      command: ARTIFACT_VERIFY_COMMAND,
+      witnessJsons: KFD_ARTIFACT_WITNESS_JSONS,
+      generationPhase: 'build-before-verify',
+      releasePhase: 'consume-sealed-evidence-only',
     },
     collaborationInterfaceDigest: `sha256:${sha256Json(collaborationInterface)}`,
     collaborationInterface,
@@ -1704,7 +1705,7 @@ function buildSummary({
               : `${rel(KFD2_OUTPUT_DIR)}/claims/${claim.id}.json`,
         ),
         kfd3PrebuildWitnessJsons: [rel(KFD3_PREBUILD_WITNESS_PATH)],
-        kfd3ArtifactVerifyCommand: ARTIFACT_VERIFY_COMMAND,
+        kfd3ArtifactWitnessJsons: KFD_ARTIFACT_WITNESS_JSONS,
         kfdAdopterManifestJson: '.buildchain/runtime/kfd-adopter/manifest.json',
         kfdProductGateJsons: KFD_PRODUCT_GATE_PATHS.map(rel),
       },

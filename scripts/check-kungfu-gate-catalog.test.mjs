@@ -826,7 +826,7 @@ test('every controller class has a structured adapter and input drift fails clos
     {
       id: 'channel-heavy-build',
       workflow: '.github/workflows/build.yml',
-      from: 'verify-command: node scripts/run-shifu-lifecycle.mjs cache-apply-command',
+      from: 'verify-command: node scripts/kfd-candidate-evidence.mjs run-verify -- node scripts/run-shifu-lifecycle.mjs cache-apply-command',
       to: 'verify-command: ./shifu verify',
       drift: 'with.verify-command',
     },
