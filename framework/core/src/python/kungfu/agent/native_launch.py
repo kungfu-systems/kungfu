@@ -104,7 +104,7 @@ def managed_workspace_id(work: Mapping[str, Any] | None, workspace_root: str) ->
 def managed_runtime_dir(
     work: Mapping[str, Any] | None, workspace_root: str, fallback_runtime_dir: str
 ) -> str:
-    """Use the stable Project runtime for a Project-scoped managed Console."""
+    """Use the stable qualified Project runtime for a managed Console."""
 
     workspace_identity = inspect_workspace(workspace_root, cwd=workspace_root)
     if (
