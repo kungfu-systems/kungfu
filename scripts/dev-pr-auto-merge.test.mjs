@@ -210,6 +210,10 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   const landing = workflow.slice(workflow.indexOf('  landing:\n'));
 
   assert.match(bridge, /needs\.admission\.result == 'success'/u);
+  assert.match(
+    bridge,
+    /needs:[\s\S]*- resolve-target[\s\S]*- delivery-contract[\s\S]*- admission/u,
+  );
   assert.match(bridge, /actions: write/u);
   assert.match(bridge, /checks: read/u);
   assert.doesNotMatch(bridge, /checks: write/u);
@@ -264,7 +268,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
-    /DELIVERY_CLASS: \$\{\{ needs\.delivery-contract\.outputs\.delivery-class \|\| 'native-proof-required' \}\}[\s\S]*--arg deliveryClass "\$DELIVERY_CLASS"[\s\S]*\$deliveryClass == "source-only" and \.conclusion == "skipped"/u,
+    /DELIVERY_CLASS: \$\{\{ needs\.delivery-contract\.outputs\.delivery-class \|\| 'native-proof-required' \}\}[\s\S]*--arg deliveryClass "\$DELIVERY_CLASS"[\s\S]*\$deliveryClass == "non-native-fast" and \.conclusion == "skipped"/u,
   );
   assert.match(
     bridge,
