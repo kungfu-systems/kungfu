@@ -14,6 +14,8 @@ import json
 import re
 from typing import Any, Mapping, overload
 
+from kungfu.initiative_family import canonical as assignment_canonical
+
 
 WORK_REF_SCHEMA = "kungfu.work-ref/v1"
 AGENT_CONSOLE_ENVELOPE_SCHEMA = "kungfu.agent-console-envelope/v1"
@@ -146,6 +148,85 @@ def validate_work_ref(
     elif "initiativeId" in result:
         raise ValueError("WorkRef.initiativeId is only valid for assignment identity")
     return result
+
+
+def _planned_work_ref(
+    expected_binding,
+    *,
+    workspace_id,
+    work_control,
+    initiative_id,
+    assignment_id,
+):
+    work_ref = validate_work_ref(dict(expected_binding.get("workRef") or {}))
+    expected_coordinates = (
+        workspace_id,
+        work_control["profile"]["id"],
+        work_control["profile_suite_root"],
+        "assignment",
+        assignment_id,
+        "continue-project-assignment",
+        initiative_id,
+    )
+    actual_coordinates = tuple(
+        work_ref[field]
+        for field in (
+            "workspaceId",
+            "profileId",
+            "profileRoot",
+            "entityType",
+            "entityId",
+            "purpose",
+            "initiativeId",
+        )
+    )
+    if actual_coordinates != expected_coordinates:
+        raise ValueError("planned native Work binding coordinates changed")
+    return work_ref
+
+
+def resolve_native_work_ref(
+    work_commands,
+    *,
+    profile_inspection,
+    runtime_dir,
+    workspace_id,
+    profile_source,
+    initiative_id,
+    assignment_id,
+    expected_binding,
+    explicit_workspace,
+):
+    """Reuse a planned WorkRef, or resolve ordinary binding from live authority."""
+
+    work_control = profile_inspection(
+        profile_source, work_commands.profile_source, runtime_dir
+    )
+    if expected_binding is not None:
+        if not explicit_workspace or profile_source is None:
+            raise ValueError(
+                "planned native Work binding requires explicit workspace and Profile source"
+            )
+        return _planned_work_ref(
+            expected_binding,
+            workspace_id=workspace_id,
+            work_control=work_control,
+            initiative_id=initiative_id,
+            assignment_id=assignment_id,
+        )
+    status = work_commands._status(runtime_dir, initiative_id, assignment_id)
+    return {
+        "schema": WORK_REF_SCHEMA,
+        "workspaceId": workspace_id,
+        "profileId": work_control["profile"]["id"],
+        "profileRoot": work_control["profile_suite_root"],
+        "entityType": "assignment",
+        "entityId": assignment_id,
+        "entityRoot": assignment_canonical.semantic_root(status["assignment"]),
+        "purpose": "continue-project-assignment",
+        "systemTimeCut": status["query_proof_root"],
+        "initiativeId": initiative_id,
+    }
 
 
 def require_expected_binding(expected, work_ref, session) -> None:
