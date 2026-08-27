@@ -1,4 +1,5 @@
 lockfileVersion: '9.0'
+
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
@@ -43,9 +44,15 @@ importers:
       '@biomejs/biome':
         specifier: 1.9.4
         version: 1.9.4
-      '@kungfu-tech/buildchain': {specifier: 3.0.9-alpha.17, version: 3.0.9-alpha.17}
-      '@kungfu-tech/buildchain-alpha': {specifier: 'npm:@kungfu-tech/buildchain@3.0.9-alpha.17', version: '@kungfu-tech/buildchain@3.0.9-alpha.17'}
-      '@kungfu-tech/buildchain-stable': {specifier: 'npm:@kungfu-tech/buildchain@3.0.7', version: '@kungfu-tech/buildchain@3.0.7'}
+      '@kungfu-tech/buildchain':
+        specifier: 3.0.9-alpha.17
+        version: 3.0.9-alpha.17
+      '@kungfu-tech/buildchain-alpha':
+        specifier: npm:@kungfu-tech/buildchain@3.0.9-alpha.17
+        version: '@kungfu-tech/buildchain@3.0.9-alpha.17'
+      '@kungfu-tech/buildchain-stable':
+        specifier: npm:@kungfu-tech/buildchain@3.0.7
+        version: '@kungfu-tech/buildchain@3.0.7'
       '@kungfu-tech/kfd':
         specifier: 1.0.0-alpha.65
         version: 1.0.0-alpha.65
@@ -188,7 +195,34 @@ importers:
         specifier: ^18.3.3
         version: 18.3.31
 
-  extensions/github-webhook-reference-suite: {}
+  extensions/github-webhook-reference-suite:
+    dependencies:
+      '@kungfu-tech/kfx-github-dogfood-bridge':
+        specifier: workspace:*
+        version: link:github-dogfood-bridge
+      '@kungfu-tech/kfx-github-webhook-ingress':
+        specifier: workspace:*
+        version: link:github-webhook-ingress
+      '@kungfu-tech/kfx-view-github-events':
+        specifier: workspace:*
+        version: link:github-event-view
+
+  extensions/github-webhook-reference-suite/github-dogfood-bridge: {}
+
+  extensions/github-webhook-reference-suite/github-event-view:
+    dependencies:
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
+  extensions/github-webhook-reference-suite/github-webhook-ingress: {}
 
   extensions/journal-manager:
     dependencies:
@@ -494,8 +528,12 @@ importers:
 
   framework/gui:
     dependencies:
-      '@kungfu-tech/agent-session': {specifier: 'workspace:*', version: 'link:../agent-session'}
-      '@kungfu-tech/api': {specifier: 'workspace:*', version: 'link:../api'}
+      '@kungfu-tech/agent-session':
+        specifier: workspace:*
+        version: link:../agent-session
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../api
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
@@ -655,7 +693,9 @@ importers:
       '@kungfu-tech/kfx-adapter-langchain':
         specifier: workspace:*
         version: link:../extensions/langchain-adapter
-      '@kungfu-tech/kfx-agent-work-lab-experience': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab/experience'}
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:../extensions/agent-work-lab/experience
       '@kungfu-tech/kfx-dogfood-actions':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-actions
@@ -665,7 +705,9 @@ importers:
       '@kungfu-tech/kfx-dogfood-contract':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-contract
-      '@kungfu-tech/kfx-suite-agent-work-lab': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab'}
+      '@kungfu-tech/kfx-suite-agent-work-lab':
+        specifier: workspace:*
+        version: link:../extensions/agent-work-lab
       '@kungfu-tech/kfx-suite-dogfood-feedback':
         specifier: workspace:*
         version: link:../extensions/dogfood
@@ -1448,9 +1490,21 @@ packages:
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/buildchain@3.0.7': {resolution: {integrity: sha512-e3Dl4/x0mcGOJCQq1HRMc8rk0b+CNd/QUP9R0d2PQg/eHZgYFdoov0FwgVxEDkALnpQrUYvTLyo1EbG5SkNKkg==}, engines: {node: '>=22.14.0'}, hasBin: true}
-  '@kungfu-tech/buildchain@3.0.9-alpha.11': {resolution: {integrity: sha512-4ZVP7dN9agJw2APN3CEjjstJcwPoOB9vLo4uDQxQmDfhAJwPlKHvDW31LcBICJgR+OfwVRtXNZsp1pvuHYzkiA==}, engines: {node: '>=22.14.0'}, hasBin: true}
-  '@kungfu-tech/buildchain@3.0.9-alpha.17': {resolution: {integrity: sha512-bHw9rUBjgjXlEfhQSrG3ph9kxemXkAJnE4VDwKzvkJ5/ChZlIOTCc3uCxpmdsigLjpipS9e9S/OZ+oVs/hW5fQ==}, engines: {node: '>=22.14.0'}, hasBin: true}
+  '@kungfu-tech/buildchain@3.0.7':
+    resolution: {integrity: sha512-e3Dl4/x0mcGOJCQq1HRMc8rk0b+CNd/QUP9R0d2PQg/eHZgYFdoov0FwgVxEDkALnpQrUYvTLyo1EbG5SkNKkg==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
+
+  '@kungfu-tech/buildchain@3.0.9-alpha.11':
+    resolution: {integrity: sha512-4ZVP7dN9agJw2APN3CEjjstJcwPoOB9vLo4uDQxQmDfhAJwPlKHvDW31LcBICJgR+OfwVRtXNZsp1pvuHYzkiA==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
+
+  '@kungfu-tech/buildchain@3.0.9-alpha.17':
+    resolution: {integrity: sha512-bHw9rUBjgjXlEfhQSrG3ph9kxemXkAJnE4VDwKzvkJ5/ChZlIOTCc3uCxpmdsigLjpipS9e9S/OZ+oVs/hW5fQ==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
+
   '@kungfu-tech/kfd@1.0.0-alpha.41':
     resolution: {integrity: sha512-e+iIuvsijDLSFotb3gPKqwn649lLGRX3xEWOwn7xfBeu8L8kvw5RPRznJ4xKVM+NYCrfYCRVmUzpJI58k97C+Q==}
     hasBin: true
@@ -1459,8 +1513,14 @@ packages:
     resolution: {integrity: sha512-t7ZyBXhhfYKNYo+KgBan/SBsBK1UygTf8RaTxQ+toTStwuq4wR5Z85sSAO/kmC2F/oqHeYVaan6nU28e1sVERw==}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.62': {resolution: {integrity: sha512-x5MgFZzphfOo3BiWH8zdyw0JcGGTxVZ5x/0Vzyv0xKOh4RvwVzdGW4kRffIgVQ6bWXCeZFkgz9d1iSlfcHcfMw==}, hasBin: true}
-  '@kungfu-tech/kfd@1.0.0-alpha.65': {resolution: {integrity: sha512-GFrt8tE3shupQJVDIDq+4xEAmYYUmURdjn2wDKq4gkx3uCVOTn/4oDiJANxjrfpRP2CjxE0N2gYsetH+2pMWXw==}, hasBin: true}
+  '@kungfu-tech/kfd@1.0.0-alpha.62':
+    resolution: {integrity: sha512-x5MgFZzphfOo3BiWH8zdyw0JcGGTxVZ5x/0Vzyv0xKOh4RvwVzdGW4kRffIgVQ6bWXCeZFkgz9d1iSlfcHcfMw==}
+    hasBin: true
+
+  '@kungfu-tech/kfd@1.0.0-alpha.65':
+    resolution: {integrity: sha512-GFrt8tE3shupQJVDIDq+4xEAmYYUmURdjn2wDKq4gkx3uCVOTn/4oDiJANxjrfpRP2CjxE0N2gYsetH+2pMWXw==}
+    hasBin: true
+
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':
     resolution: {integrity: sha512-XnSIM15azszq5xZuNzdqj+EJWu+xvq9JSW/V2JbIfHtfWwxFMTzsEXBRhpMoycHqSx+stb11vYORzYXzhCL+0Q==}
     cpu: [arm64]
@@ -5808,15 +5868,34 @@ snapshots:
       '@kungfu-tech/kfd': 1.0.0-alpha.41
       smol-toml: 1.7.0
 
-  '@kungfu-tech/buildchain@3.0.7': {dependencies: {'@kungfu-tech/kfd': 1.0.0-alpha.53, ajv: 8.20.0, smol-toml: 1.7.0}}
-  '@kungfu-tech/buildchain@3.0.9-alpha.11': {dependencies: {'@kungfu-tech/kfd': 1.0.0-alpha.62, ajv: 8.20.0, smol-toml: 1.7.0}}
-  '@kungfu-tech/buildchain@3.0.9-alpha.17': {dependencies: {'@kungfu-tech/kfd': 1.0.0-alpha.65, ajv: 8.20.0, smol-toml: 1.7.0}}
+  '@kungfu-tech/buildchain@3.0.7':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.53
+      ajv: 8.20.0
+      smol-toml: 1.7.0
+
+  '@kungfu-tech/buildchain@3.0.9-alpha.11':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.62
+      ajv: 8.20.0
+      smol-toml: 1.7.0
+
+  '@kungfu-tech/buildchain@3.0.9-alpha.17':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.65
+      ajv: 8.20.0
+      smol-toml: 1.7.0
+
   '@kungfu-tech/kfd@1.0.0-alpha.41': {}
 
   '@kungfu-tech/kfd@1.0.0-alpha.53': {}
 
   '@kungfu-tech/kfd@1.0.0-alpha.62': {}
-  '@kungfu-tech/kfd@1.0.0-alpha.65': {dependencies: {'@kungfu-tech/buildchain': 3.0.9-alpha.11}}
+
+  '@kungfu-tech/kfd@1.0.0-alpha.65':
+    dependencies:
+      '@kungfu-tech/buildchain': 3.0.9-alpha.11
+
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':
     optional: true
 
@@ -10117,6 +10196,7 @@ snapshots:
       string-width: 4.2.3
       y18n: 5.0.8
       yargs-parser: 20.2.9
+
   yargs@17.7.2:
     dependencies:
       cliui: 8.0.1
@@ -10126,6 +10206,7 @@ snapshots:
       string-width: 4.2.3
       y18n: 5.0.8
       yargs-parser: 21.1.1
+
   yargs@17.7.3:
     dependencies:
       cliui: 8.0.1
