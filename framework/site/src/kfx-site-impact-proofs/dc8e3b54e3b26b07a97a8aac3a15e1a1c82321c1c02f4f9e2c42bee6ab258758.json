@@ -1,36 +1,42 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "db3d391e3297d58124230e429085dfd99a4b1485",
-  "changeRoot": "sha256:4b2c5f8a7518cf60faf2a2b4d1aa97ee03994479b75363595124462d3c9362cf",
+  "changeRoot": "sha256:929a888c2281fd763dd340ad15c5b8cf59dca424bb650ae215caae3202e20524",
   "changes": [
     {
       "baseContentRoot": "sha256:d7c61ad7df54cf56a173dcddeb8ed30c121987803593eec4d562dc69ad83bb5b",
-      "contentRoot": "sha256:7d9a7dd3f7e1ecca663d977b98b3808ce010e68f617d7d692840a112907d53b0",
+      "contentRoot": "sha256:caee5c794a7bb3a8937dbb28f3f2cfa09428147c2ab3b2294560c67a66cdb059",
       "path": ".buildchain/kfd/kfd-1/contract-world.witness.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:95fa6a49effd45177554cc923fc2d25ef7ce6f08643a7bd32a55f6e08cbc3361",
-      "contentRoot": "sha256:822616211f9cfc8a9f93d1eec128af1b0c32b50818646d81c68c07553093493f",
+      "contentRoot": "sha256:9856e4ae6528fd832e70949b0ee5590622c67fb80c81c6802151f6c2eca51b80",
       "path": ".buildchain/kfd/kfd-1/release-gate.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:aaa6d1ddfd678628c7d6203dd657b62c45d2637f814fb82b33ee6c2d9d779d30",
-      "contentRoot": "sha256:ee9de852f8382b3e43a737b92b98e2d5bce576a19f75a44df9c6dcc907712a59",
+      "contentRoot": "sha256:c8338e0cb8b725d1c430f8bd95600f360d37eb97bf407d7a01dd642c701bc905",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:9790635c7cd111d5b3df940f630962080de733c37c3fd8d95d2438cc71b802f2",
-      "contentRoot": "sha256:ec4cdb9b48a42cc8c262b85725ce355cbf0f4982fd9b0a6a7e56641c2145d9f9",
+      "contentRoot": "sha256:9a1f41675215ecf12f5341631fc1bab8433687e96caf828aabfb48dbecf7a08e",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:e033779e7aca2bb1135401445fe1169f669721eabe45d2d8017b3f35bcf1b59c",
-      "contentRoot": "sha256:f013adb96b310d8acec1f301c9fc19e63a108f34862f0469112e0df562351a21",
+      "contentRoot": "sha256:4dfbe0ec2b3d51f11bc2dcc686c0d592e689573d7fdd66ec16269d20df050cc4",
       "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3f199095357f0efc84d1a01463c093ae93024107de091014af119846ac94e2ba",
+      "contentRoot": "sha256:057d646627215f4af8408b5e9bdf12be387ff86ce27bf521e4b005ad902c86ab",
+      "path": "config/kungfu-agent-first-canonical-policy.json",
       "status": "modified"
     },
     {
@@ -41,25 +47,25 @@
     },
     {
       "baseContentRoot": "sha256:d7c61ad7df54cf56a173dcddeb8ed30c121987803593eec4d562dc69ad83bb5b",
-      "contentRoot": "sha256:7d9a7dd3f7e1ecca663d977b98b3808ce010e68f617d7d692840a112907d53b0",
+      "contentRoot": "sha256:caee5c794a7bb3a8937dbb28f3f2cfa09428147c2ab3b2294560c67a66cdb059",
       "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:95fa6a49effd45177554cc923fc2d25ef7ce6f08643a7bd32a55f6e08cbc3361",
-      "contentRoot": "sha256:822616211f9cfc8a9f93d1eec128af1b0c32b50818646d81c68c07553093493f",
+      "contentRoot": "sha256:9856e4ae6528fd832e70949b0ee5590622c67fb80c81c6802151f6c2eca51b80",
       "path": "developer/sdk/kfd/kfd-1/release-gate.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:aaa6d1ddfd678628c7d6203dd657b62c45d2637f814fb82b33ee6c2d9d779d30",
-      "contentRoot": "sha256:ee9de852f8382b3e43a737b92b98e2d5bce576a19f75a44df9c6dcc907712a59",
+      "contentRoot": "sha256:c8338e0cb8b725d1c430f8bd95600f360d37eb97bf407d7a01dd642c701bc905",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:1b8425ef91b2dc9f9b1029486cf32ca32815dcc178bfc38d0af2b82ea0e812a2",
-      "contentRoot": "sha256:4f2897e918eadc1a4b298ea8a14cd7dc16d4721931415cd6823e017613b8ebfd",
+      "contentRoot": "sha256:4a6d83c980ebd91782fade34d3dfb62dcae22d2324332fb2258dffd57a7cd76c",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -67,6 +73,12 @@
       "baseContentRoot": "sha256:aba72f3f11576dad9500f4bee2d36d6b7b0e59dbdeeadcd412fe5280e45c6778",
       "contentRoot": "sha256:650ab6e1b2e95a1825367bdcb919c9989b5e57e6bf533deab372dc15b7ee8419",
       "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3f199095357f0efc84d1a01463c093ae93024107de091014af119846ac94e2ba",
+      "contentRoot": "sha256:057d646627215f4af8408b5e9bdf12be387ff86ce27bf521e4b005ad902c86ab",
+      "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "status": "modified"
     },
     {
@@ -117,11 +129,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "Work Control read routing and the KFX impact checker transport change preserve every public Site Bundle behavior, contract, source facet, asset, route, and reader journey.",
+  "rationale": "Work Control read routing, canonical policy projection refresh, and impact checker transport preserve every public Site Bundle behavior, contract, source facet, asset, route, and reader journey.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:6fe3e07460d1e40bc502618eec12125017730d9b22e6e81c0d4e939dab3cf114"
+  "proofRoot": "sha256:dc8e3b54e3b26b07a97a8aac3a15e1a1c82321c1c02f4f9e2c42bee6ab258758"
 }
