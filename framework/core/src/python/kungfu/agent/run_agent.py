@@ -48,7 +48,6 @@ from kungfu.agent.provider_output import (
     public_command_preview as public_command_preview,
 )
 from kungfu.content_hash import compute_content_hash_value
-from kungfu.initiative_family import canonical as assignment_canonical
 from kungfu.skill import build_skill_context
 from kungfu.workspace import resolve_workspace_target
 from kungfu.rewind import (
@@ -148,22 +147,17 @@ def bind_current_native_work(
         if work_workspace_id != str(envelope["workspaceId"]):
             binding_scope = "explicit-external-project"
 
-    status = work_commands._status(work_runtime_dir, initiative_id, assignment_id)
-    work_control = _work_profile_inspection(
-        work_profile_source, work_commands.profile_source, work_runtime_dir
+    work_ref = session_contract.resolve_native_work_ref(
+        work_commands,
+        profile_inspection=_work_profile_inspection,
+        runtime_dir=work_runtime_dir,
+        workspace_id=work_workspace_id,
+        profile_source=work_profile_source,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        expected_binding=expected_binding,
+        explicit_workspace=work_workspace_root is not None,
     )
-    work_ref = {
-        "schema": "kungfu.work-ref/v1",
-        "workspaceId": work_workspace_id,
-        "profileId": work_control["profile"]["id"],
-        "profileRoot": work_control["profile_suite_root"],
-        "entityType": "assignment",
-        "entityId": assignment_id,
-        "entityRoot": assignment_canonical.semantic_root(status["assignment"]),
-        "purpose": "continue-project-assignment",
-        "systemTimeCut": status["query_proof_root"],
-        "initiativeId": initiative_id,
-    }
     session_contract.validate_work_ref(work_ref)
     session = {
         "workConsoleId": str(envelope["consoleId"]),

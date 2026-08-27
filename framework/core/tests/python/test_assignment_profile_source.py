@@ -4,6 +4,8 @@ import importlib
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from kungfu import assignment_orchestration
 from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
@@ -156,8 +158,9 @@ def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkey
     assert ASSIGNMENT_CLI._profile_source() == native
 
 
+@pytest.mark.parametrize("planned_recovery", [False, True])
 def test_agent_session_can_observe_work_from_explicit_external_project_and_profile(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, planned_recovery
 ):
     requests = []
     observed_runtime_dirs = []
@@ -191,6 +194,8 @@ def test_agent_session_can_observe_work_from_explicit_external_project_and_profi
     monkeypatch.setenv("KUNGFU_AGENT_RUNTIME_DIR", str(console_runtime))
 
     def status(runtime_dir, *_args):
+        if planned_recovery:
+            raise AssertionError("planned recovery must reuse its verified WorkRef")
         observed_runtime_dirs.append(runtime_dir)
         return {
             "assignment": {"assignment_id": "assignment:external"},
@@ -230,16 +235,46 @@ def test_agent_session_can_observe_work_from_explicit_external_project_and_profi
         return {"status": "bound", "receiptRoot": ROOT_HASH}
 
     monkeypatch.setattr(run_agent.session_surface, "invoke", invoke)
+    expected_work_ref = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": work_target.identity.workspace_id,
+        "profileId": "kungfu.work-control",
+        "profileRoot": ROOT_HASH,
+        "entityType": "assignment",
+        "entityId": "assignment:external",
+        "entityRoot": ROOT_HASH,
+        "purpose": "continue-project-assignment",
+        "systemTimeCut": ROOT_HASH,
+        "initiativeId": "initiative:external",
+    }
+    expected_binding = (
+        {
+            "workRef": expected_work_ref,
+            "session": {
+                "workConsoleId": envelope["consoleId"],
+                "sessionAttemptId": envelope["attemptId"],
+            },
+        }
+        if planned_recovery
+        else None
+    )
     result = run_agent.bind_current_native_work(
         str(work_runtime),
         "initiative:external",
         "assignment:external",
         work_workspace_root=str(work_project),
         work_profile_source=work_profile_source,
+        expected_binding=expected_binding,
     )
 
-    assert observed_runtime_dirs == [str(work_runtime), str(work_runtime)]
+    assert observed_runtime_dirs == (
+        [str(work_runtime)]
+        if planned_recovery
+        else [str(work_runtime), str(work_runtime)]
+    )
     assert result["workRef"]["workspaceId"] == work_target.identity.workspace_id
+    if planned_recovery:
+        assert result["workRef"] == expected_work_ref
     assert result["session"]["workConsoleId"] == envelope["consoleId"]
     assert requests[0]["input"]["bindingScope"] == "explicit-external-project"
     assert requests[0]["input"]["sourceWorkspaceId"] == envelope["workspaceId"]
