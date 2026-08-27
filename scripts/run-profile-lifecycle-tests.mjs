@@ -304,6 +304,22 @@ function qualifyCommandContract() {
     );
   }
 
+  const runtimeEntry = run(python, [
+    '-c',
+    'from kungfu.cli.commands.work_design import _preflight_entry; print(_preflight_entry())',
+  ]).trim();
+  const workDesignQualification = JSON.parse(
+    run(process.execPath, [
+      path.join(root, 'scripts', 'qualify-installed-work-design.mjs'),
+      '--binary',
+      binary,
+      '--runtime-root',
+      path.resolve(path.dirname(runtimeEntry), '..', '..', '..'),
+      '--surface',
+      'wheel',
+    ]),
+  );
+
   const home = path.join(environment, 'home');
   const capabilities = JSON.parse(
     run(binary, ['--home', home, 'profile', 'capabilities', '--json']),
@@ -453,6 +469,7 @@ function qualifyCommandContract() {
         workConformanceRoot: workValidation.workConformance.conformanceRoot,
         lifecycleReceipts,
         activatedProfileRoot: activated.profile_suite_root,
+        workDesignQualification,
       },
       null,
       2,

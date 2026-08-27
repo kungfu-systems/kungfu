@@ -15,6 +15,173 @@ function uniqueBy(items, key) {
   );
 }
 
+function occurrenceGroups(items) {
+  const result = new Map();
+  for (const item of items) {
+    const key = `${item.path}\0${item.owner}\0${item.symbol}`;
+    if (!result.has(key)) result.set(key, []);
+    result.get(key).push(item);
+  }
+  for (const values of result.values())
+    values.sort(
+      (left, right) =>
+        left.startLine - right.startLine || left.id.localeCompare(right.id),
+    );
+  return result;
+}
+
+function betterOccurrencePlan(left, right) {
+  if (!left) return right;
+  if (!right) return left;
+  if (left.exactMatches !== right.exactMatches)
+    return left.exactMatches > right.exactMatches ? left : right;
+  if (left.cost !== right.cost) return left.cost < right.cost ? left : right;
+  return left.key.localeCompare(right.key) <= 0 ? left : right;
+}
+
+function occurrencePlan(currentItems, baselineItems, indexes, memo) {
+  const [currentIndex, baselineIndex, remaining] = indexes;
+  if (!remaining) return { exactMatches: 0, cost: 0, key: '', pairs: [] };
+  if (
+    currentItems.length - currentIndex < remaining ||
+    baselineItems.length - baselineIndex < remaining
+  )
+    return null;
+  const memoKey = `${currentIndex}\0${baselineIndex}\0${remaining}`;
+  if (memo.has(memoKey)) return memo.get(memoKey);
+  const item = currentItems[currentIndex];
+  const previous = baselineItems[baselineIndex];
+  const tail = occurrencePlan(
+    currentItems,
+    baselineItems,
+    [currentIndex + 1, baselineIndex + 1, remaining - 1],
+    memo,
+  );
+  let best = tail
+    ? {
+        exactMatches:
+          Number(item.bodyRoot === previous.bodyRoot) + tail.exactMatches,
+        cost: Math.abs(item.startLine - previous.startLine) + tail.cost,
+        key: `${String(baselineIndex).padStart(8, '0')}:${String(
+          currentIndex,
+        ).padStart(8, '0')}\0${tail.key}`,
+        pairs: [[item, previous], ...tail.pairs],
+      }
+    : null;
+  if (currentItems.length - currentIndex > remaining)
+    best = betterOccurrencePlan(
+      best,
+      occurrencePlan(
+        currentItems,
+        baselineItems,
+        [currentIndex + 1, baselineIndex, remaining],
+        memo,
+      ),
+    );
+  if (baselineItems.length - baselineIndex > remaining)
+    best = betterOccurrencePlan(
+      best,
+      occurrencePlan(
+        currentItems,
+        baselineItems,
+        [currentIndex, baselineIndex + 1, remaining],
+        memo,
+      ),
+    );
+  memo.set(memoKey, best);
+  return best;
+}
+
+function orderedOccurrenceMatches(currentItems, baselineItems, matches) {
+  const plan = occurrencePlan(
+    currentItems,
+    baselineItems,
+    [0, 0, Math.min(currentItems.length, baselineItems.length)],
+    new Map(),
+  );
+  for (const [item, previous] of plan?.pairs || [])
+    matches.set(item.id, previous);
+}
+
+function grouped(items, key) {
+  const result = new Map();
+  for (const item of items) {
+    const value = key(item);
+    if (!result.has(value)) result.set(value, []);
+    result.get(value).push(item);
+  }
+  return result;
+}
+
+function uniqueGlobalMatches(current, baseline, matches, key) {
+  const currentGroups = grouped(current, key);
+  const baselineGroups = grouped(baseline, key);
+  for (const [value, currentItems] of currentGroups) {
+    const baselineItems = baselineGroups.get(value) || [];
+    if (currentItems.length === 1 && baselineItems.length === 1)
+      matches.set(currentItems[0].id, baselineItems[0]);
+  }
+}
+
+function qualifiedOccurrenceMatches(current, baseline) {
+  const matches = new Map();
+  const unmatched = () => ({
+    current: current.filter((item) => !matches.has(item.id)),
+    baseline: baseline.filter(
+      (item) => ![...matches.values()].some(({ id }) => id === item.id),
+    ),
+  });
+  // Reserve only globally unique exact bodies before local occurrence alignment;
+  // otherwise a nearby changed function can consume a baseline that moved files.
+  uniqueGlobalMatches(
+    current,
+    baseline,
+    matches,
+    (item) => `${item.owner}\0${item.symbol}\0${item.bodyRoot}`,
+  );
+  let remaining = unmatched();
+  const currentGroups = occurrenceGroups(remaining.current);
+  const baselineGroups = occurrenceGroups(remaining.baseline);
+  for (const [key, currentItems] of currentGroups) {
+    orderedOccurrenceMatches(
+      currentItems,
+      baselineGroups.get(key) || [],
+      matches,
+    );
+  }
+  remaining = unmatched();
+  uniqueGlobalMatches(
+    remaining.current,
+    remaining.baseline,
+    matches,
+    (item) => `${item.owner}\0${item.symbol}`,
+  );
+  remaining = unmatched();
+  const currentCandidates = grouped(
+    remaining.current,
+    (item) => `${item.owner}\0${item.symbol}`,
+  );
+  const baselineCandidates = grouped(
+    remaining.baseline,
+    (item) => `${item.owner}\0${item.symbol}`,
+  );
+  const findings = [];
+  for (const [key, currentItems] of currentCandidates) {
+    const baselineItems = baselineCandidates.get(key) || [];
+    if (!baselineItems.length) continue;
+    findings.push({
+      code: 'ambiguous-function-identity',
+      severity: 'advisory',
+      paths: [
+        ...new Set([...currentItems, ...baselineItems].map(({ path }) => path)),
+      ].sort(),
+      message:
+        'qualified occurrence identity is ambiguous across unmatched functions',
+    });
+  }
+  return { matches, findings };
+}
+
 function referencedNewFunctions(sourceFiles, functions, baselineById) {
   const sourceByPath = new Map(
     sourceFiles.map((file) => [file.path, file.bytes.toString('utf8')]),
@@ -56,6 +223,10 @@ function analyzeTransition(
   const exact = new Map(
     baseline.map((item) => [`${item.path}\0${item.symbol}`, item]),
   );
+  const qualifiedOccurrences =
+    options.identityAlgorithm === 'qualified-occurrence-v2'
+      ? qualifiedOccurrenceMatches(current, baseline)
+      : null;
   const uniqueOwnerSymbols = uniqueBy(
     baseline.filter(({ owner }) => owner),
     (item) => `${item.owner}\0${item.symbol}`,
@@ -69,14 +240,18 @@ function analyzeTransition(
   const transitions = [];
   const functions = current.map((item) => {
     const previous =
-      exact.get(`${item.path}\0${item.symbol}`) ||
-      (options.movementScope === 'same-owner'
+      (qualifiedOccurrences
+        ? qualifiedOccurrences.matches.get(item.id)
+        : exact.get(`${item.path}\0${item.symbol}`)) ||
+      (!qualifiedOccurrences && options.movementScope === 'same-owner'
         ? options.movementIdentity === 'body-root'
           ? uniqueOwnerBodies.get(
               `${item.owner}\0${item.symbol}\0${item.bodyRoot}`,
             )
           : uniqueOwnerSymbols.get(`${item.owner}\0${item.symbol}`)
-        : uniqueSymbols.get(item.symbol)) ||
+        : !qualifiedOccurrences
+          ? uniqueSymbols.get(item.symbol)
+          : null) ||
       null;
     if (previous) matchedBaseline.add(previous.id);
     const movement = !previous
@@ -113,7 +288,7 @@ function analyzeTransition(
   const references =
     options.referencedNewIdsByPreviousId ||
     referencedNewFunctions(options.sourceFiles || [], functions, baselineById);
-  const findings = [];
+  const findings = [...(qualifiedOccurrences?.findings || [])];
   for (const item of functions) {
     if (!item.previousId) continue;
     const previous = baselineById.get(item.previousId);

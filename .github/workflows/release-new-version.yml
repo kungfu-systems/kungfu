@@ -373,20 +373,28 @@ jobs:
       release-passport: true
       release-passport-product-name: Kungfu Episodes
       release-passport-kfd-1-witness-jsons: |
-        .buildchain/kfd/kfd-1/contract-world.witness.json
-        .buildchain/kfd/kfd-1/documentation-pack.witness.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/contract-world.witness.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/documentation-pack.witness.json
       release-passport-kfd-2-claim-jsons: |
-        .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
-        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
-        .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/agent-onboarding-pack.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/remote-fact-boundary.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/agent-work-state-contract.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/cross-language-authority-membrane.json
       release-passport-kfd-3-prebuild-witness-jsons: |
-        .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
-      release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
-      release-passport-kfd-support-matrix-json: .buildchain/kfd/support-matrix.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.linux-x64.prebuild.json
+        .buildchain/release-candidate/payloads/kungfu-linux-arm64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.linux-arm64.prebuild.json
+        .buildchain/release-candidate/payloads/kungfu-macos-arm64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.macos-arm64.prebuild.json
+        .buildchain/release-candidate/payloads/kungfu-windows-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.windows-x64.prebuild.json
+      release-passport-kfd-3-artifact-witness-jsons: |
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/artifacts/linux-x64.json
+        .buildchain/release-candidate/payloads/kungfu-linux-arm64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/artifacts/linux-arm64.json
+        .buildchain/release-candidate/payloads/kungfu-macos-arm64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/artifacts/macos-arm64.json
+        .buildchain/release-candidate/payloads/kungfu-windows-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/artifacts/windows-x64.json
+      release-passport-kfd-adopter-manifest-json: .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-adopter/manifest.json
       release-passport-kfd-product-gate-jsons: |
-        .buildchain/runtime/kfd-product-gates/kfd-4/gate.json
-        .buildchain/runtime/kfd-product-gates/kfd-5/gate.json
-        .buildchain/runtime/kfd-product-gates/kfd-7/gate.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-product-gates/kfd-4/gate.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-product-gates/kfd-5/gate.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-product-gates/kfd-7/gate.json
       release-passport-evidence-command: ""
       release-passport-evidence-path: .buildchain/release-evidence/ungfu-public-use.json
       release-passport-invariant-passport-command: >-
@@ -477,20 +485,28 @@ jobs:
       release-passport: true
       release-passport-product-name: Kungfu Episodes
       release-passport-kfd-1-witness-jsons: |
-        .buildchain/kfd/kfd-1/contract-world.witness.json
-        .buildchain/kfd/kfd-1/documentation-pack.witness.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/contract-world.witness.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/documentation-pack.witness.json
       release-passport-kfd-2-claim-jsons: |
-        .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
-        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
-        .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/agent-onboarding-pack.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/remote-fact-boundary.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/agent-work-state-contract.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-2/claims/cross-language-authority-membrane.json
       release-passport-kfd-3-prebuild-witness-jsons: |
-        .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
-      release-passport-kfd-3-artifact-verify-command: node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --write --json >/dev/null && node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --artifact-witness --json
-      release-passport-kfd-support-matrix-json: .buildchain/kfd/support-matrix.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.linux-x64.prebuild.json
+        .buildchain/release-candidate/payloads/kungfu-linux-arm64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.linux-arm64.prebuild.json
+        .buildchain/release-candidate/payloads/kungfu-macos-arm64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.macos-arm64.prebuild.json
+        .buildchain/release-candidate/payloads/kungfu-windows-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-3/collaboration-interface.windows-x64.prebuild.json
+      release-passport-kfd-3-artifact-witness-jsons: |
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/artifacts/linux-x64.json
+        .buildchain/release-candidate/payloads/kungfu-linux-arm64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/artifacts/linux-arm64.json
+        .buildchain/release-candidate/payloads/kungfu-macos-arm64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/artifacts/macos-arm64.json
+        .buildchain/release-candidate/payloads/kungfu-windows-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/artifacts/windows-x64.json
+      release-passport-kfd-adopter-manifest-json: .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-adopter/manifest.json
       release-passport-kfd-product-gate-jsons: |
-        .buildchain/runtime/kfd-product-gates/kfd-4/gate.json
-        .buildchain/runtime/kfd-product-gates/kfd-5/gate.json
-        .buildchain/runtime/kfd-product-gates/kfd-7/gate.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-product-gates/kfd-4/gate.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-product-gates/kfd-5/gate.json
+        .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-product-gates/kfd-7/gate.json
       release-passport-evidence-command: ""
       release-passport-evidence-path: .buildchain/release-evidence/ungfu-public-use.json
       release-passport-invariant-passport-command: >-

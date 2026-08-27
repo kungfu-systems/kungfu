@@ -17,6 +17,7 @@ namespace fs = std::filesystem;
 namespace kfx = kungfu::runtime::kfx;
 
 void test_native_kfx_service_host_contract();
+void test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed();
 
 namespace {
 
@@ -69,12 +70,14 @@ nlohmann::json registry_request() {
 
 void require_refusal(const std::string &code, const std::function<void()> &operation) {
   bool refused = false;
+  std::string detail = "no exception";
   try {
     operation();
   } catch (const std::invalid_argument &error) {
-    refused = std::string(error.what()).rfind(code, 0) == 0;
+    detail = error.what();
+    refused = detail.rfind(code, 0) == 0;
   }
-  require(refused, "operation did not fail with stable code " + code);
+  require(refused, "operation did not fail with stable code " + code + ": " + detail);
 }
 
 void write_json(const fs::path &path, const nlohmann::json &value) {
@@ -1197,6 +1200,7 @@ int main() {
     test_exact_buildchain_attestation_and_operation_admission();
     test_semantic_graph_and_host_contract_are_canonical();
     test_native_lifecycle_uses_fact_work_and_named_cut_authority();
+    test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed();
     test_native_adapter_authority_requires_the_current_fact_cut();
     test_control_suite_recursively_dogfoods_public_fact_work();
     std::cout << "native KFX contract tests passed\n";

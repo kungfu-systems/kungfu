@@ -110,13 +110,21 @@ function evaluateFunctionRiskRatchet(
       });
   }
   for (const finding of transition.findings) {
-    if (finding.code !== 'generated-or-vendor-relabeling') continue;
+    if (
+      ![
+        'ambiguous-function-identity',
+        'generated-or-vendor-relabeling',
+      ].includes(finding.code)
+    )
+      continue;
     findings.push({
       ...finding,
       severity: 'blocking',
       owner: '',
       message:
-        'changed first-party function source cannot leave the measured surface',
+        finding.code === 'ambiguous-function-identity'
+          ? finding.message
+          : 'changed first-party function source cannot leave the measured surface',
     });
   }
   findings.sort((left, right) =>
@@ -148,6 +156,10 @@ function buildFunctionRiskRatchet(options = {}) {
   const ownership = readJson(
     'framework/maintainability/abstraction-integrity.manifest.json',
   ).ownership;
+  const analysisOptions = {
+    ...options,
+    extractorAlgorithm: 'python-multiline-v2',
+  };
   const identity = {
     sourceCommit,
     sourceTree,
@@ -175,14 +187,14 @@ function buildFunctionRiskRatchet(options = {}) {
         publicPolicy,
         layers,
         ownership,
-        options,
+        analysisOptions,
       );
       const current = functionSnapshot(
         currentInputs,
         publicPolicy,
         layers,
         ownership,
-        options,
+        analysisOptions,
       );
       const transition = analyzeTransition(
         current.functions,
@@ -190,7 +202,11 @@ function buildFunctionRiskRatchet(options = {}) {
         current.files,
         baseline.files,
         publicPolicy,
-        { movementScope: 'same-owner', sourceFiles: currentInputs },
+        {
+          identityAlgorithm: 'qualified-occurrence-v2',
+          movementScope: 'same-owner',
+          sourceFiles: currentInputs,
+        },
       );
       const baselineById = new Map(
         baseline.functions.map((item) => [item.id, item]),

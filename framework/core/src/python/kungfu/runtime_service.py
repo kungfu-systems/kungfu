@@ -19,6 +19,7 @@ from typing import Any, Mapping, Protocol
 import kungfu
 import psutil
 from kungfu import runtime_leases, runtime_paths, runtime_service_config, runtime_state
+from kungfu import runtime_processes as _runtime_processes
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
 from kungfu.coordination import locks as coordination_locks
 from kungfu.coordination.arbiter import (
@@ -242,58 +243,10 @@ def _process_matches(pid: int | None, start_identity: Any) -> bool:
     return _is_pid_running(pid) and _process_start_identity(pid) == start_identity
 
 
-def _terminate_process_if_matches(
-    pid: int, start_identity: str, *, force: bool = False
-) -> bool:
-    """Signal only the psutil process object bound to the recorded creation time."""
-
-    try:
-        process = psutil.Process(pid)
-        if format(process.create_time(), ".6f") != start_identity:
-            return False
-        if force:
-            process.kill()
-        else:
-            process.terminate()
-        return True
-    except (psutil.Error, OSError, ValueError):
-        return False
-
-
-def _terminate_process_tree_if_matches(
-    pid: int, start_identity: str, *, timeout: float = 5.0
-) -> bool:
-    """Terminate a recorded process and every descendant bound to its tree."""
-
-    try:
-        process = psutil.Process(pid)
-        if format(process.create_time(), ".6f") != start_identity:
-            return False
-        descendants = process.children(recursive=True)
-    except (psutil.Error, OSError, ValueError):
-        return False
-
-    for descendant in reversed(descendants):
-        try:
-            descendant.terminate()
-        except (psutil.Error, OSError, ValueError):
-            pass
-    try:
-        process.terminate()
-    except psutil.NoSuchProcess:
-        return True
-    except (psutil.Error, OSError, ValueError):
-        return False
-
-    _, alive = psutil.wait_procs([*descendants, process], timeout=timeout)
-    for remaining in alive:
-        try:
-            remaining.kill()
-        except (psutil.Error, OSError, ValueError):
-            pass
-    if alive:
-        psutil.wait_procs(alive, timeout=timeout)
-    return True
+_terminate_process_if_matches = _runtime_processes._terminate_process_if_matches
+_terminate_process_tree_if_matches = (
+    _runtime_processes._terminate_process_tree_if_matches
+)
 
 
 def _pid_state(pid: int | None) -> str:
@@ -519,21 +472,19 @@ def publish_assessment_snapshot(runtime_dir: str) -> dict[str, Any]:
     return snapshot
 
 
-def _empty_routes() -> dict[str, Any]:
-    return {"schema": SCHEMA_ROUTES, "routes": {}}
-
-
 def read_routes(config_home: str | None = None) -> dict[str, Any]:
     payload = _json_read(routes_path(config_home))
     if not isinstance(payload.get("routes"), dict):
-        return _empty_routes()
-    if payload.get("schema") == LEGACY_SCHEMA_ROUTES:
-        for route in payload["routes"].values():
-            if isinstance(route, dict) and "coordinatorPid" not in route:
-                route["coordinatorPid"] = route.pop("masterPid", None)
-        payload["schema"] = SCHEMA_ROUTES
-    elif payload.get("schema") != SCHEMA_ROUTES:
-        return _empty_routes()
+        return {"schema": SCHEMA_ROUTES, "routes": {}}
+    schema = payload.get("schema")
+    if schema == SCHEMA_ROUTES:
+        return payload
+    if schema != LEGACY_SCHEMA_ROUTES:
+        return {"schema": SCHEMA_ROUTES, "routes": {}}
+    for route in payload["routes"].values():
+        if isinstance(route, dict) and "coordinatorPid" not in route:
+            route["coordinatorPid"] = route.pop("masterPid", None)
+    payload["schema"] = SCHEMA_ROUTES
     return payload
 
 
@@ -798,15 +749,6 @@ def touch_route_heartbeat(
         )
 
 
-def _supervisor_always_on() -> bool:
-    return os.environ.get(SUPERVISOR_ALWAYS_ON_ENV, "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
-
-
 def _retire_idle_routes(
     config_home: str,
     *,
@@ -816,7 +758,12 @@ def _retire_idle_routes(
 ) -> bool:
     """Atomically retire inactive routes when an on-demand supervisor can exit."""
 
-    if has_children or _supervisor_always_on():
+    if has_children or os.environ.get(SUPERVISOR_ALWAYS_ON_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
         return False
     with supervisor_lifecycle_guard(config_home, "supervisor-idle-exit"):
         payload = read_routes(config_home)

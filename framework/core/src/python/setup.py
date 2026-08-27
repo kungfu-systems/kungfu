@@ -7,11 +7,14 @@
 #   实测它命中 framework/core/pyproject.toml）。
 
 import json
+import posixpath
+import re
 import shutil
 import sys
 
 from os import path
 from pathlib import Path
+from pathlib import PurePosixPath
 from setuptools import find_packages, setup
 from setuptools.command.build_py import build_py
 from setuptools.dist import Distribution
@@ -54,6 +57,73 @@ def _license():
 
 
 urls = project.get("urls", {})
+
+
+_STATIC_ESM_PATTERNS = (
+    re.compile(r"(?:^|\n)\s*import\s+(?:[^'\";]*?\sfrom\s+)?(['\"])([^'\"]+)\1"),
+    re.compile(r"(?:^|\n)\s*export\s+[^'\";]*?\sfrom\s+(['\"])([^'\"]+)\1"),
+)
+
+
+def _load_work_design_manifest(repository_root):
+    manifest_path = repository_root.joinpath(
+        "framework", "work-design-preflight", "work-design-runtime.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (
+        manifest.get("schema") != "kungfu.work-design.runtime-closure/v1"
+        or not isinstance(manifest.get("entrypoint"), str)
+        or not isinstance(manifest.get("files"), list)
+    ):
+        raise ValueError("invalid Work Design runtime closure manifest")
+    if manifest["entrypoint"] not in manifest["files"]:
+        raise ValueError("Work Design entrypoint is absent from its closure")
+    return manifest
+
+
+def _work_design_coordinate(relative):
+    coordinate = PurePosixPath(relative)
+    if coordinate.is_absolute() or ".." in coordinate.parts:
+        raise ValueError(f"invalid Work Design runtime path: {relative}")
+    return coordinate
+
+
+def _relative_esm_dependencies(source, coordinate):
+    for pattern in _STATIC_ESM_PATTERNS:
+        for match in pattern.finditer(source):
+            specifier = match.group(2)
+            if not specifier.startswith("."):
+                continue
+            dependency = coordinate.parent.joinpath(specifier)
+            normalized = PurePosixPath(posixpath.normpath(dependency.as_posix()))
+            if ".." in normalized.parts:
+                raise ValueError(
+                    f"Work Design import escapes framework: {coordinate} -> {specifier}"
+                )
+            yield normalized.as_posix()
+
+
+def _work_design_runtime_files(repository_root):
+    manifest = _load_work_design_manifest(repository_root)
+    declared = set(manifest["files"])
+    discovered = set()
+    pending = [manifest["entrypoint"]]
+    framework_root = (repository_root / "framework").resolve()
+    while pending:
+        relative = pending.pop()
+        if relative in discovered:
+            continue
+        coordinate = _work_design_coordinate(relative)
+        if relative not in declared:
+            raise ValueError(f"undeclared Work Design runtime dependency: {relative}")
+        source_path = framework_root.joinpath(*coordinate.parts)
+        source = source_path.read_text(encoding="utf-8")
+        discovered.add(relative)
+        pending.extend(_relative_esm_dependencies(source, coordinate))
+    extras = sorted(declared - discovered)
+    if extras:
+        raise ValueError(f"unreachable Work Design runtime files: {', '.join(extras)}")
+    return sorted(discovered)
 
 
 class BinaryDistribution(Distribution):
@@ -99,15 +169,21 @@ class BuildPythonWithExitContract(build_py):
         work_design_runtime = (
             Path(self.build_lib) / "kungfu" / "work_design_runtime" / "framework"
         )
-        for relative in (
-            "project-cut/src/project-cut.mjs",
-            "work-history-selector/src/work-history-selector.mjs",
-            "work-design-advisor/src/work-design-advisor.mjs",
-            "work-design-preflight/src/work-design-preflight.mjs",
-            "work-design-preflight/tooling/work-design-preflight.mjs",
-        ):
-            source_file = repository_root / "framework" / relative
-            destination_file = work_design_runtime / relative
+        work_design_manifest = (
+            repository_root
+            / "framework"
+            / "work-design-preflight"
+            / "work-design-runtime.json"
+        )
+        work_design_runtime.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(
+            work_design_manifest,
+            work_design_runtime.parent / "work-design-runtime.json",
+        )
+        for relative in _work_design_runtime_files(repository_root):
+            coordinate = PurePosixPath(relative)
+            source_file = repository_root / "framework" / Path(*coordinate.parts)
+            destination_file = work_design_runtime / Path(*coordinate.parts)
             destination_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_file, destination_file)
 
@@ -119,7 +195,10 @@ setup(
     author=_author(),
     url=urls.get("homepage"),
     project_urls={"repository": urls["repository"]} if "repository" in urls else {},
-    packages=[""] + find_packages(exclude=["test"]),
+    # project_tour intentionally remains a PEP 420 namespace package, so the
+    # legacy find_packages scan cannot discover it even though the installed
+    # CLI imports it during registry bootstrap.
+    packages=[""] + find_packages(exclude=["test"]) + ["kungfu.project_tour"],
     package_data={
         "": [
             "*.dll",

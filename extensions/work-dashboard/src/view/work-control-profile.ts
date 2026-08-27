@@ -394,6 +394,20 @@ export type WorkControlAssignmentFilter = {
   initiativeId?: string;
 };
 
+export type WorkSemanticsWriteReceipt = {
+  schema: 'kungfu.work-semantics.write-receipt/v1';
+  record: Record<string, unknown> & { record_root: string };
+  receipt: Record<string, unknown>;
+};
+
+type WorkSemanticsExecutionInput = {
+  attemptId: string;
+  leaseId: string;
+  actor: string;
+  actorType?: 'user' | 'agent';
+  source?: string;
+};
+
 export type WorkControl = {
   runtimeDir: string;
   defaultRepoRoot: string;
@@ -560,6 +574,59 @@ export type WorkControl = {
       reason: string;
     },
   ) => Promise<WorkControlContinuationDecision>;
+  recordWorkInputSnapshot: (
+    initiativeId: string,
+    assignmentId: string,
+    input: WorkSemanticsExecutionInput & {
+      snapshotId: string;
+      inputRoot: string;
+      evidenceRoots?: string[];
+    },
+  ) => Promise<WorkSemanticsWriteReceipt>;
+  recordWorkManagedRun: (
+    initiativeId: string,
+    assignmentId: string,
+    input: WorkSemanticsExecutionInput & {
+      runId: string;
+      inputSnapshotRoot: string;
+      role: string;
+      resultState: 'succeeded' | 'failed' | 'cancelled';
+      resultRoot: string;
+      evidenceRoots?: string[];
+    },
+  ) => Promise<WorkSemanticsWriteReceipt>;
+  authorizeWorkEffect: (
+    initiativeId: string,
+    assignmentId: string,
+    input: WorkSemanticsExecutionInput & {
+      authorizationId: string;
+      effectId: string;
+      effectKind: string;
+      inputSnapshotRoot: string;
+      scopeRoot: string;
+      evidenceRoots?: string[];
+    },
+  ) => Promise<WorkSemanticsWriteReceipt>;
+  recordWorkEffectAttempt: (
+    initiativeId: string,
+    assignmentId: string,
+    input: WorkSemanticsExecutionInput & {
+      effectAttemptId: string;
+      authorizationRoot: string;
+      transportRequestRoot: string;
+    },
+  ) => Promise<WorkSemanticsWriteReceipt>;
+  recordWorkEffectOutcome: (
+    initiativeId: string,
+    assignmentId: string,
+    input: WorkSemanticsExecutionInput & {
+      effectAttemptRoot: string;
+      transportState: 'unknown' | 'rejected' | 'accepted';
+      businessState: 'unknown' | 'rejected' | 'accepted' | 'not-applicable';
+      outcomeRoot: string;
+      evidenceRoots?: string[];
+    },
+  ) => Promise<WorkSemanticsWriteReceipt>;
   assignments: (
     filter?: WorkControlAssignmentFilter,
   ) => WorkControlAssignment[];
@@ -750,6 +817,36 @@ export function openWorkControlProfile(
         { initiativeId: initiativeId, assignmentId: assignmentId, ...input },
         input.actor,
       ),
+    recordWorkInputSnapshot: (initiativeId, assignmentId, input) =>
+      authorize<WorkSemanticsWriteReceipt>(
+        'work-input-snapshot',
+        { initiativeId, assignmentId, ...input },
+        input.actor,
+      ),
+    recordWorkManagedRun: (initiativeId, assignmentId, input) =>
+      authorize<WorkSemanticsWriteReceipt>(
+        'work-managed-run',
+        { initiativeId, assignmentId, ...input },
+        input.actor,
+      ),
+    authorizeWorkEffect: (initiativeId, assignmentId, input) =>
+      authorize<WorkSemanticsWriteReceipt>(
+        'work-effect-authorize',
+        { initiativeId, assignmentId, ...input },
+        input.actor,
+      ),
+    recordWorkEffectAttempt: (initiativeId, assignmentId, input) =>
+      authorize<WorkSemanticsWriteReceipt>(
+        'work-effect-attempt',
+        { initiativeId, assignmentId, ...input },
+        input.actor,
+      ),
+    recordWorkEffectOutcome: (initiativeId, assignmentId, input) =>
+      authorize<WorkSemanticsWriteReceipt>(
+        'work-effect-outcome',
+        { initiativeId, assignmentId, ...input },
+        input.actor,
+      ),
     assignments: (filter = {}) =>
       member<WorkControlAssignment[]>('assignments', filter),
     assignment: (assignmentId) =>
@@ -797,6 +894,21 @@ export function openKfd3ProfileApplication(
     decideContinuation: (
       ...args: Parameters<typeof application.decideContinuation>
     ) => application.decideContinuation(...args),
+    recordWorkInputSnapshot: (
+      ...args: Parameters<typeof application.recordWorkInputSnapshot>
+    ) => application.recordWorkInputSnapshot(...args),
+    recordWorkManagedRun: (
+      ...args: Parameters<typeof application.recordWorkManagedRun>
+    ) => application.recordWorkManagedRun(...args),
+    authorizeWorkEffect: (
+      ...args: Parameters<typeof application.authorizeWorkEffect>
+    ) => application.authorizeWorkEffect(...args),
+    recordWorkEffectAttempt: (
+      ...args: Parameters<typeof application.recordWorkEffectAttempt>
+    ) => application.recordWorkEffectAttempt(...args),
+    recordWorkEffectOutcome: (
+      ...args: Parameters<typeof application.recordWorkEffectOutcome>
+    ) => application.recordWorkEffectOutcome(...args),
     exportInitiative: (
       ...args: Parameters<typeof application.exportInitiative>
     ) => application.exportInitiative(...args),

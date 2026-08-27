@@ -4,7 +4,6 @@ import importlib
 import json
 from types import SimpleNamespace
 
-from kungfu import assignment_orchestration
 from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
 from agent_bootstrap_fixtures import verified_bootstrap_receipt
@@ -143,20 +142,65 @@ def test_claim_does_not_require_or_bind_agent_session(monkeypatch, tmp_path):
 
 
 def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkeypatch):
-    package = tmp_path / "package" / "kungfu"
-    package.mkdir(parents=True)
     checkout = tmp_path / "checkout"
     native = checkout / "extensions" / "work-control"
     native.mkdir(parents=True)
-    monkeypatch.setattr(assignment_orchestration, "__file__", package / "module.py")
+    extension_root = checkout / "extensions"
+    monkeypatch.setenv("KF_BUNDLED_EXTENSION_ROOT", str(extension_root))
+    monkeypatch.delenv("KF_EXTENSION_PATH", raising=False)
+
+    def discover(profile_id, *, search_roots):
+        assert profile_id == "kungfu.work-control"
+        assert search_roots == [extension_root]
+        return {"source": str(native)}
+
+    monkeypatch.setattr("kungfu.profile_sdk.discover_source", discover)
+
+    assert ASSIGNMENT_CLI.profile_source() == native
+
+
+def test_native_environment_injects_qualified_work_profile_without_binding(
+    monkeypatch, tmp_path
+):
+    runtime_dir = tmp_path / "project" / ".kungfu" / "runtime"
+    source = tmp_path / "installed" / "work-control"
     monkeypatch.setattr(
-        assignment_orchestration, "source_root", lambda *_starts: checkout
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda observed_runtime, **_kwargs: (
+            {
+                "id": "kungfu.work-control",
+                "root": ROOT_HASH,
+                "source": str(source),
+            }
+            if observed_runtime == str(runtime_dir)
+            else (_ for _ in ()).throw(AssertionError("wrong Project runtime"))
+        ),
     )
 
-    assert ASSIGNMENT_CLI._profile_source() == native
+    env = run_agent.native_environment(
+        "termagent",
+        runtime_dir=str(runtime_dir),
+        config_home=str(tmp_path / "config"),
+        runtime_home=str(tmp_path / "home"),
+        workspace_root=str(tmp_path / "project"),
+        work_ref=None,
+        work_selection={"schema": "kungfu.native-work-selection/v1", "state": "none"},
+        source={"PATH": "/usr/bin"},
+    )
+
+    context = json.loads(env["KUNGFU_AGENT_CONTEXT"])
+    assert context["workBinding"]["launchState"] == "unbound"
+    assert context["activeProfiles"] == [
+        {
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(source),
+        }
+    ]
+    assert env["KUNGFU_WORK_CONTROL_PROFILE_SOURCE"] == str(source)
 
 
-def test_agent_session_can_observe_work_from_explicit_external_project(
+def test_agent_session_can_observe_work_from_explicit_external_project_and_profile(
     monkeypatch, tmp_path
 ):
     requests = []
@@ -173,6 +217,8 @@ def test_agent_session_can_observe_work_from_explicit_external_project(
     work_target = resolve_workspace_target(
         "read-only", str(work_project), cwd=str(work_project)
     )
+    work_profile_source = tmp_path / "retained-work-control"
+    work_profile_source.mkdir()
     envelope = {
         "workspaceId": console_target.identity.workspace_id,
         "consoleId": f"assistant:{console_target.identity.workspace_id}:native:one",
@@ -196,18 +242,20 @@ def test_agent_session_can_observe_work_from_explicit_external_project(
         }
 
     monkeypatch.setattr(ASSIGNMENT_CLI, "_status", status)
-    monkeypatch.setattr(ASSIGNMENT_CLI, "_profile_source", lambda: tmp_path)
 
-    def validate_source(_source, runtime_dir):
+    def resolve_profile(runtime_dir, *, source=None, **_kwargs):
+        assert source == work_profile_source
         observed_runtime_dirs.append(runtime_dir)
         return {
-            "inspection": {
-                "profile": {"id": "kungfu.work-control"},
-                "profile_suite_root": ROOT_HASH,
-            }
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(work_profile_source.resolve()),
         }
 
-    monkeypatch.setattr("kungfu.profile_sdk.validate_source", validate_source)
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        resolve_profile,
+    )
 
     def invoke(request, **_kwargs):
         requests.append(request)
@@ -226,6 +274,7 @@ def test_agent_session_can_observe_work_from_explicit_external_project(
         "initiative:external",
         "assignment:external",
         work_workspace_root=str(work_project),
+        work_profile_source=work_profile_source,
     )
 
     assert observed_runtime_dirs == [str(work_runtime), str(work_runtime)]
@@ -237,3 +286,39 @@ def test_agent_session_can_observe_work_from_explicit_external_project(
         "plan-native-bind-work",
         "bind-native-work",
     ]
+
+
+def test_work_status_does_not_require_ambient_extension_search(monkeypatch, tmp_path):
+    status = {
+        "phase": "executing",
+        "assignment": {"assignment_id": "assignment:bound"},
+    }
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI,
+        "profile_source",
+        lambda: (_ for _ in ()).throw(
+            AssertionError("status must use the retained runtime Profile source")
+        ),
+    )
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI.LocalAssignmentRuntimeApplication,
+        "status",
+        lambda self, initiative_id, assignment_id: dict(status),
+    )
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime._workspace_realm",
+        lambda _runtime_dir: ("project:bound", ROOT_HASH),
+    )
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI.orchestration,
+        "next_actions",
+        lambda value: [{"action": "stage", "phase": value["phase"]}],
+    )
+
+    result = ASSIGNMENT_CLI._status(
+        str(tmp_path / "work-runtime"),
+        "initiative:bound",
+        "assignment:bound",
+    )
+
+    assert result["next_actions"] == [{"action": "stage", "phase": "executing"}]

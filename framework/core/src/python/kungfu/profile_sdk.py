@@ -7,6 +7,11 @@ packages, computes content roots, and delegates every lifecycle decision and
 mutation to the Core service introduced by KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.
 """
 
+# Exact-source projection reads may inspect a retained inactive Profile root.
+# They never authorize lifecycle actions or substitute a conflicting root.
+# Authorized actions continue to require the exact active Profile lifecycle.
+# Member bytes and Suite roots remain verified before every adapter invocation.
+
 from __future__ import annotations
 
 import hashlib
@@ -27,6 +32,7 @@ from typing import Any, Iterator, Mapping
 from kungfu import agent as agent_pack
 from kungfu import runtime_broker
 from kungfu import kfx_contract
+from kungfu.storage import profile_member_state
 from kungfu.storage import service as storage_service
 from kungfu.profile_sdk_support import (
     ACTION_PLAN_SCHEMA as ACTION_PLAN_SCHEMA,
@@ -551,11 +557,15 @@ def invoke_member_adapter(
     input_value: Any,
     *,
     authorized_action: bool = False,
+    inactive_projection_read: bool = False,
 ) -> dict[str, Any]:
     """Invoke one exact-root Profile member through its declared Python adapter.
 
     Core owns resolution, root binding and the transport envelope.  The member
     owns every domain operation and result schema behind ``invoke``.
+
+    Inactive projection reads are explicit exact-source reads; they never
+    authorize a Profile action.
     """
 
     if not _TOKEN.fullmatch(member_id) or not _TOKEN.fullmatch(operation):
@@ -566,25 +576,15 @@ def invoke_member_adapter(
     validated = validate_source(source, runtime_dir)
     resolved = validated["source"]
     profile_suite_root = validated["inspection"]["profile_suite_root"]
-    try:
-        state = storage_service.profile_lifecycle(
-            runtime_dir,
-            "get",
-            profile_id=resolved["profile"]["id"],
-        )
-    except (KeyError, ValueError) as error:
-        raise ProfileSdkError(
-            "profile-not-active",
-            "Profile member adapters require an active exact Profile root",
-        ) from error
-    if (
-        not state.get("activated")
-        or state.get("profile_suite_root") != profile_suite_root
-    ):
-        raise ProfileSdkError(
-            "profile-not-active",
-            "Profile member adapters require an active exact Profile root",
-        )
+    profile_failure = profile_member_state.adapter_failure(
+        runtime_dir,
+        resolved["profile"]["id"],
+        profile_suite_root,
+        authorized_action,
+        inactive_projection_read,
+    )
+    if profile_failure:
+        raise ProfileSdkError("profile-not-active", profile_failure)
     package_value = (resolved.get("memberPackages") or {}).get(member_id)
     if not package_value:
         raise ProfileSdkError(

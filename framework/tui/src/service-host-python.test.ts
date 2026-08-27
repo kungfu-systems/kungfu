@@ -5,7 +5,11 @@ import { delimiter, dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import type { ServiceAuthorization } from '@kungfu-tech/api/capability';
+import type {
+  KfxRuntimeWarrant,
+  KfxRuntimeWarrantAdoption,
+  KfxRuntimeWarrantAuthorization,
+} from '@kungfu-tech/api/capability';
 import type { KfxServicePlanEntry } from '@kungfu-tech/kfx';
 
 import {
@@ -27,8 +31,8 @@ function deadline(message: string): Promise<never> {
 }
 
 function authorization(
-  runtimeTier: ServiceAuthorization['runtimeTier'],
-): ServiceAuthorization {
+  runtimeTier: KfxRuntimeWarrantAuthorization['runtimeTier'],
+): KfxRuntimeWarrantAuthorization {
   const capabilities = ['ledger', 'network', 'process'];
   return {
     schema: 'kungfu.kfx.host-authorization/v2',
@@ -56,6 +60,64 @@ function authorization(
     generationRoot: root('f'),
     executionAllowed: true,
     authorizationRoot: root('0'),
+    host: 'service-python',
+  };
+}
+
+function runtimeWarrant(events: string[] = []): KfxRuntimeWarrant {
+  return {
+    adopt: (exact, request) => {
+      events.push('adopt');
+      return {
+        schema: 'kungfu.kfx.runtime-warrant-adoption/v1',
+        executionAllowed: true,
+        runtimeWarrant: {
+          schema: 'kungfu.kfx.runtime-warrant/v1',
+          warrantRoot: root('1'),
+          packageKey: exact.packageKey,
+          host: exact.host,
+          holder: request.holder,
+          capabilityGrantRoot: exact.capabilityGrantRoot ?? root('2'),
+          hostAuthorizationRoot: exact.authorizationRoot,
+          mutationWarrantRoot: exact.warrantRoot ?? root('3'),
+          expiresAt: request.expiresAt,
+          heartbeatTtl: request.heartbeatTtl,
+        },
+        leaseState: {
+          schema: 'kungfu.kfx.runtime-lease-state-fact/v1',
+          warrantRoot: root('1'),
+          packageKey: exact.packageKey,
+          host: exact.host,
+          holder: request.holder,
+          generation: 1,
+          fencingToken: root('4'),
+          state: 'active',
+          heartbeatAt: request.issuedAt,
+          heartbeatDeadline: request.issuedAt + request.heartbeatTtl,
+          expiresAt: request.expiresAt,
+        },
+        recovery: null,
+        receipt: {},
+      } satisfies KfxRuntimeWarrantAdoption;
+    },
+    heartbeat: () => {
+      events.push('heartbeat');
+      return {
+        schema: 'kungfu.kfx.runtime-warrant-transition/v1',
+        event: 'heartbeat',
+        leaseState: { state: 'active' },
+        receipt: {},
+      };
+    },
+    settle: () => {
+      events.push('settle');
+      return {
+        schema: 'kungfu.kfx.runtime-warrant-transition/v1',
+        event: 'settled',
+        leaseState: { state: 'settled' },
+        receipt: {},
+      };
+    },
   };
 }
 
@@ -110,12 +172,14 @@ test('Python launch refuses capabilities outside the exact Core grant', async ()
     launchDiscoveredService(entry, {
       caps: { ledger: {} },
       authorization: narrowed,
+      runtimeWarrant: runtimeWarrant(),
     }),
     /KF_KFX_HOST_NOT_AUTHORIZED/,
   );
 });
 
 test('integrated-explicit Python service uses standard asyncio in a separate process', async () => {
+  const warrantEvents: string[] = [];
   const reports: Array<Record<string, unknown>> = [];
   let resolveRunning: (() => void) | undefined;
   let resolveStopped: (() => void) | undefined;
@@ -152,6 +216,8 @@ test('integrated-explicit Python service uses standard asyncio in a separate pro
   const service = await launchDiscoveredService(entry, {
     caps,
     authorization: authorization('integrated-explicit'),
+    runtimeWarrant: runtimeWarrant(warrantEvents),
+    runtimeWarrantHeartbeatTtlMs: 20,
     pythonCommand:
       process.env.KUNGFU_PYTHON_BIN ??
       (process.platform === 'win32' ? 'python' : 'python3'),
@@ -169,6 +235,7 @@ test('integrated-explicit Python service uses standard asyncio in a separate pro
       process: 'subprocess-ok',
       concurrentRelayCounts: [1, 2],
     });
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
 
     service.dispose();
     releaseRunningResult?.();
@@ -178,6 +245,9 @@ test('integrated-explicit Python service uses standard asyncio in a separate pro
     ]);
     assert.equal(await service.done, 0);
     assert.deepEqual(reports.at(-1), { phase: 'stopped' });
+    assert.equal(warrantEvents[0], 'adopt');
+    assert.ok(warrantEvents.includes('heartbeat'));
+    assert.equal(warrantEvents.at(-1), 'settle');
   } finally {
     // A failed readiness assertion must not strand the Python child and keep
     // the Node test process alive. This is especially important on Windows,

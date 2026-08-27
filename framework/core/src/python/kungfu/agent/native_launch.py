@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 import os
 import shlex
-import shutil
 import subprocess
 import sys
 import threading
@@ -32,6 +31,7 @@ from kungfu.agent.provider_bootstrap import (
 from kungfu.skill import build_skill_context
 from kungfu.workspace import (
     WorkspaceTargetRequired,
+    inspect_workspace,
     load_workspace_registry,
     resolve_workspace_target,
 )
@@ -84,6 +84,47 @@ def unbound_work_selection(workspace_id):
         "selectionAuthority": "kungfu-work-cli",
         "entrypoint": "kungfu work status",
     }
+
+
+def managed_workspace_id(work: Mapping[str, Any] | None, workspace_root: str) -> str:
+    """Use exact Project identity for an unbound managed Agent Console."""
+
+    if work is not None:
+        return str(work["workspaceId"])
+    workspace_identity = inspect_workspace(workspace_root, cwd=workspace_root)
+    return str(
+        workspace_identity.workspace_id
+        if workspace_identity is not None
+        and workspace_identity.workspace_kind == "project"
+        else workspace_root
+    )
+
+
+def managed_runtime_dir(
+    work: Mapping[str, Any] | None, workspace_root: str, fallback_runtime_dir: str
+) -> str:
+    """Use the stable qualified Project runtime for a managed Console."""
+
+    workspace_identity = inspect_workspace(workspace_root, cwd=workspace_root)
+    if (
+        workspace_identity is None
+        or workspace_identity.workspace_kind != "project"
+        or workspace_identity.identity_state != "qualified"
+        or (
+            work is not None
+            and str(work.get("workspaceId") or "") != workspace_identity.workspace_id
+        )
+    ):
+        return fallback_runtime_dir
+    target = resolve_workspace_target("read-only", workspace_root, cwd=workspace_root)
+    return str(target.runtime_dir)
+
+
+def managed_console_scope(cwd, home, work, fallback_runtime_dir):
+    """Pair a managed Console cwd with its qualified Project runtime."""
+
+    exact_root = str(cwd or home or os.path.expanduser("~"))
+    return cwd, managed_runtime_dir(work, exact_root, fallback_runtime_dir)
 
 
 def resolve_native_launch_target(ctx, workspace_root=None, *, cwd=None):
@@ -302,24 +343,7 @@ def native_environment(
         # valid terminal types remain untouched.
         env["TERM"] = "xterm"
         env["KUNGFU_AGENT_TERMINAL_RECOVERY"] = f"{ambient_term or 'unset'}->xterm"
-    configured_cli = str(ambient.get("KUNGFU_CLI_BIN") or "").strip()
-    cli_candidate = configured_cli or shutil.which(
-        "kungfu", path=str(ambient.get("PATH") or "")
-    )
-    if configured_cli and not os.path.isabs(os.path.expanduser(configured_cli)):
-        cli_candidate = shutil.which(
-            configured_cli, path=str(ambient.get("PATH") or "")
-        )
-    if cli_candidate:
-        cli_path = Path(cli_candidate).expanduser().absolute()
-        if not cli_path.is_file() or not os.access(cli_path, os.X_OK):
-            raise ValueError(
-                "KUNGFU_CLI_BIN must identify an executable Kungfu front door"
-            )
-        cli_bin = str(cli_path)
-        env["KUNGFU_CLI_BIN"] = cli_bin
-    else:
-        cli_bin = "kungfu"
+    cli_bin = session_contract.native_cli_front_door(ambient, env)
     bind_work_entrypoint = [
         cli_bin,
         "agent",
@@ -333,6 +357,9 @@ def native_environment(
     ]
     selected = dict(profile or {})
     profile_id = str(selected.get("id") or f"kungfu.agent-runtime.{provider}")
+    work_control_profile = session_contract.qualified_work_control_profile(
+        runtime_dir, work_ref
+    )
     bootstrap_receipt = (
         agent_resources.native_bootstrap_receipt(
             provider,
@@ -368,6 +395,7 @@ def native_environment(
         },
         "bootstrap": bootstrap_context,
         "workSelection": dict(work_selection),
+        "activeProfiles": [dict(work_control_profile)] if work_control_profile else [],
         "terminal": {
             "stdioAttached": terminal_attached,
             "ambientTerm": ambient_term or None,
@@ -449,15 +477,8 @@ def native_environment(
             "attemptId": str(session_ref["sessionAttemptId"]),
             "runtimeProfileId": profile_id,
             "provider": provider,
-            "activeProfiles": (
-                [
-                    {
-                        "id": str(work_ref["profileId"]),
-                        "root": str(work_ref["profileRoot"]),
-                    }
-                ]
-                if work_ref is not None
-                else []
+            "activeProfiles": session_contract.active_profile_roots(
+                work_control_profile
             ),
             "workRef": dict(work_ref) if work_ref is not None else None,
             "entrypoints": {
@@ -581,6 +602,8 @@ def native_environment(
             env["KUNGFU_SKILL_WORK_REF"] = skill_work_ref
         if session_endpoint:
             env["KUNGFU_AGENT_SESSION_ENDPOINT"] = session_endpoint
+    if work_control_profile is not None:
+        env["KUNGFU_WORK_CONTROL_PROFILE_SOURCE"] = work_control_profile["source"]
     if work_ref is not None:
         env["KUNGFU_WORK_REF"] = json.dumps(
             dict(work_ref),

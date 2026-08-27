@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:2bc174f794f42be701b536af686cc4f9c60bcba9c35979c67ddfe4af1107d44b"
+          "sourceRoot": "sha256:85ac2fbc09d851ab50d3b2554585e0086286e174396f15b447488212622843de"
         },
         {
           "path": ".github/workflows/dev-post-merge-advisory.yml",
@@ -136,7 +136,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:1e5810ee0e02f6d1bdf7fea2da081fce753f668c1f9fdce7e3b36d452a446de3"
+          "sourceRoot": "sha256:2e6972b314b3736d23f79baa552f7e6f69f10f63d0f92c9555f33e4547ac8df7"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -160,7 +160,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:a5c5c5d1bc13b03e2d2956a1ac2d02c1dc6c6c0767776a55618ff57f845b268d"
+          "sourceRoot": "sha256:0b8f17c2dda31679c60133995904f809baa27e51e82d9cf0e83ac709a75a6515"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -191,14 +191,14 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:d50fea17f3704289e58afa11ccc5155dbc22aff86f6edd01e6c111f3326bb46f"
+          "sourceRoot": "sha256:25c930ad458abd332917919442c7505dd5c8ac5e3871c59c1ea6d0d5a874f0c2"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:f7a40a41a0fd27627949f00e50e784b4d2b73f908c4d401e2565cb7c1d6f0401"
+          "sourceRoot": "sha256:6c6c7a0161f0a244764379aefad7e48515182f6b8d46e7539f747b843c767a9f"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -343,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:efaf8463f1dae8adb237b95ce5330f87f1d0155e8809fcd08e6546a6001ce249"
+          "sourceRoot": "sha256:1dbb4b00aa32bb0675709bc52633577208c7e6306665c4071826966782a5bee4"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:99b71d04eae3f56691d86cdbc5bb1559055c165b433fe42f6f064b5950df2437"
+  "registryRoot": "sha256:dfc803bfc7dcbce2bd727c52351d9da3813aa4590a1167143961ce04bb31ff96"
 }

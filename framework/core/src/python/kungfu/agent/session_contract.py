@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import shutil
+from pathlib import Path
 from typing import Any, Mapping, overload
 
 
@@ -50,6 +53,59 @@ _ENVELOPE_FIELDS = {
     "envelopeRoot",
 }
 _ENVELOPE_REQUIRED_FIELDS = _ENVELOPE_FIELDS - {"bootstrap", "skillRuntimeAudit"}
+
+
+def native_cli_front_door(ambient: Mapping[str, Any], env: dict[str, str]) -> str:
+    """Resolve the executable Kungfu front door exposed to a native Agent."""
+
+    configured = str(ambient.get("KUNGFU_CLI_BIN") or "").strip()
+    candidate = configured or shutil.which(
+        "kungfu", path=str(ambient.get("PATH") or "")
+    )
+    if configured and not os.path.isabs(os.path.expanduser(configured)):
+        candidate = shutil.which(configured, path=str(ambient.get("PATH") or ""))
+    if not candidate:
+        return "kungfu"
+    cli_path = Path(candidate).expanduser().absolute()
+    if not cli_path.is_file() or not os.access(cli_path, os.X_OK):
+        raise ValueError("KUNGFU_CLI_BIN must identify an executable Kungfu front door")
+    env["KUNGFU_CLI_BIN"] = str(cli_path)
+    return str(cli_path)
+
+
+def qualified_work_control_profile(
+    runtime_dir: str, work_ref: Mapping[str, Any] | None
+):
+    """Resolve and verify the exact Work Control Profile for native launch."""
+
+    from kungfu.assignment_runtime import profile_lifecycle
+
+    profile = profile_lifecycle.resolve_qualified_work_profile(
+        runtime_dir, required=False
+    )
+    if work_ref is not None:
+        if profile is None:
+            raise ValueError(
+                "bound native Agent Console requires a qualified active Work Control Profile"
+            )
+        if (
+            str(work_ref.get("profileId") or "") != profile["id"]
+            or str(work_ref.get("profileRoot") or "") != profile["root"]
+        ):
+            raise ValueError(
+                "native Agent WorkRef does not match the exact qualified Work Control Profile root"
+            )
+    return profile
+
+
+def active_profile_roots(
+    profile: Mapping[str, Any] | None,
+) -> list[dict[str, str]]:
+    """Project a qualified profile into the public Agent Console envelope."""
+
+    if profile is None:
+        return []
+    return [{"id": str(profile["id"]), "root": str(profile["root"])}]
 
 
 def canonical_json(value: Any) -> str:
@@ -146,6 +202,17 @@ def validate_work_ref(
     elif "initiativeId" in result:
         raise ValueError("WorkRef.initiativeId is only valid for assignment identity")
     return result
+
+
+def require_expected_binding(expected, work_ref, session) -> None:
+    """Fail before mutation when a planned native binding has drifted."""
+
+    if expected is None:
+        return
+    if dict(expected.get("workRef") or {}) != work_ref:
+        raise ValueError("native Work binding drifted from expected WorkRef")
+    if dict(expected.get("session") or {}) != session:
+        raise ValueError("native Work binding drifted to another SessionAttempt")
 
 
 def validate_agent_console_envelope(

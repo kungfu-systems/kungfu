@@ -127,6 +127,22 @@
       "disposition": "proof-eligible"
     },
     {
+      "id": "python-kfx-storage-adapter",
+      "selectors": [
+        {
+          "kind": "exact",
+          "value": "framework/core/src/python/kungfu/storage/kfx_service.py"
+        }
+      ],
+      "facets": [
+        "registry-admission-lifecycle",
+        "capabilities",
+        "agent-first-authoring",
+        "sdk-cli"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
       "id": "kfx-qualification-surface",
       "selectors": [
         { "kind": "prefix", "value": "docs/qualification/kfx" },
@@ -204,6 +220,22 @@
         {
           "kind": "prefix",
           "value": "tests/fixtures/kfx"
+        }
+      ],
+      "facets": [
+        "architecture",
+        "registry-admission-lifecycle",
+        "capabilities",
+        "qualification-status"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
+      "id": "native-kfx-python-tests",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/tests/python/test_native_kfx"
         }
       ],
       "facets": [

@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 import threading
+from functools import partial
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
@@ -71,16 +72,50 @@ _COMMAND_OPERATIONS = {
     "initiative.progress.assess": "assess-progress",
     "assignment.completion.review": "review-completion",
     "assignment.continuation.decide": "decide-continuation",
+    "work.input.snapshot": "work-input-snapshot",
+    "work.run.record": "work-managed-run",
+    "work.effect.authorize": "work-effect-authorize",
+    "work.effect.attempt": "work-effect-attempt",
+    "work.effect.outcome": "work-effect-outcome",
     "assignment.atlas.import": "import-atlas",
     "assignment.authority.activate": "activate-work-control",
     "assignment.authority.restore": "restore-atlas-authority",
     "initiative.bundle.export": "export-initiative",
     "initiative.bundle.import": "import-initiative",
 }
-_LEASE_COMMANDS = {"assignment.claim", "assignment.stage"}
+_LEASE_COMMANDS = {
+    "assignment.claim",
+    "assignment.stage",
+    "work.input.snapshot",
+    "work.run.record",
+    "work.effect.authorize",
+    "work.effect.attempt",
+    "work.effect.outcome",
+}
+_COMMAND_BINDINGS = {
+    "assignment.claim": (
+        ("leaseId", "lease", "leaseId"),
+        ("leaseExpiresAt", "lease", "expiresAt"),
+        ("attemptId", "attempt", "attemptId"),
+    ),
+    **{
+        command_type: (
+            ("leaseId", "lease", "leaseId"),
+            ("attemptId", "attempt", "attemptId"),
+        )
+        for command_type in _LEASE_COMMANDS - {"assignment.claim", "assignment.stage"}
+    },
+}
 _ASSESSMENT_EXECUTOR_PROFILES = {"inline", "thread", "process"}
 _PROCESS_WRITERS: set[str] = set()
 _PROCESS_WRITERS_GUARD = threading.Lock()
+_RETAINED_PROFILE_ERRORS = {
+    "work-control-profile-not-installed",
+    "work-control-profile-removed",
+    "work-control-profile-not-qualified",
+    "work-control-profile-source-unavailable",
+    "work-control-profile-source-root-drift",
+}
 
 
 def _root(value: Any) -> str:
@@ -128,6 +163,52 @@ def _find_values(value: Any, key: str) -> list[Any]:
     return found
 
 
+def _claim_identity(value: Mapping[str, Any]) -> tuple[str, str]:
+    return (
+        str(value.get("attempt_id") or value.get("attemptId") or ""),
+        str(value.get("claim_id") or value.get("claimId") or ""),
+    )
+
+
+def _claim_matches(active: Mapping[str, Any], candidate: Mapping[str, Any]) -> bool:
+    active_attempt, active_claim = _claim_identity(active)
+    candidate_attempt, candidate_claim = _claim_identity(candidate)
+    return candidate_attempt == active_attempt and (
+        not active_claim or candidate_claim == active_claim
+    )
+
+
+def _exact_active_claim(
+    claims: list[Mapping[str, Any]], active: Mapping[str, Any]
+) -> dict[str, Any]:
+    matches = list(map(dict, filter(partial(_claim_matches, active), claims)))
+    if len(matches) != 1:
+        raise LocalRuntimeError(
+            "ambiguous-identity",
+            "Active Work lease does not bind exactly one execution Attempt",
+        )
+    return matches[0]
+
+
+def _attempt_from_status(status: Mapping[str, Any]) -> dict[str, Any] | None:
+    claims = status.get("execution_claims") or status.get("executionClaims") or []
+    if not claims:
+        return None
+    active_lease = status.get("active_lease") or status.get("activeLease")
+    claim = (
+        _exact_active_claim(list(claims), active_lease)
+        if isinstance(active_lease, Mapping)
+        else dict(claims[-1])
+    )
+    phase = str(status.get("phase") or "claimed")
+    attempt_id, claim_id = _claim_identity(claim)
+    return {
+        "attemptId": attempt_id or claim_id,
+        "claimId": claim_id,
+        "state": phase if phase in {"claimed", "executing", "settled"} else "claimed",
+    }
+
+
 class LocalRuntimeError(RuntimeError):
     """Stable public Runtime error."""
 
@@ -146,6 +227,45 @@ class LocalRuntimeError(RuntimeError):
         self.diagnostics = list(diagnostics or [])
 
 
+def _validate_completion_evidence_row(index: int, row: Any) -> None:
+    if not isinstance(row, Mapping):
+        raise LocalRuntimeError(
+            "invalid-command",
+            "evidenceAvailability rows must be objects",
+            details={"field": "evidenceAvailability", "index": index},
+        )
+    acceptance = str(row.get("acceptance") or "").strip()
+    level = str(row.get("level") or "").strip()
+    state = str(row.get("state") or "").strip()
+    if (
+        not acceptance
+        or level not in {"thin", "full"}
+        or state not in {"available", "unavailable", "missing"}
+    ):
+        raise LocalRuntimeError(
+            "invalid-command",
+            "evidenceAvailability requires acceptance, thin/full level, "
+            "and available/unavailable/missing state",
+            details={"field": "evidenceAvailability", "index": index},
+        )
+
+
+def _validate_completion_evidence_availability(
+    command: Mapping[str, Any], arguments: Mapping[str, Any]
+) -> None:
+    if command.get("type") != "assignment.completion.claim":
+        return
+    evidence_availability = arguments.get("evidenceAvailability", [])
+    if not isinstance(evidence_availability, list):
+        raise LocalRuntimeError(
+            "invalid-command",
+            "evidenceAvailability must be an array",
+            details={"field": "evidenceAvailability"},
+        )
+    for index, row in enumerate(evidence_availability):
+        _validate_completion_evidence_row(index, row)
+
+
 def _validate_command_arguments(command: Mapping[str, Any]) -> None:
     arguments = command.get("arguments")
     if not isinstance(arguments, Mapping):
@@ -156,6 +276,40 @@ def _validate_command_arguments(command: Mapping[str, Any]) -> None:
             "invalid-command",
             "Assessment executor profile must be inline, thread, or process",
             details={"field": "executorProfile"},
+        )
+    _validate_completion_evidence_availability(command, arguments)
+
+
+def _validate_assignment_create_references(
+    command: Mapping[str, Any], snapshot: Mapping[str, Any]
+) -> None:
+    if command.get("type") != "assignment.create":
+        return
+    arguments = command.get("arguments")
+    if not isinstance(arguments, Mapping):
+        return
+    parent_assignment_id = str(arguments.get("parentAssignmentId") or "")
+    if not parent_assignment_id:
+        return
+    if arguments.get("parentAssignmentRef"):
+        raise LocalRuntimeError(
+            "invalid-command",
+            "Pass parentAssignmentId shorthand or parentAssignmentRef, not both",
+            details={"fields": ["parentAssignmentId", "parentAssignmentRef"]},
+        )
+    matches = [
+        row
+        for row in snapshot.get("assignments") or []
+        if row.get("assignmentId") == parent_assignment_id
+    ]
+    if len(matches) != 1:
+        raise LocalRuntimeError(
+            "invalid-command",
+            "Local parent Assignment shorthand must resolve exactly once",
+            details={
+                "field": "parentAssignmentId",
+                "matches": len(matches),
+            },
         )
 
 
@@ -194,8 +348,8 @@ def _interrupted_command_rejection(
     diagnostic = {
         "code": "interrupted-command-rejected",
         "message": (
-            "An interrupted command failed deterministic validation before "
-            "authority execution"
+            "An interrupted command failed deterministic validation without "
+            "an admitted authority mutation"
         ),
         "severity": "warning",
         "recovery": [],
@@ -222,15 +376,15 @@ class WorkControlAuthority:
         self._source = str(Path(source).resolve()) if source is not None else ""
 
     def _profile_source(self) -> str:
-        from kungfu import profile_sdk
+        from kungfu.assignment_runtime import profile_lifecycle
 
         if self._source:
+            from kungfu import profile_sdk
+
             profile_sdk.validate_source(self._source, self.runtime_dir)
             return self._source
-        discovered = profile_sdk.discover_source(
-            "kungfu.work-control", self.runtime_dir
-        )
-        self._source = str(discovered["source"])
+        resolved = profile_lifecycle.resolve_qualified_work_profile(self.runtime_dir)
+        self._source = str(resolved["source"])
         return self._source
 
     def _invoke(
@@ -247,30 +401,18 @@ class WorkControlAuthority:
                 operation,
                 adapter_values,
                 authorized_action=write,
+                inactive_projection_read=not write,
             )
         except profile_sdk.ProfileSdkError as error:
-            code = str(error.diagnosis.get("code") or "")
-            if code in {
-                "member-resolution-failed",
-                "profile-member-ambiguous",
-                "profile-source-ambiguous",
-            }:
-                raise LocalRuntimeError(
-                    "ambiguous-identity",
-                    "Work Control authority does not resolve exactly once",
-                ) from error
-            raise LocalRuntimeError(
-                "backend-unavailable",
-                "Work Control authority is unavailable",
-                diagnostics=[
-                    {
-                        "code": "work-control-unavailable",
-                        "message": "The exact active Work Control Profile could not be invoked",
-                        "severity": "error",
-                        "recovery": ["diagnostics.get", "recovery.plan"],
-                    }
-                ],
-            ) from error
+            from kungfu.agent import native_authority
+
+            failure = native_authority.profile_adapter_runtime_failure(
+                error,
+                write=write,
+                operation=operation,
+                retained_codes=_RETAINED_PROFILE_ERRORS,
+            )
+            raise LocalRuntimeError(**failure) from error
 
     @staticmethod
     def _record(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -397,19 +539,7 @@ class WorkControlAuthority:
             "diagnostics": diagnostics,
         }
 
-    @staticmethod
-    def _attempt(status: Mapping[str, Any]) -> dict[str, Any] | None:
-        claims = status.get("execution_claims") or status.get("executionClaims") or []
-        if not claims:
-            return None
-        claim = dict(claims[-1])
-        phase = str(status.get("phase") or "claimed")
-        state = phase if phase in {"claimed", "executing", "settled"} else "claimed"
-        return {
-            "attemptId": str(claim.get("attempt_id") or claim.get("claim_id") or ""),
-            "claimId": str(claim.get("claim_id") or ""),
-            "state": state,
-        }
+    _attempt = staticmethod(_attempt_from_status)
 
     @staticmethod
     def _lease(status: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -438,39 +568,40 @@ class WorkControlAuthority:
         runtime_initiative_id = arguments.pop("_runtimeInitiativeId", None)
         runtime_assignment_id = arguments.pop("_runtimeAssignmentId", None)
         target = dict(command.get("target") or {})
-        if runtime_initiative_id is None:
-            arguments.setdefault("initiativeId", target.get("initiativeId"))
-        elif runtime_initiative_id != target.get("initiativeId"):
-            raise LocalRuntimeError(
-                "malformed-identity", "Runtime Initiative routing identity drifted"
-            )
-        if runtime_assignment_id is None:
-            arguments.setdefault("assignmentId", target.get("assignmentId"))
-        elif runtime_assignment_id != target.get("assignmentId"):
-            raise LocalRuntimeError(
-                "malformed-identity", "Runtime Assignment routing identity drifted"
-            )
-        lease = command.get("lease")
-        if operation == "claim-assignment" and isinstance(lease, Mapping):
-            arguments.setdefault("leaseId", lease.get("leaseId"))
-            arguments.setdefault("leaseExpiresAt", lease.get("expiresAt"))
-            attempt = command.get("attempt")
-            if isinstance(attempt, Mapping):
-                arguments.setdefault("attemptId", attempt.get("attemptId"))
+        routing = (
+            ("initiativeId", "Initiative", runtime_initiative_id),
+            ("assignmentId", "Assignment", runtime_assignment_id),
+        )
+        for key, label, runtime_value in routing:
+            if runtime_value is None:
+                arguments.setdefault(key, target.get(key))
+            elif runtime_value != target.get(key):
+                raise LocalRuntimeError(
+                    "malformed-identity", f"Runtime {label} routing identity drifted"
+                )
+        command_type = str(command.get("type") or "")
+        for argument_key, section, source_key in _COMMAND_BINDINGS.get(
+            command_type, ()
+        ):
+            source = command.get(section)
+            if isinstance(source, Mapping):
+                arguments.setdefault(argument_key, source.get(source_key))
         try:
             receipt = self._invoke(operation, arguments, write=True)
         except LocalRuntimeError:
             raise
         except (TypeError, ValueError) as error:
             message = str(error).lower()
-            if "lease" in message:
-                code = "lease-required"
-            elif "warrant" in message:
-                code = "warrant-invalid"
-            elif "phase changed" in message or "transition" in message:
-                code = "stale-revision"
-            else:
-                code = "invalid-command"
+            code = "invalid-command"
+            for marker, candidate in (
+                ("lease", "lease-required"),
+                ("warrant", "warrant-invalid"),
+                ("phase changed", "stale-revision"),
+                ("transition", "stale-revision"),
+            ):
+                if marker in message:
+                    code = candidate
+                    break
             raise LocalRuntimeError(
                 code, "Native authority rejected the command"
             ) from error
@@ -478,9 +609,11 @@ class WorkControlAuthority:
         episode_refs = []
         from kungfu.storage import service as storage_service
 
-        for episode_id in sorted(
-            {str(value) for value in _find_values(receipt, "episode_id") if str(value)}
-        ):
+        episode_ids = set()
+        for value in _find_values(receipt, "episode_id"):
+            if str(value):
+                episode_ids.add(str(value))
+        for episode_id in sorted(episode_ids):
             try:
                 inspected = storage_service.episode_inspect(
                     self.runtime_dir, episode_id=int(episode_id)
@@ -488,20 +621,17 @@ class WorkControlAuthority:
             except (KeyError, OSError, RuntimeError, TypeError, ValueError):
                 continue
             roots = _find_values(inspected, "root_value")
-            episode_root = next(
-                (
-                    value if str(value).startswith("sha256:") else f"sha256:{value}"
-                    for value in roots
-                    if re.fullmatch(r"(?:sha256:)?[0-9a-f]{64}", str(value))
-                ),
-                "",
-            )
+            episode_root = ""
+            for value in roots:
+                candidate = str(value)
+                if not candidate.startswith("sha256:"):
+                    candidate = f"sha256:{candidate}"
+                if _ROOT.fullmatch(candidate):
+                    episode_root = candidate
+                    break
             if episode_root:
                 episode_refs.append({"episodeRoot": episode_root})
-        return {
-            "authorityReceipt": receipt,
-            "episodeRefs": episode_refs,
-        }
+        return {"authorityReceipt": receipt, "episodeRefs": episode_refs}
 
     def diagnostics(self) -> list[dict[str, Any]]:
         try:

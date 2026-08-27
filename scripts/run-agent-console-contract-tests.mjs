@@ -55,6 +55,14 @@ const result = spawnSync(
       'core',
       'tests',
       'python',
+      'test_assignment_profile_source.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
       'test_agent_native_terminal_contract.py',
     ),
     path.join(

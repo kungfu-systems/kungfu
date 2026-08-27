@@ -39,9 +39,20 @@ from .authority import (
     _interrupted_command_rejection,
     _root,
     _stable,
+    _validate_assignment_create_references,
     _validate_command_arguments,
 )
 from .recovery import AssignmentRuntimeRecoveryMixin
+
+_RETRY_FAILED = {
+    "code": "interrupted-write-retry-failed",
+    "message": (
+        "The interrupted command could not be replayed; its authority outcome "
+        "remains unknown"
+    ),
+    "severity": "error",
+    "recovery": ["diagnostics.get", "recovery.plan"],
+}
 
 
 class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
@@ -322,14 +333,28 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             self._finalize_pending(dict(pending), snapshot, revision, recovered=True)
             return
         snapshot, revision = self._observe_snapshot(record_event=False)
-        before = dict(pending.get("beforeRevision") or {})
-        if revision.get("root") == before.get("root"):
-            authority_result = self.authority.apply(dict(pending["command"]))
-            pending = {**dict(pending), "authorityResult": authority_result}
-            self._state["pending"] = pending
-            self._save_state()
-            snapshot, revision = self._observe_snapshot(record_event=False)
-            self._finalize_pending(pending, snapshot, revision, recovered=True)
+        self._resume_unapplied_pending(pending, command, snapshot, revision)
+
+    def _resume_unapplied_pending(
+        self,
+        pending: Mapping[str, Any],
+        command: Mapping[str, Any],
+        snapshot: Mapping[str, Any],
+        revision: Mapping[str, Any],
+    ) -> None:
+        try:
+            _validate_assignment_create_references(command, snapshot)
+            before = dict(pending.get("beforeRevision") or {})
+            if revision.get("root") == before.get("root"):
+                authority_result = self.authority.apply(dict(pending["command"]))
+                pending = {**dict(pending), "authorityResult": authority_result}
+                self._state["pending"] = pending
+                self._save_state()
+                snapshot, revision = self._observe_snapshot(record_event=False)
+                self._finalize_pending(pending, snapshot, revision, recovered=True)
+                return
+        except LocalRuntimeError as error:
+            self._reject_pending_before_authority(pending, error)
             return
         diagnostic = {
             "code": "interrupted-write-ambiguous",
@@ -338,22 +363,24 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
             "recovery": ["diagnostics.get", "recovery.plan"],
         }
         diagnostics = list(self._state.get("diagnostics") or [])
-        if diagnostic not in diagnostics:
-            diagnostics.append(diagnostic)
-        self._state["diagnostics"] = diagnostics
+        diagnostics_by_root = dict(
+            map(lambda item: (_root(item), item), [*diagnostics, diagnostic])
+        )
+        self._state["diagnostics"] = list(diagnostics_by_root.values())
         self._save_state()
 
     def _reject_pending_before_authority(
         self, pending: Mapping[str, Any], error: LocalRuntimeError
     ) -> None:
+        if error.code != "invalid-command":
+            diagnostic = dict(_RETRY_FAILED, details={"causeCode": error.code})
+            self._state["diagnostics"].append(diagnostic)
+            return self._save_state()
         revision = dict(
-            pending.get("beforeRevision") or self._state.get("revision") or {}
+            pending.get("beforeRevision") or self._state.get("revision", {})
         )
         diagnostic, event_details = _interrupted_command_rejection(pending, error)
-        diagnostics = list(self._state.get("diagnostics") or [])
-        if diagnostic not in diagnostics:
-            diagnostics.append(diagnostic)
-        self._state["diagnostics"] = diagnostics
+        self._state["diagnostics"].append(diagnostic)
         self._state["pending"] = None
         self._append_event("command-rejected", revision, event_details)
         self._save_state()
@@ -609,6 +636,7 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
                 details={"field": forbidden},
             )
         _validate_command_arguments(command)
+        _validate_assignment_create_references(command, snapshot)
         attempt = command.get("attempt")
         lease = command.get("lease")
         warrant = command.get("warrant")
@@ -629,7 +657,7 @@ class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
                 ) from error
             if expires_at.tzinfo is None or expires_at <= datetime.now(UTC):
                 raise LocalRuntimeError("lease-required", "Command lease is expired")
-            if command_type == "assignment.stage":
+            if command_type != "assignment.claim":
                 matches = [
                     row
                     for row in snapshot.get("assignments") or []
