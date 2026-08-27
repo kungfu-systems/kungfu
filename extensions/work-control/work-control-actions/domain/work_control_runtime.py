@@ -1735,6 +1735,23 @@ def claim_assignment_execution(
     }
 
 
+def resolve_canonical_state(
+    runtime_dir: str,
+    initiative_id: str,
+    storage_source_id: str,
+    existing: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Reuse one canonical projection or obtain it from its query authority."""
+
+    if existing is not None:
+        return existing
+    return query_state(
+        runtime_dir,
+        initiative_id=initiative_id,
+        storage_source_id=storage_source_id,
+    )
+
+
 def assignment_orchestration_status(
     runtime_dir: str,
     *,
@@ -1748,13 +1765,9 @@ def assignment_orchestration_status(
 
     from . import native_state
 
-    state = canonical_state
-    if state is None:
-        state = native_state.query_state(
-            runtime_dir,
-            initiative_id=initiative_id,
-            storage_source_id=storage_source_id,
-        )
+    state = resolve_canonical_state(
+        runtime_dir, initiative_id, storage_source_id, canonical_state
+    )
     assignment = native_state.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
     linked = [

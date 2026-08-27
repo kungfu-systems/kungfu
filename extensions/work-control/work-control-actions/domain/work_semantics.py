@@ -58,13 +58,9 @@ def _linked_records(
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
     from . import native_state
 
-    state = canonical_state
-    if state is None:
-        state = runtime.query_state(
-            runtime_dir,
-            initiative_id=initiative_id,
-            storage_source_id=storage_source_id,
-        )
+    state = runtime.resolve_canonical_state(
+        runtime_dir, initiative_id, storage_source_id, canonical_state
+    )
     assignment = native_state.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
     records = []
