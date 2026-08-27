@@ -12,7 +12,10 @@ import {
 
 test('product KFX discovery accepts public and first-party package scopes', () => {
   assert.equal(isKfxPackageName('@kungfu-tech/kfx-view-status'), true);
-  assert.equal(isKfxPackageName('@kungfu-kfx/github-webhook-ingress'), true);
+  assert.equal(
+    isKfxPackageName('@kungfu-tech/kfx-github-webhook-ingress'),
+    true,
+  );
   assert.equal(isKfxPackageName('@kungfu-tech/core'), false);
   assert.equal(isKfxPackageName('@example/kfx-extension'), false);
   assert.doesNotThrow(() => assertDeclaredKfx(listKfxPackages()));

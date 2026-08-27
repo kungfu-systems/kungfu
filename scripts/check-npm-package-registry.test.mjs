@@ -20,7 +20,7 @@ const source = JSON.parse(
   ),
 );
 
-test('accepts the exact 29-package Release inventory', () => {
+test('accepts the exact 33-package Release inventory', () => {
   assert.deepEqual(collectNpmRegistryIssues({ root, registry: source }), []);
 });
 
@@ -60,12 +60,75 @@ test('rejects private package sources and an incomplete exact artifact set', (t)
     const targetPath = path.join(temporary, entry.source.split('#')[0]);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.copyFileSync(sourcePath, targetPath);
+    const sourceManifest = path.join(
+      path.dirname(sourcePath),
+      'kungfu.kfx.json',
+    );
+    if (!fs.existsSync(sourceManifest)) continue;
+    const targetManifest = path.join(
+      path.dirname(targetPath),
+      'kungfu.kfx.json',
+    );
+    fs.copyFileSync(sourceManifest, targetManifest);
+    const profile = JSON.parse(fs.readFileSync(sourceManifest, 'utf8'))
+      .kungfuConfig?.suite?.profile;
+    if (profile)
+      fs.copyFileSync(
+        path.join(path.dirname(sourceManifest), profile),
+        path.join(path.dirname(targetManifest), profile),
+      );
   }
   const codes = collectNpmRegistryIssues({ root: temporary, registry }).map(
     (entry) => entry.code,
   );
   assert.ok(codes.includes('source-private'));
   assert.ok(codes.includes('exact-artifacts'));
+});
+
+test('rejects KFX manifest and Suite profile version drift', (t) => {
+  const registry = structuredClone(source);
+  const suite = registry.packages.find(
+    ({ name }) => name === '@kungfu-tech/kfx-suite-github-webhook-reference',
+  );
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-npm-kfx-identity-test-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  for (const entry of registry.packages) {
+    const source = entry.source.split('#')[0];
+    const sourcePath = path.join(root, source);
+    if (!fs.existsSync(sourcePath)) continue;
+    const targetPath = path.join(temporary, source);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.copyFileSync(sourcePath, targetPath);
+    if (!entry.source.startsWith('extensions/')) continue;
+    const sourceDirectory = path.dirname(sourcePath);
+    const targetDirectory = path.dirname(targetPath);
+    fs.copyFileSync(
+      path.join(sourceDirectory, 'kungfu.kfx.json'),
+      path.join(targetDirectory, 'kungfu.kfx.json'),
+    );
+    const profile = JSON.parse(
+      fs.readFileSync(path.join(sourceDirectory, 'kungfu.kfx.json'), 'utf8'),
+    ).kungfuConfig?.suite?.profile;
+    if (profile)
+      fs.copyFileSync(
+        path.join(sourceDirectory, profile),
+        path.join(targetDirectory, profile),
+      );
+  }
+  const manifestPath = path.join(
+    temporary,
+    path.dirname(suite.source),
+    'kungfu.kfx.json',
+  );
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.version = '0.1.0';
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  const codes = collectNpmRegistryIssues({ root: temporary, registry }).map(
+    (entry) => entry.code,
+  );
+  assert.ok(codes.includes('kfx-identity-drift'));
 });
 
 test('component distribution closes embedded, standalone, and npm boundaries', () => {
