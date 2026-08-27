@@ -60,9 +60,9 @@ test('Project Work awaits the shared Agent Session before rendering', () => {
     lab,
     /execFileEvents: async[\s\S]*?await ensureTuiAgentSession\(tuiAgentSessionRuntimeDir\)/u,
   );
-  assert.match(lab, /bindTuiMockAgentEnvironment\(\{/u);
+  assert.match(lab, /bindMockAgentEnvironment\(cli, paths\)/u);
   assert.ok(
-    lab.indexOf('bindTuiMockAgentEnvironment') <
+    lab.indexOf('bindMockAgentEnvironment') <
       lab.indexOf('if (projectTour)'),
     'installed Mock Agent paths must be bound outside Project Tour mode',
   );

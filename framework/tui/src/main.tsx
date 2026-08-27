@@ -134,6 +134,7 @@ import {
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
   resolveTuiRuntimeDir,
+  tuiAttachedAgentSessionEnvironment,
 } from './terminal-lifecycle.js';
 import {
   globalWorkContribution,
@@ -212,7 +213,11 @@ function ensureTuiAgentSession(
     ? createAttachedAgentSessionHost({
         runtimeDir: resolvedRuntimeDir,
         ptyModule: process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE,
-        env: process.env,
+        env: tuiAttachedAgentSessionEnvironment({
+          env: process.env,
+          packagedBin: paths.packagedBin,
+          mockPath,
+        }),
       })
     : createDetachedAgentSessionHost({
         runtimeDir: resolvedRuntimeDir,
