@@ -1742,16 +1742,19 @@ def assignment_orchestration_status(
     assignment_id: str,
     storage_source_id: str = "kungfu",
     now: str = "",
+    canonical_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fold append-only orchestration facts into one deterministic Assignment phase."""
 
     from . import native_state
 
-    state = native_state.query_state(
-        runtime_dir,
-        initiative_id=initiative_id,
-        storage_source_id=storage_source_id,
-    )
+    state = canonical_state
+    if state is None:
+        state = native_state.query_state(
+            runtime_dir,
+            initiative_id=initiative_id,
+            storage_source_id=storage_source_id,
+        )
     assignment = native_state.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
     linked = [

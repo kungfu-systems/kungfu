@@ -775,6 +775,42 @@ def test_native_state_reuses_canonical_work_control_projection(monkeypatch):
     assert projected == {**state, "authority_mode": "work-control"}
 
 
+def test_assignment_status_reuses_one_canonical_state_projection(monkeypatch):
+    domain = profile_sdk.load_member_python_package(
+        str(SOURCE), "work-control-actions", "domain"
+    )
+    proof_root = "sha256:" + "a" * 64
+    state = {
+        "initiative_subject": "kungfu:initiative-a",
+        "assignments": [
+            {
+                "subject_key": "kungfu:assignment-a",
+                "payload": {"record": {"assignment_id": "assignment-a"}},
+            }
+        ],
+        "claims": [],
+        "reviews": [],
+        "query_proof_root": proof_root,
+    }
+    queries = []
+
+    def query_state(*_args, **_kwargs):
+        queries.append((_args, _kwargs))
+        return state
+
+    monkeypatch.setattr(domain.work_semantics.runtime, "query_state", query_state)
+
+    projected = domain.work_semantics.lifecycle_status(
+        "/runtime",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
+    )
+
+    assert len(queries) == 1
+    assert projected["query_proof_root"] == proof_root
+    assert projected["work_semantics"]["query_proof_root"] == proof_root
+
+
 def test_initiative_assignment_capabilities_are_native_and_preserve_pursuit():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
