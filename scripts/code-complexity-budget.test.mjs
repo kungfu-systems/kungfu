@@ -81,7 +81,7 @@ test('git probes remain bounded with a precise timeout', () => {
         status: null,
         error: { code: 'ETIMEDOUT' },
       })),
-    /timed out after 30000ms/,
+    /timed out after 60000ms/,
   );
 });
 
