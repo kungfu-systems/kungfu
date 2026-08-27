@@ -10,10 +10,63 @@ import { fileURLToPath } from 'node:url';
 
 import { guiQualificationArgs } from './installer.mjs';
 import {
+  directoryBytes,
   findArtifact,
   surfaceQualificationTempPrefix,
   surfaceQualificationTempRoot,
 } from './run.mjs';
+
+test('installed Windows tree measurement retries a transient EPERM', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-surface-eperm-'));
+  const nested = path.join(root, 'node_modules', 'tiny-typed-emitter');
+  fs.mkdirSync(nested, { recursive: true });
+  fs.writeFileSync(path.join(nested, 'index.js'), 'fixture');
+  let attempts = 0;
+  const filesystem = {
+    readdirSync(target, options) {
+      if (target === nested && attempts++ === 0) {
+        const error = new Error('transient Windows scanner lock');
+        error.code = 'EPERM';
+        throw error;
+      }
+      return fs.readdirSync(target, options);
+    },
+    statSync: fs.statSync,
+  };
+  try {
+    assert.equal(
+      await directoryBytes(root, {
+        filesystem,
+        platform: 'win32',
+        retryAttempts: 2,
+        retryDelayMs: 0,
+      }),
+      7,
+    );
+    assert.equal(attempts, 2);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('installed Windows tree measurement fails closed on persistent EPERM', async () => {
+  const error = new Error('persistent Windows scanner lock');
+  error.code = 'EPERM';
+  await assert.rejects(
+    directoryBytes('C:\\installed', {
+      filesystem: {
+        readdirSync() {
+          throw error;
+        },
+        statSync: fs.statSync,
+      },
+      platform: 'win32',
+      retryAttempts: 2,
+      retryDelayMs: 0,
+    }),
+    /persistent Windows scanner lock/u,
+  );
+});
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runner = path.join(here, 'run.mjs');
@@ -101,7 +154,8 @@ test('Windows installer qualification stays below the legacy path budget', () =>
   };
   for (const source of packageSources)
     visit(source.root, source.installedPrefix);
-  const runnerTemp = 'C:\\actions-runner\\kungfu-systems\\_work\\_temp';
+  const runnerTemp =
+    'C:\\actions-runner\\kungfu-systems-longname\\_work\\_temp';
   const workspace = `${surfaceQualificationTempPrefix(runnerTemp)}xxxxxx`;
   const legacyWorkspace = path.win32.join(
     runnerTemp,
@@ -193,7 +247,9 @@ test('installed Windows tree traversal waits for packaged runtime children', () 
   const wait = source.indexOf(
     'await waitForWindowsProcessesUnderRootExit(desktopInstall.installRoot)',
   );
-  const measure = source.indexOf('directoryBytes(desktopInstall.installRoot)');
+  const measure = source.indexOf(
+    'const installedDesktopBytes = await directoryBytes(',
+  );
   assert.ok(wait >= 0, 'Windows process settlement is missing');
   assert.ok(measure > wait, 'installed tree is traversed before settlement');
 });
