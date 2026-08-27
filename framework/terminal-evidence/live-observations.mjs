@@ -14,6 +14,7 @@ const ROOT = path.resolve(
   '../..',
 );
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const TERMINAL_JSON_START_PATTERN = /(?:^|\n)\s*([\[{])/gu;
 
 function command(program, args, cwd = ROOT) {
   const result = spawnSync(program, args, {
@@ -35,7 +36,7 @@ function command(program, args, cwd = ROOT) {
 
 function jsonOutput(output, label) {
   const starts = [];
-  for (const match of output.matchAll(/(?:^|\n)\s*([\[{])/gu)) {
+  for (const match of output.matchAll(TERMINAL_JSON_START_PATTERN)) {
     starts.push((match.index || 0) + match[0].lastIndexOf(match[1]));
   }
   for (const start of starts.reverse()) {
