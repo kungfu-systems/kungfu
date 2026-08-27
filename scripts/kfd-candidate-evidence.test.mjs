@@ -229,6 +229,109 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
   );
 });
 
+test('the Verify wrapper binds a successful qualification artifact transition', () => {
+  const fixture = artifactFixture();
+  const artifactPath = path.join(
+    fixture.root,
+    'product',
+    'release',
+    'artifact.bin',
+  );
+  const beforeRoot = kfdEvidenceRoot([
+    {
+      path: 'artifact.bin',
+      bytes: fs.statSync(artifactPath).size,
+      sha256: `sha256:${awaitHash(artifactPath)}`,
+    },
+  ]);
+  const command = [
+    process.execPath,
+    '-e',
+    `require('node:fs').writeFileSync(${JSON.stringify(artifactPath)},'verified artifact\\n')`,
+  ];
+  assert.equal(
+    runVerifiedQualification({
+      ...fixture,
+      command,
+      buildArtifactWitness: () => ({
+        id: 'kungfu-collaboration-interface',
+        standard: 'kfd-3',
+        witnessKind: 'artifact',
+        exposedSurfaces: [],
+      }),
+    }),
+    0,
+  );
+  const witness = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        fixture.root,
+        'product',
+        'release',
+        'qualification',
+        'kfd',
+        'artifacts',
+        `${fixture.platform}.json`,
+      ),
+      'utf8',
+    ),
+  );
+  assert.equal(witness.candidateBinding.preVerifyArtifactRoot, beforeRoot);
+  assert.notEqual(witness.candidateBinding.artifactRoot, beforeRoot);
+  assert.equal(witness.candidateBinding.transition, 'verified-qualification');
+  assert.doesNotThrow(() => finalizeKfdCandidateEvidence(fixture));
+  fs.appendFileSync(artifactPath, 'tampered after verification\n');
+  assert.throws(
+    () => finalizeKfdCandidateEvidence(fixture),
+    /KFD artifact digest mismatch/u,
+  );
+});
+
+test('the Verify wrapper never authorizes a failed qualification artifact transition', () => {
+  const fixture = artifactFixture();
+  const artifactPath = path.join(
+    fixture.root,
+    'product',
+    'release',
+    'artifact.bin',
+  );
+  const command = [
+    process.execPath,
+    '-e',
+    `require('node:fs').writeFileSync(${JSON.stringify(artifactPath)},'failed artifact\\n');process.exit(7)`,
+  ];
+  assert.equal(
+    runVerifiedQualification({
+      ...fixture,
+      command,
+      buildArtifactWitness: () => ({
+        id: 'kungfu-collaboration-interface',
+        standard: 'kfd-3',
+        witnessKind: 'artifact',
+        exposedSurfaces: [],
+      }),
+    }),
+    7,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        fixture.root,
+        'product',
+        'release',
+        'qualification',
+        'kfd',
+        'candidate-evidence.json',
+      ),
+    ),
+    false,
+  );
+  assert.throws(
+    () => finalizeKfdCandidateEvidence(fixture),
+    /KFD artifact digest mismatch/u,
+  );
+});
+
 test('fails before Verify completion when artifact bytes change after witnessing', () => {
   const fixture = artifactFixture();
   prepareKfdArtifactWitness({
@@ -247,6 +350,43 @@ test('fails before Verify completion when artifact bytes change after witnessing
   assert.throws(
     () => finalizeKfdCandidateEvidence(fixture),
     /KFD artifact digest mismatch/u,
+  );
+});
+
+test('rejects a tampered witness instead of laundering it through a verified transition', () => {
+  const fixture = artifactFixture();
+  prepareKfdArtifactWitness({
+    ...fixture,
+    buildArtifactWitness: () => ({
+      id: 'kungfu-collaboration-interface',
+      standard: 'kfd-3',
+      witnessKind: 'artifact',
+      exposedSurfaces: [],
+    }),
+  });
+  const witnessPath = path.join(
+    fixture.root,
+    'product',
+    'release',
+    'qualification',
+    'kfd',
+    'artifacts',
+    `${fixture.platform}.json`,
+  );
+  const witness = JSON.parse(fs.readFileSync(witnessPath, 'utf8'));
+  witness.candidateBinding.candidate.sourceSha = 'f'.repeat(40);
+  writeJson(witnessPath, witness);
+  fs.appendFileSync(
+    path.join(fixture.root, 'product', 'release', 'artifact.bin'),
+    'verified artifact change\n',
+  );
+  assert.throws(
+    () =>
+      finalizeKfdCandidateEvidence({
+        ...fixture,
+        allowVerifiedArtifactTransition: true,
+      }),
+    /KFD artifact witness candidate\/source root mismatch/u,
   );
 });
 

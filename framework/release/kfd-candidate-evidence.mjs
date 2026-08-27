@@ -439,6 +439,7 @@ export function finalizeKfdCandidateEvidence({
   platform = process.env.BUILDCHAIN_PLATFORM_ID || '',
   sourceSha = '',
   sourceTree = '',
+  allowVerifiedArtifactTransition = false,
 } = {}) {
   assertPlatform(platform);
   const identity = resolveIdentity(root, sourceSha, sourceTree);
@@ -448,18 +449,39 @@ export function finalizeKfdCandidateEvidence({
   if (!fs.existsSync(witnessPath))
     throw new Error(`missing KFD artifact witness: ${platform}`);
   const witness = readJson(witnessPath);
-  const artifact = releaseArtifactRoot(root);
-  if (witness.candidateBinding?.artifactRoot !== artifact.root) {
-    throw new Error(
-      `KFD artifact digest mismatch: expected ${witness.candidateBinding?.artifactRoot || '<empty>'}, got ${artifact.root}`,
-    );
-  }
+  const { bindingRoot, ...bindingBodyBeforeFinalize } =
+    witness.candidateBinding || {};
   if (
     witness.candidateBinding?.candidate?.sourceSha !== identity.sourceSha ||
     witness.candidateBinding?.candidate?.sourceTree !== identity.sourceTree ||
     witness.candidateBinding?.sourceGateRoot !== sourceGate.gateRoot
   ) {
     throw new Error('KFD artifact witness candidate/source root mismatch');
+  }
+  if (bindingRoot !== rooted(bindingBodyBeforeFinalize)) {
+    throw new Error('KFD artifact witness binding digest mismatch');
+  }
+  const artifact = releaseArtifactRoot(root);
+  if (witness.candidateBinding?.artifactRoot !== artifact.root) {
+    if (!allowVerifiedArtifactTransition) {
+      throw new Error(
+        `KFD artifact digest mismatch: expected ${witness.candidateBinding?.artifactRoot || '<empty>'}, got ${artifact.root}`,
+      );
+    }
+    const bindingBody = {
+      contract: KFD_ARTIFACT_WITNESS_CONTRACT,
+      platform,
+      candidate: identity,
+      sourceGateRoot: sourceGate.gateRoot,
+      preVerifyArtifactRoot: witness.candidateBinding.artifactRoot,
+      artifactRoot: artifact.root,
+      transition: 'verified-qualification',
+    };
+    witness.candidateBinding = {
+      ...bindingBody,
+      bindingRoot: rooted(bindingBody),
+    };
+    writeJson(witnessPath, witness);
   }
   const evidenceFiles = listFiles(output, output).filter(
     (row) => row.path !== 'candidate-evidence.json',
@@ -645,6 +667,12 @@ export function runVerifiedQualification({
   fs.renameSync(sealed, output);
   if (result.error) throw result.error;
   if (result.status !== 0) return result.status || 1;
-  finalizeKfdCandidateEvidence({ root, platform, sourceSha, sourceTree });
+  finalizeKfdCandidateEvidence({
+    root,
+    platform,
+    sourceSha,
+    sourceTree,
+    allowVerifiedArtifactTransition: true,
+  });
   return 0;
 }
