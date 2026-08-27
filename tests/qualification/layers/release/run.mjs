@@ -10,6 +10,13 @@ import { writeShifuGateEvidence } from '../../../../scripts/shifu-gate-evidence.
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const POLICY = path.join(HERE, 'policy.json');
+const NPM_PACKAGE_REGISTRY = path.join(
+  HERE,
+  '../../../../framework/release/npm-package-registry.json',
+);
+const EXPECTED_NPM_PACKAGE_COUNT = JSON.parse(
+  fs.readFileSync(NPM_PACKAGE_REGISTRY, 'utf8'),
+).releaseInventory.expectedPackageCount;
 
 function fail(message) {
   throw new Error(message);
@@ -220,12 +227,14 @@ function requireNpmDistributionClosure(publication) {
   if (
     inventory?.schema !== 'kungfu.npm-release-package-inventory-evidence/v1' ||
     inventory.status !== 'passing' ||
-    inventory.expectedPackageCount !== 29 ||
-    inventory.packages?.length !== 29
+    inventory.expectedPackageCount !== EXPECTED_NPM_PACKAGE_COUNT ||
+    inventory.packages?.length !== EXPECTED_NPM_PACKAGE_COUNT
   )
-    fail('publication report lacks passing 29-package npm inventory evidence');
+    fail(
+      `publication report lacks passing ${EXPECTED_NPM_PACKAGE_COUNT}-package npm inventory evidence`,
+    );
   const names = inventory.packages.map((entry) => entry.name);
-  if (new Set(names).size !== 29)
+  if (new Set(names).size !== EXPECTED_NPM_PACKAGE_COUNT)
     fail('npm package inventory contains duplicate names');
   const requiredCore = [
     '@kungfu-tech/core',
@@ -352,8 +361,7 @@ function main() {
     npm_package_inventory: publication.npmPackageInventory,
     core_distribution: publication.coreDistribution,
     artifact_status_counts: { passing: artifacts.length },
-    boundary:
-      'passing is computed from clean-source exact artifacts, every required platform, all six numeric budgets, installer-uninstall evidence for product surfaces, immutable publication coordinates, the exact Core package family, and the 29-package npm Release inventory.',
+    boundary: `passing is computed from clean-source exact artifacts, every required platform, all six numeric budgets, installer-uninstall evidence for product surfaces, immutable publication coordinates, the exact Core package family, and the ${EXPECTED_NPM_PACKAGE_COUNT}-package npm Release inventory.`,
   };
   if (options.report) {
     fs.mkdirSync(path.dirname(options.report), { recursive: true });
