@@ -1757,6 +1757,14 @@ def test_managed_session_retains_its_visible_terminal_answer(tmp_path, monkeypat
         "verify_profile",
         lambda _profile: {"ok": True, "version": "0.147.0"},
     )
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": "sha256:" + "1" * 64,
+            "source": str(tmp_path / "exact-work-control"),
+        },
+    )
 
     result = run_agent.execute(
         prompt="inspect README",
@@ -1815,6 +1823,14 @@ def test_direct_provider_starts_native_work_before_process_launch(
         run_agent.runtime_profiles,
         "verify_profile",
         lambda _profile: {"ok": True, "version": "arbitrary-version"},
+    )
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": work_ref["profileRoot"],
+            "source": str(tmp_path / "exact-work-control"),
+        },
     )
 
     def start_work(ref, started):

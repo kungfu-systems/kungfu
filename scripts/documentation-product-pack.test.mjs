@@ -21,10 +21,35 @@ const {
   documentationAtlasSource,
   firstPartyProfileFilter,
   requireAssemblySelector,
+  workDesignRuntimeFiles,
+  workDesignRuntimePath,
 } = require(path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'));
 const SELECTOR = JSON.parse(
   fs.readFileSync(path.join(ROOT, '.xinfa', 'product-documentation-pack.json')),
 );
+const INSTALLED_PREFLIGHT_REQUEST = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      ROOT,
+      'framework',
+      'work-design-preflight',
+      'fixtures',
+      'installed-preflight-request.json',
+    ),
+    'utf8',
+  ),
+);
+function installedWorkDesignRequest({ manual = false } = {}) {
+  const request = structuredClone(INSTALLED_PREFLIGHT_REQUEST);
+  if (manual)
+    request.disposition = {
+      action: 'overridden',
+      decisionAuthority: 'human',
+      rationaleRoot:
+        'sha256:df7186e3f525d9207abfb9a533e300f692cb70703886862698296a6d3e1f6b72',
+    };
+  return request;
+}
 const ATLAS = path.join(
   process.env.KUNGFU_DOCUMENTATION_ATLAS ||
     path.join(
@@ -174,21 +199,71 @@ test('freeze assembly stages the complete Work conformance checker closure', (t)
   }
 });
 
-test('freeze assembly stages the installed Work Design runtime closure', (t) => {
+function runtimeSnapshot(root) {
+  const snapshot = {};
+  for (const relative of workDesignRuntimeFiles(ROOT)) {
+    const file = path.join(root, 'framework', ...relative.split('/'));
+    const stat = fs.statSync(file);
+    snapshot[relative] = {
+      sha256: crypto
+        .createHash('sha256')
+        .update(fs.readFileSync(file))
+        .digest('hex'),
+      mode: stat.mode,
+      mtimeMs: stat.mtimeMs,
+    };
+  }
+  return snapshot;
+}
+
+function executeWorkDesignRuntime(root, request) {
+  const input = path.join(root, 'request.json');
+  fs.writeFileSync(input, `${JSON.stringify(request)}\n`);
+  const entry = path.join(
+    root,
+    'framework',
+    'work-design-preflight',
+    'tooling',
+    'work-design-preflight.mjs',
+  );
+  return spawnSync(process.execPath, [entry, '--input', input], {
+    cwd: os.tmpdir(),
+    encoding: 'utf8',
+    env: {
+      HOME: path.join(root, 'home'),
+      PATH: process.env.PATH,
+      NODE_PATH: '',
+      NODE_OPTIONS: '',
+    },
+  });
+}
+
+test('freeze assembly executes the complete isolated Work Design runtime closure', (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-work-design-pack-'),
   );
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
   copyWorkDesignRuntime(temporary, ROOT);
 
-  for (const relative of [
-    'project-cut/src/project-cut.mjs',
-    'project-cut/src/json-scanner.mjs',
-    'work-history-selector/src/work-history-selector.mjs',
-    'work-design-advisor/src/work-design-advisor.mjs',
-    'work-design-preflight/src/work-design-preflight.mjs',
-    'work-design-preflight/tooling/work-design-preflight.mjs',
-  ]) {
+  const files = workDesignRuntimeFiles(ROOT);
+  assert.deepEqual(
+    JSON.parse(
+      fs.readFileSync(path.join(temporary, 'work-design-runtime.json'), 'utf8'),
+    ).files,
+    JSON.parse(
+      fs.readFileSync(
+        path.join(
+          ROOT,
+          'framework',
+          'work-design-preflight',
+          'work-design-runtime.json',
+        ),
+        'utf8',
+      ),
+    ).files,
+  );
+  assert.ok(files.includes('project-cut/src/json-scanner.mjs'));
+  for (const relative of files) {
     const source = path.join(ROOT, 'framework', relative);
     const installed = path.join(temporary, 'framework', relative);
     assert.equal(fs.existsSync(installed), true, relative);
@@ -198,6 +273,82 @@ test('freeze assembly stages the installed Work Design runtime closure', (t) => 
       relative,
     );
   }
+  const before = runtimeSnapshot(temporary);
+  const automatic = executeWorkDesignRuntime(
+    temporary,
+    installedWorkDesignRequest(),
+  );
+  assert.equal(automatic.status, 0, automatic.stderr || automatic.stdout);
+  const automaticResult = JSON.parse(automatic.stdout);
+  assert.equal(automaticResult.outcome, 'advisory-auto-adopted');
+  assert.equal(automaticResult.operation.mutates, false);
+  assert.equal(automaticResult.authority.assignment, false);
+  assert.deepEqual(runtimeSnapshot(temporary), before);
+
+  const manual = executeWorkDesignRuntime(
+    temporary,
+    installedWorkDesignRequest({ manual: true }),
+  );
+  assert.equal(manual.status, 0, manual.stderr || manual.stdout);
+  const manualResult = JSON.parse(manual.stdout);
+  assert.equal(manualResult.outcome, 'manual-capture');
+  assert.equal(manualResult.adoption.adopted, false);
+  assert.equal(manualResult.fallback.silentAdoption, false);
+  assert.deepEqual(runtimeSnapshot(temporary), before);
+});
+
+test('isolated Work Design runtime fails when a declared dependency is missing', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-design-missing-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  copyWorkDesignRuntime(temporary, ROOT);
+  fs.rmSync(
+    path.join(temporary, 'framework', 'project-cut', 'src', 'json-scanner.mjs'),
+  );
+  const result = executeWorkDesignRuntime(
+    temporary,
+    installedWorkDesignRequest(),
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /ERR_MODULE_NOT_FOUND/u);
+});
+
+test('Work Design assembly rejects an undeclared static ESM dependency', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-design-closure-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const preflight = path.join(temporary, 'framework', 'work-design-preflight');
+  fs.mkdirSync(path.join(preflight, 'tooling'), { recursive: true });
+  fs.writeFileSync(
+    path.join(preflight, 'work-design-runtime.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.work-design.runtime-closure/v1',
+      entrypoint: 'work-design-preflight/tooling/entry.mjs',
+      files: ['work-design-preflight/tooling/entry.mjs'],
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(preflight, 'tooling', 'entry.mjs'),
+    "import '../../project-cut/src/new-dependency.mjs';\n",
+  );
+  assert.throws(
+    () => workDesignRuntimeFiles(temporary),
+    /undeclared Work Design runtime dependency: project-cut\/src\/new-dependency\.mjs/u,
+  );
+});
+
+test('Work Design manifest coordinates map to native POSIX and Windows paths', () => {
+  const coordinate = 'project-cut/src/json-scanner.mjs';
+  assert.equal(
+    workDesignRuntimePath('/product', coordinate, path.posix),
+    '/product/framework/project-cut/src/json-scanner.mjs',
+  );
+  assert.equal(
+    workDesignRuntimePath('C:\\product', coordinate, path.win32),
+    'C:\\product\\framework\\project-cut\\src\\json-scanner.mjs',
+  );
 });
 
 test('freeze assembly accepts only the assembled product selector', () => {

@@ -6,10 +6,138 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, NoReturn, overload
 
 from kungfu import profile_sdk
 from kungfu.storage import service as storage_service
+
+
+WORK_CONTROL_PROFILE_ID = "kungfu.work-control"
+
+
+def _missing_profile(runtime_dir: str | Path, message: str, **details: Any) -> NoReturn:
+    raise profile_sdk.ProfileSdkError(
+        details.pop("code"),
+        message,
+        profileId=WORK_CONTROL_PROFILE_ID,
+        runtimeDir=str(Path(runtime_dir).expanduser().resolve()),
+        **details,
+    )
+
+
+def _qualified_profile_state(
+    runtime_dir: str | Path, *, required: bool
+) -> dict[str, Any] | None:
+    try:
+        state = storage_service.profile_lifecycle(
+            runtime_dir, "get", profile_id=WORK_CONTROL_PROFILE_ID
+        )
+    except ValueError as error:
+        if not required and str(error).startswith("Profile not found:"):
+            return None
+        _missing_profile(
+            runtime_dir,
+            "Work Control Profile is not installed in the selected Project runtime",
+            code="work-control-profile-not-installed",
+        )
+    if state.get("removed"):
+        if not required:
+            return None
+        _missing_profile(
+            runtime_dir,
+            "Work Control Profile is removed from the selected Project runtime",
+            code="work-control-profile-removed",
+        )
+    if state.get("qualified") and state.get("activated"):
+        return state
+    if not required:
+        return None
+    _missing_profile(
+        runtime_dir,
+        "Work Control Profile must be qualified and active in the selected Project runtime",
+        code="work-control-profile-not-qualified",
+        qualified=bool(state.get("qualified")),
+        activated=bool(state.get("activated")),
+    )
+
+
+def _retained_profile_source(runtime_dir: str | Path, state: dict[str, Any]) -> Path:
+    closure = dict((state.get("latest_event") or {}).get("closure") or {})
+    profile_path = Path(str(closure.get("profile_path") or "")).expanduser()
+    if not profile_path.is_file():
+        _missing_profile(
+            runtime_dir,
+            "Qualified Work Control Profile retained source is unavailable",
+            code="work-control-profile-source-unavailable",
+            profilePath=str(profile_path),
+        )
+    return profile_path.resolve().parent
+
+
+@overload
+def resolve_qualified_work_profile(
+    runtime_dir: str | Path,
+    *,
+    required: Literal[True] = True,
+    source: str | Path | None = None,
+) -> dict[str, str]: ...
+
+
+@overload
+def resolve_qualified_work_profile(
+    runtime_dir: str | Path,
+    *,
+    required: Literal[False],
+    source: str | Path | None = None,
+) -> dict[str, str] | None: ...
+
+
+def resolve_qualified_work_profile(
+    runtime_dir: str | Path,
+    *,
+    required: bool = True,
+    source: str | Path | None = None,
+) -> dict[str, str] | None:
+    """Resolve the retained exact source for the qualified Work authority.
+
+    Profile lifecycle state, rather than the caller's ambient extension search
+    path, owns the source/root association.  This keeps a native Agent Console
+    usable when its ``KF_RUNTIME_DIR`` and an explicit Work ``--workspace`` are
+    different Projects.
+    """
+
+    state = _qualified_profile_state(runtime_dir, required=required)
+    if state is None:
+        return None
+    retained_source = _retained_profile_source(runtime_dir, state)
+    if source is not None and Path(source).expanduser().resolve() != retained_source:
+        raise profile_sdk.ProfileSdkError(
+            "work-control-profile-source-drift",
+            "Explicit Work Control Profile source does not match the qualified retained source",
+            profileId=WORK_CONTROL_PROFILE_ID,
+            retainedSource=str(retained_source),
+            observedSource=str(Path(source).expanduser().resolve()),
+        )
+    validated = profile_sdk.validate_source(retained_source, runtime_dir)
+    inspection = validated["inspection"]
+    profile_id = str((inspection.get("profile") or {}).get("id") or "")
+    profile_root = str(inspection.get("profile_suite_root") or "")
+    retained_root = str(state.get("profile_suite_root") or "")
+    if profile_id != WORK_CONTROL_PROFILE_ID or profile_root != retained_root:
+        raise profile_sdk.ProfileSdkError(
+            "work-control-profile-source-root-drift",
+            "Qualified Work Control Profile retained source no longer matches its exact root",
+            profileId=WORK_CONTROL_PROFILE_ID,
+            retainedRoot=retained_root,
+            observedProfileId=profile_id,
+            observedRoot=profile_root,
+            source=str(retained_source),
+        )
+    return {
+        "id": WORK_CONTROL_PROFILE_ID,
+        "root": retained_root,
+        "source": str(retained_source),
+    }
 
 
 def resolve_profile_source(

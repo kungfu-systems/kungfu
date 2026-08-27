@@ -240,6 +240,25 @@ def _active_work_profiles(work_ref):
     return [{"id": work_ref["profileId"], "root": work_ref["profileRoot"]}]
 
 
+def _qualified_active_work_profiles(runtime_dir, work_ref):
+    from kungfu.assignment_runtime import profile_lifecycle
+
+    profile = profile_lifecycle.resolve_qualified_work_profile(
+        runtime_dir, required=False
+    )
+    if work_ref is not None and (
+        profile is None
+        or work_ref.get("profileId") != profile["id"]
+        or work_ref.get("profileRoot") != profile["root"]
+    ):
+        raise ValueError(
+            "native Agent WorkRef does not match the exact qualified Work Control Profile root"
+        )
+    return (
+        [{"id": profile["id"], "root": profile["root"]}] if profile is not None else []
+    )
+
+
 class ReturnCodeResult(Protocol):
     returncode: int
 
@@ -720,7 +739,7 @@ def current_native_console(
         "attemptId": session["sessionAttemptId"],
         "runtimeProfileId": "kungfu.agent-runtime.codex.ambient",
         "provider": "codex",
-        "activeProfiles": _active_work_profiles(work_ref),
+        "activeProfiles": _qualified_active_work_profiles(target.runtime_dir, work_ref),
         "workRef": work_ref,
         "entrypoints": {
             "context": [cli_bin, "agent", "context", "--json"],

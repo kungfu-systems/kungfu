@@ -109,6 +109,13 @@ _COMMAND_BINDINGS = {
 _ASSESSMENT_EXECUTOR_PROFILES = {"inline", "thread", "process"}
 _PROCESS_WRITERS: set[str] = set()
 _PROCESS_WRITERS_GUARD = threading.Lock()
+_RETAINED_PROFILE_ERRORS = {
+    "work-control-profile-not-installed",
+    "work-control-profile-removed",
+    "work-control-profile-not-qualified",
+    "work-control-profile-source-unavailable",
+    "work-control-profile-source-root-drift",
+}
 
 
 def _root(value: Any) -> str:
@@ -369,15 +376,15 @@ class WorkControlAuthority:
         self._source = str(Path(source).resolve()) if source is not None else ""
 
     def _profile_source(self) -> str:
-        from kungfu import profile_sdk
+        from kungfu.assignment_runtime import profile_lifecycle
 
         if self._source:
+            from kungfu import profile_sdk
+
             profile_sdk.validate_source(self._source, self.runtime_dir)
             return self._source
-        discovered = profile_sdk.discover_source(
-            "kungfu.work-control", self.runtime_dir
-        )
-        self._source = str(discovered["source"])
+        resolved = profile_lifecycle.resolve_qualified_work_profile(self.runtime_dir)
+        self._source = str(resolved["source"])
         return self._source
 
     def _invoke(
@@ -397,45 +404,15 @@ class WorkControlAuthority:
                 inactive_projection_read=not write,
             )
         except profile_sdk.ProfileSdkError as error:
-            code = str(error.diagnosis.get("code") or "")
-            fallback = {
-                "member-resolution-failed": LocalRuntimeError(
-                    "ambiguous-identity",
-                    "Work Control authority does not resolve exactly once",
-                ),
-                "profile-member-ambiguous": LocalRuntimeError(
-                    "ambiguous-identity",
-                    "Work Control authority does not resolve exactly once",
-                ),
-                "profile-source-ambiguous": LocalRuntimeError(
-                    "ambiguous-identity",
-                    "Work Control authority does not resolve exactly once",
-                ),
-            }.get(
-                code,
-                LocalRuntimeError(
-                    "backend-unavailable",
-                    "Work Control authority is unavailable",
-                    diagnostics=[
-                        {
-                            "code": "work-control-unavailable",
-                            "message": "The exact active Work Control Profile could not be invoked",
-                            "severity": "error",
-                            "recovery": ["diagnostics.get", "recovery.plan"],
-                        }
-                    ],
-                ),
+            from kungfu.agent import native_authority
+
+            failure = native_authority.profile_adapter_runtime_failure(
+                error,
+                write=write,
+                operation=operation,
+                retained_codes=_RETAINED_PROFILE_ERRORS,
             )
-            raise {
-                (True, "member-adapter-invoke-failed", True): LocalRuntimeError(
-                    "invalid-command",
-                    str(error.__cause__),
-                    details={"operation": operation},
-                )
-            }.get(
-                (write, code, isinstance(error.__cause__, ValueError)),
-                fallback,
-            ) from error
+            raise LocalRuntimeError(**failure) from error
 
     @staticmethod
     def _record(row: Mapping[str, Any]) -> dict[str, Any]:

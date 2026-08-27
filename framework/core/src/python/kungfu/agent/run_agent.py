@@ -38,7 +38,6 @@ from kungfu.agent.native_launch import (
     provider_interactive_argv as interactive_launch_argv,
     provider_runtime_health as _provider_runtime_health,
     resolve_command_wrapper as _resolve_windows_command_wrapper,
-    work_profile_inspection as _work_profile_inspection,
 )
 from kungfu.agent.provider_bootstrap import refresh_native_skill_runtime_audit
 from kungfu.agent.managed_run import ManagedRunCoordinator
@@ -149,14 +148,15 @@ def bind_current_native_work(
             binding_scope = "explicit-external-project"
 
     status = work_commands._status(work_runtime_dir, initiative_id, assignment_id)
-    work_control = _work_profile_inspection(
-        work_profile_source, work_commands.profile_source, work_runtime_dir
+    work_control = work_commands.profile_lifecycle.resolve_qualified_work_profile(
+        work_runtime_dir,
+        source=work_profile_source,
     )
     work_ref = {
         "schema": "kungfu.work-ref/v1",
         "workspaceId": work_workspace_id,
-        "profileId": work_control["profile"]["id"],
-        "profileRoot": work_control["profile_suite_root"],
+        "profileId": work_control["id"],
+        "profileRoot": work_control["root"],
         "entityType": "assignment",
         "entityId": assignment_id,
         "entityRoot": assignment_canonical.semantic_root(status["assignment"]),

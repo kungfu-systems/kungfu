@@ -790,12 +790,22 @@ def test_work_control_authority_normalizes_legacy_completion_context_roots(
     authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
     captured = {}
 
-    def invoke(_source, _runtime, member, operation, values, *, authorized_action):
+    def invoke(
+        _source,
+        _runtime,
+        member,
+        operation,
+        values,
+        *,
+        authorized_action,
+        inactive_projection_read,
+    ):
         captured.update(
             member=member,
             operation=operation,
             values=values,
             write=authorized_action,
+            inactiveProjectionRead=inactive_projection_read,
         )
         return {"result": {"coreReceipt": {"status": "admitted"}}}
 
@@ -829,6 +839,7 @@ def test_work_control_authority_normalizes_legacy_completion_context_roots(
             "resultContextRoot": ROOT_B,
         },
         "write": True,
+        "inactiveProjectionRead": False,
     }
 
 
@@ -838,12 +849,22 @@ def test_work_semantics_commands_bind_exact_runtime_attempt_and_lease(
     authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
     captured = {}
 
-    def invoke(_source, _runtime, member, operation, values, *, authorized_action):
+    def invoke(
+        _source,
+        _runtime,
+        member,
+        operation,
+        values,
+        *,
+        authorized_action,
+        inactive_projection_read,
+    ):
         captured.update(
             member=member,
             operation=operation,
             values=values,
             write=authorized_action,
+            inactiveProjectionRead=inactive_projection_read,
         )
         return {"result": {"coreReceipt": {"status": "admitted"}}}
 
@@ -879,6 +900,7 @@ def test_work_semantics_commands_bind_exact_runtime_attempt_and_lease(
             "leaseId": "lease-a",
         },
         "write": True,
+        "inactiveProjectionRead": False,
     }
 
 
@@ -1586,7 +1608,9 @@ def test_restart_recovers_legacy_completion_roots_without_rewriting_command_iden
         values,
         *,
         authorized_action=False,
+        inactive_projection_read=False,
     ):
+        assert inactive_projection_read is (not authorized_action)
         if operation == "portfolio":
             return {
                 "result": {

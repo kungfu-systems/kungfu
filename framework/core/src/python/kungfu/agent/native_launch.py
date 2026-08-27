@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 import os
 import shlex
-import shutil
 import subprocess
 import sys
 import threading
@@ -18,7 +17,6 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 import uuid
 
-from kungfu import profile_sdk
 from kungfu.agent.work_projection import WorkProjectionPort
 from kungfu.agent import resources as agent_resources
 from kungfu.agent import runtime_profiles
@@ -43,17 +41,6 @@ _DARWIN_DEFAULT_SSL_CERT_FILE = Path("/etc/ssl/cert.pem")
 COMMAND_WRAPPER_SUFFIXES = _COMMAND_WRAPPER_SUFFIXES
 encode_wrapper_prompt = _encode_wrapper_prompt
 resolve_command_wrapper = _resolve_command_wrapper
-
-
-def work_profile_inspection(
-    source: str | Path | None,
-    fallback: Callable[[], str | Path],
-    runtime_dir: str | Path,
-) -> Mapping[str, Any]:
-    """Validate an explicit retained Work profile or the ordinary bound source."""
-
-    resolved = Path(source).expanduser().resolve() if source is not None else fallback()
-    return profile_sdk.validate_source(resolved, runtime_dir)["inspection"]
 
 
 def provider_interactive_argv(profile: Mapping[str, Any]) -> list[str]:
@@ -356,24 +343,7 @@ def native_environment(
         # valid terminal types remain untouched.
         env["TERM"] = "xterm"
         env["KUNGFU_AGENT_TERMINAL_RECOVERY"] = f"{ambient_term or 'unset'}->xterm"
-    configured_cli = str(ambient.get("KUNGFU_CLI_BIN") or "").strip()
-    cli_candidate = configured_cli or shutil.which(
-        "kungfu", path=str(ambient.get("PATH") or "")
-    )
-    if configured_cli and not os.path.isabs(os.path.expanduser(configured_cli)):
-        cli_candidate = shutil.which(
-            configured_cli, path=str(ambient.get("PATH") or "")
-        )
-    if cli_candidate:
-        cli_path = Path(cli_candidate).expanduser().absolute()
-        if not cli_path.is_file() or not os.access(cli_path, os.X_OK):
-            raise ValueError(
-                "KUNGFU_CLI_BIN must identify an executable Kungfu front door"
-            )
-        cli_bin = str(cli_path)
-        env["KUNGFU_CLI_BIN"] = cli_bin
-    else:
-        cli_bin = "kungfu"
+    cli_bin = session_contract.native_cli_front_door(ambient, env)
     bind_work_entrypoint = [
         cli_bin,
         "agent",
@@ -387,6 +357,9 @@ def native_environment(
     ]
     selected = dict(profile or {})
     profile_id = str(selected.get("id") or f"kungfu.agent-runtime.{provider}")
+    work_control_profile = session_contract.qualified_work_control_profile(
+        runtime_dir, work_ref
+    )
     bootstrap_receipt = (
         agent_resources.native_bootstrap_receipt(
             provider,
@@ -422,6 +395,7 @@ def native_environment(
         },
         "bootstrap": bootstrap_context,
         "workSelection": dict(work_selection),
+        "activeProfiles": [dict(work_control_profile)] if work_control_profile else [],
         "terminal": {
             "stdioAttached": terminal_attached,
             "ambientTerm": ambient_term or None,
@@ -503,15 +477,8 @@ def native_environment(
             "attemptId": str(session_ref["sessionAttemptId"]),
             "runtimeProfileId": profile_id,
             "provider": provider,
-            "activeProfiles": (
-                [
-                    {
-                        "id": str(work_ref["profileId"]),
-                        "root": str(work_ref["profileRoot"]),
-                    }
-                ]
-                if work_ref is not None
-                else []
+            "activeProfiles": session_contract.active_profile_roots(
+                work_control_profile
             ),
             "workRef": dict(work_ref) if work_ref is not None else None,
             "entrypoints": {
@@ -635,6 +602,8 @@ def native_environment(
             env["KUNGFU_SKILL_WORK_REF"] = skill_work_ref
         if session_endpoint:
             env["KUNGFU_AGENT_SESSION_ENDPOINT"] = session_endpoint
+    if work_control_profile is not None:
+        env["KUNGFU_WORK_CONTROL_PROFILE_SOURCE"] = work_control_profile["source"]
     if work_ref is not None:
         env["KUNGFU_WORK_REF"] = json.dumps(
             dict(work_ref),

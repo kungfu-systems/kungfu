@@ -1876,20 +1876,19 @@ def test_current_native_console_uses_project_runtime_when_cli_context_is_home(
         "kungfu.cli.commands.assignment._status",
         status,
     )
-    monkeypatch.setattr(
-        "kungfu.cli.commands.assignment.profile_source", lambda: tmp_path
-    )
 
-    def validate_source(_source, runtime_dir):
+    def resolve_profile(runtime_dir, **_kwargs):
         observed_runtime_dirs.append(runtime_dir)
         return {
-            "inspection": {
-                "profile": {"id": "kungfu.work-control"},
-                "profile_suite_root": ROOT_HASH,
-            }
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(tmp_path / "exact-work-control"),
         }
 
-    monkeypatch.setattr("kungfu.profile_sdk.validate_source", validate_source)
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        resolve_profile,
+    )
 
     def invoke(request, **_kwargs):
         requests.append(request)
@@ -1963,16 +1962,12 @@ def test_public_bind_work_cli_preserves_stable_project_runtime_under_home(
         },
     )
     monkeypatch.setattr(
-        "kungfu.cli.commands.assignment.profile_source", lambda: tmp_path
-    )
-    monkeypatch.setattr(
-        "kungfu.profile_sdk.validate_source",
-        lambda _source, runtime_dir: {
-            "inspection": {
-                "profile": {"id": "kungfu.work-control"},
-                "profile_suite_root": ROOT_HASH,
-                "observedRuntimeDir": runtime_dir,
-            }
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda runtime_dir, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(tmp_path / "exact-work-control"),
+            "observedRuntimeDir": runtime_dir,
         },
     )
 
@@ -2095,6 +2090,14 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
         lambda *_args, **_kwargs: {
             "schema": "kungfu.skill-context/v1",
             "catalog": [{"key": "kungfu-agent"}],
+        },
+    )
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": work_ref["profileRoot"],
+            "source": str(tmp_path / "exact-work-control"),
         },
     )
 

@@ -13,12 +13,78 @@ from kungfu import (
     assignment_review_lifecycle,
 )
 from kungfu.assignment_runtime import fresh_recovery as assignment_fresh_recovery
+from kungfu.assignment_runtime import profile_lifecycle
+from kungfu.assignment_runtime.authority import LocalRuntimeError, WorkControlAuthority
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import assignment_review
 from kungfu.cli.commands import kfc
 from kungfu.agent import run_agent, session_contract
 
 assignment_command = importlib.import_module("kungfu.cli.commands.assignment")
+
+
+def test_qualified_work_profile_resolves_retained_exact_source(monkeypatch, tmp_path):
+    source = tmp_path / "installed" / "work-control"
+    source.mkdir(parents=True)
+    (source / "profile.json").write_text("{}\n", encoding="utf-8")
+    profile_root = f"sha256:{'a' * 64}"
+    monkeypatch.setattr(
+        profile_lifecycle.storage_service,
+        "profile_lifecycle",
+        lambda *_args, **_kwargs: {
+            "profile_suite_root": profile_root,
+            "qualified": True,
+            "activated": True,
+            "removed": False,
+            "latest_event": {"closure": {"profile_path": str(source / "profile.json")}},
+        },
+    )
+    monkeypatch.setattr(
+        profile_lifecycle.profile_sdk,
+        "validate_source",
+        lambda observed_source, observed_runtime: (
+            {
+                "inspection": {
+                    "profile": {"id": "kungfu.work-control"},
+                    "profile_suite_root": profile_root,
+                }
+            }
+            if observed_source == source.resolve() and observed_runtime == tmp_path
+            else (_ for _ in ()).throw(AssertionError("source/runtime drift"))
+        ),
+    )
+
+    assert profile_lifecycle.resolve_qualified_work_profile(tmp_path) == {
+        "id": "kungfu.work-control",
+        "root": profile_root,
+        "source": str(source.resolve()),
+    }
+
+
+def test_missing_work_profile_has_specific_fail_closed_diagnosis(monkeypatch, tmp_path):
+    def missing(*_args, **_kwargs):
+        raise ValueError("Profile not found: kungfu.work-control")
+
+    monkeypatch.setattr(profile_lifecycle.storage_service, "profile_lifecycle", missing)
+
+    with __import__("pytest").raises(
+        profile_lifecycle.profile_sdk.ProfileSdkError,
+        match="Work Control Profile is not installed",
+    ) as error:
+        profile_lifecycle.resolve_qualified_work_profile(tmp_path)
+
+    assert error.value.diagnosis["code"] == "work-control-profile-not-installed"
+
+    with __import__("pytest").raises(
+        LocalRuntimeError,
+        match="Work Control Profile is not installed",
+    ) as runtime_error:
+        WorkControlAuthority(tmp_path).inspect()
+
+    assert runtime_error.value.code == "backend-unavailable"
+    assert runtime_error.value.diagnostics[0]["code"] == (
+        "work-control-profile-not-installed"
+    )
 
 
 def test_click_tree_exposes_one_work_family_and_no_assignment_alias():
