@@ -8,6 +8,7 @@ import copy
 import hashlib
 import os
 import re
+import sys
 import tarfile
 import urllib.parse
 import urllib.request
@@ -31,6 +32,13 @@ from kungfu.distribution_update_policy import (
     _content_root,
     _stable_id,
 )
+
+
+def _facade_value(name: str, fallback: Any) -> Any:
+    """Resolve legacy call-time seams without moving ownership back to the facade."""
+
+    facade = sys.modules.get("kungfu.distribution_update")
+    return getattr(facade, name, fallback) if facade is not None else fallback
 
 
 def _assert_https_response(
@@ -118,7 +126,7 @@ def _download_response_appends(
     offset: int,
     expected_size: int,
 ) -> bool:
-    _assert_https_response(
+    _facade_value("_assert_https_response", _assert_https_response)(
         response,
         code="artifact-transport-insecure",
         message="CLI artifact redirect requires HTTPS",
@@ -162,7 +170,7 @@ def _download_to_partial(url: str, partial: Path, *, expected_size: int) -> None
             )
         partial.parent.mkdir(parents=True, exist_ok=True)
         with source.open("rb") as input_file, partial.open("wb") as output_file:
-            _copy_bounded_download(
+            _facade_value("_copy_bounded_download", _copy_bounded_download)(
                 input_file,
                 output_file,
                 expected_size=expected_size,
@@ -185,19 +193,21 @@ def _download_to_partial(url: str, partial: Path, *, expected_size: int) -> None
     if offset:
         request.add_header("Range", f"bytes={offset}-")
     try:
-        with _open_https(
+        with _facade_value("_open_https", _open_https)(
             request,
             timeout=60,
             code="artifact-transport-insecure",
             message="CLI artifact redirect requires HTTPS",
         ) as response:
-            append = _download_response_appends(
+            append = _facade_value(
+                "_download_response_appends", _download_response_appends
+            )(
                 response,
                 offset=offset,
                 expected_size=expected_size,
             )
             with partial.open("ab" if append else "wb") as output_file:
-                _copy_bounded_download(
+                _facade_value("_copy_bounded_download", _copy_bounded_download)(
                     response,
                     output_file,
                     expected_size=expected_size,
@@ -239,13 +249,13 @@ def _stage_verified_archive(
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         with source.open("rb") as input_file, target.open("xb") as output_file:
-            _copy_bounded_download(
+            _facade_value("_copy_bounded_download", _copy_bounded_download)(
                 input_file,
                 output_file,
                 expected_size=expected_size,
             )
         observed_size = target.stat().st_size
-        observed_digest = _file_digest(target)
+        observed_digest = _facade_value("_file_digest", _file_digest)(target)
     except DistributionUpdateError:
         raise
     except OSError as error:
@@ -300,7 +310,7 @@ def download(
                 )
             if target.is_file():
                 observed_size = target.stat().st_size
-                observed_digest = _file_digest(target)
+                observed_digest = _facade_value("_file_digest", _file_digest)(target)
                 if (
                     observed_size != int(plan["artifact"]["size"])
                     or observed_digest != plan["artifact"]["digest"]
@@ -312,16 +322,20 @@ def download(
             else:
                 expected_size = int(plan["artifact"]["size"])
                 if partial.is_file() and partial.stat().st_size > expected_size:
-                    _discard_poisoned_partial(partial)
+                    _facade_value(
+                        "_discard_poisoned_partial", _discard_poisoned_partial
+                    )(partial)
                 try:
-                    _download_to_partial(
+                    _facade_value("_download_to_partial", _download_to_partial)(
                         str(plan["artifact"]["url"]),
                         partial,
                         expected_size=expected_size,
                     )
                 except DistributionUpdateError:
                     if partial.is_file() and partial.stat().st_size >= expected_size:
-                        _discard_poisoned_partial(partial)
+                        _facade_value(
+                            "_discard_poisoned_partial", _discard_poisoned_partial
+                        )(partial)
                     raise
                 observed_size = partial.stat().st_size
                 if observed_size != expected_size:
@@ -329,9 +343,11 @@ def download(
                         "artifact-verification-failed",
                         "downloaded CLI artifact does not match size and digest evidence",
                     )
-                observed_digest = _file_digest(partial)
+                observed_digest = _facade_value("_file_digest", _file_digest)(partial)
                 if observed_digest != plan["artifact"]["digest"]:
-                    _discard_poisoned_partial(partial)
+                    _facade_value(
+                        "_discard_poisoned_partial", _discard_poisoned_partial
+                    )(partial)
                     raise DistributionUpdateError(
                         "artifact-verification-failed",
                         "downloaded CLI artifact does not match size and digest evidence",
@@ -365,10 +381,13 @@ def _safe_member(name: str) -> bool:
 
 def _archive_expanded_limit(archive_size: int) -> int:
     return min(
-        _MAX_ARCHIVE_EXPANDED_BYTES,
+        _facade_value("_MAX_ARCHIVE_EXPANDED_BYTES", _MAX_ARCHIVE_EXPANDED_BYTES),
         max(
-            _MIN_ARCHIVE_EXPANDED_BYTES,
-            archive_size * _MAX_ARCHIVE_EXPANSION_RATIO,
+            _facade_value("_MIN_ARCHIVE_EXPANDED_BYTES", _MIN_ARCHIVE_EXPANDED_BYTES),
+            archive_size
+            * _facade_value(
+                "_MAX_ARCHIVE_EXPANSION_RATIO", _MAX_ARCHIVE_EXPANSION_RATIO
+            ),
         ),
     )
 
@@ -381,7 +400,7 @@ def _account_archive_member(
     expanded_limit: int,
 ) -> tuple[int, int]:
     count += 1
-    if count > _MAX_ARCHIVE_ENTRIES:
+    if count > _facade_value("_MAX_ARCHIVE_ENTRIES", _MAX_ARCHIVE_ENTRIES):
         raise DistributionUpdateError(
             "archive-resource-limit", "CLI archive contains too many entries"
         )
@@ -394,7 +413,7 @@ def _account_archive_member(
 
 
 def _assert_zip_member(info: zipfile.ZipInfo) -> None:
-    if not _safe_member(info.filename):
+    if not _facade_value("_safe_member", _safe_member)(info.filename):
         raise DistributionUpdateError(
             "archive-path-unsafe", "CLI archive contains an unsafe path"
         )
@@ -428,7 +447,7 @@ def _assert_tar_member(member: tarfile.TarInfo) -> None:
             else:
                 depth += 1
     if (
-        not _safe_member(member.name)
+        not _facade_value("_safe_member", _safe_member)(member.name)
         or member.islnk()
         or (member.issym() and not safe_symlink)
         or not (member.isfile() or member.isdir() or member.issym())
@@ -440,7 +459,9 @@ def _assert_tar_member(member: tarfile.TarInfo) -> None:
 
 
 def _validate_archive(archive: Path, *, archive_size: int) -> tuple[str, list[Any]]:
-    expanded_limit = _archive_expanded_limit(archive_size)
+    expanded_limit = _facade_value("_archive_expanded_limit", _archive_expanded_limit)(
+        archive_size
+    )
     if zipfile.is_zipfile(archive):
         try:
             with zipfile.ZipFile(archive) as source:
@@ -448,8 +469,10 @@ def _validate_archive(archive: Path, *, archive_size: int) -> tuple[str, list[An
                 expanded_size = 0
                 zip_members = source.infolist()
                 for info in zip_members:
-                    _assert_zip_member(info)
-                    count, expanded_size = _account_archive_member(
+                    _facade_value("_assert_zip_member", _assert_zip_member)(info)
+                    count, expanded_size = _facade_value(
+                        "_account_archive_member", _account_archive_member
+                    )(
                         count=count,
                         expanded_size=expanded_size,
                         member_size=0 if info.is_dir() else info.file_size,
@@ -466,8 +489,10 @@ def _validate_archive(archive: Path, *, archive_size: int) -> tuple[str, list[An
             expanded_size = 0
             tar_members: list[tarfile.TarInfo] = []
             for member in source:
-                _assert_tar_member(member)
-                count, expanded_size = _account_archive_member(
+                _facade_value("_assert_tar_member", _assert_tar_member)(member)
+                count, expanded_size = _facade_value(
+                    "_account_archive_member", _account_archive_member
+                )(
                     count=count,
                     expanded_size=expanded_size,
                     member_size=member.size if member.isfile() else 0,

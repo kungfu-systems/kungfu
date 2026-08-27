@@ -40,6 +40,13 @@ from kungfu.distribution_update_policy import (
 release_cut = runtime_upgrade
 
 
+def _facade_value(name: str, fallback: Any) -> Any:
+    """Resolve legacy call-time seams while this module owns CLI inventory."""
+
+    facade = sys.modules.get("kungfu.distribution_update")
+    return getattr(facade, name, fallback) if facade is not None else fallback
+
+
 def _installed_cli_manifest(
     image: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -50,7 +57,9 @@ def _installed_cli_manifest(
             "cli-image-invalid",
             "installed CLI image has no safe upgrade manifest",
         )
-    return runtime_upgrade.validate_manifest(_read_object(manifest))
+    return runtime_upgrade.validate_manifest(
+        _facade_value("_read_object", _read_object)(manifest)
+    )
 
 
 def _install_cli_image(
@@ -82,7 +91,7 @@ def _install_cli_image(
     ):
         record_path = target / "image.json"
         if record_path.is_file():
-            record = _read_object(record_path)
+            record = _facade_value("_read_object", _read_object)(record_path)
             if (
                 record.get("schema") != CLI_IMAGE_SCHEMA
                 or record.get("artifactDigest") != artifact_digest
@@ -119,7 +128,7 @@ def _install_cli_image(
                     "runtime-artifact-invalid",
                     "staged CLI runtime digest does not match the release manifest",
                 )
-            _write_object(bundled_manifest, manifest)
+            _facade_value("_write_object", _write_object)(bundled_manifest, manifest)
             record = {
                 "schema": CLI_IMAGE_SCHEMA,
                 "frontendBuildId": frontend_build_id,
@@ -140,7 +149,9 @@ def _install_cli_image(
                     else {}
                 ),
             }
-            _write_object(staging / "image.json", record)
+            _facade_value("_write_object", _write_object)(
+                staging / "image.json", record
+            )
             os.replace(staging, target)
             return record
         finally:
@@ -158,7 +169,7 @@ def _assert_cli_image_slot_available(
     record_path = target / "image.json"
     if not record_path.is_file():
         return
-    record = _read_object(record_path)
+    record = _facade_value("_read_object", _read_object)(record_path)
     if (
         record.get("schema") != CLI_IMAGE_SCHEMA
         or record.get("artifactDigest") != artifact_digest
@@ -172,10 +183,12 @@ def _assert_cli_image_slot_available(
 def _read_cli_selection(
     config_home: str | Path,
 ) -> tuple[dict[str, Any], dict[str, Any]] | None:
-    selection_path = _cli_selection_path(config_home)
+    selection_path = _facade_value("_cli_selection_path", _cli_selection_path)(
+        config_home
+    )
     if not selection_path.is_file():
         return None
-    selection = _read_object(selection_path)
+    selection = _facade_value("_read_object", _read_object)(selection_path)
     if selection.get("schema") != CLI_SELECTION_SCHEMA:
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection schema is invalid"
@@ -221,7 +234,7 @@ def _read_cli_selection(
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection escaped the product inventory"
         )
-    image = _read_object(root / "image.json")
+    image = _facade_value("_read_object", _read_object)(root / "image.json")
     if (
         image.get("schema") != CLI_IMAGE_SCHEMA
         or image.get("frontendBuildId") != frontend_build_id
@@ -258,9 +271,16 @@ def _select_cli_image(
                 selection: dict[str, Any],
             ) -> tuple[dict[str, Any], dict[str, Any]]:
                 receipt = receipt_factory(selection)
-                _persist_cli_selection_receipt(config_home, selection, receipt)
+                _facade_value(
+                    "_persist_cli_selection_receipt", _persist_cli_selection_receipt
+                )(config_home, selection, receipt)
                 try:
-                    _write_object(_cli_selection_path(config_home), selection)
+                    _facade_value("_write_object", _write_object)(
+                        _facade_value("_cli_selection_path", _cli_selection_path)(
+                            config_home
+                        ),
+                        selection,
+                    )
                 except OSError as error:
                     raise DistributionUpdateError(
                         "selection-io-failed",
@@ -326,7 +346,7 @@ def _select_cli_image(
                         else:
                             return current_selection, None
             previous = current[0] if current is not None else None
-            generation = _next_cli_generation(
+            generation = _facade_value("_next_cli_generation", _next_cli_generation)(
                 config_home, int((previous or {}).get("generation") or 0)
             )
             if previous is None:
@@ -373,7 +393,9 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                         "cli-image-path-unsafe",
                         "CLI image inventory entry is not a real directory",
                     )
-                image = _read_object(entry / "image.json")
+                image = _facade_value("_read_object", _read_object)(
+                    entry / "image.json"
+                )
                 frontend_build_id = _path_safe_id(
                     str(image.get("frontendBuildId") or ""),
                     "frontend-build-id",
@@ -429,12 +451,16 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
     selection = selected_receipt_root = None
     retained_receipts: list[dict[str, Any]] = []
     pending_receipts: list[dict[str, Any]] = []
-    selection_path_exists = _cli_selection_path(config_home).is_file()
+    selection_path_exists = _facade_value("_cli_selection_path", _cli_selection_path)(
+        config_home
+    ).is_file()
     try:
         selected = _read_cli_selection(config_home)
         if selected is not None:
             selection = selected[0]
-            receipt = _read_cli_selection_receipt(config_home, selection)
+            receipt = _facade_value(
+                "_read_cli_selection_receipt", _read_cli_selection_receipt
+            )(config_home, selection)
             if receipt is not None:
                 selected_receipt_root = receipt["receiptRoot"]
             elif selection.get("releaseCutRoot"):
@@ -442,9 +468,12 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                     {
                         "code": "cli-selection-receipt-missing",
                         "path": str(
-                            _cli_selection_receipt_path(
-                                config_home, int(selection["generation"])
-                            ).relative_to(root)
+                            _facade_value(
+                                "_cli_selection_receipt_path",
+                                _cli_selection_receipt_path,
+                            )(config_home, int(selection["generation"])).relative_to(
+                                root
+                            )
                         ),
                     }
                 )
@@ -452,17 +481,26 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
         issues.append(
             {
                 "code": error.code,
-                "path": str(_cli_selection_path(config_home).relative_to(root)),
+                "path": str(
+                    _facade_value("_cli_selection_path", _cli_selection_path)(
+                        config_home
+                    ).relative_to(root)
+                ),
             }
         )
     selected_generation = int((selection or {}).get("generation") or 0)
     try:
-        for generation in _cli_selection_receipt_generations(config_home):
+        for generation in _facade_value(
+            "_cli_selection_receipt_generations",
+            _cli_selection_receipt_generations,
+        )(config_home):
             if generation == selected_generation:
                 continue
-            path = _cli_selection_receipt_path(config_home, generation)
+            path = _facade_value(
+                "_cli_selection_receipt_path", _cli_selection_receipt_path
+            )(config_home, generation)
             try:
-                receipt = _read_object(path)
+                receipt = _facade_value("_read_object", _read_object)(path)
                 receipt_selection = receipt.get("frontendSelection")
                 receipt_root = receipt.get("receiptRoot")
                 receipt_core = {
