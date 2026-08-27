@@ -3,7 +3,6 @@ packages:
   - "developer/*"
   - "extensions/*"
   - "extensions/*/*"
-  - "!extensions/github-webhook-reference-suite/github-*"
   - "examples/*"
   - "product"
 allowBuilds:

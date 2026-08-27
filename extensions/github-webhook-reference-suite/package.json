@@ -3,7 +3,34 @@
   "version": "4.0.0-alpha.3",
   "description": "Maintained GitHub webhook ingress, evidence view, and optional Dogfood Finding bridge",
   "license": "Apache-2.0",
-  "private": true,
+  "main": "package.json",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "package.json",
+    "README.md",
+    "kungfu.kfx.json",
+    "profile.json",
+    "actions",
+    "assessments",
+    "claims",
+    "compatibility",
+    "contracts",
+    "migrations",
+    "permissions.json",
+    "qualification",
+    "views"
+  ],
+  "dependencies": {
+    "@kungfu-tech/kfx-view-github-events": "workspace:*",
+    "@kungfu-tech/kfx-github-dogfood-bridge": "workspace:*",
+    "@kungfu-tech/kfx-github-webhook-ingress": "workspace:*"
+  },
   "kungfuProduct": {
     "assembly": "reference-only"
   }
