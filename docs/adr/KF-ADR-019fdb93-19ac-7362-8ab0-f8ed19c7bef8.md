@@ -5,7 +5,7 @@ adr_id: KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590, https://github.com/kungfu-systems/kungfu/pull/2618, https://github.com/kungfu-systems/kungfu/pull/2704, https://github.com/kungfu-systems/kungfu/pull/2953]
-qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, framework/assignment-runtime/consumer-inventory-v1.json, framework/api/tests/assignment-runtime.test.ts, framework/core/tests/python/test_assignment_runtime.py, framework/gui/src/main/assignment-runtime-host.test.ts, extensions/work-dashboard/tests/work-control-profile.test.ts, docs/architecture/assignment-runtime-r0-evidence.md, docs/architecture/assignment-runtime-r1-local-profile.md, docs/architecture/assignment-runtime-r2-gui-client.md]
+qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, framework/assignment-runtime/consumer-inventory-v1.json, framework/api/tests/assignment-runtime.test.ts, framework/core/tests/python/test_assignment_runtime.py, framework/core/tests/python/test_work_control_profile.py, framework/gui/src/main/assignment-runtime-host.test.ts, extensions/work-control/work-control-actions/domain/work_semantics.py, extensions/work-dashboard/tests/work-control-profile.test.ts, docs/architecture/assignment-runtime-r0-evidence.md, docs/architecture/assignment-runtime-r1-local-profile.md, docs/architecture/assignment-runtime-r2-gui-client.md]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,13 +13,13 @@ period: 2026-08-07
 theme: local-first-assignment-runtime-api
 confidence: high
 evidence_grade: A
-last_reviewed: 2026-08-11
-ai_provenance: GPT-5 via Codex on 2026-08-11; based on the exact R0 through R3 Assignment artifacts, protected delivery in PRs 2590 and 2618, review history in PR 2704, the current R3 source candidate in PR 2953, and disposable-Home qualification; protected R3 delivery, Product qualification, and any Cluster Runtime cutover are not claimed
+last_reviewed: 2026-08-24
+ai_provenance: GPT-5 via Codex on 2026-08-11 and 2026-08-24; based on the exact R0 through R3 Assignment artifacts, protected delivery in PRs 2590 and 2618, review history in PR 2704, the R3 source candidate in PR 2953, disposable-Home qualification, and the current generic Work-semantics source candidate and focused tests; protected delivery of the current candidate, Product qualification, independent downstream adoption, and any Cluster Runtime cutover are not claimed
 ---
 
 # KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8: Assignment clients converge on one local-first transport-neutral Runtime API
 
-- Status: accepted; R0 contract and R1 Local Profile delivered, R2 GUI source candidate, R3 client convergence source candidate
+- Status: accepted; R0 contract and R1 Local Profile delivered, R2 GUI and R3 client convergence staged, generic Work-semantics source candidate
 - Date: 2026-08-07
 - Category: Work Control / Assignment Runtime / client boundary
 - Related: [Assignment orchestration](KF-ADR-019f87cc-bd1f-786d-896d-07ea9245861e.md),
@@ -117,6 +117,29 @@ consumer inventory and focused qualification. This record does not treat that
 source candidate as protected delivery or Product qualification before those
 external gates settle.
 
+### 6. Generic Work semantics belong to the Runtime authority
+
+The Runtime boundary owns the domain-neutral semantics that make an Assignment
+safe to execute and settle: immutable input snapshots and invalidation,
+managed-run evidence, bounded effect authorization, effect attempt and outcome
+records, Completion Claims, independent review, continuation decisions, and
+portable sealing. These operations remain expected-revision-, lease-, actor-,
+and idempotency-fenced and return content-addressed receipts through the public
+Work Control action surface.
+
+Downstream products may retain business-domain planning, payload construction,
+transport adapters, and outcome interpretation. They must not recreate generic
+Work state, synthesize local authority when Kungfu is unavailable, or treat a
+transport response as a business outcome. An ambiguous effect attempt remains
+recorded as ambiguous and cannot be blindly retried; diagnostic degradation is
+read-only and grants no fallback mutation path.
+
+The current source candidate exposes these operations through the installed
+Work Control Profile and exercises their native fold with focused Python,
+contract, dashboard, CLI, and KFD evidence. It does not claim protected
+delivery, release admission, or downstream Product certification before those
+separate gates settle.
+
 ## Falsification and qualification
 
 The contract is false if:
@@ -127,6 +150,8 @@ The contract is false if:
 - replaying an identical command produces a second authoritative receipt;
 - client kind or transport changes canonical identities or roots;
 - an unavailable Runtime causes a GUI, CLI, Agent, or KFX storage fallback;
+- a downstream product can mint generic Work authority or blindly retry an
+  ambiguous authorized effect outside the Runtime fold;
 - event resume skips an unknown gap or changes generation silently;
 - a public envelope exposes backend paths or database/Electron internals; or
 - the R0 artifacts report Local or Cluster implementation as delivered.

@@ -126,7 +126,6 @@ def create_runtime_host_command(
             runtime_dir,
             realm_id=identity.workspace_id,
             generation=identity.identity_root,
-            profile_source=profile_source(),
         )
         try:
             serve(
@@ -411,7 +410,10 @@ class LocalAssignmentRuntimeApplication:
         self.runtime_dir = Path(runtime_dir).expanduser().resolve()
         self.client_id = _stable(client_id, "clientId")
         self.kind = kind
-        self.source = source or profile_source()
+        # A caller-provided source is an explicit recovery/install coordinate.
+        # Ordinary reads and commands resolve the qualified retained source from
+        # this exact runtime inside WorkControlAuthority.
+        self.source = source
         self.realm_id, self.generation = _workspace_realm(self.runtime_dir)
 
     def _runtime(self) -> EmbeddedLocalAssignmentRuntime:

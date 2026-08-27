@@ -121,6 +121,14 @@
       "nonClaim": "Retained terminal qualification does not promote KFX to stable or authorize a new package."
     },
     {
+      "id": "runtime-warrant-adopter-evidence",
+      "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
+      "role": "draft-runtime-authority-evidence",
+      "maturity": "pre-release",
+      "status": "staged",
+      "nonClaim": "Draft KFD-10 adopter evidence does not activate KFD-10, grant a capability, issue a Runtime Warrant, or authorize host execution."
+    },
+    {
       "id": "github-webhook-suite-readme",
       "path": "extensions/github-webhook-reference-suite/README.md",
       "role": "reference-suite-guide",
@@ -166,20 +174,20 @@
     {
       "id": "architecture",
       "title": "Architecture and hosts",
-      "summary": "The 4.0.0-alpha.3 development line keeps views, adapters, and services in distinct physical hosts while preserving one Core descriptor.",
+      "summary": "The 4.0.0-alpha.3 development line keeps views, adapters, and services in distinct physical hosts; each executable product host adopts and heartbeats an exact Core-owned leased Runtime Warrant before execution.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-topology", "surface-neutral-contributions"],
-      "nonClaim": "Presentation parity does not merge renderer, injected adapter, and service isolation."
+      "sourceIds": ["kfx-topology", "surface-neutral-contributions", "runtime-warrant-adopter-evidence"],
+      "nonClaim": "Presentation parity, host placement, or adapter discovery does not merge isolation boundaries or issue runtime authority."
     },
     {
       "id": "package-facets",
       "title": "Packages and facets",
-      "summary": "The 4.0.0-alpha.3 KFX manifest declares package identity, facets, requested capabilities, and host inputs; retained qualification covers package, install, activation, upgrade, rollback, and removal for the maintained webhook suite.",
+      "summary": "The 4.0.0-alpha.3 KFX manifest declares package identity, facets, requested capabilities, and host inputs; after separate native admission, executable product hosts consume a distinct Core-issued Runtime Warrant lease.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "extensions-guide", "installed-authoring-contract", "github-webhook-qualification"],
-      "nonClaim": "A conforming manifest remains inert until native admission."
+      "sourceIds": ["kfx-contract", "extensions-guide", "installed-authoring-contract", "github-webhook-qualification", "runtime-warrant-adopter-evidence"],
+      "nonClaim": "A conforming manifest remains inert and is neither a capability grant nor a Runtime Warrant."
     },
     {
       "id": "registry-admission-lifecycle",
@@ -193,11 +201,11 @@
     {
       "id": "capabilities",
       "title": "Capabilities and confinement",
-      "summary": "On the 4.0.0-alpha.3 development line, packages request capabilities while Core policy and an explicit exact grant select the allowed subset for one host and preserve that separation across rollback.",
+      "summary": "On the 4.0.0-alpha.3 development line, Core keeps the exact capability grant separate from the leased Runtime Warrant that binds one holder, generation, fencing token, heartbeat, expiry, revocation, recovery, and terminal settlement.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification"],
-      "nonClaim": "Declaration, KFD success, or package origin does not grant a capability."
+      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification", "runtime-warrant-adopter-evidence"],
+      "nonClaim": "Declaration, KFD evidence, package origin, an Episode, or Settlement does not become a capability grant or Runtime Warrant."
     },
     {
       "id": "trust",
@@ -211,20 +219,20 @@
     {
       "id": "agent-first-authoring",
       "title": "Installed Agent-first authoring",
-      "summary": "The installed 4.0.0-alpha.3-matched kit supports scaffold, inspect, validate, build, offline qualify, package, install, activate, upgrade, rollback, and remove steps.",
+      "summary": "The installed 4.0.0-alpha.3-matched kit supports inert authoring and lifecycle steps; separately admitted product hosts then adopt Core-owned Runtime Warrant leases without deriving authority from authoring output.",
       "maturity": "pre-release",
       "status": "experimental",
-      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme"],
-      "nonClaim": "Authoring output remains inert; lifecycle commands require their declared native admission and do not expose a public listener by themselves."
+      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence"],
+      "nonClaim": "Authoring output and draft adopter evidence remain inert; neither can issue a Runtime Warrant or expose a public listener."
     },
     {
       "id": "sdk-cli",
       "title": "SDK and CLI surfaces",
-      "summary": "The 4.0.0-alpha.3 runtime SDK projection and public CLI catalog expose version-matched authoring, lifecycle, and native inspection routes.",
+      "summary": "The 4.0.0-alpha.3 runtime SDK projection exposes typed Runtime Warrant adoption, heartbeat, revocation, and settlement edges while Core alone owns issuance, recovery fencing, and authoritative lease state.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["installed-authoring-brief", "installed-authoring-contract", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme"],
-      "nonClaim": "A visible CLI route does not change its declared mutation or approval policy."
+      "sourceIds": ["installed-authoring-brief", "installed-authoring-contract", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence"],
+      "nonClaim": "A visible SDK type or CLI route does not mint, recover, or widen Runtime Warrant authority."
     },
     {
       "id": "profiles-suites",
@@ -247,17 +255,18 @@
     {
       "id": "qualification-status",
       "title": "Current qualification status",
-      "summary": "For the 4.0.0-alpha.3 development line, identity-neutral terminal evidence and the maintained webhook Profile cover installed-product package, lifecycle, rollback, removal, and local reference-suite qualification.",
+      "summary": "For the 4.0.0-alpha.3 development line, retained qualification covers existing installed-product and reference-suite boundaries; the product-host Runtime Warrant witness is additional draft KFD-10 adopter evidence only.",
       "maturity": "pre-release",
       "status": "qualified",
-      "sourceIds": ["kfx-terminal-qualification", "installed-authoring-contract", "github-webhook-qualification", "github-webhook-suite-readme"],
-      "nonClaim": "Current retained evidence does not establish stable compatibility, downstream Site adoption, or completion of the optional real GitHub/AWS China canary."
+      "sourceIds": ["kfx-terminal-qualification", "installed-authoring-contract", "github-webhook-qualification", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence"],
+      "nonClaim": "The draft Runtime Warrant witness does not establish KFD-10 conformance, activation, shipped support, stable compatibility, or downstream Site adoption."
     }
   ],
   "humanReadingOrder": ["value", "architecture", "package-facets", "registry-admission-lifecycle", "capabilities", "trust", "agent-first-authoring", "sdk-cli", "profiles-suites", "github-webhook-reference", "qualification-status"],
   "agentReadingOrder": ["value", "architecture", "package-facets", "registry-admission-lifecycle", "capabilities", "trust", "agent-first-authoring", "sdk-cli", "profiles-suites", "github-webhook-reference", "qualification-status"],
   "nonClaims": [
     "The dedicated KFX Site Bundle is a deterministic documentation projection, not a registry, permission system, lifecycle authority, or maturity oracle.",
+    "The retained KFD-10 Runtime Warrant adopter witness is draft, non-conforming, non-shipped evidence and does not grant product authority.",
     "This source change does not publish @kungfu-tech/site or any other npm package.",
     "The production KFX Site does not consume this bundle until a separately reviewed downstream adoption.",
     "No source-built or retained qualification evidence opens a stable KFX compatibility line."

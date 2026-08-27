@@ -375,7 +375,11 @@ test('PR payload transport requires merge-group reused-proof authority', (t) => 
   );
   assert.match(
     workflow,
-    /name: Seal cache promotion payload[\s\S]*?github\.event_name == 'pull_request'[\s\S]*?github\.event_name == 'merge_group'[\s\S]*?steps\.native-gate\.outcome == 'success'/u,
+    /name: Seal portable cache receipts[\s\S]*?steps\.native-gate\.outcome == 'success'[\s\S]*?steps\.plan\.outputs\.native-required == 'true'/u,
+  );
+  assert.match(
+    workflow,
+    /name: Seal cache promotion payload[\s\S]*?github\.event_name == 'pull_request'[\s\S]*?github\.event_name == 'merge_group'[\s\S]*?steps\.native-gate\.outcome == 'success'[\s\S]*?steps\.plan\.outputs\.native-required == 'true'/u,
   );
   assert.match(
     workflow,

@@ -97,6 +97,14 @@ def test_current_native_console_adopts_exact_ambient_process(monkeypatch, tmp_pa
     monkeypatch.setattr(
         session_surface, "resolve_workspace_target", lambda *_a, **_k: target
     )
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(project / "extensions" / "work-control"),
+        },
+    )
     identity = process_identity()
     identity_root = session_contract.semantic_root(identity)
     requests = []
@@ -153,6 +161,10 @@ def test_current_native_console_adopts_exact_ambient_process(monkeypatch, tmp_pa
     assert current["source"] == "ambient-provider-session"
     assert current["processIdentityRoot"] == identity_root
     assert current["envelope"]["workspaceId"] == "project:exact"
+    assert current["envelope"]["workRef"] is None
+    assert current["envelope"]["activeProfiles"] == [
+        {"id": "kungfu.work-control", "root": ROOT_HASH}
+    ]
     assert "bootstrap" not in current["envelope"]
     session_contract.validate_agent_console_envelope(current["envelope"])
 
@@ -264,20 +276,19 @@ def test_public_bind_work_cli_selects_explicit_external_project(monkeypatch, tmp
         }
 
     monkeypatch.setattr("kungfu.cli.commands.assignment._status", status)
-    monkeypatch.setattr(
-        "kungfu.cli.commands.assignment.profile_source", lambda: tmp_path
-    )
 
-    def validate_source(_source, runtime_dir):
+    def resolve_profile(runtime_dir, **_kwargs):
         observed_runtime_dirs.append(runtime_dir)
         return {
-            "inspection": {
-                "profile": {"id": "kungfu.work-control"},
-                "profile_suite_root": ROOT_HASH,
-            }
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(tmp_path / "exact-work-control"),
         }
 
-    monkeypatch.setattr("kungfu.profile_sdk.validate_source", validate_source)
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        resolve_profile,
+    )
 
     def invoke(request, **_kwargs):
         requests.append(request)

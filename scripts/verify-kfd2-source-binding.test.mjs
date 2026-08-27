@@ -25,3 +25,55 @@ test('release verification binds KFD-2 claims to the canonical prebuild witness'
   assert.match(verify, /KFD-2 release claims check requires source\.sourceSha/);
   assert.equal(releaseClaims.release.sourceSha, witness.source.sourceSha);
 });
+
+test('release workflows publish the complete canonical KFD-2 claim set', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/release-new-version.yml'),
+    'utf8',
+  );
+  const releaseClaims = readJson('.buildchain/kfd/kfd-2/release-claims.json');
+  const expectedPaths = releaseClaims.claims
+    .map(({ id }) => `source/kfd-2/claims/${id}.json`)
+    .sort();
+  const claimBlocks = [
+    ...workflow.matchAll(
+      /release-passport-kfd-2-claim-jsons: \|\n((?:\s+\.buildchain\/release-candidate\/payloads\/[^\n]+\/source\/kfd-2\/claims\/[^\n]+\.json\n?)+)/g,
+    ),
+  ];
+
+  assert.equal(claimBlocks.length, 2);
+  for (const [, block] of claimBlocks) {
+    const actualPaths = block
+      .trim()
+      .split('\n')
+      .map((entry) => {
+        const normalized = entry.trim();
+        return normalized.slice(
+          normalized.lastIndexOf('/source/kfd-2/claims/') + 1,
+        );
+      })
+      .sort();
+    assert.deepEqual(actualPaths, expectedPaths);
+  }
+});
+
+test('release workflows materialize the standard KFD adopter authority', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/release-new-version.yml'),
+    'utf8',
+  );
+  const manifestInputs = workflow.match(
+    /release-passport-kfd-adopter-manifest-json: \.buildchain\/release-candidate\/payloads\/[^\n]+\/source\/kfd-adopter\/manifest\.json/g,
+  );
+  const artifactWitnessSets = workflow.match(
+    /release-passport-kfd-3-artifact-witness-jsons: \|/g,
+  );
+
+  assert.equal(manifestInputs?.length, 2);
+  assert.equal(artifactWitnessSets?.length, 2);
+  assert.doesNotMatch(
+    workflow,
+    /release-passport-kfd-3-artifact-verify-command:/,
+  );
+  assert.doesNotMatch(workflow, /release-passport-kfd-support-matrix-json:/);
+});

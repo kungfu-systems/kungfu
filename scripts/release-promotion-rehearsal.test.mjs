@@ -194,11 +194,13 @@ test('publication and recovery clear activation commands while preserving public
         : /publish-command: node scripts\/buildchain-custom-publish-evidence\.mjs/u,
       name,
     );
+    assert.doesNotMatch(
+      job,
+      /release-passport-kfd-3-artifact-verify-command:/u,
+    );
     assert.match(
       job,
-      name === 'recover'
-        ? /release-passport-kfd-3-artifact-verify-command: node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --write --json >\/dev\/null && node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --artifact-witness --json/u
-        : /release-passport-kfd-3-artifact-verify-command: node scripts\/buildchain-kfd-evidence\.mjs --artifact-witness --json/u,
+      /release-passport-kfd-3-artifact-witness-jsons:[\s\S]*artifacts\/linux-x64\.json[\s\S]*artifacts\/linux-arm64\.json[\s\S]*artifacts\/macos-arm64\.json[\s\S]*artifacts\/windows-x64\.json/u,
       name,
     );
     assert.match(

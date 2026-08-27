@@ -402,6 +402,8 @@ py::dict action_envelope_to_py(const kungfu::view::action::envelope &value) {
 } // namespace
 
 namespace kungfu::runtime {
+
+namespace {
 class PyLocator : public locator {
   using locator::locator;
 
@@ -519,7 +521,126 @@ public:
   void on_start() override { PYBIND11_OVERLOAD(void, peer, on_start); }
 };
 
-void bind(pybind11::module &&m) {
+py::list storage_sync_root_issues_to_py(py::object actual, py::iterable entries) {
+  py::list result;
+  const auto issues = yijinjing::storage::verify_linear_sync_root(py_to_json(actual), py_entries_to_json(entries));
+  for (const auto &issue : issues) {
+    py::dict item;
+    item["code"] = issue.code;
+    if (!issue.field.empty()) {
+      item["field"] = issue.field;
+    }
+    if (!issue.expected.is_null()) {
+      item["expected"] = json_to_py(issue.expected);
+    }
+    if (!issue.actual.is_null()) {
+      item["actual"] = json_to_py(issue.actual);
+    }
+    result.append(item);
+  }
+  return result;
+}
+
+py::list storage_import_manifest_issues_to_py(py::dict manifest) {
+  py::list result;
+  for (const auto &issue : yijinjing::storage::verify_storage_import_manifest(py_to_json(manifest))) {
+    py::dict item;
+    item["severity"] = issue.severity;
+    item["code"] = issue.code;
+    if (!issue.path.empty()) {
+      item["path"] = issue.path;
+    }
+    if (!issue.message.empty()) {
+      item["message"] = issue.message;
+    }
+    if (!issue.expected.is_null()) {
+      item["expected"] = json_to_py(issue.expected);
+    }
+    if (!issue.actual.is_null()) {
+      item["actual"] = json_to_py(issue.actual);
+    }
+    result.append(item);
+  }
+  return result;
+}
+
+storage_service_api::storage_fsck_scope storage_fsck_scope_for(const std::string &source_id, uint64_t episode_id,
+                                                               bool verify_frames) {
+  if (episode_id != 0 || verify_frames) {
+    return storage_service_api::storage_fsck_scope::Episode;
+  }
+  return source_id.empty() ? storage_service_api::storage_fsck_scope::All
+                           : storage_service_api::storage_fsck_scope::Source;
+}
+
+EpisodeRefKind parse_episode_ref_kind(const std::string &kind) {
+  if (kind == "payload") {
+    return EpisodeRefKind::Payload;
+  }
+  if (kind == "schema") {
+    return EpisodeRefKind::Schema;
+  }
+  if (kind == "episode") {
+    return EpisodeRefKind::Episode;
+  }
+  return EpisodeRefKind::InputFrame;
+}
+
+SourceKind parse_source_kind(const std::string &kind) {
+  if (kind == "imported_bundle") {
+    return SourceKind::ImportedBundle;
+  }
+  if (kind == "kungfu_runtime") {
+    return SourceKind::KungfuRuntime;
+  }
+  if (kind == "adapter") {
+    return SourceKind::Adapter;
+  }
+  return SourceKind::Local;
+}
+
+SourceVerificationStatus parse_source_verification_status(const std::string &status) {
+  if (status == "degraded") {
+    return SourceVerificationStatus::Degraded;
+  }
+  if (status == "failed") {
+    return SourceVerificationStatus::Failed;
+  }
+  return SourceVerificationStatus::Ok;
+}
+
+py::object storage_episode_close_to_py(const std::string &runtime_dir, uint64_t episode_id, bool aborted,
+                                       uint32_t location_uid, int64_t end_time, uint64_t last_frame_uid,
+                                       uint64_t frame_count, const std::string &reason) {
+  storage_service_api::storage_episode_close_request request{};
+  request.runtime_dir = runtime_dir;
+  request.options = {episode_id, location_uid,   aborted ? EpisodeStatus::Aborted : EpisodeStatus::Ended,
+                     end_time,   last_frame_uid, frame_count,
+                     reason};
+  const auto &service = storage_service_api::default_storage_service();
+  return hana_view_to_py(aborted ? service.episode_abort(request) : service.episode_end(request));
+}
+
+void writer_write_bytes(writer &target, int64_t trigger_time, int32_t carrier_type, py::buffer payload) {
+  const auto view = payload.request();
+  if (view.ndim != 1 || view.itemsize <= 0 || view.size < 0 ||
+      (view.size > 1 && (view.strides.empty() || view.strides[0] != view.itemsize))) {
+    throw std::invalid_argument("writer payload must be a contiguous one-dimensional bytes-like buffer");
+  }
+  const auto item_size = static_cast<size_t>(view.itemsize);
+  const auto item_count = static_cast<size_t>(view.size);
+  if (item_count > std::numeric_limits<size_t>::max() / item_size) {
+    throw std::invalid_argument("writer payload byte length overflows size_t");
+  }
+  const auto byte_length = item_count * item_size;
+  if (view.ptr == nullptr && byte_length != 0) {
+    throw std::invalid_argument("writer payload has a null address");
+  }
+  target.write_bytes(trigger_time, carrier_type,
+                     std::span<const std::byte>(static_cast<const std::byte *>(view.ptr), byte_length));
+}
+
+void bind_durability_surface(py::module_ &m) {
   ensure_sqlite_initilize();
   py::register_exception<replay_exhausted>(m, "ReplayExhaustedError", PyExc_RuntimeError);
 
@@ -585,7 +706,9 @@ void bind(pybind11::module &&m) {
       py::arg("data_root"), py::arg("stream_id"), py::arg("container_epoch"), py::arg("writer_resource_id"),
       py::arg("qualification_profile"), py::arg("projection_name") = "typed-peer-state",
       py::arg("requirement") = "required");
+}
 
+void bind_runtime_primitives(py::module_ &m) {
   // nanosecond-time related
   m.def("now_in_nano", &yijinjing::time::now_in_nano);
   m.def("nano_hashed", &yijinjing::time::nano_hashed);
@@ -700,6 +823,9 @@ void bind(pybind11::module &&m) {
                                       static_cast<uint32_t>(payload_view.size * payload_view.itemsize), algorithm);
       },
       py::arg("header"), py::arg("payload"), py::arg("algorithm") = action::DEFAULT_FRAME_CHECKSUM_ALGORITHM);
+}
+
+void bind_content_integrity(py::module_ &m) {
   m.attr("CONTENT_HASH_ALGORITHM_SHA256") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256;
   m.attr("CONTENT_HASH_ALGORITHM_BLAKE3") = yijinjing::storage::CONTENT_HASH_ALGORITHM_BLAKE3;
   m.def("is_supported_content_hash_algorithm", &yijinjing::storage::is_supported_content_hash_algorithm,
@@ -755,28 +881,7 @@ void bind(pybind11::module &&m) {
         return json_to_py(yijinjing::storage::compute_linear_sync_root(py_entries_to_json(entries)));
       },
       py::arg("entries"));
-  m.def(
-      "verify_storage_sync_root",
-      [](py::object actual, py::iterable entries) {
-        py::list result;
-        for (const auto &issue :
-             yijinjing::storage::verify_linear_sync_root(py_to_json(actual), py_entries_to_json(entries))) {
-          py::dict item;
-          item["code"] = issue.code;
-          if (!issue.field.empty()) {
-            item["field"] = issue.field;
-          }
-          if (!issue.expected.is_null()) {
-            item["expected"] = json_to_py(issue.expected);
-          }
-          if (!issue.actual.is_null()) {
-            item["actual"] = json_to_py(issue.actual);
-          }
-          result.append(item);
-        }
-        return result;
-      },
-      py::arg("actual"), py::arg("entries"));
+  m.def("verify_storage_sync_root", &storage_sync_root_issues_to_py, py::arg("actual"), py::arg("entries"));
   m.def(
       "verify_storage_payload",
       [](py::buffer payload, const std::string &expected_hash, uint64_t expected_byte_length,
@@ -794,37 +899,16 @@ void bind(pybind11::module &&m) {
             yijinjing::storage::filter_storage_manifest_entries(py_to_json(entries), py_to_json(range_filter)));
       },
       py::arg("entries"), py::arg("range_filter"));
-  m.def(
-      "verify_storage_import_manifest",
-      [](py::dict manifest) {
-        py::list result;
-        for (const auto &issue : yijinjing::storage::verify_storage_import_manifest(py_to_json(manifest))) {
-          py::dict item;
-          item["severity"] = issue.severity;
-          item["code"] = issue.code;
-          if (!issue.path.empty()) {
-            item["path"] = issue.path;
-          }
-          if (!issue.message.empty()) {
-            item["message"] = issue.message;
-          }
-          if (!issue.expected.is_null()) {
-            item["expected"] = json_to_py(issue.expected);
-          }
-          if (!issue.actual.is_null()) {
-            item["actual"] = json_to_py(issue.actual);
-          }
-          result.append(item);
-        }
-        return result;
-      },
-      py::arg("manifest"));
+  m.def("verify_storage_import_manifest", &storage_import_manifest_issues_to_py, py::arg("manifest"));
   m.def(
       "build_storage_export_bundle",
       [](py::dict manifest, py::iterable records) {
         return json_to_py(yijinjing::storage::build_storage_export_bundle(py_to_json(manifest), py_to_json(records)));
       },
       py::arg("manifest"), py::arg("records"));
+}
+
+void bind_storage_service(py::module_ &m) {
   m.def("storage_service_capabilities",
         []() { return json_to_py(storage_service_api::storage_service_capabilities()); });
   m.def(
@@ -893,10 +977,7 @@ void bind(pybind11::module &&m) {
         request.source_id = source_id.value_or("");
         request.episode_id = episode_id;
         request.verify_frames = verify_frames;
-        request.scope = episode_id != 0 || verify_frames
-                            ? storage_service_api::storage_fsck_scope::Episode
-                            : (request.source_id.empty() ? storage_service_api::storage_fsck_scope::All
-                                                         : storage_service_api::storage_fsck_scope::Source);
+        request.scope = storage_fsck_scope_for(request.source_id, episode_id, verify_frames);
         return hana_view_to_py(storage_service_api::default_storage_service().fsck(request));
       },
       py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("episode_id") = 0,
@@ -911,10 +992,7 @@ void bind(pybind11::module &&m) {
         request.episode_id = episode_id;
         request.verify_frames = verify_frames;
         request.dry_run = dry_run;
-        request.scope = episode_id != 0 || verify_frames
-                            ? storage_service_api::storage_fsck_scope::Episode
-                            : (request.source_id.empty() ? storage_service_api::storage_fsck_scope::All
-                                                         : storage_service_api::storage_fsck_scope::Source);
+        request.scope = storage_fsck_scope_for(request.source_id, episode_id, verify_frames);
         return hana_view_to_py(storage_service_api::default_storage_service().repair_plan(request));
       },
       py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("episode_id") = 0,
@@ -968,34 +1046,15 @@ void bind(pybind11::module &&m) {
          const std::string &ref_id, const std::string &ref_hash, uint32_t location_uid, int64_t update_time) {
         storage_service_api::storage_episode_ref_attach_request request{};
         request.runtime_dir = runtime_dir;
-        request.options = {episode_id,
-                           location_uid,
-                           ref_kind == "payload"   ? EpisodeRefKind::Payload
-                           : ref_kind == "schema"  ? EpisodeRefKind::Schema
-                           : ref_kind == "episode" ? EpisodeRefKind::Episode
-                                                   : EpisodeRefKind::InputFrame,
-                           ref_uid,
-                           update_time,
-                           ref_id,
-                           ref_hash};
+        request.options = {episode_id, location_uid, parse_episode_ref_kind(ref_kind), ref_uid, update_time,
+                           ref_id,     ref_hash};
         return hana_view_to_py(storage_service_api::default_storage_service().episode_attach_ref(request));
       },
       py::arg("runtime_dir"), py::arg("episode_id"), py::arg("ref_kind") = "input_frame", py::arg("ref_uid") = 0,
       py::arg("ref_id") = "", py::arg("ref_hash") = "", py::arg("location_uid") = 0, py::arg("update_time") = 0);
-  m.def(
-      "storage_episode_close_typed",
-      [](const std::string &runtime_dir, uint64_t episode_id, bool aborted, uint32_t location_uid, int64_t end_time,
-         uint64_t last_frame_uid, uint64_t frame_count, const std::string &reason) {
-        storage_service_api::storage_episode_close_request request{};
-        request.runtime_dir = runtime_dir;
-        request.options = {episode_id, location_uid,   aborted ? EpisodeStatus::Aborted : EpisodeStatus::Ended,
-                           end_time,   last_frame_uid, frame_count,
-                           reason};
-        const auto &service = storage_service_api::default_storage_service();
-        return hana_view_to_py(aborted ? service.episode_abort(request) : service.episode_end(request));
-      },
-      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("aborted") = false, py::arg("location_uid") = 0,
-      py::arg("end_time") = 0, py::arg("last_frame_uid") = 0, py::arg("frame_count") = 0, py::arg("reason") = "");
+  m.def("storage_episode_close_typed", &storage_episode_close_to_py, py::arg("runtime_dir"), py::arg("episode_id"),
+        py::arg("aborted") = false, py::arg("location_uid") = 0, py::arg("end_time") = 0, py::arg("last_frame_uid") = 0,
+        py::arg("frame_count") = 0, py::arg("reason") = "");
   m.def(
       "storage_episode_recover_typed",
       [](const std::string &runtime_dir, uint64_t episode_id, uint32_t location_uid, int64_t end_time,
@@ -1037,11 +1096,7 @@ void bind(pybind11::module &&m) {
          const std::string &coordinate, const std::string &head, uint32_t location_uid, int64_t register_time) {
         storage_service_api::storage_source_register_request request{};
         request.runtime_dir = runtime_dir;
-        const auto source_kind = kind == "imported_bundle"  ? SourceKind::ImportedBundle
-                                 : kind == "kungfu_runtime" ? SourceKind::KungfuRuntime
-                                 : kind == "adapter"        ? SourceKind::Adapter
-                                                            : SourceKind::Local;
-        request.options = {source_id, source_kind, coordinate, head, location_uid, register_time};
+        request.options = {source_id, parse_source_kind(kind), coordinate, head, location_uid, register_time};
         return hana_view_to_py(storage_service_api::default_storage_service().source_register(request));
       },
       py::arg("runtime_dir"), py::arg("source_id"), py::arg("kind") = "local", py::arg("coordinate") = "",
@@ -1067,11 +1122,9 @@ void bind(pybind11::module &&m) {
          int64_t until, const std::string &status) {
         storage_service_api::storage_source_accepted_range_request request{};
         request.runtime_dir = runtime_dir;
-        const auto verification = status == "degraded" ? SourceVerificationStatus::Degraded
-                                  : status == "failed" ? SourceVerificationStatus::Failed
-                                                       : SourceVerificationStatus::Ok;
-        request.options = {source_id,      manifest_id, location_uid, accept_time, first_frame_uid,
-                           last_frame_uid, since,       until,        verification};
+        request.options = {source_id,   manifest_id,     location_uid,
+                           accept_time, first_frame_uid, last_frame_uid,
+                           since,       until,           parse_source_verification_status(status)};
         return hana_view_to_py(storage_service_api::default_storage_service().source_record_accepted_range(request));
       },
       py::arg("runtime_dir"), py::arg("source_id"), py::arg("manifest_id"), py::arg("location_uid") = 0,
@@ -1203,7 +1256,9 @@ void bind(pybind11::module &&m) {
         return json_to_py(result);
       },
       py::arg("runtime_dir"));
+}
 
+void bind_event_and_action_types(py::module_ &m) {
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);
 
@@ -1337,7 +1392,9 @@ void bind(pybind11::module &&m) {
       .def("mark", &action::action_recorder::mark, py::arg("carrier_type"),
            py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def_property_readonly("last_frame_uid", &action::action_recorder::last_frame_uid);
+}
 
+void bind_journal_and_io_types(py::module_ &m) {
   auto location_class = py::class_<location, location_ptr>(m, "location");
   location_class
       .def(py::init<mode, location_role, const std::string &, const std::string &, locator_ptr, uint32_t>(),
@@ -1423,27 +1480,7 @@ void bind(pybind11::module &&m) {
       .def("copy_frame", &writer::copy_frame)
       .def("mark", &writer::mark)
       .def("mark_at", &writer::mark_at)
-      .def(
-          "write_bytes",
-          [](writer &target, int64_t trigger_time, int32_t carrier_type, py::buffer payload) {
-            const auto view = payload.request();
-            if (view.ndim != 1 || view.itemsize <= 0 || view.size < 0 ||
-                (view.size > 1 && (view.strides.empty() || view.strides[0] != view.itemsize))) {
-              throw std::invalid_argument("writer payload must be a contiguous one-dimensional bytes-like buffer");
-            }
-            const auto item_size = static_cast<size_t>(view.itemsize);
-            const auto item_count = static_cast<size_t>(view.size);
-            if (item_count > std::numeric_limits<size_t>::max() / item_size) {
-              throw std::invalid_argument("writer payload byte length overflows size_t");
-            }
-            const auto byte_length = item_count * item_size;
-            if (view.ptr == nullptr && byte_length != 0) {
-              throw std::invalid_argument("writer payload has a null address");
-            }
-            target.write_bytes(trigger_time, carrier_type,
-                               std::span<const std::byte>(static_cast<const std::byte *>(view.ptr), byte_length));
-          },
-          py::arg("trigger_time"), py::arg("carrier_type"), py::arg("payload"));
+      .def("write_bytes", &writer_write_bytes, py::arg("trigger_time"), py::arg("carrier_type"), py::arg("payload"));
 
   py::class_<sink, PySink, sink_ptr>(m, "sink")
       .def(py::init())
@@ -1510,7 +1547,9 @@ void bind(pybind11::module &&m) {
     profile_class.def("get_all", &profile::get_all<DataType>);
     profile_class.def("remove", &profile::remove<DataType>);
   });
+}
 
+void bind_live_runtime_types(py::module_ &m) {
   py::class_<durability_writer_lease>(m, "durability_writer_lease")
       .def(py::init<const std::string &, const std::string &>(), py::arg("data_root"), py::arg("resource_id"))
       .def_property_readonly(
@@ -1679,4 +1718,17 @@ void bind(pybind11::module &&m) {
       .def("get_public_writer", &peer::get_public_writer)
       .def("on_exit", &peer::on_exit);
 }
+
+} // namespace
+
+void bind(pybind11::module &&m) {
+  bind_durability_surface(m);
+  bind_runtime_primitives(m);
+  bind_content_integrity(m);
+  bind_storage_service(m);
+  bind_event_and_action_types(m);
+  bind_journal_and_io_types(m);
+  bind_live_runtime_types(m);
+}
+
 } // namespace kungfu::runtime

@@ -277,6 +277,167 @@ export function authorizeKfxHostLaunch(
   return authorization;
 }
 
+export type KfxRuntimeWarrantAuthorization =
+  KfxExperienceFlowDescriptor['runtimeAuthorizations'][number];
+
+export type KfxRuntimeWarrantAdoption = {
+  schema: 'kungfu.kfx.runtime-warrant-adoption/v1';
+  executionAllowed: true;
+  runtimeWarrant: {
+    schema: 'kungfu.kfx.runtime-warrant/v1';
+    warrantRoot: string;
+    packageKey: string;
+    host: KfxRuntimeHost;
+    holder: string;
+    capabilityGrantRoot: string;
+    hostAuthorizationRoot: string;
+    mutationWarrantRoot: string;
+    expiresAt: number;
+    heartbeatTtl: number;
+  };
+  leaseState: {
+    schema: 'kungfu.kfx.runtime-lease-state-fact/v1';
+    warrantRoot: string;
+    packageKey: string;
+    host: KfxRuntimeHost;
+    holder: string;
+    generation: number;
+    fencingToken: string;
+    state: 'active';
+    heartbeatAt: number;
+    heartbeatDeadline: number;
+    expiresAt: number;
+  };
+  recovery: null | {
+    schema: 'kungfu.kfx.runtime-warrant-transition/v1';
+    event: 'lease-expired' | 'heartbeat-expired';
+    leaseState: { state: 'recovered' } & Record<string, unknown>;
+    receipt: Record<string, unknown>;
+  };
+  receipt: Record<string, unknown>;
+};
+
+export type KfxRuntimeWarrantTransition = {
+  schema: 'kungfu.kfx.runtime-warrant-transition/v1';
+  event: string;
+  leaseState: Record<string, unknown> & { state: string };
+  receipt: Record<string, unknown>;
+};
+
+export type KfxRuntimeWarrant = {
+  adopt: (
+    authorization: KfxRuntimeWarrantAuthorization,
+    request: {
+      holder: string;
+      purpose: string;
+      leaseNonce: string;
+      issuedAt: number;
+      expiresAt: number;
+      heartbeatTtl: number;
+      residualResponsibility: string;
+      requestedCapabilities: string[];
+    },
+  ) => KfxRuntimeWarrantAdoption;
+  heartbeat: (
+    adoption: KfxRuntimeWarrantAdoption,
+    recordedAt: number,
+  ) => KfxRuntimeWarrantTransition;
+  settle: (
+    adoption: KfxRuntimeWarrantAdoption,
+    request: {
+      recordedAt: number;
+      outcome: string;
+      residualResponsibilityDisposition: string;
+    },
+  ) => KfxRuntimeWarrantTransition;
+};
+
+export type OpenKfxRuntimeWarrantOptions = {
+  binding: KfNativeBinding;
+  locator: KfLocator;
+};
+
+function runtimeWarrantFence(adoption: KfxRuntimeWarrantAdoption) {
+  const warrant = adoption.runtimeWarrant;
+  const lease = adoption.leaseState;
+  if (
+    adoption.schema !== 'kungfu.kfx.runtime-warrant-adoption/v1' ||
+    adoption.executionAllowed !== true ||
+    warrant.schema !== 'kungfu.kfx.runtime-warrant/v1' ||
+    lease.schema !== 'kungfu.kfx.runtime-lease-state-fact/v1' ||
+    lease.state !== 'active' ||
+    lease.warrantRoot !== warrant.warrantRoot ||
+    lease.packageKey !== warrant.packageKey ||
+    lease.host !== warrant.host ||
+    lease.holder !== warrant.holder ||
+    !Number.isSafeInteger(lease.generation) ||
+    lease.generation < 1 ||
+    !lease.fencingToken.startsWith('sha256:') ||
+    warrant.warrantRoot === warrant.capabilityGrantRoot ||
+    warrant.warrantRoot === warrant.mutationWarrantRoot
+  ) {
+    throw new Error('KFX Runtime Warrant adoption identity does not match');
+  }
+  return {
+    packageKey: warrant.packageKey,
+    host: warrant.host,
+    holder: warrant.holder,
+    expectedWarrantRoot: warrant.warrantRoot,
+    expectedGeneration: lease.generation,
+    expectedFencingToken: lease.fencingToken,
+  };
+}
+
+export function openKfxRuntimeWarrant(
+  options: OpenKfxRuntimeWarrantOptions,
+): KfxRuntimeWarrant {
+  const operation = options.binding.runStorageServiceOperation;
+  if (!operation) {
+    throw new Error(
+      'native binding does not expose KFX Runtime Warrant operations',
+    );
+  }
+  const runtimeDir = resolveRuntimeDir(options.locator);
+  const run = <T>(action: string, request: object): T =>
+    operation('kfx_runtime', runtimeDir, { action, request }) as T;
+  return {
+    adopt: (authorization, request) => {
+      if (
+        authorization.cutRoot === null ||
+        authorization.capabilityGrantRoot === null ||
+        authorization.authorizationRoot.length === 0 ||
+        request.requestedCapabilities.length === 0
+      ) {
+        throw new Error('KFX Runtime Warrant requires exact host authority');
+      }
+      const adoption = run<KfxRuntimeWarrantAdoption>('runtime-warrant-adopt', {
+        packageKey: authorization.packageKey,
+        host: authorization.host,
+        expectedCutRoot: authorization.cutRoot,
+        expectedRevision: authorization.revision,
+        expectedGenerationRoot: authorization.generationRoot,
+        expectedPackageRoot: authorization.packageRoot,
+        expectedCapabilityGrantRoot: authorization.capabilityGrantRoot,
+        expectedAuthorizationRoot: authorization.authorizationRoot,
+        expectedGrantedCapabilities: authorization.grantedCapabilities,
+        ...request,
+      });
+      runtimeWarrantFence(adoption);
+      return adoption;
+    },
+    heartbeat: (adoption, recordedAt) =>
+      run<KfxRuntimeWarrantTransition>('runtime-warrant-heartbeat', {
+        ...runtimeWarrantFence(adoption),
+        recordedAt,
+      }),
+    settle: (adoption, request) =>
+      run<KfxRuntimeWarrantTransition>('runtime-warrant-settle', {
+        ...runtimeWarrantFence(adoption),
+        ...request,
+      }),
+  };
+}
+
 // Public narrow capability for the KFX Control Suite. Product roles identify
 // assembly/distribution metadata only. Core owns Passport verification,
 // capability grants, Work/Warrant settlement, CAS, and recovery state.

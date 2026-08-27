@@ -40,8 +40,19 @@ import type {
   ProjectWorkspaceSelection,
 } from '../projects-view/index.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
+import {
+  type ProjectWorkComposer,
+  workWindowInputAction,
+} from './input-action.js';
 import { projectWorkSessionState } from './project-work-session-state.js';
 import { NativeWorkProjectionView } from './project-work-session-view.js';
+
+export {
+  type ProjectWorkComposer,
+  type WorkWindowInputAction,
+  type WorkWindowInputContext,
+  workWindowInputAction,
+} from './input-action.js';
 
 export type WorkSort = 'updated-desc' | 'project-asc' | 'title-asc';
 
@@ -477,13 +488,6 @@ export type ProjectWorkActionRequest = {
   action: ProjectWorkQuickAction;
 };
 
-type ProjectWorkComposer = {
-  step: 'objective' | 'acceptance' | 'preview' | 'capturing';
-  objective: string;
-  acceptanceCriterion: string;
-  plan?: ProjectWorkCapturePlan;
-};
-
 function ProjectWorkDock({
   title,
   detail,
@@ -903,137 +907,56 @@ export function ProjectWorkHost({
     const onData = (chunk: Buffer | string) => {
       const value = String(chunk);
       if (isInputCaptured()) return;
-      if (agentReply !== undefined) {
-        if (value === '\u001b') {
-          setAgentReply(undefined);
-        } else if (value === '\u007f' || value === '\b') {
-          setAgentReply((current) => current?.slice(0, -1) ?? '');
-        } else if (value === '\r' || value === '\n') {
-          submitAgentReply();
-        } else if (
-          [...value].every((character) => {
-            const codePoint = character.codePointAt(0) ?? 0;
-            return codePoint >= 0x20 && codePoint !== 0x7f;
-          })
-        ) {
-          setAgentReply((current) => `${current ?? ''}${value}`.slice(0, 1000));
+      const action = workWindowInputAction(value, {
+        agentReply,
+        composer,
+        planPending: Boolean(plan),
+        retainedAgentReviewable,
+        attentionKind: attention?.kind,
+        sessionControllable: session?.controllable,
+      });
+      if (action.kind === 'none') return;
+      if (action.kind === 'set-agent-reply') return setAgentReply(action.value);
+      if (action.kind === 'submit-agent-reply') return submitAgentReply();
+      if (action.kind === 'set-composer') {
+        setComposer(action.value);
+        if (action.message) setMessage(action.message);
+        return;
+      }
+      if (action.kind === 'capture-composed-work') return captureComposedWork();
+      if (action.kind === 'preview-composed-work' && composer) {
+        try {
+          setComposer({
+            ...composer,
+            step: 'preview',
+            plan: projects.prepareWork(
+              composer.objective,
+              composer.acceptanceCriterion,
+            ),
+          });
+          setMessage('Review this Work before capturing it.');
+        } catch (error) {
+          setMessage(error instanceof Error ? error.message : String(error));
         }
         return;
       }
-      if (composer) {
-        if (composer.step === 'capturing') return;
-        if (composer.step === 'preview') {
-          if (value === '\u001b' || value === 'b') {
-            setComposer({ ...composer, step: 'acceptance', plan: undefined });
-          } else if (value === '\r' || value === '\n') {
-            captureComposedWork();
-          }
-          return;
-        }
-        if (value === '\u001b') {
-          setComposer(undefined);
-          setMessage('New Work cancelled; nothing was captured.');
-          return;
-        }
-        if (value === '\u007f' || value === '\b') {
-          setComposer((current) =>
-            current?.step === 'objective'
-              ? { ...current, objective: current.objective.slice(0, -1) }
-              : current
-                ? {
-                    ...current,
-                    acceptanceCriterion: current.acceptanceCriterion.slice(
-                      0,
-                      -1,
-                    ),
-                  }
-                : current,
-          );
-          return;
-        }
-        if (value === '\r' || value === '\n') {
-          if (composer.step === 'objective') {
-            if (!composer.objective.trim()) return;
-            setComposer({ ...composer, step: 'acceptance' });
-            setMessage(
-              'Define the result that independent review should check.',
-            );
-          } else {
-            if (!composer.acceptanceCriterion.trim()) return;
-            try {
-              setComposer({
-                ...composer,
-                step: 'preview',
-                plan: projects.prepareWork(
-                  composer.objective,
-                  composer.acceptanceCriterion,
-                ),
-              });
-              setMessage('Review this Work before capturing it.');
-            } catch (error) {
-              setMessage(
-                error instanceof Error ? error.message : String(error),
-              );
-            }
-          }
-          return;
-        }
-        const printable = [...value].every((character) => {
-          const codePoint = character.codePointAt(0) ?? 0;
-          return codePoint >= 0x20 && codePoint !== 0x7f;
-        });
-        if (printable) {
-          setComposer((current) =>
-            current?.step === 'objective'
-              ? {
-                  ...current,
-                  objective: `${current.objective}${value}`.slice(0, 320),
-                }
-              : current
-                ? {
-                    ...current,
-                    acceptanceCriterion:
-                      `${current.acceptanceCriterion}${value}`.slice(0, 320),
-                  }
-                : current,
-          );
-        }
+      if (action.kind === 'cancel-plan') {
+        setPlan(undefined);
+        setMessage('Work start cancelled; no effects were performed.');
         return;
       }
-      if (plan) {
-        if (value === '\u001b' || value === 'b' || value === 'n') {
-          setPlan(undefined);
-          setMessage('Work start cancelled; no effects were performed.');
-        } else if (value === '\r' || value === 'y') {
-          confirmRun();
-        }
-        return;
-      }
-      if (value === 'q' || value === '\u0003') return exit();
-      if (value === 'a') return onOpenLab();
-      if (value === 't') {
-        setFileTreeFocused(true);
-        return;
-      }
-      if (value === 'p' || value === '\u001b') return onOpenProjects();
-      if (value === 'v' && retainedAgentReviewable)
+      if (action.kind === 'confirm-plan') return confirmRun();
+      if (action.kind === 'exit') return exit();
+      if (action.kind === 'open-lab') return onOpenLab();
+      if (action.kind === 'focus-file-tree') return setFileTreeFocused(true);
+      if (action.kind === 'open-projects') return onOpenProjects();
+      if (action.kind === 'continue-retained-work')
         return continueRetainedWork();
-      if (value === '\r' && retainedAgentReviewable)
-        return continueRetainedWork();
-      if (attention?.kind === 'blocked' && value === 'r')
-        return retryAgentAttempt();
-      if (session?.controllable === false) return;
-      if (value === 'n') return beginNewWork();
-      if (attention?.kind === 'needs-approval' && value === 'y')
-        return decideAgentApproval(true);
-      if (attention?.kind === 'needs-approval' && value === 'n')
-        return decideAgentApproval(false);
-      if (attention?.kind === 'needs-answer' && value === 'i') {
-        setAgentReply('');
-        return;
-      }
-      if (value === '\r') return beginNewWork();
-      if (value === 'r') previewCodex();
+      if (action.kind === 'retry-agent-attempt') return retryAgentAttempt();
+      if (action.kind === 'begin-new-work') return beginNewWork();
+      if (action.kind === 'decide-agent-approval')
+        return decideAgentApproval(action.approved);
+      previewCodex();
     };
     process.stdin.on('data', onData);
     return () => {

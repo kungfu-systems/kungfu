@@ -2,7 +2,7 @@
   "schema": "kungfu.temporal-release-admission-rollback/v1",
   "status": "sealed",
   "normalAdmissionEligible": false,
-  "sourceFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
+  "sourceFactSetRoot": "sha256:f7948f0f85b4cefa1ce72e9162397b852248a6d0f0ae05ac0ffd75e502a9580f",
   "invocation": {
     "command": "./shifu rollback:temporal-release-admission --request <request.json>",
     "mode": "offline-explicit",
@@ -21,31 +21,35 @@
     "alpha": {
       "schema": "kungfu.temporal-release-admission-digest-projection/v1",
       "authority": "non-authoritative",
-      "sourceFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
+      "sourceFactSetRoot": "sha256:f7948f0f85b4cefa1ce72e9162397b852248a6d0f0ae05ac0ffd75e502a9580f",
       "entries": [
         {
           "contractDigest": "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490",
-          "sourceProofRoot": "sha256:12eed392ce3899eca7b995eaa3ef48a226040668b2da54212117f82372e22007"
+          "sourceProofRoot": "sha256:a77b0558711a7d66256c425a8b65797d0a34efbb6d1e2f8a7d9f9d9e0ee7a1ad"
         },
         {
           "contractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
-          "sourceProofRoot": "sha256:27073cb22644c89d8996ad578bca65d195d9b9969b9a32ca4e10f992220b7b21"
+          "sourceProofRoot": "sha256:03fbcd27a64fed137d8c2d18258bc2c5024a8f41bb6e774e984e57803bf9f91f"
+        },
+        {
+          "contractDigest": "sha256:cb12a8b2ac4a4752e1a5075d6e8a5b8ea48fb4ea7261f24a858363f9eecd1a25",
+          "sourceProofRoot": "sha256:10a0979ddb8f4290364a233e03b4c981fddeae4ac53e5d049b466a5821163dfb"
         }
       ],
-      "projectionRoot": "sha256:598448c40cc084fe789e3a0cadd3fd9fc5f75a39a6208334c04530b384aa01ce"
+      "projectionRoot": "sha256:0d1caec6b3a9f943106b06ff54f6b616a4eeb640c0de5529e4a9a43de85f3cf9"
     },
     "release": {
       "schema": "kungfu.temporal-release-admission-digest-projection/v1",
       "authority": "non-authoritative",
-      "sourceFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
+      "sourceFactSetRoot": "sha256:f7948f0f85b4cefa1ce72e9162397b852248a6d0f0ae05ac0ffd75e502a9580f",
       "entries": [
         {
           "contractDigest": "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12",
-          "sourceProofRoot": "sha256:b6a1a19c1d819171a90a7111ce69c371c72a94205db8b1bcfb925aac0c48c3af"
+          "sourceProofRoot": "sha256:dfdad146972a56f41ff0adf4bb81e349a2e2ff13ac023854c12a199ca5e7796a"
         }
       ],
-      "projectionRoot": "sha256:bf39df6594090878919e76ebff120f8a9a36af424f72e86dfa2a2f7ea93e1e03"
+      "projectionRoot": "sha256:e3685e4cfb3e4b7f95395ef7d438b7f9d5b82712c951aa6abf22bde669a6e597"
     }
   },
-  "sealRoot": "sha256:e8de0b7a102241aa47c9273b84b65b02dd889f92fdd7b8b1295e1454f7416112"
+  "sealRoot": "sha256:26448df8adbdf43977de448ac8c46dc8fa30eda91c114b02fd3d48a33ab68707"
 }

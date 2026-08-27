@@ -31,6 +31,8 @@ from kungfu.agent.native_launch import (
     NativeLaunchCoordinator,
     apply_platform_tls_trust,
     encode_wrapper_prompt as _encode_windows_wrapper_prompt,
+    managed_console_scope as _managed_console_scope,
+    managed_workspace_id as _managed_workspace_id,
     native_environment as _native_environment,
     native_provider_adapter,
     provider_interactive_argv as interactive_launch_argv,
@@ -70,8 +72,10 @@ def bind_current_native_work(
     assignment_id: str,
     *,
     work_workspace_root: str | None = None,
+    work_profile_source: str | Path | None = None,
     envelope_override: Mapping[str, Any] | None = None,
     console_workspace_root: str | None = None,
+    expected_binding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Atomically bind the current native attempt before it acts on Work."""
 
@@ -86,7 +90,6 @@ def bind_current_native_work(
             dict(envelope_override or {})
         )
     )
-    from kungfu import profile_sdk
     from kungfu.cli.commands import assignment as work_commands
 
     workspace_root = (
@@ -121,12 +124,10 @@ def bind_current_native_work(
             )
         agent_resources.validated_current_bootstrap_receipt(envelope)
 
-    # ``runtime_dir`` belongs to the CLI invocation context. A packaged CLI may
-    # deliberately use ``--home`` while the native attempt is attached to a
-    # Project, so an implicit target must keep using the verified launch
-    # workspace. An explicit ``--workspace`` may select Work in another Project;
-    # bind that exact Project identity while preserving the current Console and
-    # attempt identities.
+    # A packaged --home runtime still retains the verified launch workspace.
+    # Explicit --workspace may bind another exact Project while preserving the
+    # current Console and attempt identities.
+    # The resulting WorkRef remains bound to that explicit Project identity.
     work_runtime_dir = project_runtime_dir
     work_workspace_id = str(envelope["workspaceId"])
     binding_scope = "same-project"
@@ -147,14 +148,15 @@ def bind_current_native_work(
             binding_scope = "explicit-external-project"
 
     status = work_commands._status(work_runtime_dir, initiative_id, assignment_id)
-    work_control = profile_sdk.validate_source(
-        work_commands.profile_source(), work_runtime_dir
-    )["inspection"]
+    work_control = work_commands.profile_lifecycle.resolve_qualified_work_profile(
+        work_runtime_dir,
+        source=work_profile_source,
+    )
     work_ref = {
         "schema": "kungfu.work-ref/v1",
         "workspaceId": work_workspace_id,
-        "profileId": work_control["profile"]["id"],
-        "profileRoot": work_control["profile_suite_root"],
+        "profileId": work_control["id"],
+        "profileRoot": work_control["root"],
         "entityType": "assignment",
         "entityId": assignment_id,
         "entityRoot": assignment_canonical.semantic_root(status["assignment"]),
@@ -167,6 +169,7 @@ def bind_current_native_work(
         "workConsoleId": str(envelope["consoleId"]),
         "sessionAttemptId": str(envelope["attemptId"]),
     }
+    session_contract.require_expected_binding(expected_binding, work_ref, session)
     actor_id = os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
 
     def invoke_session(request):
@@ -890,7 +893,12 @@ def execute(
         elif work != continuation_value["workRef"]:
             raise ValueError("WorkRef does not match the continuation envelope")
     provider = str(selected["provider"])
-    cwd = _cwd(selected, workspace_root=workspace_root, home=home)
+    cwd, runtime_dir = _managed_console_scope(
+        _cwd(selected, workspace_root=workspace_root, home=home),
+        home,
+        work,
+        runtime_dir,
+    )
     argv = launch_argv(
         selected,
         prompt,
@@ -913,9 +921,8 @@ def execute(
         .expanduser()
         .resolve()
     )
-    workspace_id = str(
-        work.get("workspaceId") if work is not None else cwd or runtime_home
-    )
+    workspace_root = str(cwd or runtime_home)
+    workspace_id = _managed_workspace_id(work, workspace_root)
     managed_session_ref = (
         _session_ref(work, run_id)
         if work is not None
@@ -942,7 +949,7 @@ def execute(
             runtime_dir=runtime_dir,
             config_home=effective_config_home,
             runtime_home=runtime_home,
-            workspace_root=str(cwd or runtime_home),
+            workspace_root=workspace_root,
             work_ref=work,
             work_selection={"workspaceId": workspace_id},
             profile=selected,

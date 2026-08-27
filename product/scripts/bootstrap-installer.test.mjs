@@ -273,6 +273,10 @@ test('bootstrap publication is deterministic and pins signed release identity', 
       /Get-AuthenticodeSignature/,
     );
     assert.match(powershell.bytes.toString(), /signed-channel-digest/);
+    assert.match(
+      powershell.bytes.toString(),
+      /existing Kungfu is owned outside \$\{Launcher\}:/,
+    );
     assert.match(powershell.bytes.toString(), /update bootstrap-verify/);
     assert.match(powershell.bytes.toString(), /\$ReleaseCutRoot = 'sha256:/);
     assert.match(powershell.bytes.toString(), /\$PlatformSliceRoot = 'sha256:/);

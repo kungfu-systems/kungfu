@@ -557,6 +557,8 @@ test('the Buildchain artifact contract requires the common lane summary', () => 
   const expected = JSON.parse(encoded);
   assert.deepEqual(expected.requiredPaths, [
     'product/release/qualification/layer-qualification-summary.json',
+    'product/release/qualification/kfd/source-gate.json',
+    'product/release/qualification/kfd/candidate-evidence.json',
   ]);
   assert.equal(expected.minFiles, 3);
 });

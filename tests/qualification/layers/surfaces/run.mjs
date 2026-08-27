@@ -243,16 +243,42 @@ function findOne(root, basename) {
   return matches[0];
 }
 
-function directoryBytes(root) {
+async function settledDirectoryEntries(
+  directory,
+  {
+    filesystem = fs,
+    platform = process.platform,
+    retryAttempts = 600,
+    retryDelayMs = 100,
+  } = {},
+) {
+  for (let attempt = 1; attempt <= retryAttempts; attempt += 1) {
+    try {
+      return filesystem.readdirSync(directory, { withFileTypes: true });
+    } catch (error) {
+      if (
+        platform !== 'win32' ||
+        error?.code !== 'EPERM' ||
+        attempt === retryAttempts
+      )
+        throw error;
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
+  throw new Error(`unreachable directory settlement loop: ${directory}`);
+}
+
+export async function directoryBytes(root, options = {}) {
   let total = 0;
-  const visit = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  const filesystem = options.filesystem || fs;
+  const visit = async (dir) => {
+    for (const entry of await settledDirectoryEntries(dir, options)) {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) visit(full);
-      else if (entry.isFile()) total += fs.statSync(full).size;
+      if (entry.isDirectory()) await visit(full);
+      else if (entry.isFile()) total += filesystem.statSync(full).size;
     }
   };
-  visit(root);
+  await visit(root);
   return total;
 }
 
@@ -343,7 +369,9 @@ async function exactQualification(options, fixture) {
     // the same child would have cleared before the existing NSIS uninstall
     // wait. Settle the exact install root before measuring it as well.
     await waitForWindowsProcessesUnderRootExit(desktopInstall.installRoot);
-    const installedDesktopBytes = directoryBytes(desktopInstall.installRoot);
+    const installedDesktopBytes = await directoryBytes(
+      desktopInstall.installRoot,
+    );
     await desktopInstall.uninstall();
     if (fs.existsSync(desktopInstall.installRoot))
       fail('GUI install root survived uninstall');
@@ -367,7 +395,7 @@ async function exactQualification(options, fixture) {
     if (before !== after)
       fail('GUI install/uninstall changed the lower-layer data root');
 
-    const cliInstalledBytes = directoryBytes(installRoot);
+    const cliInstalledBytes = await directoryBytes(installRoot);
     fs.rmSync(installRoot, { recursive: true, force: true });
     if (fs.existsSync(installRoot)) fail('CLI install root survived uninstall');
     const componentCount = Object.keys(compatibility.components).length;

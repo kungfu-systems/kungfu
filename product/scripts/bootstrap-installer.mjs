@@ -442,7 +442,7 @@ if ($DryRun) { exit 0 }
 New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir 'versions'), $BinDir | Out-Null
 $Existing = Get-Command kungfu -ErrorAction SilentlyContinue
 if ($Existing -and $Existing.Source -ne $Launcher) {
-  throw "error[ownership-conflict]: existing Kungfu is owned outside $Launcher: $($Existing.Source)"
+  throw "error[ownership-conflict]: existing Kungfu is owned outside \${Launcher}: $($Existing.Source)"
 }
 if (Test-Path $Launcher) {
   $firstLine = Get-Content -LiteralPath $Launcher -TotalCount 1
