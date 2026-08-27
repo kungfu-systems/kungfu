@@ -348,43 +348,48 @@ test('fails before Verify completion when artifact bytes change after witnessing
     'tampered\n',
   );
   assert.throws(
-    () => finalizeKfdCandidateEvidence(fixture),
+    () =>
+      finalizeKfdCandidateEvidence({
+        ...fixture,
+        allowVerifiedArtifactTransition: true,
+      }),
     /KFD artifact digest mismatch/u,
   );
 });
 
 test('rejects a tampered witness instead of laundering it through a verified transition', () => {
   const fixture = artifactFixture();
-  prepareKfdArtifactWitness({
-    ...fixture,
-    buildArtifactWitness: () => ({
-      id: 'kungfu-collaboration-interface',
-      standard: 'kfd-3',
-      witnessKind: 'artifact',
-      exposedSurfaces: [],
-    }),
-  });
   const witnessPath = path.join(
     fixture.root,
-    'product',
-    'release',
-    'qualification',
-    'kfd',
+    '.buildchain',
+    'runtime',
+    'kfd-candidate-evidence',
+    'artifact-before-verify',
     'artifacts',
     `${fixture.platform}.json`,
   );
-  const witness = JSON.parse(fs.readFileSync(witnessPath, 'utf8'));
-  witness.candidateBinding.candidate.sourceSha = 'f'.repeat(40);
-  writeJson(witnessPath, witness);
-  fs.appendFileSync(
-    path.join(fixture.root, 'product', 'release', 'artifact.bin'),
-    'verified artifact change\n',
+  const artifactPath = path.join(
+    fixture.root,
+    'product',
+    'release',
+    'artifact.bin',
   );
+  const command = [
+    process.execPath,
+    '-e',
+    `const fs=require('node:fs');const p=${JSON.stringify(witnessPath)};const w=JSON.parse(fs.readFileSync(p,'utf8'));w.candidateBinding.candidate.sourceSha='${'f'.repeat(40)}';fs.writeFileSync(p,JSON.stringify(w,null,2)+'\\n');fs.appendFileSync(${JSON.stringify(artifactPath)},'verified artifact change\\n')`,
+  ];
   assert.throws(
     () =>
-      finalizeKfdCandidateEvidence({
+      runVerifiedQualification({
         ...fixture,
-        allowVerifiedArtifactTransition: true,
+        command,
+        buildArtifactWitness: () => ({
+          id: 'kungfu-collaboration-interface',
+          standard: 'kfd-3',
+          witnessKind: 'artifact',
+          exposedSurfaces: [],
+        }),
       }),
     /KFD artifact witness candidate\/source root mismatch/u,
   );
