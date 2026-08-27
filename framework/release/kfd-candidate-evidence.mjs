@@ -115,6 +115,21 @@ export function kfdEvidenceRoot(value) {
   return rooted(value);
 }
 
+export function kfdPlatformId(
+  hostPlatform = process.platform,
+  hostArch = process.arch,
+) {
+  const platform =
+    hostPlatform === 'darwin'
+      ? 'macos'
+      : hostPlatform === 'win32'
+        ? 'windows'
+        : hostPlatform;
+  const arch = hostArch === 'x64' ? 'x64' : hostArch;
+  const candidate = `${platform}-${arch}`;
+  return SUPPORTED_KFD_PLATFORMS.includes(candidate) ? candidate : '';
+}
+
 function toPosix(value) {
   return value.split(path.sep).join('/');
 }
@@ -241,7 +256,7 @@ export function sealKfdSourceEvidence({
   sourceTree = '',
   platform = process.env.BUILDCHAIN_PLATFORM_ID ||
     process.env['INPUT_PLATFORM-ID'] ||
-    '',
+    kfdPlatformId(),
 } = {}) {
   if (platform) assertPlatform(platform);
   const prebuild = createKfdPrebuildGate({ root, sourceSha, sourceTree });
@@ -371,9 +386,15 @@ export function prepareKfdArtifactWitness({
   if (!fs.existsSync(sourceGatePath))
     throw new Error('missing sealed KFD source gate');
   const sourceGate = readJson(sourceGatePath);
+  if (sourceGate.status !== 'passed') {
+    throw new Error('KFD source gate is not passed');
+  }
+  if (sourceGate.platform !== platform) {
+    throw new Error(
+      `KFD source gate platform mismatch: expected ${platform}, got ${sourceGate.platform || '<empty>'}`,
+    );
+  }
   if (
-    sourceGate.status !== 'passed' ||
-    sourceGate.platform !== platform ||
     sourceGate.candidate?.sourceSha !== identity.sourceSha ||
     sourceGate.candidate?.sourceTree !== identity.sourceTree
   ) {

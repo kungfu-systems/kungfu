@@ -11,6 +11,7 @@ import {
   SUPPORTED_KFD_PLATFORMS,
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
+  kfdPlatformId,
   prepareKfdArtifactWitness,
   releaseArtifactRoot,
   runVerifiedQualification,
@@ -133,6 +134,14 @@ test('accepts a complete sealed four-platform KFD payload set', () => {
   );
 });
 
+test('derives every supported Buildchain platform from the native host tuple', () => {
+  assert.equal(kfdPlatformId('linux', 'x64'), 'linux-x64');
+  assert.equal(kfdPlatformId('linux', 'arm64'), 'linux-arm64');
+  assert.equal(kfdPlatformId('darwin', 'arm64'), 'macos-arm64');
+  assert.equal(kfdPlatformId('win32', 'x64'), 'windows-x64');
+  assert.equal(kfdPlatformId('darwin', 'x64'), '');
+});
+
 test('seals an artifact witness and candidate capsule in two phases', () => {
   const fixture = artifactFixture();
   const witness = prepareKfdArtifactWitness({
@@ -241,6 +250,24 @@ test('fails before Verify completion when artifact bytes change after witnessing
   assert.throws(
     () => finalizeKfdCandidateEvidence(fixture),
     /KFD artifact digest mismatch/u,
+  );
+});
+
+test('rejects a source gate sealed for another platform', () => {
+  const fixture = artifactFixture();
+  const sourceGate = path.join(
+    fixture.root,
+    '.buildchain',
+    'runtime',
+    'kfd-candidate-evidence',
+    'source-gate.json',
+  );
+  const gate = JSON.parse(fs.readFileSync(sourceGate, 'utf8'));
+  gate.platform = 'linux-arm64';
+  writeJson(sourceGate, gate);
+  assert.throws(
+    () => prepareKfdArtifactWitness(fixture),
+    /KFD source gate platform mismatch: expected linux-x64, got linux-arm64/u,
   );
 });
 
