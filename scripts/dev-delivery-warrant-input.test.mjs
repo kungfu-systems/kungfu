@@ -221,6 +221,13 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.match(workflow, /types: \[closed, dequeued, synchronize\]/u);
   assert.match(workflow, /No matching active Warrant or queued candidate/u);
   assert.match(workflow, /\.observation\.queued\[\]\?/u);
+  assert.match(workflow, /\.observation\.pendingSuccessorWakes\[\]\?/u);
+  assert.match(workflow, /echo "retry-terminal=true"/u);
+  assert.match(workflow, /\[ "\$terminal_count" -eq 0 \]/u);
+  assert.match(
+    workflow,
+    /needs\.prepare\.outputs\.active == 'true' \|\| needs\.prepare\.outputs\.retry-terminal == 'true'/u,
+  );
   assert.match(workflow, /needs\.prepare\.outputs\.queued == 'true'/u);
   assert.match(
     workflow,
@@ -238,11 +245,11 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(
     workflow,
-    /dev-delivery-warrant-close\.yml@4dabecd7056e168f7345d460e3729465a932db9c/u,
+    /dev-delivery-warrant-close\.yml@8493bf140a7f567e76aff3119f3d39ff026afc84/u,
   );
   assert.match(
     workflow,
-    /dev-delivery-warrant-cancel\.yml@4dabecd7056e168f7345d460e3729465a932db9c/u,
+    /dev-delivery-warrant-cancel\.yml@8493bf140a7f567e76aff3119f3d39ff026afc84/u,
   );
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.ref/u);
   assert.doesNotMatch(workflow, /checkout[^\n]*pull_request\.head/u);
