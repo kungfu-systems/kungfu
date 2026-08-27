@@ -10,6 +10,16 @@ function fail(message) {
   throw new Error(message);
 }
 
+const npmRegistry = JSON.parse(
+  fs.readFileSync(
+    path.resolve('framework/release/npm-package-registry.json'),
+    'utf8',
+  ),
+);
+const expectedNpmCount = npmRegistry.releaseInventory?.expectedPackageCount;
+if (!Number.isInteger(expectedNpmCount))
+  fail('npm package registry lacks an integer expectedPackageCount');
+
 function sha256(file) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
@@ -58,15 +68,6 @@ function main() {
     fail('usage: collect-layer-publication.mjs --input DIR --output DIR');
   const sourceRoot = path.resolve(input);
   const outputRoot = path.resolve(output);
-  const npmRegistry = JSON.parse(
-    fs.readFileSync(
-      path.resolve('framework/release/npm-package-registry.json'),
-      'utf8',
-    ),
-  );
-  const expectedNpmCount = npmRegistry.releaseInventory?.expectedPackageCount;
-  if (!Number.isInteger(expectedNpmCount))
-    fail('npm package registry lacks an integer expectedPackageCount');
   if (!fs.existsSync(sourceRoot)) fail(`input does not exist: ${sourceRoot}`);
   if (fs.existsSync(outputRoot))
     fail(`refusing to replace an existing output directory: ${outputRoot}`);
