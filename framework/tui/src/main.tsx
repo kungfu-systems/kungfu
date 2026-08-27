@@ -170,7 +170,10 @@ function tuiAgentSessionEnvironment(
     KUNGFU_PROJECT_WORK_AGENT_SESSION: '1',
   };
 }
-function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
+function ensureTuiAgentSession(
+  runtimeDir: string,
+  attached = false,
+): Promise<string> {
   const resolvedRuntimeDir = path.resolve(runtimeDir);
   if (
     tuiAgentSessionReady &&
@@ -204,7 +207,7 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const paths = runtimePaths();
   const mockScenario = process.env.KUNGFU_MOCK_AGENT_SCENARIO;
-  const deterministicMock = Boolean(mockScenario?.trim());
+  const deterministicMock = attached || Boolean(mockScenario?.trim());
   const host = deterministicMock
     ? createAttachedAgentSessionHost({
         runtimeDir: resolvedRuntimeDir,
@@ -389,7 +392,7 @@ async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const cli = tuiCliInvocation(paths);
   bindMockAgentEnvironment(cli, paths);
   if (projectTour) {
-    const endpoint = await ensureTuiAgentSession(paths.runtimeDir);
+    const endpoint = await ensureTuiAgentSession(paths.runtimeDir, true);
     cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint;
     cli.env.KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING = '1';
   }

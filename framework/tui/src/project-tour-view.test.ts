@@ -53,7 +53,7 @@ test('Project Work awaits the shared Agent Session before rendering', () => {
   );
   assert.match(
     lab,
-    /const endpoint = await ensureTuiAgentSession\(paths\.runtimeDir\)/u,
+    /const endpoint = await ensureTuiAgentSession\(paths\.runtimeDir, true\)/u,
   );
   assert.match(lab, /cli\.env\.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint/u);
   assert.match(

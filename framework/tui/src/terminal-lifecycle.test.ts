@@ -124,7 +124,7 @@ test('cached Agent Session readiness is revalidated before reuse', () => {
   );
 });
 
-test('deterministic Mock onboarding owns an attached Session host', () => {
+test('deterministic Project Tour and Mock onboarding own an attached Session host', () => {
   const source = fs.readFileSync(
     new URL('./main.tsx', import.meta.url),
     'utf8',
@@ -138,6 +138,7 @@ test('deterministic Mock onboarding owns an attached Session host', () => {
     ensureSession,
     /KUNGFU_MOCK_AGENT_SCENARIO[\s\S]*createAttachedAgentSessionHost/u,
   );
+  assert.match(source, /ensureTuiAgentSession\(paths\.runtimeDir, true\)/u);
   assert.match(ensureSession, /async function closeTuiAgentSession/u);
   assert.match(source, /finally \{\s*await closeTuiAgentSession\(\);\s*\}/u);
 });
