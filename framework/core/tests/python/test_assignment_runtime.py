@@ -2555,7 +2555,7 @@ def test_production_adapter_reaches_existing_work_control_authority(
         )
         assert stale["error"]["code"] == "stale-revision"
 
-        submit_work(
+        managed_run = submit_work(
             "work.run.record",
             "run",
             {
@@ -2591,7 +2591,7 @@ def test_production_adapter_reaches_existing_work_control_authority(
                 "actor": "agent-a",
             },
         )
-        submit_work(
+        ambiguous_outcome = submit_work(
             "work.effect.outcome",
             "ambiguous-outcome",
             {
@@ -2614,7 +2614,7 @@ def test_production_adapter_reaches_existing_work_control_authority(
             }
         ]
 
-        submit_work(
+        settled_outcome = submit_work(
             "work.effect.outcome",
             "settled-outcome",
             {
@@ -2631,6 +2631,64 @@ def test_production_adapter_reaches_existing_work_control_authority(
         )["result"]["assignments"][0]["lifecycle"]["work_semantics"]
         assert settled["completion_eligible"] is True
         settled_root = settled["effect_outcomes"][-1]["record_root"]
+
+        expired_projection = profile_sdk.invoke_member_adapter(
+            PROFILE_SOURCE,
+            runtime_dir,
+            "work-control-actions",
+            "assignment-status",
+            {
+                "initiativeId": "initiative-a",
+                "assignmentId": "assignment-a",
+                "source": "kungfu",
+                "now": "2999-01-01T00:00:00Z",
+            },
+            authorized_action=False,
+            inactive_projection_read=True,
+        )["result"]
+        assert expired_projection["phase"] == "executing"
+        assert expired_projection["active_lease"] is None
+
+        before_completion = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )
+        completion = _command(
+            before_completion["revision"],
+            command_id="command.completion-after-recovery",
+            idempotency_key="idem.completion-after-recovery",
+            command_type="assignment.completion.claim",
+            expected_phase="executing",
+            to_phase="completion-claimed",
+        )
+        completion["attempt"] = None
+        completion["lease"] = None
+        completion["arguments"] = {
+            "statement": "Complete through retained Work Control authority",
+            "actor": "agent-a",
+            "evidenceEpisodeIds": [],
+            "assignmentSet": ["assignment-a"],
+            "proofRoots": [
+                input_root,
+                managed_run["record"]["record_root"],
+                ambiguous_outcome["record"]["record_root"],
+                settled_outcome["record"]["record_root"],
+            ],
+        }
+        completed = _handle(
+            runtime,
+            _request(
+                "command.submit",
+                "assignment.command.submit",
+                payload=completion,
+                request_id="request.completion-after-recovery",
+            ),
+        )
+        assert completed["status"] == "ok", json.dumps(completed, indent=2)
+        completed_status = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )["result"]["assignments"][0]
+        assert completed_status["phase"] == "completion-claimed"
+        assert completed_status["lifecycle"]["completion_claim_count"] == 1
 
     with EmbeddedLocalAssignmentRuntime(
         runtime_dir,
