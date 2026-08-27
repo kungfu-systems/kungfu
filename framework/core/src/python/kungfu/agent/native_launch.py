@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 import uuid
 
+from kungfu import profile_sdk
 from kungfu.agent.work_projection import WorkProjectionPort
 from kungfu.agent import resources as agent_resources
 from kungfu.agent import runtime_profiles
@@ -32,6 +33,7 @@ from kungfu.agent.provider_bootstrap import (
 from kungfu.skill import build_skill_context
 from kungfu.workspace import (
     WorkspaceTargetRequired,
+    inspect_workspace,
     load_workspace_registry,
     resolve_workspace_target,
 )
@@ -41,6 +43,17 @@ _DARWIN_DEFAULT_SSL_CERT_FILE = Path("/etc/ssl/cert.pem")
 COMMAND_WRAPPER_SUFFIXES = _COMMAND_WRAPPER_SUFFIXES
 encode_wrapper_prompt = _encode_wrapper_prompt
 resolve_command_wrapper = _resolve_command_wrapper
+
+
+def work_profile_inspection(
+    source: str | Path | None,
+    fallback: Callable[[], str | Path],
+    runtime_dir: str | Path,
+) -> Mapping[str, Any]:
+    """Validate an explicit retained Work profile or the ordinary bound source."""
+
+    resolved = Path(source).expanduser().resolve() if source is not None else fallback()
+    return profile_sdk.validate_source(resolved, runtime_dir)["inspection"]
 
 
 def provider_interactive_argv(profile: Mapping[str, Any]) -> list[str]:
@@ -84,6 +97,47 @@ def unbound_work_selection(workspace_id):
         "selectionAuthority": "kungfu-work-cli",
         "entrypoint": "kungfu work status",
     }
+
+
+def managed_workspace_id(work: Mapping[str, Any] | None, workspace_root: str) -> str:
+    """Use exact Project identity for an unbound managed Agent Console."""
+
+    if work is not None:
+        return str(work["workspaceId"])
+    workspace_identity = inspect_workspace(workspace_root, cwd=workspace_root)
+    return str(
+        workspace_identity.workspace_id
+        if workspace_identity is not None
+        and workspace_identity.workspace_kind == "project"
+        else workspace_root
+    )
+
+
+def managed_runtime_dir(
+    work: Mapping[str, Any] | None, workspace_root: str, fallback_runtime_dir: str
+) -> str:
+    """Use the stable qualified Project runtime for a managed Console."""
+
+    workspace_identity = inspect_workspace(workspace_root, cwd=workspace_root)
+    if (
+        workspace_identity is None
+        or workspace_identity.workspace_kind != "project"
+        or workspace_identity.identity_state != "qualified"
+        or (
+            work is not None
+            and str(work.get("workspaceId") or "") != workspace_identity.workspace_id
+        )
+    ):
+        return fallback_runtime_dir
+    target = resolve_workspace_target("read-only", workspace_root, cwd=workspace_root)
+    return str(target.runtime_dir)
+
+
+def managed_console_scope(cwd, home, work, fallback_runtime_dir):
+    """Pair a managed Console cwd with its qualified Project runtime."""
+
+    exact_root = str(cwd or home or os.path.expanduser("~"))
+    return cwd, managed_runtime_dir(work, exact_root, fallback_runtime_dir)
 
 
 def resolve_native_launch_target(ctx, workspace_root=None, *, cwd=None):

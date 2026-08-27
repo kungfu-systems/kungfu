@@ -841,6 +841,11 @@ export function sourceAcceptancePlan(
       'scripts/kfd-support-matrix.test.mjs',
     ],
     [
+      'KFD candidate evidence fixtures',
+      '--test',
+      'scripts/kfd-candidate-evidence.test.mjs',
+    ],
+    [
       'KFD-4 perspective qualification negative fixtures',
       '--test',
       'scripts/kfd4-perspective-qualification.test.mjs',

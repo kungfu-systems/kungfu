@@ -64,6 +64,152 @@ function forbidPattern(source, pattern, findings, message) {
   if (pattern.test(source)) findings.push(finding(message));
 }
 
+/** @param {any} contract @param {string} promotion @param {string} promote @param {string} recovery @param {any[]} findings */
+function validateTailCommandAudit(
+  contract,
+  promotion,
+  promote,
+  recovery,
+  findings,
+) {
+  const tailAudit = contract.tail_command_audit;
+  if (
+    tailAudit?.buildchain_contract_sha !==
+    contract.buildchain.alpha.resolved_sha
+  ) {
+    findings.push(
+      finding(
+        'tail command audit is not bound to the active Buildchain v3 contract',
+      ),
+    );
+  }
+  const retainedInputs = (tailAudit?.retained || [])
+    .map((entry) => entry.input)
+    .sort();
+  const observedTailInputs = new Set();
+  for (const job of [promote, recovery]) {
+    for (const match of job.matchAll(/^ {6}([a-z0-9-]+-command):\s*(.*)$/gmu)) {
+      if (match[2].trim() !== '""') observedTailInputs.add(match[1]);
+    }
+  }
+  if ([...observedTailInputs].sort().join('\0') !== retainedInputs.join('\0')) {
+    findings.push(
+      finding(
+        `tail command audit mismatch: observed ${[...observedTailInputs].sort().join(', ') || '<none>'}`,
+      ),
+    );
+  }
+  const collapsed = (value) =>
+    String(value || '')
+      .replace(/\s+/gu, ' ')
+      .trim();
+  for (const entry of tailAudit?.retained || []) {
+    if (!collapsed(promote).includes(collapsed(entry.command))) {
+      findings.push(finding(`primary tail command drifted: ${entry.input}`));
+    }
+    const recoveryCommand = entry.recovery_command || entry.command;
+    if (!collapsed(recovery).includes(collapsed(recoveryCommand))) {
+      findings.push(finding(`recovery tail command drifted: ${entry.input}`));
+    }
+    if (!entry.contract_surface || !entry.reason || !entry.delete_when) {
+      findings.push(
+        finding(`tail command audit is incomplete: ${entry.input}`),
+      );
+    }
+  }
+  for (const entry of tailAudit?.removed || []) {
+    if (promotion.includes(`${entry.input}:`)) {
+      findings.push(
+        finding(`removed tail command was restored: ${entry.input}`),
+      );
+    }
+    if (
+      !promote.includes(`${entry.replacement}:`) ||
+      !recovery.includes(`${entry.replacement}:`)
+    ) {
+      findings.push(
+        finding(
+          `removed tail command replacement drifted: ${entry.replacement}`,
+        ),
+      );
+    }
+  }
+}
+
+/** @param {string} build @param {string} promotion @param {string} promote @param {string} recovery @param {any} contract @param {any[]} findings */
+function validateKfdEvidenceFrontload(
+  build,
+  promotion,
+  promote,
+  recovery,
+  contract,
+  findings,
+) {
+  for (const evidence of [
+    ...contract.evidence.kfd_1_witnesses,
+    ...contract.evidence.kfd_2_claims,
+  ]) {
+    for (const [label, job] of [
+      ['primary promotion', promote],
+      ['release-candidate recovery', recovery],
+    ]) {
+      if (!job.includes(evidence)) {
+        findings.push(
+          finding(`${label} does not consume sealed KFD evidence: ${evidence}`),
+        );
+      }
+    }
+  }
+  for (const platform of contract.evidence.supported_platforms) {
+    const prebuildWitness =
+      contract.evidence.kfd_3_prebuild_witness_template.replace(
+        '{platform}',
+        platform,
+      );
+    const witness = contract.evidence.kfd_3_artifact_witness_template.replace(
+      '{platform}',
+      platform,
+    );
+    for (const [label, job] of [
+      ['primary promotion', promote],
+      ['release-candidate recovery', recovery],
+    ]) {
+      if (!job.includes(prebuildWitness)) {
+        findings.push(
+          finding(
+            `${label} does not consume sealed ${platform} KFD prebuild evidence`,
+          ),
+        );
+      }
+      if (!job.includes(witness)) {
+        findings.push(
+          finding(
+            `${label} does not consume sealed ${platform} KFD artifact evidence`,
+          ),
+        );
+      }
+    }
+  }
+  forbidPattern(
+    promotion,
+    /release-passport-kfd-3-artifact-verify-command:/,
+    findings,
+    'promotion must not regenerate KFD artifact witnesses in the release tail',
+  );
+  requirePattern(
+    build,
+    /kfd-candidate-evidence\.mjs source-check[\s\S]*kfd-candidate-evidence\.mjs source --expected-input-root[\s\S]*kfd-candidate-evidence\.mjs run-verify/,
+    findings,
+    'Build must gate source evidence before build and artifact evidence before Verify',
+  );
+  requirePattern(
+    build,
+    /kfd-candidate-evidence:[\s\S]*verify-manifest-set/,
+    findings,
+    'Build must reject an incomplete sealed KFD platform set before promotion',
+  );
+}
+
 /** @param {string} root @param {any} contract @param {Record<string, string>} [overrides] */
 export function validateWorkflowSources(root, contract, overrides = {}) {
   /** @type {any[]} */
@@ -163,6 +309,8 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `${label} must retain the exact GitHub Release payloads`,
     );
   }
+
+  validateTailCommandAudit(contract, promotion, promote, recovery, findings);
 
   const candidateBuildShellCalls = [
     ...build.matchAll(
@@ -518,25 +666,14 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     );
   }
 
-  for (const evidence of [
-    ...contract.evidence.kfd_1_witnesses,
-    ...contract.evidence.kfd_2_claims,
-    ...contract.evidence.kfd_3_prebuild_witnesses,
-  ]) {
-    if (!fs.existsSync(path.join(root, evidence))) {
-      findings.push(
-        finding(`declared release evidence does not exist: ${evidence}`),
-      );
-    }
-    if (!promote.includes(evidence)) {
-      findings.push(
-        finding(`Buildchain promotion does not consume evidence: ${evidence}`),
-      );
-    }
-  }
-  if (!promote.includes(contract.evidence.kfd_3_artifact_verify_command)) {
-    findings.push(finding('KFD-3 artifact verification command drifted'));
-  }
+  validateKfdEvidenceFrontload(
+    build,
+    promotion,
+    promote,
+    recovery,
+    contract,
+    findings,
+  );
 
   return { ok: findings.length === 0, findings };
 }
@@ -626,11 +763,11 @@ export function validatePromotionContract(
       findings,
       'custom publish evidence must not add a product-specific upgrade admission authority',
     );
-    requirePattern(
+    forbidPattern(
       publishAdapter,
-      /path\.join\(SCRIPT_DIR, 'buildchain-kfd-evidence\.mjs'\)/u,
+      /buildchain-kfd-evidence\.mjs|generateKfdEvidence/u,
       findings,
-      'recovery custom publish evidence must execute the checked-out publication controller KFD adapter',
+      'custom publish evidence must not regenerate KFD evidence in the release tail',
     );
     requirePattern(
       publishAdapter,

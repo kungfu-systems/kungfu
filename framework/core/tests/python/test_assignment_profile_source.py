@@ -4,7 +4,6 @@ import importlib
 import json
 from types import SimpleNamespace
 
-from kungfu import assignment_orchestration
 from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
 from agent_bootstrap_fixtures import verified_bootstrap_receipt
@@ -143,20 +142,24 @@ def test_claim_does_not_require_or_bind_agent_session(monkeypatch, tmp_path):
 
 
 def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkeypatch):
-    package = tmp_path / "package" / "kungfu"
-    package.mkdir(parents=True)
     checkout = tmp_path / "checkout"
     native = checkout / "extensions" / "work-control"
     native.mkdir(parents=True)
-    monkeypatch.setattr(assignment_orchestration, "__file__", package / "module.py")
-    monkeypatch.setattr(
-        assignment_orchestration, "source_root", lambda *_starts: checkout
-    )
+    extension_root = checkout / "extensions"
+    monkeypatch.setenv("KF_BUNDLED_EXTENSION_ROOT", str(extension_root))
+    monkeypatch.delenv("KF_EXTENSION_PATH", raising=False)
 
-    assert ASSIGNMENT_CLI._profile_source() == native
+    def discover(profile_id, *, search_roots):
+        assert profile_id == "kungfu.work-control"
+        assert search_roots == [extension_root]
+        return {"source": str(native)}
+
+    monkeypatch.setattr("kungfu.profile_sdk.discover_source", discover)
+
+    assert ASSIGNMENT_CLI.profile_source() == native
 
 
-def test_agent_session_can_observe_work_from_explicit_external_project(
+def test_agent_session_can_observe_work_from_explicit_external_project_and_profile(
     monkeypatch, tmp_path
 ):
     requests = []
@@ -173,6 +176,8 @@ def test_agent_session_can_observe_work_from_explicit_external_project(
     work_target = resolve_workspace_target(
         "read-only", str(work_project), cwd=str(work_project)
     )
+    work_profile_source = tmp_path / "retained-work-control"
+    work_profile_source.mkdir()
     envelope = {
         "workspaceId": console_target.identity.workspace_id,
         "consoleId": f"assistant:{console_target.identity.workspace_id}:native:one",
@@ -196,9 +201,16 @@ def test_agent_session_can_observe_work_from_explicit_external_project(
         }
 
     monkeypatch.setattr(ASSIGNMENT_CLI, "_status", status)
-    monkeypatch.setattr(ASSIGNMENT_CLI, "_profile_source", lambda: tmp_path)
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI,
+        "profile_source",
+        lambda: (_ for _ in ()).throw(
+            AssertionError("explicit recovery source must not be rediscovered")
+        ),
+    )
 
-    def validate_source(_source, runtime_dir):
+    def validate_source(source, runtime_dir):
+        assert source == work_profile_source.resolve()
         observed_runtime_dirs.append(runtime_dir)
         return {
             "inspection": {
@@ -226,6 +238,7 @@ def test_agent_session_can_observe_work_from_explicit_external_project(
         "initiative:external",
         "assignment:external",
         work_workspace_root=str(work_project),
+        work_profile_source=work_profile_source,
     )
 
     assert observed_runtime_dirs == [str(work_runtime), str(work_runtime)]

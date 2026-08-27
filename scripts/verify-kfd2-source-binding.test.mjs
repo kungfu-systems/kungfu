@@ -33,11 +33,11 @@ test('release workflows publish the complete canonical KFD-2 claim set', () => {
   );
   const releaseClaims = readJson('.buildchain/kfd/kfd-2/release-claims.json');
   const expectedPaths = releaseClaims.claims
-    .map(({ id }) => `.buildchain/kfd/kfd-2/claims/${id}.json`)
+    .map(({ id }) => `source/kfd-2/claims/${id}.json`)
     .sort();
   const claimBlocks = [
     ...workflow.matchAll(
-      /release-passport-kfd-2-claim-jsons: \|\n((?:\s+\.buildchain\/kfd\/kfd-2\/claims\/[^\n]+\.json\n?)+)/g,
+      /release-passport-kfd-2-claim-jsons: \|\n((?:\s+\.buildchain\/release-candidate\/payloads\/[^\n]+\/source\/kfd-2\/claims\/[^\n]+\.json\n?)+)/g,
     ),
   ];
 
@@ -46,12 +46,14 @@ test('release workflows publish the complete canonical KFD-2 claim set', () => {
     const actualPaths = block
       .trim()
       .split('\n')
-      .map((entry) => entry.trim())
+      .map((entry) => {
+        const normalized = entry.trim();
+        return normalized.slice(
+          normalized.lastIndexOf('/source/kfd-2/claims/') + 1,
+        );
+      })
       .sort();
     assert.deepEqual(actualPaths, expectedPaths);
-    for (const relativePath of actualPaths) {
-      assert.equal(fs.existsSync(path.join(ROOT, relativePath)), true);
-    }
   }
 });
 
@@ -61,13 +63,17 @@ test('release workflows materialize the standard KFD adopter authority', () => {
     'utf8',
   );
   const manifestInputs = workflow.match(
-    /release-passport-kfd-adopter-manifest-json: \.buildchain\/runtime\/kfd-adopter\/manifest\.json/g,
+    /release-passport-kfd-adopter-manifest-json: \.buildchain\/release-candidate\/payloads\/[^\n]+\/source\/kfd-adopter\/manifest\.json/g,
   );
-  const artifactCommands = workflow.match(
-    /release-passport-kfd-3-artifact-verify-command: [^\n]*--write --json >\/dev\/null && [^\n]*--artifact-witness --json/g,
+  const artifactWitnessSets = workflow.match(
+    /release-passport-kfd-3-artifact-witness-jsons: \|/g,
   );
 
   assert.equal(manifestInputs?.length, 2);
-  assert.equal(artifactCommands?.length, 2);
+  assert.equal(artifactWitnessSets?.length, 2);
+  assert.doesNotMatch(
+    workflow,
+    /release-passport-kfd-3-artifact-verify-command:/,
+  );
   assert.doesNotMatch(workflow, /release-passport-kfd-support-matrix-json:/);
 });

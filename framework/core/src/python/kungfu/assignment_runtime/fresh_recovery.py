@@ -15,6 +15,7 @@ import click
 from kungfu import initiative_family, profile_sdk
 from kungfu.agent import run_agent, session_contract, session_surface
 from kungfu.assignment_runtime import LocalAssignmentRuntimeApplication
+from kungfu.assignment_runtime import profile_lifecycle
 from kungfu.storage import service as storage_service
 
 JsonObject = dict[str, Any]
@@ -612,6 +613,7 @@ def _apply_from_ports(
                 initiative_id,
                 assignment_id,
                 work_workspace_root=workspace_root,
+                work_profile_source=recovery_profile_source,
                 expected_binding=expected,
             )
             or {}
@@ -748,7 +750,7 @@ def register_commands(work_commands) -> None:
         write_immutable_json=work_commands._write_immutable_json,
         runtime=work_commands._runtime,
         status=work_commands._status,
-        prepare_resume_profile=work_commands._prepare_resume_profile,
+        prepare_resume_profile=profile_lifecycle.prepare_fresh_recovery_profile,
     )
     for command in commands:
         work_commands.assignment.add_command(command)

@@ -44,8 +44,8 @@
         "functionRisk": { "functions": 22, "total": 171, "maximum": 28 }
       },
       "current": {
-        "physicalLines": 1210,
-        "responsibilities": 34,
+        "physicalLines": 1217,
+        "responsibilities": 33,
         "functionRisk": { "functions": 21, "total": 143, "maximum": 27 }
       },
       "ownerFiles": [
