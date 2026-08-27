@@ -8,8 +8,6 @@ import re
 from datetime import datetime
 from typing import Any
 
-from kungfu.storage import service as storage_service
-
 from . import work_control
 
 
@@ -129,64 +127,10 @@ def query_state(
 ) -> dict[str, Any]:
     """Return native Initiative/Assignment state without legacy vocabulary."""
 
-    definition = work_control.build_state_query(
+    state = work_control.query_state(
         runtime_dir,
         initiative_id=initiative_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
-    result = work_control._batched_state_query(runtime_dir, definition)
-    materials = storage_service.fact_material_list(
-        runtime_dir, cut_system_time=cut_system_time
-    )
-    payloads = materials.get("payloads", {})
-    rows = []
-    initiative = None
-    assignments = []
-    claims = []
-    reviews = []
-    for row in result.get("rows", []):
-        body = payloads.get(str(row.get("payload_hash") or ""))
-        resolved = {**row, "payload": body}
-        rows.append(resolved)
-        if row.get("fact_surface_id") == work_control.INITIATIVE_SURFACE_ID:
-            initiative = resolved
-        elif row.get("fact_surface_id") == work_control.ASSIGNMENT_SURFACE_ID:
-            assignments.append(resolved)
-        elif row.get("fact_surface_id") == work_control.CLAIM_SURFACE_ID:
-            record = (body or {}).get("record", {})
-            if record.get("review_type") in {
-                work_control.INDEPENDENT_REVIEW,
-                work_control.CONTINUATION_DECISION,
-            }:
-                reviews.append(resolved)
-            else:
-                claims.append(resolved)
-    assignments.sort(key=lambda row: str(row.get("subject_key") or ""))
-    claims.sort(key=lambda row: str(row.get("subject_key") or ""))
-    reviews.sort(key=lambda row: str(row.get("subject_key") or ""))
-    initiative_subject = str(
-        (initiative or {}).get("subject_key")
-        or definition["work_control"]["initiative_subject"]
-    )
-    return {
-        "schema": "kungfu.work-control.state/v1",
-        "authority_mode": "work-control",
-        "initiative_subject": initiative_subject,
-        "definition": result["definition"],
-        "logical_plan": result["logical_plan"],
-        "query_definition_root": result["query_definition_root"],
-        "query_proof_root": result["query_proof_root"],
-        "result_hash": result["result_hash"],
-        "profile_suite_root": result["profile_suite_root"],
-        "catalog_root": result["catalog_root"],
-        "profile_query_receipt": result["profile_query_receipt"],
-        "cut": result["lineage"]["cut"],
-        "canonical_state": result["lineage"]["canonical_state"],
-        "lineage": result["lineage"],
-        "initiative": initiative,
-        "assignments": assignments,
-        "claims": claims,
-        "reviews": reviews,
-        "rows": rows,
-    }
+    return {**state, "authority_mode": "work-control"}

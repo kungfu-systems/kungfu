@@ -1,0 +1,157 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "db3d391e3297d58124230e429085dfd99a4b1485",
+  "changeRoot": "sha256:4a113be0aa634e902e9e7fcb0b4f873ee7e83f5af41653e000839ca5ca33d1c7",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:d7c61ad7df54cf56a173dcddeb8ed30c121987803593eec4d562dc69ad83bb5b",
+      "contentRoot": "sha256:80d036f372ae9ae72ef42dbd5385ab3e41681fd52d9f1e0c973ce9b474af00f7",
+      "path": ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:95fa6a49effd45177554cc923fc2d25ef7ce6f08643a7bd32a55f6e08cbc3361",
+      "contentRoot": "sha256:6c7a59972285ab3d9aafe059c56591403e80a6c9237b00a56e935e99efeda03f",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aaa6d1ddfd678628c7d6203dd657b62c45d2637f814fb82b33ee6c2d9d779d30",
+      "contentRoot": "sha256:99288a31963ece62ca2285d9e0b7c798050711242de2d98b43940856b187be21",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9790635c7cd111d5b3df940f630962080de733c37c3fd8d95d2438cc71b802f2",
+      "contentRoot": "sha256:13a121b4679a21f0cff0bd93933695dc169f93cbe686d04df03d3095fe83f4ca",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e033779e7aca2bb1135401445fe1169f669721eabe45d2d8017b3f35bcf1b59c",
+      "contentRoot": "sha256:5e05100da1e4f3b812457f58684b6549e168c7ceb331f0d0e5f977edcdb8718f",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3f199095357f0efc84d1a01463c093ae93024107de091014af119846ac94e2ba",
+      "contentRoot": "sha256:057d646627215f4af8408b5e9bdf12be387ff86ce27bf521e4b005ad902c86ab",
+      "path": "config/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0625fdb229e60782636b42fbfcaf5ab6077ec32a68221fe9bce62adbd389ff7f",
+      "contentRoot": "sha256:a4f1c8da582015a303fca367ae9ebb558e092740c4d2d01ce53e20ad027301f9",
+      "path": "config/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d7c61ad7df54cf56a173dcddeb8ed30c121987803593eec4d562dc69ad83bb5b",
+      "contentRoot": "sha256:80d036f372ae9ae72ef42dbd5385ab3e41681fd52d9f1e0c973ce9b474af00f7",
+      "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:95fa6a49effd45177554cc923fc2d25ef7ce6f08643a7bd32a55f6e08cbc3361",
+      "contentRoot": "sha256:6c7a59972285ab3d9aafe059c56591403e80a6c9237b00a56e935e99efeda03f",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aaa6d1ddfd678628c7d6203dd657b62c45d2637f814fb82b33ee6c2d9d779d30",
+      "contentRoot": "sha256:99288a31963ece62ca2285d9e0b7c798050711242de2d98b43940856b187be21",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1b8425ef91b2dc9f9b1029486cf32ca32815dcc178bfc38d0af2b82ea0e812a2",
+      "contentRoot": "sha256:98bb979192b8ef5fe95d0e88b1591f77da3ebe31fb8c2d425da1eac2db7f2794",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:72962e41ae2e8bc93f4b91e4a21b0813d4b8babb5b748a114f15ee72629836e4",
+      "contentRoot": "sha256:d5a1f52218c7536e134537d9a4e3399ef4b0b38b0de9a5d43b1650b173ed43d6",
+      "path": "extensions/work-control/work-control-actions/domain/native_state.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aba72f3f11576dad9500f4bee2d36d6b7b0e59dbdeeadcd412fe5280e45c6778",
+      "contentRoot": "sha256:a2e64cf0376b5bb639f35adbda603eef0eb75ad033503c84d47d2efdb2213692",
+      "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:84d5aefcfb9f25f79a9c755224ea5d074a5de75f80974edcd7fcfb3f6a73c7e8",
+      "contentRoot": "sha256:f2de40f2ce243deb874ed898be3a2e6c13c91d3b6c116b9c418d1af8dba2ce8d",
+      "path": "extensions/work-control/work-control-actions/domain/work_semantics.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3f199095357f0efc84d1a01463c093ae93024107de091014af119846ac94e2ba",
+      "contentRoot": "sha256:057d646627215f4af8408b5e9bdf12be387ff86ce27bf521e4b005ad902c86ab",
+      "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:89b1f10b9042f8b4175554ae0c14229f0aa58fb0a4426c0c084e500a61e5420c",
+      "contentRoot": "sha256:32db821b15e4c88ad773203ca4db96a77e3977b63797e78008c1fcef1d52aaa4",
+      "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ede7cba4e0856f517632718433cf45b9d73881c0092dc98eaa8866f8f96cf264",
+      "contentRoot": "sha256:fe706d459d895e6c6f2737601c1b8d6e9da609682ca35740e3d49eaa737cc7c5",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/__init__.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e9ad3cb7b65cfade0c2f300f136e12c68d832fdc7d51220f3c25af898ef283c7",
+      "contentRoot": "sha256:e21470c0022cfd85416626a4402b244d0c8f720d337491d1197f19d8fdd79770",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/authority.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ffe205216d6192e20b82895aa5ea841e6721ffb9f843536a976b471cc6c18dad",
+      "contentRoot": "sha256:53774aaa91925431b5272c8029f871c8e27f716bc4a9a1797692180452fd18df",
+      "path": "framework/core/tests/python/test_assignment_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:088a1dab48abeec38de2b06af2823ad59cf4483938e911dd3625c1a9e2400065",
+      "contentRoot": "sha256:cf6fe9bc195eef993165a0cd44a2996f0295e570393267471f1ff705361454e8",
+      "path": "framework/core/tests/python/test_work_control_profile.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0625fdb229e60782636b42fbfcaf5ab6077ec32a68221fe9bce62adbd389ff7f",
+      "contentRoot": "sha256:a4f1c8da582015a303fca367ae9ebb558e092740c4d2d01ce53e20ad027301f9",
+      "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c3035a76d0373fb91905cf82e22c2dea46597b2302ff100d0ba92eeb43f91c42",
+      "contentRoot": "sha256:a5df743af72c58288a54a05ab2439fdc462380b38adfe3092f424a7d07ce231d",
+      "path": "framework/site/tooling/check-kfx-site-impact.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6b38e1971f0aba740b8597dd8109f2f760363975c32a74dbe770bf497b9f95d5",
+      "contentRoot": "sha256:75f12652a92cce41ac3d296174bf4ac9b59e5ab51449189da82e5d41b0cc840b",
+      "path": "scripts/check-kfx-site-impact.test.mjs",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Reuse one canonical Work Control state projection for Assignment lifecycle and Work semantics status while preserving the public Profile surfaces and affected facets.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:d534cb717071780b8399fd21af6aa3c80617ded255c33bbd6420562eb82c8af0"
+}

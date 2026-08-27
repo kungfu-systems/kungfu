@@ -106,17 +106,7 @@ export function focusedMeasurementStaleGateIdsFromEnv(env = process.env) {
   return gateIds;
 }
 
-export function validateMeasurementCoverage(root, registry, options = {}) {
-  const issues = [];
-  const staleMeasurementGateIds = new Set([
-    ...focusedMeasurementStaleGateIdsFromEnv(),
-    ...(options.staleMeasurementGateIds || []),
-  ]);
-  const document = readJson(root, MEASUREMENT_COVERAGE);
-  const bindingDocument = readJson(root, BINDINGS);
-  const bindings = new Map(
-    (bindingDocument.bindings || []).map((binding) => [binding.id, binding]),
-  );
+function validateMeasurementDocument(document, issues) {
   exactObjectKeys(
     document,
     ['schema', 'registry', 'baseline', 'measurements'],
@@ -165,7 +155,355 @@ export function validateMeasurementCoverage(root, registry, options = {}) {
         '[measurement] frozen unmeasured baseline changed; new Gates must add measurements',
       );
   }
+  return baseline;
+}
 
+function validateControllerMeasurementReceipt(context) {
+  const {
+    receipt,
+    record,
+    observation,
+    gate,
+    currentDefinitionDigest,
+    registry,
+    bindings,
+    issues,
+  } = context;
+  if (gate.action?.kind !== 'handler')
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller receipts are only valid for handler Gates`,
+    );
+  exactObjectKeys(
+    receipt,
+    [
+      '$schema',
+      'schema',
+      'gateId',
+      'definitionDigest',
+      'source',
+      'registry',
+      'environment',
+      'binding',
+      'run',
+      'startedAt',
+      'finishedAt',
+      'durationMs',
+      'status',
+      'attempted',
+      'conclusion',
+      'integrity',
+    ],
+    `${record.gateId}:${observation.platform}: controller receipt`,
+    issues,
+  );
+  if (
+    receipt.$schema !==
+    'https://libkungfu.dev/schemas/shifu/gate-controller-receipt-v1.schema.json'
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller receipt schema URL is invalid`,
+    );
+  if (
+    receipt.gateId !== record.gateId ||
+    receipt.definitionDigest !== currentDefinitionDigest
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller receipt Gate identity is stale`,
+    );
+  if (
+    receipt.source?.dirty !== false ||
+    receipt.source?.sha !== observation.sourceSha
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller receipt must match a clean source SHA`,
+    );
+  if (
+    receipt.registry?.ref !== 'shifu.gates.json' ||
+    receipt.registry?.projectId !== registry.project.id ||
+    receipt.registry?.digest !== observation.registryDigest
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller receipt registry identity does not match`,
+    );
+  if (receipt.environment?.platform !== observation.platform)
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller receipt platform does not match`,
+    );
+  const binding = bindings.get(receipt.binding?.id);
+  if (
+    !binding ||
+    binding.execution !== 'controller' ||
+    !binding.gates?.includes(record.gateId) ||
+    binding.workflow !== receipt.binding?.workflow ||
+    binding.job !== receipt.binding?.job ||
+    gateDigest(binding.adapter) !== receipt.binding?.adapterDigest
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller binding identity is stale`,
+    );
+  const started = Date.parse(receipt.startedAt);
+  const finished = Date.parse(receipt.finishedAt);
+  if (
+    !Number.isFinite(started) ||
+    !Number.isFinite(finished) ||
+    finished < started ||
+    finished - started !== receipt.durationMs ||
+    receipt.durationMs !== observation.durationMs
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: durationMs differs from controller timestamps`,
+    );
+  if (
+    receipt.status !== 'pass' ||
+    receipt.attempted !== true ||
+    receipt.conclusion !== 'success'
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller result must be an attempted pass`,
+    );
+  const unsigned = structuredClone(receipt);
+  Reflect.deleteProperty(unsigned, 'integrity');
+  if (receipt.integrity?.digest !== gateDigest(unsigned))
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: controller receipt integrity is invalid`,
+    );
+}
+
+function validateGateMeasurementReceipt(context) {
+  const {
+    receipt,
+    record,
+    observation,
+    gate,
+    currentDefinitionDigest,
+    staleMeasurementGateIds,
+    registry,
+    issues,
+  } = context;
+  if (receipt.schema !== 'shifu.gate-receipt/v1')
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: unsupported receipt schema`,
+    );
+  if (gate.action?.kind === 'handler')
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: handler Gates require a controller receipt`,
+    );
+  if (
+    receipt.source?.dirty !== false ||
+    receipt.source?.sha !== observation.sourceSha
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: receipt must match a clean source SHA`,
+    );
+  if (
+    receipt.registry?.ref !== 'shifu.gates.json' ||
+    receipt.registry?.projectId !== registry.project.id ||
+    receipt.registry?.digest !== observation.registryDigest
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: receipt registry identity does not match`,
+    );
+  if (receipt.environment?.platform !== observation.platform)
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: receipt platform does not match`,
+    );
+  const results = Array.isArray(receipt.results)
+    ? receipt.results.filter((result) => result.gateId === record.gateId)
+    : [];
+  if (results.length !== 1) {
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: receipt must contain exactly one matching result`,
+    );
+    return;
+  }
+  const result = results[0];
+  if (
+    result.definitionDigest !== currentDefinitionDigest &&
+    !staleMeasurementGateIds.has(record.gateId)
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: receipt definition digest is stale`,
+    );
+  if (
+    result.attempted !== true ||
+    result.status !== 'pass' ||
+    result.exitCode !== 0
+  )
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: receipt result must be an attempted pass`,
+    );
+  if (result.durationMs !== observation.durationMs)
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: durationMs differs from the receipt`,
+    );
+}
+
+function validateMeasurementObservation(context) {
+  const {
+    root,
+    registry,
+    bindings,
+    record,
+    observation,
+    observationIndex,
+    recordAt,
+    gate,
+    currentDefinitionDigest,
+    staleMeasurementGateIds,
+    issues,
+  } = context;
+  const observationAt = `${recordAt}.observations[${observationIndex}]`;
+  if (
+    !exactObjectKeys(
+      observation,
+      ['platform', 'sourceSha', 'registryDigest', 'durationMs', 'receipt'],
+      observationAt,
+      issues,
+    )
+  )
+    return;
+  if (!gate.platforms.includes(observation.platform))
+    issues.push(
+      `[measurement] ${record.gateId}: unsupported platform '${observation.platform}'`,
+    );
+  if (!/^[0-9a-f]{40}$/.test(observation.sourceSha || ''))
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: sourceSha must be a full Git SHA`,
+    );
+  if (!/^sha256:[0-9a-f]{64}$/.test(observation.registryDigest || ''))
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: registryDigest must be sha256`,
+    );
+  if (!Number.isInteger(observation.durationMs) || observation.durationMs < 0)
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: durationMs must be a non-negative integer`,
+    );
+  if (!safeEvidencePath(observation.receipt)) {
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: unsafe receipt path`,
+    );
+    return;
+  }
+  const receiptPath = path.join(root, observation.receipt);
+  if (!fs.existsSync(receiptPath)) {
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: missing ${observation.receipt}`,
+    );
+    return;
+  }
+  let receipt;
+  try {
+    receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+  } catch {
+    issues.push(
+      `[measurement] ${record.gateId}:${observation.platform}: receipt is not valid JSON`,
+    );
+    return;
+  }
+  const receiptContext = {
+    receipt,
+    record,
+    observation,
+    gate,
+    currentDefinitionDigest,
+    staleMeasurementGateIds,
+    registry,
+    bindings,
+    issues,
+  };
+  if (receipt.schema === 'kungfu.gate-controller-receipt/v1')
+    validateControllerMeasurementReceipt(receiptContext);
+  else validateGateMeasurementReceipt(receiptContext);
+}
+
+function validateMeasurementRecord(context) {
+  const {
+    root,
+    registry,
+    bindings,
+    record,
+    recordIndex,
+    gates,
+    records,
+    staleMeasurementGateIds,
+    issues,
+  } = context;
+  const at = `measurements[${recordIndex}]`;
+  if (
+    !exactObjectKeys(
+      record,
+      ['gateId', 'definitionDigest', 'observations'],
+      at,
+      issues,
+    )
+  )
+    return;
+  if (records.has(record.gateId))
+    issues.push(`[measurement] duplicate Gate record '${record.gateId}'`);
+  records.set(record.gateId, record);
+  const gate = gates.get(record.gateId);
+  if (!gate) {
+    issues.push(`[measurement] unknown Gate '${record.gateId}'`);
+    return;
+  }
+  const currentDefinitionDigest = gateDefinitionDigest(gate);
+  if (
+    record.definitionDigest !== currentDefinitionDigest &&
+    !staleMeasurementGateIds.has(record.gateId)
+  )
+    issues.push(`[measurement] ${record.gateId}: definition digest is stale`);
+  if (!Array.isArray(record.observations) || !record.observations.length) {
+    issues.push(
+      `[measurement] ${record.gateId}: observations must be a non-empty array`,
+    );
+    return;
+  }
+  const observedPlatforms = record.observations.map(
+    (observation) => observation?.platform,
+  );
+  if (!sameStringSet(observedPlatforms, gate.platforms))
+    issues.push(
+      `[measurement] ${record.gateId}: measured platforms [${observedPlatforms.join(', ')}], expected [${gate.platforms.join(', ')}]`,
+    );
+  const sourceShas = new Set(
+    record.observations.map((observation) => observation?.sourceSha),
+  );
+  const registryDigests = new Set(
+    record.observations.map((observation) => observation?.registryDigest),
+  );
+  if (sourceShas.size !== 1 || registryDigests.size !== 1)
+    issues.push(
+      `[measurement] ${record.gateId}: all platforms must measure one source and registry revision`,
+    );
+  for (const [observationIndex, observation] of record.observations.entries()) {
+    validateMeasurementObservation({
+      root,
+      registry,
+      bindings,
+      record,
+      observation,
+      observationIndex,
+      recordAt: at,
+      gate,
+      currentDefinitionDigest,
+      staleMeasurementGateIds,
+      issues,
+    });
+  }
+}
+
+export function validateMeasurementCoverage(root, registry, options = {}) {
+  const issues = [];
+  const staleMeasurementGateIds = new Set([
+    ...focusedMeasurementStaleGateIdsFromEnv(),
+    ...(options.staleMeasurementGateIds || []),
+  ]);
+  const document = readJson(root, MEASUREMENT_COVERAGE);
+  const bindingDocument = readJson(root, BINDINGS);
+  const bindings = new Map(
+    (bindingDocument.bindings || []).map((binding) => [binding.id, binding]),
+  );
+  const baseline = validateMeasurementDocument(document, issues);
   const gates = new Map(registry.gates.map((gate) => [gate.id, gate]));
   const exempt = new Set(
     Array.isArray(baseline?.unmeasuredGateIds)
@@ -173,273 +511,23 @@ export function validateMeasurementCoverage(root, registry, options = {}) {
       : [],
   );
   const records = new Map();
-  if (!Array.isArray(document.measurements)) {
+  if (!Array.isArray(document.measurements))
     issues.push('[measurement] document.measurements must be an array');
-  }
-  for (const [recordIndex, record] of (Array.isArray(document.measurements)
+  const measurements = Array.isArray(document.measurements)
     ? document.measurements
-    : []
-  ).entries()) {
-    const at = `measurements[${recordIndex}]`;
-    if (
-      !exactObjectKeys(
-        record,
-        ['gateId', 'definitionDigest', 'observations'],
-        at,
-        issues,
-      )
-    )
-      continue;
-    if (records.has(record.gateId))
-      issues.push(`[measurement] duplicate Gate record '${record.gateId}'`);
-    records.set(record.gateId, record);
-    const gate = gates.get(record.gateId);
-    if (!gate) {
-      issues.push(`[measurement] unknown Gate '${record.gateId}'`);
-      continue;
-    }
-    const currentDefinitionDigest = gateDefinitionDigest(gate);
-    if (
-      record.definitionDigest !== currentDefinitionDigest &&
-      !staleMeasurementGateIds.has(record.gateId)
-    )
-      issues.push(`[measurement] ${record.gateId}: definition digest is stale`);
-    if (!Array.isArray(record.observations) || !record.observations.length) {
-      issues.push(
-        `[measurement] ${record.gateId}: observations must be a non-empty array`,
-      );
-      continue;
-    }
-    const observedPlatforms = record.observations.map(
-      (observation) => observation?.platform,
-    );
-    if (!sameStringSet(observedPlatforms, gate.platforms))
-      issues.push(
-        `[measurement] ${record.gateId}: measured platforms [${observedPlatforms.join(', ')}], expected [${gate.platforms.join(', ')}]`,
-      );
-    const sourceShas = new Set(
-      record.observations.map((observation) => observation?.sourceSha),
-    );
-    const registryDigests = new Set(
-      record.observations.map((observation) => observation?.registryDigest),
-    );
-    if (sourceShas.size !== 1 || registryDigests.size !== 1)
-      issues.push(
-        `[measurement] ${record.gateId}: all platforms must measure one source and registry revision`,
-      );
-    for (const [
-      observationIndex,
-      observation,
-    ] of record.observations.entries()) {
-      const observationAt = `${at}.observations[${observationIndex}]`;
-      if (
-        !exactObjectKeys(
-          observation,
-          ['platform', 'sourceSha', 'registryDigest', 'durationMs', 'receipt'],
-          observationAt,
-          issues,
-        )
-      )
-        continue;
-      if (!gate.platforms.includes(observation.platform))
-        issues.push(
-          `[measurement] ${record.gateId}: unsupported platform '${observation.platform}'`,
-        );
-      if (!/^[0-9a-f]{40}$/.test(observation.sourceSha || ''))
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: sourceSha must be a full Git SHA`,
-        );
-      if (!/^sha256:[0-9a-f]{64}$/.test(observation.registryDigest || ''))
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: registryDigest must be sha256`,
-        );
-      if (
-        !Number.isInteger(observation.durationMs) ||
-        observation.durationMs < 0
-      )
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: durationMs must be a non-negative integer`,
-        );
-      if (!safeEvidencePath(observation.receipt)) {
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: unsafe receipt path`,
-        );
-        continue;
-      }
-      const receiptPath = path.join(root, observation.receipt);
-      if (!fs.existsSync(receiptPath)) {
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: missing ${observation.receipt}`,
-        );
-        continue;
-      }
-      let receipt;
-      try {
-        receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
-      } catch {
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: receipt is not valid JSON`,
-        );
-        continue;
-      }
-      if (receipt.schema === 'kungfu.gate-controller-receipt/v1') {
-        if (gate.action?.kind !== 'handler')
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller receipts are only valid for handler Gates`,
-          );
-        exactObjectKeys(
-          receipt,
-          [
-            '$schema',
-            'schema',
-            'gateId',
-            'definitionDigest',
-            'source',
-            'registry',
-            'environment',
-            'binding',
-            'run',
-            'startedAt',
-            'finishedAt',
-            'durationMs',
-            'status',
-            'attempted',
-            'conclusion',
-            'integrity',
-          ],
-          `${record.gateId}:${observation.platform}: controller receipt`,
-          issues,
-        );
-        if (
-          receipt.$schema !==
-          'https://libkungfu.dev/schemas/shifu/gate-controller-receipt-v1.schema.json'
-        )
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller receipt schema URL is invalid`,
-          );
-        if (
-          receipt.gateId !== record.gateId ||
-          receipt.definitionDigest !== currentDefinitionDigest
-        )
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller receipt Gate identity is stale`,
-          );
-        if (
-          receipt.source?.dirty !== false ||
-          receipt.source?.sha !== observation.sourceSha
-        )
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller receipt must match a clean source SHA`,
-          );
-        if (
-          receipt.registry?.ref !== 'shifu.gates.json' ||
-          receipt.registry?.projectId !== registry.project.id ||
-          receipt.registry?.digest !== observation.registryDigest
-        )
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller receipt registry identity does not match`,
-          );
-        if (receipt.environment?.platform !== observation.platform)
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller receipt platform does not match`,
-          );
-        const binding = bindings.get(receipt.binding?.id);
-        if (
-          !binding ||
-          binding.execution !== 'controller' ||
-          !binding.gates?.includes(record.gateId) ||
-          binding.workflow !== receipt.binding?.workflow ||
-          binding.job !== receipt.binding?.job ||
-          gateDigest(binding.adapter) !== receipt.binding?.adapterDigest
-        )
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller binding identity is stale`,
-          );
-        const started = Date.parse(receipt.startedAt);
-        const finished = Date.parse(receipt.finishedAt);
-        if (
-          !Number.isFinite(started) ||
-          !Number.isFinite(finished) ||
-          finished < started ||
-          finished - started !== receipt.durationMs ||
-          receipt.durationMs !== observation.durationMs
-        )
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: durationMs differs from controller timestamps`,
-          );
-        if (
-          receipt.status !== 'pass' ||
-          receipt.attempted !== true ||
-          receipt.conclusion !== 'success'
-        )
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller result must be an attempted pass`,
-          );
-        const unsigned = structuredClone(receipt);
-        Reflect.deleteProperty(unsigned, 'integrity');
-        if (receipt.integrity?.digest !== gateDigest(unsigned))
-          issues.push(
-            `[measurement] ${record.gateId}:${observation.platform}: controller receipt integrity is invalid`,
-          );
-        continue;
-      }
-      if (receipt.schema !== 'shifu.gate-receipt/v1')
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: unsupported receipt schema`,
-        );
-      if (gate.action?.kind === 'handler')
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: handler Gates require a controller receipt`,
-        );
-      if (
-        receipt.source?.dirty !== false ||
-        receipt.source?.sha !== observation.sourceSha
-      )
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: receipt must match a clean source SHA`,
-        );
-      if (
-        receipt.registry?.ref !== 'shifu.gates.json' ||
-        receipt.registry?.projectId !== registry.project.id ||
-        receipt.registry?.digest !== observation.registryDigest
-      )
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: receipt registry identity does not match`,
-        );
-      if (receipt.environment?.platform !== observation.platform)
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: receipt platform does not match`,
-        );
-      const results = Array.isArray(receipt.results)
-        ? receipt.results.filter((result) => result.gateId === record.gateId)
-        : [];
-      if (results.length !== 1) {
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: receipt must contain exactly one matching result`,
-        );
-        continue;
-      }
-      const result = results[0];
-      if (
-        result.definitionDigest !== currentDefinitionDigest &&
-        !staleMeasurementGateIds.has(record.gateId)
-      )
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: receipt definition digest is stale`,
-        );
-      if (
-        result.attempted !== true ||
-        result.status !== 'pass' ||
-        result.exitCode !== 0
-      )
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: receipt result must be an attempted pass`,
-        );
-      if (result.durationMs !== observation.durationMs)
-        issues.push(
-          `[measurement] ${record.gateId}:${observation.platform}: durationMs differs from the receipt`,
-        );
-    }
+    : [];
+  for (const [recordIndex, record] of measurements.entries()) {
+    validateMeasurementRecord({
+      root,
+      registry,
+      bindings,
+      record,
+      recordIndex,
+      gates,
+      records,
+      staleMeasurementGateIds,
+      issues,
+    });
   }
   for (const gate of registry.gates) {
     if (!exempt.has(gate.id) && !records.has(gate.id))
