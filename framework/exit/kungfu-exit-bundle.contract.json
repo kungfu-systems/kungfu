@@ -1272,6 +1272,7 @@
       ],
       "owner": "Project Cut protocol reader and exact tracked-artifact importer",
       "source": "framework/core/src/python/kungfu/exit_bundle.py",
+      "schemaSource": "framework/core/src/python/kungfu/_exit_bundle/common.py",
       "identityRoot": "primaryCutRoot with four-root Project Cut receipt identity",
       "protocol": "project-cut-history-portability/v1",
       "modes": [
@@ -1300,6 +1301,7 @@
       ],
       "owner": "Product Release Cut protocol plus native installed-image and selection-receipt owners",
       "source": "framework/core/src/python/kungfu/exit_bundle.py",
+      "schemaSource": "framework/core/src/python/kungfu/_exit_bundle/common.py",
       "identityRoot": "selectedReleaseCutRoot",
       "protocol": "product-release-cut-history-portability/v1",
       "modes": [
