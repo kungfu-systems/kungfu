@@ -9,6 +9,7 @@ import test from 'node:test';
 import {
   KFD_CANDIDATE_EVIDENCE_CONTRACT,
   SUPPORTED_KFD_PLATFORMS,
+  createKfdPrebuildGate,
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
   kfdPlatformId,
@@ -21,6 +22,17 @@ import {
 
 const SOURCE_SHA = 'a'.repeat(40);
 const SOURCE_TREE = 'b'.repeat(40);
+
+const SOURCE_GATE_INPUTS = [
+  '.buildchain/kfd/kfd-1/contract-world.witness.json',
+  '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
+  '.buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json',
+  '.buildchain/kfd/kfd-2/claims/remote-fact-boundary.json',
+  '.buildchain/kfd/kfd-2/claims/agent-work-state-contract.json',
+  '.buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json',
+  '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
+  '.buildchain/kfd/support-matrix.json',
+];
 
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -122,6 +134,31 @@ function artifactFixture(platform = 'linux-x64') {
   return { root, platform, sourceSha, sourceTree };
 }
 
+function rematerializedSourceFixture() {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfd-rematerialized-source-test-'),
+  );
+  const git = (args) => {
+    const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  git(['init', '-q']);
+  git(['config', 'user.name', 'KFD Test']);
+  git(['config', 'user.email', 'kfd-test@example.invalid']);
+  for (const filePath of SOURCE_GATE_INPUTS)
+    writeJson(path.join(root, filePath), {});
+  git(['add', '.']);
+  git(['commit', '-q', '-m', 'source identity']);
+  const sourceSha = git(['rev-parse', 'HEAD']);
+  const sourceTree = git(['rev-parse', 'HEAD^{tree}']);
+  git(['commit', '-q', '--allow-empty', '-m', 'rematerialized identity']);
+  const checkoutSha = git(['rev-parse', 'HEAD']);
+  assert.notEqual(checkoutSha, sourceSha);
+  assert.equal(git(['rev-parse', 'HEAD^{tree}']), sourceTree);
+  return { root, sourceSha, sourceTree, checkoutSha };
+}
+
 test('accepts a complete sealed four-platform KFD payload set', () => {
   const root = fixture();
   assert.deepEqual(
@@ -140,6 +177,25 @@ test('derives every supported Buildchain platform from the native host tuple', (
   assert.equal(kfdPlatformId('darwin', 'arm64'), 'macos-arm64');
   assert.equal(kfdPlatformId('win32', 'x64'), 'windows-x64');
   assert.equal(kfdPlatformId('darwin', 'x64'), '');
+});
+
+test('binds a rematerialized checkout only through the exact declared source tree', () => {
+  const fixture = rematerializedSourceFixture();
+  const gate = createKfdPrebuildGate(fixture);
+  assert.deepEqual(gate.candidate, {
+    sourceSha: fixture.sourceSha,
+    sourceTree: fixture.sourceTree,
+    checkoutSha: fixture.checkoutSha,
+    checkoutBinding: 'checkout-tree-verified',
+  });
+  assert.throws(
+    () =>
+      createKfdPrebuildGate({
+        ...fixture,
+        sourceTree: 'f'.repeat(40),
+      }),
+    /candidate source tree mismatch/u,
+  );
 });
 
 test('seals an artifact witness and candidate capsule in two phases', () => {

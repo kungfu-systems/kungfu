@@ -153,15 +153,16 @@ function gitValue(root, args) {
   return result.stdout.trim();
 }
 
-function resolveIdentity(root, sourceSha = '', sourceTree = '') {
-  const head = gitValue(root, ['rev-parse', 'HEAD']);
-  const tree = gitValue(root, ['rev-parse', 'HEAD^{tree}']);
-  const resolvedSha = sourceSha || process.env.BUILDCHAIN_SOURCE_SHA || head;
-  const resolvedTree =
-    sourceTree || process.env.BUILDCHAIN_SOURCE_TREE_SHA || tree;
-  if (resolvedSha !== head) {
+function assertCheckoutIdentity({
+  resolvedSha,
+  resolvedTree,
+  declaredTree,
+  head,
+  tree,
+}) {
+  if (resolvedSha !== head && !declaredTree) {
     throw new Error(
-      `candidate source root mismatch: expected ${resolvedSha}, checkout is ${head}`,
+      `candidate source commit mismatch without an exact tree binding: expected ${resolvedSha}, checkout is ${head}`,
     );
   }
   if (resolvedTree !== tree) {
@@ -169,7 +170,31 @@ function resolveIdentity(root, sourceSha = '', sourceTree = '') {
       `candidate source tree mismatch: expected ${resolvedTree}, checkout is ${tree}`,
     );
   }
-  return { sourceSha: resolvedSha, sourceTree: resolvedTree };
+}
+
+function sourceIdentity(resolvedSha, resolvedTree, head) {
+  return {
+    sourceSha: resolvedSha,
+    sourceTree: resolvedTree,
+    checkoutSha: head,
+    checkoutBinding: 'checkout-tree-verified',
+  };
+}
+
+function resolveIdentity(root, sourceSha = '', sourceTree = '') {
+  const head = gitValue(root, ['rev-parse', 'HEAD']);
+  const tree = gitValue(root, ['rev-parse', 'HEAD^{tree}']);
+  const resolvedSha = sourceSha || process.env.BUILDCHAIN_SOURCE_SHA || head;
+  const declaredTree = sourceTree || process.env.BUILDCHAIN_SOURCE_TREE_SHA;
+  const resolvedTree = declaredTree || tree;
+  assertCheckoutIdentity({
+    resolvedSha,
+    resolvedTree,
+    declaredTree,
+    head,
+    tree,
+  });
+  return sourceIdentity(resolvedSha, resolvedTree, head);
 }
 
 function fileRows(root, relativePaths) {
