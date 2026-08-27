@@ -597,6 +597,13 @@ export function runVerifiedQualification({
   sourceTree,
   buildArtifactWitness,
 }) {
+  const result = spawnSync(command[0], command.slice(1), {
+    cwd: root,
+    env: process.env,
+    stdio: 'inherit',
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) return result.status || 1;
   prepareKfdArtifactWitness({
     root,
     platform,
@@ -604,27 +611,6 @@ export function runVerifiedQualification({
     sourceTree,
     buildArtifactWitness,
   });
-  const output = path.join(root, 'product', 'release', 'qualification', 'kfd');
-  const sealed = path.join(
-    root,
-    '.buildchain',
-    'runtime',
-    'kfd-candidate-evidence',
-    'artifact-before-verify',
-  );
-  fs.rmSync(sealed, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(sealed), { recursive: true });
-  fs.renameSync(output, sealed);
-  const result = spawnSync(command[0], command.slice(1), {
-    cwd: root,
-    env: process.env,
-    stdio: 'inherit',
-  });
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.renameSync(sealed, output);
-  if (result.error) throw result.error;
-  if (result.status !== 0) return result.status || 1;
   finalizeKfdCandidateEvidence({ root, platform, sourceSha, sourceTree });
   return 0;
 }

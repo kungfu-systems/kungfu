@@ -12,6 +12,7 @@ import {
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
   prepareKfdArtifactWitness,
+  releaseArtifactRoot,
   runVerifiedQualification,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
@@ -132,7 +133,7 @@ test('accepts a complete sealed four-platform KFD payload set', () => {
   );
 });
 
-test('seals the artifact witness before qualification and the capsule after it', () => {
+test('seals an artifact witness and candidate capsule in two phases', () => {
   const fixture = artifactFixture();
   const witness = prepareKfdArtifactWitness({
     ...fixture,
@@ -167,7 +168,7 @@ test('seals the artifact witness before qualification and the capsule after it',
   assert.equal(capsule.platform, fixture.platform);
 });
 
-test('the Verify wrapper restores pre-qualification evidence after qualification cleanup', () => {
+test('the Verify wrapper seals final artifacts after qualification cleanup', () => {
   const fixture = artifactFixture();
   const qualification = path.join(
     fixture.root,
@@ -175,21 +176,30 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
     'release',
     'qualification',
   );
+  const finalArtifact = path.join(
+    fixture.root,
+    'product',
+    'release',
+    'artifact-after-qualification.bin',
+  );
   const command = [
     process.execPath,
     '-e',
-    `const fs=require('node:fs');fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n')`,
+    `const fs=require('node:fs');fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n');fs.writeFileSync(${JSON.stringify(finalArtifact)},'final artifact\\n')`,
   ];
   assert.equal(
     runVerifiedQualification({
       ...fixture,
       command,
-      buildArtifactWitness: () => ({
-        id: 'kungfu-collaboration-interface',
-        standard: 'kfd-3',
-        witnessKind: 'artifact',
-        exposedSurfaces: [],
-      }),
+      buildArtifactWitness: () => {
+        assert.equal(fs.existsSync(finalArtifact), true);
+        return {
+          id: 'kungfu-collaboration-interface',
+          standard: 'kfd-3',
+          witnessKind: 'artifact',
+          exposedSurfaces: [],
+        };
+      },
     }),
     0,
   );
@@ -200,6 +210,16 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
   assert.equal(
     fs.existsSync(path.join(qualification, 'kfd', 'candidate-evidence.json')),
     true,
+  );
+  const witness = JSON.parse(
+    fs.readFileSync(
+      path.join(qualification, 'kfd', 'artifacts', `${fixture.platform}.json`),
+      'utf8',
+    ),
+  );
+  assert.equal(
+    witness.candidateBinding.artifactRoot,
+    releaseArtifactRoot(fixture.root).root,
   );
 });
 
