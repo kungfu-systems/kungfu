@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7336,
+  "generation": 7337,
   "fencingCounter": 694,
   "policy": {
     "agingSeconds": 900,
@@ -48538,8 +48538,40 @@
       "affectedPaths": [
         "framework/deprecation/deprecation-lifecycle.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3458,
+      "assignmentRoot": "sha256:989530ebd2bc0eedbfc87e7d35c68fdae391e594afdb354b7b448d9c2ab86034",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:ca4d8071d62f4ab869edb07e8adfdf6e617206d87c7ecf057c8ce590eab7ff84",
+      "deliveryClass": "non-native-fast",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:6fc2ae0e41e081218e85fa2f4761aef7dc525508c4437049783e526a4685be86",
+      "candidateId": "sha256:683e00c1d230a3d5ddf4be47632ec8cc993a336df25d321fd1e8f8032a37b1d0",
+      "sourceHead": "195264b182b1431af74897723f596f1b76785f92",
+      "sourcePatchRoot": "sha256:1fde2043e6cf4b183b78ccb26446becde846edb26656ce22c9a5177beaa3cf48",
+      "sourceProofRoot": "sha256:26d49334ce023f0e6a102211e3ab8d157b661b48a6748a4d670d76ddfac9d73c",
+      "planRoot": "sha256:4dd37230e0da18a5fd90695c7caea145ff55e2334921c2eabeefb91e2de10c06",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:f27f50e0302a7560fa47f6d4f37f517fb8c82aaf4b07dc34aefb0dfefd13a548",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 33057631467,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-27T09:24:47.320Z",
+      "updatedAt": "2026-08-27T09:24:47.320Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "docs/adr/KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c.md",
+        "framework/deprecation/deprecation-lifecycle.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-27T09:14:34.971Z",
-  "stateRoot": "sha256:e28ce16e993cf5822d8d78dcbd1107c73cfc37ab490467b135798bd30249e12a"
+  "updatedAt": "2026-08-27T09:24:47.320Z",
+  "stateRoot": "sha256:c9e991530e9ce0f4dc6b70ed497c2e9dfabf8c2221ec1f17d786c69a7d127e6e"
 }
