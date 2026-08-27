@@ -3,21 +3,17 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import os
 import re
-import shutil
+import shutil as shutil
 import subprocess
-import sys
-import tarfile
+import sys as sys
 import tempfile
-import time
 import urllib.parse
 import urllib.request
-import zipfile
 from collections.abc import Callable, Mapping
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 
 from kungfu import runtime_upgrade
@@ -90,60 +86,106 @@ from kungfu.distribution_update_policy import (
     install_source as install_source,
     local_dogfood_residency as local_dogfood_residency,
 )
+from kungfu._distribution_update.download import (
+    _HttpsOnlyRedirectHandler as _HttpsOnlyRedirectHandler,
+    _account_archive_member as _account_archive_member,
+    _archive_expanded_limit as _archive_expanded_limit,
+    _assert_https_response as _assert_https_response,
+    _assert_tar_member as _assert_tar_member,
+    _assert_zip_member as _assert_zip_member,
+    _copy_bounded_download as _copy_bounded_download,
+    _discard_poisoned_partial as _discard_poisoned_partial,
+    _download_response_appends as _download_response_appends,
+    _download_to_partial as _download_to_partial_impl,
+    _extract_archive as _extract_archive,
+    _file_digest as _file_digest,
+    _open_https as _open_https,
+    _safe_member as _safe_member,
+    _stage_verified_archive as _stage_verified_archive,
+    _validate_archive as _validate_archive_impl,
+    download as _download_impl,
+)
+from kungfu._distribution_update.cli import (
+    _assert_cli_image_slot_available as _assert_cli_image_slot_available,
+    _install_cli_image as _install_cli_image_impl,
+    _installed_cli_manifest as _installed_cli_manifest,
+    _read_cli_selection as _read_cli_selection,
+    _select_cli_image as _select_cli_image_impl,
+    cli_inventory_fsck as cli_inventory_fsck,
+    selected_cli_command as selected_cli_command,
+)
 
 release_cut = runtime_upgrade
 
 
-def _assert_https_response(
-    response: Any,
-    *,
-    code: str,
-    message: str,
-) -> None:
-    final_url = str(response.geturl())
-    if urllib.parse.urlparse(final_url).scheme.lower() != "https":
-        raise DistributionUpdateError(code, message)
-
-
-class _HttpsOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
-    def __init__(self, *, code: str, message: str) -> None:
-        super().__init__()
-        self._code = code
-        self._message = message
-
-    def redirect_request(
-        self,
-        request: Any,
-        file_pointer: Any,
-        response_code: int,
-        response_message: str,
-        headers: Any,
-        new_url: str,
-    ) -> Any:
-        target = urllib.parse.urljoin(request.full_url, new_url)
-        if urllib.parse.urlparse(target).scheme.lower() != "https":
-            raise DistributionUpdateError(self._code, self._message)
-        return super().redirect_request(
-            request,
-            file_pointer,
-            response_code,
-            response_message,
-            headers,
-            target,
-        )
-
-
-def _open_https(
-    request: str | urllib.request.Request,
-    *,
-    timeout: int,
-    code: str,
-    message: str,
-) -> Any:
-    opener = urllib.request.build_opener(
-        _HttpsOnlyRedirectHandler(code=code, message=message)
+def _download_to_partial(url: str, partial: Path, *, expected_size: int) -> None:
+    return _download_to_partial_impl(
+        url,
+        partial,
+        expected_size=expected_size,
     )
-    return opener.open(request, timeout=timeout)
+
+
+def download(
+    plan: Mapping[str, Any], *, expected_plan_id: str, execute: bool
+) -> dict[str, Any]:
+    return _download_impl(
+        plan,
+        expected_plan_id=expected_plan_id,
+        execute=execute,
+    )
+
+
+def _validate_archive(archive: Path, *, archive_size: int) -> tuple[str, list[Any]]:
+    return _validate_archive_impl(
+        archive,
+        archive_size=archive_size,
+    )
+
+
+def _install_cli_image(
+    product_root: Path,
+    product: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    *,
+    artifact_digest: str,
+    config_home: str | Path,
+) -> dict[str, Any]:
+    return _install_cli_image_impl(
+        product_root,
+        product,
+        manifest,
+        artifact_digest=artifact_digest,
+        config_home=config_home,
+    )
+
+
+def _select_cli_image(
+    image: Mapping[str, Any],
+    *,
+    config_home: str | Path,
+    cut_decision: Mapping[str, Any] | None = None,
+    cut_transition: Mapping[str, Any] | None = None,
+    bootstrap_rollback: Mapping[str, Any] | None = None,
+    receipt_factory: Callable[[dict[str, Any]], dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    return _select_cli_image_impl(
+        image,
+        config_home=config_home,
+        cut_decision=cut_decision,
+        cut_transition=cut_transition,
+        bootstrap_rollback=bootstrap_rollback,
+        receipt_factory=receipt_factory,
+    )
+
+
+def reexec_selected_cli() -> None:
+    selected = selected_cli_command()
+    if selected is not None:
+        argv, env = selected
+        if sys.platform == "win32":
+            raise SystemExit(subprocess.run(argv, env=env, check=False).returncode)
+        os.execve(argv[0], argv, env)
 
 
 def load_release_manifest(reference: str | Path) -> tuple[dict[str, Any], bool]:
@@ -391,427 +433,6 @@ def execute_update(
         raise wrapped from error
 
 
-def _copy_bounded_download(
-    input_file: Any,
-    output_file: Any,
-    *,
-    expected_size: int,
-    initial_size: int = 0,
-) -> None:
-    observed_size = initial_size
-    while True:
-        remaining = expected_size - observed_size
-        if remaining < 0:
-            raise DistributionUpdateError(
-                "artifact-verification-failed",
-                "CLI artifact exceeds the size declared by the release manifest",
-            )
-        chunk = input_file.read(min(_DOWNLOAD_CHUNK_BYTES, remaining + 1))
-        if not chunk:
-            return
-        if len(chunk) > remaining:
-            raise DistributionUpdateError(
-                "artifact-verification-failed",
-                "CLI artifact exceeds the size declared by the release manifest",
-            )
-        output_file.write(chunk)
-        observed_size += len(chunk)
-
-
-def _download_response_appends(
-    response: Any,
-    *,
-    offset: int,
-    expected_size: int,
-) -> bool:
-    _assert_https_response(
-        response,
-        code="artifact-transport-insecure",
-        message="CLI artifact redirect requires HTTPS",
-    )
-    status = int(response.status)
-    if status == 200:
-        return False
-    if status != 206 or offset <= 0:
-        raise DistributionUpdateError(
-            "artifact-verification-failed",
-            "CLI artifact server returned an unexpected download range",
-        )
-    content_range = str(response.getheader("Content-Range") or "")
-    match = _CONTENT_RANGE.fullmatch(content_range)
-    if match is None:
-        raise DistributionUpdateError(
-            "artifact-verification-failed",
-            "CLI artifact resume response has no exact content range",
-        )
-    start, end, total = (int(value) for value in match.groups())
-    if start != offset or end < start or end >= expected_size or total != expected_size:
-        raise DistributionUpdateError(
-            "artifact-verification-failed",
-            "CLI artifact resume range differs from the cached bytes or manifest",
-        )
-    return True
-
-
-def _download_to_partial(url: str, partial: Path, *, expected_size: int) -> None:
-    parsed = urllib.parse.urlparse(url)
-    if parsed.scheme == "file":
-        source = Path(urllib.request.url2pathname(parsed.path)).resolve()
-        if not source.is_file():
-            raise DistributionUpdateError(
-                "artifact-missing", f"CLI artifact is missing: {source}"
-            )
-        if source.stat().st_size != expected_size:
-            raise DistributionUpdateError(
-                "artifact-verification-failed",
-                "CLI artifact size differs from the release manifest",
-            )
-        partial.parent.mkdir(parents=True, exist_ok=True)
-        with source.open("rb") as input_file, partial.open("wb") as output_file:
-            _copy_bounded_download(
-                input_file,
-                output_file,
-                expected_size=expected_size,
-            )
-        return
-    if parsed.scheme != "https":
-        raise DistributionUpdateError(
-            "artifact-transport-insecure", "CLI update artifact requires HTTPS"
-        )
-    offset = partial.stat().st_size if partial.is_file() else 0
-    if offset > expected_size:
-        raise DistributionUpdateError(
-            "artifact-verification-failed",
-            "partial CLI artifact exceeds the size declared by the release manifest",
-        )
-    if offset == expected_size:
-        return
-    partial.parent.mkdir(parents=True, exist_ok=True)
-    request = urllib.request.Request(url)
-    if offset:
-        request.add_header("Range", f"bytes={offset}-")
-    try:
-        with _open_https(
-            request,
-            timeout=60,
-            code="artifact-transport-insecure",
-            message="CLI artifact redirect requires HTTPS",
-        ) as response:
-            append = _download_response_appends(
-                response,
-                offset=offset,
-                expected_size=expected_size,
-            )
-            with partial.open("ab" if append else "wb") as output_file:
-                _copy_bounded_download(
-                    response,
-                    output_file,
-                    expected_size=expected_size,
-                    initial_size=offset if append else 0,
-                )
-    except OSError as error:
-        raise DistributionUpdateError(
-            "artifact-download-failed", "CLI artifact download failed"
-        ) from error
-
-
-def _file_digest(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as input_file:
-        for chunk in iter(lambda: input_file.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return f"sha256:{digest.hexdigest()}"
-
-
-def _discard_poisoned_partial(partial: Path) -> None:
-    try:
-        partial.unlink()
-    except FileNotFoundError:
-        pass
-    except OSError as error:
-        raise DistributionUpdateError(
-            "artifact-io-failed",
-            "invalid partial CLI artifact could not be discarded",
-        ) from error
-
-
-def _stage_verified_archive(
-    source: Path,
-    target: Path,
-    *,
-    expected_size: int,
-    expected_digest: str,
-) -> None:
-    try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with source.open("rb") as input_file, target.open("xb") as output_file:
-            _copy_bounded_download(
-                input_file,
-                output_file,
-                expected_size=expected_size,
-            )
-        observed_size = target.stat().st_size
-        observed_digest = _file_digest(target)
-    except DistributionUpdateError:
-        raise
-    except OSError as error:
-        raise DistributionUpdateError(
-            "artifact-io-failed", "CLI archive could not be staged for extraction"
-        ) from error
-    if observed_size != expected_size or observed_digest != expected_digest:
-        raise DistributionUpdateError(
-            "artifact-verification-failed",
-            "CLI archive changed while being staged for extraction",
-        )
-
-
-def download(
-    plan: Mapping[str, Any], *, expected_plan_id: str, execute: bool
-) -> dict[str, Any]:
-    if plan.get("schema") != DOWNLOAD_PLAN_SCHEMA:
-        raise DistributionUpdateError("plan-invalid", "download plan schema is invalid")
-    identity = {
-        "runtimeBuildId": plan.get("manifest", {}).get("runtimeBuildId"),
-        "artifactUrl": plan.get("artifact", {}).get("url"),
-        "artifactSize": plan.get("artifact", {}).get("size"),
-        "artifactDigest": plan.get("artifact", {}).get("digest"),
-        "target": plan.get("target"),
-    }
-    current_plan_id = _stable_id("product-download-plan", identity)
-    if plan.get("planId") != expected_plan_id or current_plan_id != expected_plan_id:
-        raise DistributionUpdateError("stale-plan", "download plan identity changed")
-    if plan.get("state") != "download-allowed":
-        raise DistributionUpdateError(
-            "plan-not-applicable", "install source does not allow self-update"
-        )
-    if not execute:
-        return {**copy.deepcopy(dict(plan)), "executeRequired": True}
-    target = Path(str(plan["target"])).resolve()
-    partial = target.with_suffix(f"{target.suffix}.part")
-    lock_root = target.parent / "locks"
-    lock_id = _stable_id("product-download-target", {"target": str(target)})
-    with (
-        _CLI_DOWNLOAD_PROCESS_LOCK,
-        coordination_locks.held(
-            lock_root,
-            lock_id,
-            label=f"cli-product-download:{lock_id}",
-        ),
-    ):
-        try:
-            if target.is_symlink() or partial.is_symlink():
-                raise DistributionUpdateError(
-                    "artifact-path-unsafe",
-                    "CLI download target must not be a symbolic link",
-                )
-            if target.is_file():
-                observed_size = target.stat().st_size
-                observed_digest = _file_digest(target)
-                if (
-                    observed_size != int(plan["artifact"]["size"])
-                    or observed_digest != plan["artifact"]["digest"]
-                ):
-                    raise DistributionUpdateError(
-                        "artifact-target-collision",
-                        "download target already contains different bytes",
-                    )
-            else:
-                expected_size = int(plan["artifact"]["size"])
-                if partial.is_file() and partial.stat().st_size > expected_size:
-                    _discard_poisoned_partial(partial)
-                try:
-                    _download_to_partial(
-                        str(plan["artifact"]["url"]),
-                        partial,
-                        expected_size=expected_size,
-                    )
-                except DistributionUpdateError:
-                    if partial.is_file() and partial.stat().st_size >= expected_size:
-                        _discard_poisoned_partial(partial)
-                    raise
-                observed_size = partial.stat().st_size
-                if observed_size != expected_size:
-                    raise DistributionUpdateError(
-                        "artifact-verification-failed",
-                        "downloaded CLI artifact does not match size and digest evidence",
-                    )
-                observed_digest = _file_digest(partial)
-                if observed_digest != plan["artifact"]["digest"]:
-                    _discard_poisoned_partial(partial)
-                    raise DistributionUpdateError(
-                        "artifact-verification-failed",
-                        "downloaded CLI artifact does not match size and digest evidence",
-                    )
-                os.replace(partial, target)
-        except DistributionUpdateError:
-            raise
-        except OSError as error:
-            raise DistributionUpdateError(
-                "artifact-io-failed",
-                "CLI artifact could not be written; check free space and permissions",
-            ) from error
-    receipt = {
-        "schema": DOWNLOAD_RECEIPT_SCHEMA,
-        "planId": expected_plan_id,
-        "state": "complete",
-        "reasonCode": "artifact-verified",
-        "artifactPath": str(target),
-        "artifactDigest": observed_digest,
-        "runtimeBuildId": plan["manifest"]["runtimeBuildId"],
-        "documentationUrl": plan["documentationUrl"],
-    }
-    return {**receipt, "receiptRoot": _content_root(receipt)}
-
-
-def _safe_member(name: str) -> bool:
-    normalized = name.replace("\\", "/")
-    parts = Path(normalized).parts
-    return bool(parts) and not normalized.startswith("/") and ".." not in parts
-
-
-def _archive_expanded_limit(archive_size: int) -> int:
-    return min(
-        _MAX_ARCHIVE_EXPANDED_BYTES,
-        max(
-            _MIN_ARCHIVE_EXPANDED_BYTES,
-            archive_size * _MAX_ARCHIVE_EXPANSION_RATIO,
-        ),
-    )
-
-
-def _account_archive_member(
-    *,
-    count: int,
-    expanded_size: int,
-    member_size: int,
-    expanded_limit: int,
-) -> tuple[int, int]:
-    count += 1
-    if count > _MAX_ARCHIVE_ENTRIES:
-        raise DistributionUpdateError(
-            "archive-resource-limit", "CLI archive contains too many entries"
-        )
-    if member_size < 0 or expanded_size > expanded_limit - member_size:
-        raise DistributionUpdateError(
-            "archive-resource-limit",
-            "CLI archive expands beyond the bounded extraction budget",
-        )
-    return count, expanded_size + member_size
-
-
-def _assert_zip_member(info: zipfile.ZipInfo) -> None:
-    if not _safe_member(info.filename):
-        raise DistributionUpdateError(
-            "archive-path-unsafe", "CLI archive contains an unsafe path"
-        )
-    mode = info.external_attr >> 16
-    if mode & 0o170000 == 0o120000:
-        raise DistributionUpdateError(
-            "archive-link-unsupported",
-            "CLI archive contains an unsupported symlink",
-        )
-
-
-def _assert_tar_member(member: tarfile.TarInfo) -> None:
-    safe_symlink = False
-    if member.issym():
-        link_name = member.linkname.replace("\\", "/")
-        target = PurePosixPath(member.name).parent / PurePosixPath(link_name)
-        depth = 0
-        safe_symlink = (
-            bool(link_name)
-            and not link_name.startswith("/")
-            and re.match(r"^[A-Za-z]:", link_name) is None
-        )
-        for part in target.parts:
-            if part in ("", "."):
-                continue
-            if part == "..":
-                depth -= 1
-                if depth < 0:
-                    safe_symlink = False
-                    break
-            else:
-                depth += 1
-    if (
-        not _safe_member(member.name)
-        or member.islnk()
-        or (member.issym() and not safe_symlink)
-        or not (member.isfile() or member.isdir() or member.issym())
-    ):
-        raise DistributionUpdateError(
-            "archive-entry-unsupported",
-            "CLI archive contains an unsafe or unsupported entry",
-        )
-
-
-def _validate_archive(archive: Path, *, archive_size: int) -> tuple[str, list[Any]]:
-    expanded_limit = _archive_expanded_limit(archive_size)
-    if zipfile.is_zipfile(archive):
-        try:
-            with zipfile.ZipFile(archive) as source:
-                count = 0
-                expanded_size = 0
-                zip_members = source.infolist()
-                for info in zip_members:
-                    _assert_zip_member(info)
-                    count, expanded_size = _account_archive_member(
-                        count=count,
-                        expanded_size=expanded_size,
-                        member_size=0 if info.is_dir() else info.file_size,
-                        expanded_limit=expanded_limit,
-                    )
-        except zipfile.BadZipFile as error:
-            raise DistributionUpdateError(
-                "archive-invalid", "CLI artifact is not a supported archive"
-            ) from error
-        return "zip", zip_members
-    try:
-        with tarfile.open(archive, "r:*") as source:
-            count = 0
-            expanded_size = 0
-            tar_members: list[tarfile.TarInfo] = []
-            for member in source:
-                _assert_tar_member(member)
-                count, expanded_size = _account_archive_member(
-                    count=count,
-                    expanded_size=expanded_size,
-                    member_size=member.size if member.isfile() else 0,
-                    expanded_limit=expanded_limit,
-                )
-                tar_members.append(member)
-    except tarfile.TarError as error:
-        raise DistributionUpdateError(
-            "archive-invalid", "CLI artifact is not a supported archive"
-        ) from error
-    return "tar", tar_members
-
-
-def _extract_archive(
-    archive: Path,
-    target: Path,
-    *,
-    archive_type: str,
-    members: list[Any],
-) -> None:
-    if archive_type == "zip":
-        try:
-            with zipfile.ZipFile(archive) as source:
-                source.extractall(target, members=members)
-        except zipfile.BadZipFile as error:
-            raise DistributionUpdateError(
-                "archive-invalid", "CLI artifact is not a supported archive"
-            ) from error
-        return
-    try:
-        with tarfile.open(archive, "r:*") as source:
-            source.extractall(target, members=members, filter="data")
-    except tarfile.TarError as error:
-        raise DistributionUpdateError(
-            "archive-invalid", "CLI artifact is not a supported archive"
-        ) from error
-
-
 _IDENTITY_FIELDS = (
     "schema",
     "productVersion",
@@ -838,550 +459,6 @@ _CUT_IDENTITY_FIELDS = (
     "releaseCutRoot",
     "platformSliceRoot",
 )
-
-
-def _installed_cli_manifest(
-    image: Mapping[str, Any],
-) -> dict[str, Any]:
-    root = Path(str(image["productRoot"])).expanduser().resolve()
-    manifest = (root / str(image["upgradeManifest"])).resolve()
-    if root not in manifest.parents or not manifest.is_file():
-        raise DistributionUpdateError(
-            "cli-image-invalid",
-            "installed CLI image has no safe upgrade manifest",
-        )
-    return runtime_upgrade.validate_manifest(_read_object(manifest))
-
-
-def _install_cli_image(
-    product_root: Path,
-    product: Mapping[str, Any],
-    manifest: Mapping[str, Any],
-    *,
-    artifact_digest: str,
-    config_home: str | Path,
-) -> dict[str, Any]:
-    entries = product.get("entries")
-    if not isinstance(entries, Mapping):
-        raise DistributionUpdateError(
-            "product-layout-invalid", "CLI product entries are missing"
-        )
-    executable_relative = str(entries.get("runtime") or "")
-    manifest_relative = str(entries.get("upgradeManifest") or "")
-    if not executable_relative or not manifest_relative:
-        raise DistributionUpdateError(
-            "product-layout-invalid", "CLI product launch entries are missing"
-        )
-    frontend_build_id = str(manifest["frontendBuildId"])
-    target = _cli_image_root(config_home, frontend_build_id)
-    lock_root = _cli_inventory_root(config_home) / "locks"
-    with coordination_locks.held(
-        lock_root,
-        frontend_build_id,
-        label=f"cli-product-install:{frontend_build_id}",
-    ):
-        record_path = target / "image.json"
-        if record_path.is_file():
-            record = _read_object(record_path)
-            if (
-                record.get("schema") != CLI_IMAGE_SCHEMA
-                or record.get("artifactDigest") != artifact_digest
-            ):
-                raise DistributionUpdateError(
-                    "frontend-build-id-collision",
-                    "CLI frontend build id already names different archive bytes",
-                )
-            return record
-        staging = target.with_name(
-            f".{frontend_build_id}.{os.getpid()}.{time.time_ns()}.partial"
-        )
-        try:
-            shutil.copytree(product_root, staging, symlinks=True)
-            executable = (staging / executable_relative).resolve()
-            bundled_manifest = (staging / manifest_relative).resolve()
-            if (
-                staging.resolve() not in executable.parents
-                or not executable.is_file()
-                or staging.resolve() not in bundled_manifest.parents
-                or not bundled_manifest.is_file()
-            ):
-                raise DistributionUpdateError(
-                    "product-layout-invalid",
-                    "CLI executable or bundled upgrade manifest escapes the product image",
-                )
-            runtime_root = (staging / executable_relative).parent
-            try:
-                observed_runtime_digest = runtime_upgrade.tree_digest(runtime_root)
-            except runtime_upgrade.UpgradeError as error:
-                raise DistributionUpdateError(error.code, str(error)) from error
-            if observed_runtime_digest != manifest["runtimeArtifactDigest"]:
-                raise DistributionUpdateError(
-                    "runtime-artifact-invalid",
-                    "staged CLI runtime digest does not match the release manifest",
-                )
-            _write_object(bundled_manifest, manifest)
-            record = {
-                "schema": CLI_IMAGE_SCHEMA,
-                "frontendBuildId": frontend_build_id,
-                "runtimeBuildId": manifest["runtimeBuildId"],
-                "productVersion": manifest["productVersion"],
-                "artifactDigest": artifact_digest,
-                "productRoot": str(target),
-                "executable": executable_relative,
-                "productManifest": "product.json",
-                "upgradeManifest": manifest_relative,
-                **(
-                    {
-                        "manifestIdentityRoot": manifest["manifestIdentityRoot"],
-                        "releaseCutRoot": manifest["releaseCutRoot"],
-                        "platformSliceRoot": manifest["platformSliceRoot"],
-                    }
-                    if manifest.get("releaseCutRoot")
-                    else {}
-                ),
-            }
-            _write_object(staging / "image.json", record)
-            os.replace(staging, target)
-            return record
-        finally:
-            if staging.exists():
-                shutil.rmtree(staging)
-
-
-def _assert_cli_image_slot_available(
-    manifest: Mapping[str, Any],
-    *,
-    artifact_digest: str,
-    config_home: str | Path,
-) -> None:
-    target = _cli_image_root(config_home, str(manifest["frontendBuildId"]))
-    record_path = target / "image.json"
-    if not record_path.is_file():
-        return
-    record = _read_object(record_path)
-    if (
-        record.get("schema") != CLI_IMAGE_SCHEMA
-        or record.get("artifactDigest") != artifact_digest
-    ):
-        raise DistributionUpdateError(
-            "frontend-build-id-collision",
-            "CLI frontend build id already names different archive bytes",
-        )
-
-
-def _read_cli_selection(
-    config_home: str | Path,
-) -> tuple[dict[str, Any], dict[str, Any]] | None:
-    selection_path = _cli_selection_path(config_home)
-    if not selection_path.is_file():
-        return None
-    selection = _read_object(selection_path)
-    if selection.get("schema") != CLI_SELECTION_SCHEMA:
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "CLI selection schema is invalid"
-        )
-    generation = selection.get("generation")
-    if generation is not None and (
-        isinstance(generation, bool)
-        or not isinstance(generation, int)
-        or generation < 1
-    ):
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "CLI selection generation is invalid"
-        )
-    transition = selection.get("cutTransition")
-    verified_transition = None
-    if transition is not None:
-        try:
-            verified_transition = release_cut.validate_cut_transition(transition)
-        except (TypeError, release_cut.ReleaseCutError) as error:
-            raise DistributionUpdateError(
-                "cli-selection-invalid",
-                "CLI selection Cut Transition evidence is invalid",
-            ) from error
-        if verified_transition["cutTransitionRoot"] != selection.get(
-            "cutTransitionRoot"
-        ):
-            raise DistributionUpdateError(
-                "cli-selection-invalid",
-                "CLI selection Cut Transition root disagrees with retained evidence",
-            )
-    if release_cut.is_legacy_bootstrap(selection):
-        if not release_cut.legacy_selection_is_bound(selection, verified_transition):
-            raise DistributionUpdateError(
-                "cli-selection-invalid",
-                "legacy bootstrap selection is not bound to exact recovery evidence",
-            )
-        return selection, {}
-    frontend_build_id = _path_safe_id(
-        str(selection.get("frontendBuildId") or ""), "frontend-build-id"
-    )
-    root = _cli_image_root(config_home, frontend_build_id)
-    if Path(str(selection.get("productRoot") or "")).resolve() != root:
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "CLI selection escaped the product inventory"
-        )
-    image = _read_object(root / "image.json")
-    if (
-        image.get("schema") != CLI_IMAGE_SCHEMA
-        or image.get("frontendBuildId") != frontend_build_id
-        or image.get("artifactDigest") != selection.get("artifactDigest")
-        or image.get("runtimeBuildId") != selection.get("runtimeBuildId")
-        or image.get("releaseCutRoot") != selection.get("releaseCutRoot")
-        or image.get("platformSliceRoot") != selection.get("platformSliceRoot")
-        or Path(str(image.get("productRoot") or "")).resolve() != root
-    ):
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "CLI selection and image evidence disagree"
-        )
-    return selection, image
-
-
-def _select_cli_image(
-    image: Mapping[str, Any],
-    *,
-    config_home: str | Path,
-    cut_decision: Mapping[str, Any] | None = None,
-    cut_transition: Mapping[str, Any] | None = None,
-    bootstrap_rollback: Mapping[str, Any] | None = None,
-    receipt_factory: Callable[[dict[str, Any]], dict[str, Any]],
-) -> tuple[dict[str, Any], dict[str, Any] | None]:
-    lock_root = _cli_inventory_root(config_home) / "locks"
-    with _CLI_SELECTION_PROCESS_LOCK:
-        with coordination_locks.held(
-            lock_root,
-            "current-selection",
-            label="cli-product-select:current",
-        ):
-
-            def finish_selection(
-                selection: dict[str, Any],
-            ) -> tuple[dict[str, Any], dict[str, Any]]:
-                receipt = receipt_factory(selection)
-                _persist_cli_selection_receipt(config_home, selection, receipt)
-                try:
-                    _write_object(_cli_selection_path(config_home), selection)
-                except OSError as error:
-                    raise DistributionUpdateError(
-                        "selection-io-failed",
-                        "CLI selection could not be published; the prior selection remains authoritative",
-                    ) from error
-                return selection, receipt
-
-            current = _read_cli_selection(config_home)
-            if current is not None:
-                current_selection, current_image = current
-                current_cut = current_selection.get("releaseCutRoot")
-                target_cut = image.get("releaseCutRoot")
-                cut_movement_authorized = False
-                if current_cut is not None or target_cut is not None:
-                    if not current_cut or not target_cut:
-                        raise DistributionUpdateError(
-                            "release-cut-binding-incomplete",
-                            "CLI image transition mixes Cut-aware and legacy identities",
-                        )
-                    if current_cut != target_cut and (
-                        not isinstance(cut_decision, Mapping)
-                        or cut_decision.get("updateAllowed") is not True
-                        or cut_decision.get("currentReleaseCutRoot") != current_cut
-                        or cut_decision.get("targetReleaseCutRoot") != target_cut
-                    ):
-                        raise DistributionUpdateError(
-                            "release-cut-transition-required",
-                            "CLI image selection requires an authorized Cut Transition",
-                        )
-                    cut_movement_authorized = current_cut != target_cut
-                    if current_cut == target_cut:
-                        if (
-                            current_image["frontendBuildId"] != image["frontendBuildId"]
-                            or current_image["artifactDigest"]
-                            != image["artifactDigest"]
-                        ):
-                            raise DistributionUpdateError(
-                                "release-cut-image-collision",
-                                "one Release Cut names different CLI image evidence",
-                            )
-                        return current_selection, None
-                if not cut_movement_authorized:
-                    version_order = compare_product_versions(
-                        str(
-                            current_image.get("productVersion")
-                            or current_selection.get("productVersion")
-                            or ""
-                        ),
-                        str(image["productVersion"]),
-                    )
-                    if version_order > 0:
-                        return current_selection, None
-                    if version_order == 0:
-                        if (
-                            current_image["frontendBuildId"] != image["frontendBuildId"]
-                            or current_image["artifactDigest"]
-                            != image["artifactDigest"]
-                        ):
-                            raise DistributionUpdateError(
-                                "frontend-version-collision",
-                                "one CLI product version names different image evidence",
-                            )
-                        else:
-                            return current_selection, None
-            previous = current[0] if current is not None else None
-            generation = _next_cli_generation(
-                config_home, int((previous or {}).get("generation") or 0)
-            )
-            if previous is None:
-                rollback = bootstrap_rollback
-            elif release_cut.is_legacy_bootstrap(previous):
-                rollback = release_cut.legacy_coordinate(
-                    previous["releaseCutRoot"], previous["productVersion"]
-                )
-            else:
-                rollback = release_cut.image_coordinate(previous)
-            selection = release_cut.image_selection(
-                image,
-                schema=CLI_SELECTION_SCHEMA,
-                generation=generation,
-                transition_root=(
-                    cut_decision.get("cutTransitionRoot")
-                    if isinstance(cut_decision, Mapping)
-                    else None
-                ),
-                transition=cut_transition,
-                previous_frontend_build_id=(
-                    previous.get("frontendBuildId") if previous is not None else None
-                ),
-                rollback=rollback,
-            )
-            return finish_selection(selection)
-
-
-def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
-    root = _cli_inventory_root(config_home)
-    images_root = root / "images"
-    images: list[dict[str, Any]] = []
-    retained_partials: list[str] = []
-    issues: list[dict[str, str]] = []
-    if images_root.is_dir():
-        for entry in sorted(images_root.iterdir(), key=lambda value: value.name):
-            relative = str(entry.relative_to(root))
-            if entry.name.startswith(".") and entry.name.endswith(".partial"):
-                retained_partials.append(relative)
-                continue
-            try:
-                if entry.is_symlink() or not entry.is_dir():
-                    raise DistributionUpdateError(
-                        "cli-image-path-unsafe",
-                        "CLI image inventory entry is not a real directory",
-                    )
-                image = _read_object(entry / "image.json")
-                frontend_build_id = _path_safe_id(
-                    str(image.get("frontendBuildId") or ""),
-                    "frontend-build-id",
-                )
-                if (
-                    image.get("schema") != CLI_IMAGE_SCHEMA
-                    or frontend_build_id != entry.name
-                    or Path(str(image.get("productRoot") or "")).resolve()
-                    != entry.resolve()
-                ):
-                    raise DistributionUpdateError(
-                        "cli-image-invalid",
-                        "CLI image identity or product root is invalid",
-                    )
-                executable = (entry / str(image.get("executable") or "")).resolve()
-                bundled_manifest = (
-                    entry / str(image.get("upgradeManifest") or "")
-                ).resolve()
-                if (
-                    entry.resolve() not in executable.parents
-                    or not executable.is_file()
-                    or entry.resolve() not in bundled_manifest.parents
-                    or not bundled_manifest.is_file()
-                ):
-                    raise DistributionUpdateError(
-                        "cli-image-invalid",
-                        "CLI image executable or release manifest is missing or unsafe",
-                    )
-                images.append(
-                    {
-                        "frontendBuildId": frontend_build_id,
-                        "runtimeBuildId": image["runtimeBuildId"],
-                        "productVersion": image["productVersion"],
-                        "artifactDigest": image["artifactDigest"],
-                        "productRoot": image["productRoot"],
-                        "releaseCutRoot": image.get("releaseCutRoot"),
-                        "platformSliceRoot": image.get("platformSliceRoot"),
-                    }
-                )
-            except (
-                DistributionUpdateError,
-                KeyError,
-                OSError,
-                TypeError,
-                ValueError,
-            ) as error:
-                issues.append(
-                    {
-                        "code": getattr(error, "code", "cli-image-unreadable"),
-                        "path": relative,
-                    }
-                )
-    selection = selected_receipt_root = None
-    retained_receipts: list[dict[str, Any]] = []
-    pending_receipts: list[dict[str, Any]] = []
-    selection_path_exists = _cli_selection_path(config_home).is_file()
-    try:
-        selected = _read_cli_selection(config_home)
-        if selected is not None:
-            selection = selected[0]
-            receipt = _read_cli_selection_receipt(config_home, selection)
-            if receipt is not None:
-                selected_receipt_root = receipt["receiptRoot"]
-            elif selection.get("releaseCutRoot"):
-                issues.append(
-                    {
-                        "code": "cli-selection-receipt-missing",
-                        "path": str(
-                            _cli_selection_receipt_path(
-                                config_home, int(selection["generation"])
-                            ).relative_to(root)
-                        ),
-                    }
-                )
-    except DistributionUpdateError as error:
-        issues.append(
-            {
-                "code": error.code,
-                "path": str(_cli_selection_path(config_home).relative_to(root)),
-            }
-        )
-    selected_generation = int((selection or {}).get("generation") or 0)
-    try:
-        for generation in _cli_selection_receipt_generations(config_home):
-            if generation == selected_generation:
-                continue
-            path = _cli_selection_receipt_path(config_home, generation)
-            try:
-                receipt = _read_object(path)
-                receipt_selection = receipt.get("frontendSelection")
-                receipt_root = receipt.get("receiptRoot")
-                receipt_core = {
-                    key: value for key, value in receipt.items() if key != "receiptRoot"
-                }
-                if (
-                    not isinstance(receipt_selection, Mapping)
-                    or int(receipt_selection.get("generation") or 0) != generation
-                    or not isinstance(receipt_root, str)
-                    or receipt_root != _content_root(receipt_core)
-                ):
-                    raise DistributionUpdateError(
-                        "cli-selection-receipt-invalid",
-                        "CLI selection receipt does not verify against its generation",
-                    )
-                retained = {
-                    "generation": generation,
-                    "receiptRoot": receipt_root,
-                    "frontendBuildId": receipt_selection.get("frontendBuildId"),
-                }
-                retained_receipts.append(retained)
-                if generation > selected_generation and (
-                    selection is not None or not selection_path_exists
-                ):
-                    pending_receipts.append(retained)
-                    issues.append(
-                        {
-                            "code": "cli-selection-publication-pending",
-                            "path": str(path.relative_to(root)),
-                        }
-                    )
-            except (DistributionUpdateError, OSError, TypeError, ValueError) as error:
-                issues.append(
-                    {
-                        "code": getattr(error, "code", "cli-receipt-unreadable"),
-                        "path": str(path.relative_to(root)),
-                    }
-                )
-    except DistributionUpdateError as error:
-        issues.append(
-            {
-                "code": error.code,
-                "path": "receipts",
-            }
-        )
-    return {
-        "schema": CLI_INVENTORY_FSCK_SCHEMA,
-        "ok": not issues,
-        "selected": selection,
-        "selectedReceiptRoot": selected_receipt_root,
-        "images": images,
-        "retainedPartials": retained_partials,
-        "retainedReceipts": retained_receipts,
-        "pendingReceipts": pending_receipts,
-        "issues": issues,
-        "recoveryAction": (
-            None
-            if not issues
-            else "Keep the last known-good image and rerun `kungfu update --check` before recovery."
-        ),
-    }
-
-
-def selected_cli_command(
-    env: Mapping[str, str] | None = None,
-    *,
-    current_executable: str | Path | None = None,
-) -> tuple[list[str], dict[str, str]] | None:
-    """Resolve an archive-selected CLI image for the stable bootstrap process."""
-
-    env = os.environ if env is None else env
-    if env.get("KUNGFU_INSTALL_SOURCE") != "archive":
-        return None
-    config_home = Path(env.get("KF_CONFIG_HOME") or "~/.kungfu-config").expanduser()
-    if (selected := _read_cli_selection(config_home)) is None:
-        return None
-    selection, image = selected
-    if release_cut.is_legacy_bootstrap(selection):
-        return None
-    frontend_build_id = str(selection["frontendBuildId"])
-    root = _cli_image_root(config_home, frontend_build_id)
-    executable = (root / str(image.get("executable") or "")).resolve()
-    if root not in executable.parents or not executable.is_file():
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "selected CLI executable is missing or unsafe"
-        )
-    current = Path(current_executable or sys.executable).resolve()
-    selected_id = env.get("KUNGFU_SELECTED_FRONTEND_BUILD_ID")
-    if current == executable or selected_id == frontend_build_id:
-        return None
-    selected_env = dict(env)
-    selected_env.update(
-        {
-            "KUNGFU_SELECTED_FRONTEND_BUILD_ID": frontend_build_id,
-            "KUNGFU_DIR": str(executable.parent),
-            "KUNGFU_PRODUCT_MANIFEST": str(root / image["productManifest"]),
-            "KUNGFU_UPGRADE_MANIFEST": str(root / image["upgradeManifest"]),
-            "KF_BUNDLED_EXTENSION_ROOT": str(root / "extensions"),
-            "KUNGFU_AGENT_SESSION_EXECUTABLE": str(executable),
-            "KUNGFU_CONTROLLER_ENTRYPOINT": str(executable),
-        }
-    )
-    if selection.get("releaseCutRoot"):
-        selected_env["KUNGFU_SELECTED_RELEASE_CUT_ROOT"] = str(
-            selection["releaseCutRoot"]
-        )
-        selected_env["KUNGFU_SELECTED_PLATFORM_SLICE_ROOT"] = str(
-            selection["platformSliceRoot"]
-        )
-    return [str(executable), *sys.argv[1:]], selected_env
-
-
-def reexec_selected_cli() -> None:
-    selected = selected_cli_command()
-    if selected is not None:
-        argv, env = selected
-        if sys.platform == "win32":
-            raise SystemExit(subprocess.run(argv, env=env, check=False).returncode)
-        os.execve(argv[0], argv, env)
 
 
 def apply_archive(

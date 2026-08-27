@@ -16,6 +16,7 @@ from kungfu import runtime_upgrade as release_cut
 
 from test_distribution_update import (
     _archive,
+    cli_owner,
     distribution_update,
     update_command,
     update_test_cli,
@@ -471,14 +472,14 @@ def test_shifu_local_rollback_advances_past_an_unpublished_successor_receipt(
         build_id="third",
         parent_release_cut_root=second_manifest["releaseCutRoot"],
     )
-    original_write = distribution_update._write_object
+    original_write = cli_owner._write_object
 
     def interrupt_selection(path: Path, value: dict) -> None:
         if path.name == "current.json":
             raise OSError(errno.EIO, "simulated selection interruption")
         original_write(path, value)
 
-    monkeypatch.setattr(distribution_update, "_write_object", interrupt_selection)
+    monkeypatch.setattr(cli_owner, "_write_object", interrupt_selection)
     with pytest.raises(distribution_update.DistributionUpdateError) as error:
         distribution_update.apply_shifu_local_archive(
             third_manifest,
@@ -501,7 +502,7 @@ def test_shifu_local_rollback_advances_past_an_unpublished_successor_receipt(
         }
     ]
 
-    monkeypatch.setattr(distribution_update, "_write_object", original_write)
+    monkeypatch.setattr(cli_owner, "_write_object", original_write)
     rolled_back = distribution_update.rollback_shifu_local_cli(
         config_home=config_home,
         expected_current_release_cut_root=second_manifest["releaseCutRoot"],

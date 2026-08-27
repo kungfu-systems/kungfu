@@ -35,6 +35,8 @@ def _install_fake_pykungfu():
 _install_fake_pykungfu()
 
 import kungfu  # noqa: E402
+import kungfu._distribution_update.cli as cli_owner  # noqa: E402
+import kungfu._distribution_update.download as download_owner  # noqa: E402
 from kungfu import distribution_update, runtime_upgrade  # noqa: E402
 
 kungfu.__version__ = "4.0.0-alpha.0"
@@ -568,7 +570,7 @@ def test_download_stops_before_streaming_past_declared_size(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: _Response(b"oversized-candidate"),
     )
@@ -595,7 +597,7 @@ def test_download_discards_complete_partial_when_stream_exceeds_manifest(
             return super().read(min(size, 4))
 
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: ChunkedResponse(b"goodx"),
     )
@@ -616,7 +618,7 @@ def test_download_discards_full_digest_mismatch_and_recovers_next_attempt(
     plan, target, partial = _remote_download_plan(tmp_path)
     responses = iter([_Response(b"evil"), _Response(b"good")])
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: next(responses),
     )
@@ -645,7 +647,7 @@ def test_download_discards_oversized_partial_before_restarting(
     partial.parent.mkdir(parents=True)
     partial.write_bytes(b"oversized")
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: _Response(b"good"),
     )
@@ -679,7 +681,7 @@ def test_download_preserves_incomplete_partial_for_exact_range_resume(
         requests.append(request)
         return next(responses)
 
-    monkeypatch.setattr(distribution_update, "_open_https", open_https)
+    monkeypatch.setattr(download_owner, "_open_https", open_https)
 
     with pytest.raises(distribution_update.DistributionUpdateError) as error:
         distribution_update.download(
@@ -714,7 +716,7 @@ def test_download_recovers_from_disk_full_using_retained_partial(
         ]
     )
     requests = []
-    copy_bounded_download = distribution_update._copy_bounded_download
+    copy_bounded_download = download_owner._copy_bounded_download
     fail_write = True
 
     def open_https(request, **_kwargs):
@@ -729,9 +731,9 @@ def test_download_recovers_from_disk_full_using_retained_partial(
             raise OSError(errno.ENOSPC, "No space left on device")
         copy_bounded_download(input_file, output_file, **kwargs)
 
-    monkeypatch.setattr(distribution_update, "_open_https", open_https)
+    monkeypatch.setattr(download_owner, "_open_https", open_https)
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_copy_bounded_download",
         copy_with_disk_full,
     )
@@ -821,7 +823,7 @@ def test_artifact_download_rejects_redirect_to_insecure_transport(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: _Response(
             b"abcd", url="http://mirror.invalid/candidate.tar.gz"
@@ -851,7 +853,7 @@ def test_artifact_resume_rejects_unbound_content_range(
 ) -> None:
     headers = {"Content-Range": content_range} if content_range is not None else {}
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: _Response(b"cd", status=206, headers=headers),
     )
@@ -873,7 +875,7 @@ def test_artifact_resume_appends_only_the_exact_remaining_range(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: _Response(
             b"cd",
@@ -943,11 +945,11 @@ def test_apply_rejects_archive_resource_exhaustion_before_inventory_write(
             for name, payload in members:
                 output.writestr(name, payload)
     if limit == "entries":
-        monkeypatch.setattr(distribution_update, "_MAX_ARCHIVE_ENTRIES", 1)
+        monkeypatch.setattr(download_owner, "_MAX_ARCHIVE_ENTRIES", 1)
     else:
-        monkeypatch.setattr(distribution_update, "_MIN_ARCHIVE_EXPANDED_BYTES", 1)
-        monkeypatch.setattr(distribution_update, "_MAX_ARCHIVE_EXPANDED_BYTES", 1)
-        monkeypatch.setattr(distribution_update, "_MAX_ARCHIVE_EXPANSION_RATIO", 1)
+        monkeypatch.setattr(download_owner, "_MIN_ARCHIVE_EXPANDED_BYTES", 1)
+        monkeypatch.setattr(download_owner, "_MAX_ARCHIVE_EXPANDED_BYTES", 1)
+        monkeypatch.setattr(download_owner, "_MAX_ARCHIVE_EXPANSION_RATIO", 1)
     artifact = next(item for item in manifest["artifacts"] if item["kind"] == "cli")
     artifact["size"] = candidate.stat().st_size
     artifact["digest"] = f"sha256:{hashlib.sha256(candidate.read_bytes()).hexdigest()}"
@@ -1122,14 +1124,14 @@ def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
         expected_digest=older_manifest["artifacts"][1]["digest"],
         execute=True,
     )
-    original_write = distribution_update._write_object
+    original_write = cli_owner._write_object
 
     def interrupt_selection(path: Path, value: dict) -> None:
         if path.name == "current.json":
             raise OSError(errno.EIO, "simulated selection interruption")
         original_write(path, value)
 
-    monkeypatch.setattr(distribution_update, "_write_object", interrupt_selection)
+    monkeypatch.setattr(cli_owner, "_write_object", interrupt_selection)
     with pytest.raises(distribution_update.DistributionUpdateError) as error:
         distribution_update.apply_archive(
             newer_manifest,
@@ -1163,7 +1165,7 @@ def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
         {key: value for key, value in retained.items() if key != "receiptRoot"}
     )
 
-    monkeypatch.setattr(distribution_update, "_write_object", original_write)
+    monkeypatch.setattr(cli_owner, "_write_object", original_write)
     retried = distribution_update.apply_archive(
         newer_manifest,
         newer_archive,
@@ -2112,7 +2114,7 @@ def test_previous_archive_alpha_upgrades_once_with_rooted_receipts(
         },
     )
     monkeypatch.setattr(
-        distribution_update,
+        download_owner,
         "_open_https",
         lambda *_args, **_kwargs: _Response(archive.read_bytes()),
     )
