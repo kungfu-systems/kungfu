@@ -272,6 +272,21 @@ class FakeAuthority:
             "diagnostics": [],
         }
 
+    def assignment_status(
+        self, initiative_id: str, assignment_id: str
+    ) -> dict[str, Any]:
+        assignments = [
+            row
+            for row in self.inspect()["assignments"]
+            if row["initiativeId"] == initiative_id
+            and row["assignmentId"] == assignment_id
+        ]
+        if len(assignments) != 1:
+            raise LocalRuntimeError(
+                "ambiguous-identity", "Assignment status did not resolve exactly once"
+            )
+        return copy.deepcopy(assignments[0]["lifecycle"])
+
     def apply(self, command: dict[str, Any]) -> dict[str, Any]:
         state = self._read()
         command_type = command["type"]
@@ -750,6 +765,78 @@ def test_cli_agent_and_kfx_application_edges_share_runtime_state(
     )
     assert len(state["commands"]) == 2
     assert all(record["authorityReceipt"] for record in state["commands"].values())
+
+
+def test_application_status_does_not_compete_with_active_runtime_writer(
+    tmp_path, monkeypatch
+):
+    runtime_dir = tmp_path / ".kungfu" / "runtime"
+    runtime_dir.parent.mkdir(parents=True)
+    (runtime_dir.parent / "workspace-identity.json").write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.workspace.identity-material/v1",
+                "workspaceKind": "project",
+                "workspaceKey": "workspace:test",
+                "identityRoot": ROOT_A,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    authority = FakeAuthority(runtime_dir)
+
+    def runtime():
+        return EmbeddedLocalAssignmentRuntime(
+            runtime_dir,
+            realm_id=f"project:{ROOT_A[7:23]}",
+            generation=ROOT_A,
+            authority=authority,
+            contract=ASSIGNMENT_RUNTIME_CONTRACT,
+            request_schema=ENVELOPE_SCHEMA,
+        )
+
+    writer = runtime().start()
+    try:
+        state_path = runtime_dir / "assignment-runtime" / "local-v1" / "state.json"
+        before = state_path.read_bytes()
+        application = LocalAssignmentRuntimeApplication(
+            runtime_dir,
+            client_id="kungfu.cli.test",
+            kind="cli",
+            source=PROFILE_SOURCE,
+        )
+        monkeypatch.setattr(application, "_runtime", runtime)
+
+        assert application.status("initiative-a", "assignment-a")["phase"] == "admitted"
+        assert writer._started is True
+        assert state_path.read_bytes() == before
+    finally:
+        writer.close()
+
+
+def test_work_control_status_uses_direct_read_only_profile_query(tmp_path, monkeypatch):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+    lifecycle = {"phase": "executing", "query_proof_root": ROOT_A}
+    captured = {}
+
+    def invoke(operation, values, *, write=False):
+        captured.update(operation=operation, values=values, write=write)
+        return {"result": lifecycle}
+
+    monkeypatch.setattr(authority, "_invoke", invoke)
+
+    assert authority.assignment_status("initiative-a", "assignment-a") == lifecycle
+    assert captured == {
+        "operation": "assignment-status",
+        "values": {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+            "source": "kungfu",
+        },
+        "write": False,
+    }
 
 
 def test_work_control_authority_strips_runtime_only_routing_ids(tmp_path, monkeypatch):

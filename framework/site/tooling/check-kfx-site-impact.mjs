@@ -643,8 +643,14 @@ export function repositoryChanges(baseRevision, changedFiles, root = ROOT) {
           ? null
           : (() => {
               const oid = git(
-                ['hash-object', '-w', `--path=${relativePath}`, '--stdin'],
-                { env: canonicalEnv, input: worktreeBytes, root },
+                [
+                  'hash-object',
+                  '-w',
+                  `--path=${relativePath}`,
+                  '--',
+                  currentPath,
+                ],
+                { env: canonicalEnv, root },
               )
                 .toString('utf8')
                 .trim();

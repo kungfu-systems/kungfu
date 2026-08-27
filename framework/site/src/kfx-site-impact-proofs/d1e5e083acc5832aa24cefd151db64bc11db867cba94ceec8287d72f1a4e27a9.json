@@ -1,0 +1,127 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "995c709ede96b5b87ef1400b6b67bf86784a8643",
+  "changeRoot": "sha256:86a78563333ce56aa29ef83c42fe7fd3a70dcd01e301857aa8c3ee8f5d2fd2a3",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:d7c61ad7df54cf56a173dcddeb8ed30c121987803593eec4d562dc69ad83bb5b",
+      "contentRoot": "sha256:7d9a7dd3f7e1ecca663d977b98b3808ce010e68f617d7d692840a112907d53b0",
+      "path": ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:95fa6a49effd45177554cc923fc2d25ef7ce6f08643a7bd32a55f6e08cbc3361",
+      "contentRoot": "sha256:822616211f9cfc8a9f93d1eec128af1b0c32b50818646d81c68c07553093493f",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aaa6d1ddfd678628c7d6203dd657b62c45d2637f814fb82b33ee6c2d9d779d30",
+      "contentRoot": "sha256:96f085c022ef8f796a6ba93d2edd7d609a6f2520e60257f15177eeb07873afca",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9790635c7cd111d5b3df940f630962080de733c37c3fd8d95d2438cc71b802f2",
+      "contentRoot": "sha256:fd08fe020cf9d957f174b06c6e3d0f2bd51833adebdddd197c050020fdff9d21",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e033779e7aca2bb1135401445fe1169f669721eabe45d2d8017b3f35bcf1b59c",
+      "contentRoot": "sha256:60143069f0b825768808095942c3615d7d0febbc749422b540b028627e31336d",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0625fdb229e60782636b42fbfcaf5ab6077ec32a68221fe9bce62adbd389ff7f",
+      "contentRoot": "sha256:afc0d3b5252e05472dbce7aa8536c4ea8cccde8e1ed1778a16d7a7b233eab989",
+      "path": "config/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d7c61ad7df54cf56a173dcddeb8ed30c121987803593eec4d562dc69ad83bb5b",
+      "contentRoot": "sha256:7d9a7dd3f7e1ecca663d977b98b3808ce010e68f617d7d692840a112907d53b0",
+      "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:95fa6a49effd45177554cc923fc2d25ef7ce6f08643a7bd32a55f6e08cbc3361",
+      "contentRoot": "sha256:822616211f9cfc8a9f93d1eec128af1b0c32b50818646d81c68c07553093493f",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aaa6d1ddfd678628c7d6203dd657b62c45d2637f814fb82b33ee6c2d9d779d30",
+      "contentRoot": "sha256:96f085c022ef8f796a6ba93d2edd7d609a6f2520e60257f15177eeb07873afca",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1b8425ef91b2dc9f9b1029486cf32ca32815dcc178bfc38d0af2b82ea0e812a2",
+      "contentRoot": "sha256:7d94644446b550db44ce0084178748d88a1ad718332e560696fc09e75fcbc11f",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aba72f3f11576dad9500f4bee2d36d6b7b0e59dbdeeadcd412fe5280e45c6778",
+      "contentRoot": "sha256:650ab6e1b2e95a1825367bdcb919c9989b5e57e6bf533deab372dc15b7ee8419",
+      "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:89b1f10b9042f8b4175554ae0c14229f0aa58fb0a4426c0c084e500a61e5420c",
+      "contentRoot": "sha256:b6a581858d9a8b7e9a6d4cc0ea71c33c4e237810d49000639409deaa579507bb",
+      "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ede7cba4e0856f517632718433cf45b9d73881c0092dc98eaa8866f8f96cf264",
+      "contentRoot": "sha256:fe706d459d895e6c6f2737601c1b8d6e9da609682ca35740e3d49eaa737cc7c5",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/__init__.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e9ad3cb7b65cfade0c2f300f136e12c68d832fdc7d51220f3c25af898ef283c7",
+      "contentRoot": "sha256:e21470c0022cfd85416626a4402b244d0c8f720d337491d1197f19d8fdd79770",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/authority.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ffe205216d6192e20b82895aa5ea841e6721ffb9f843536a976b471cc6c18dad",
+      "contentRoot": "sha256:53774aaa91925431b5272c8029f871c8e27f716bc4a9a1797692180452fd18df",
+      "path": "framework/core/tests/python/test_assignment_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0625fdb229e60782636b42fbfcaf5ab6077ec32a68221fe9bce62adbd389ff7f",
+      "contentRoot": "sha256:afc0d3b5252e05472dbce7aa8536c4ea8cccde8e1ed1778a16d7a7b233eab989",
+      "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c3035a76d0373fb91905cf82e22c2dea46597b2302ff100d0ba92eeb43f91c42",
+      "contentRoot": "sha256:7473f2a35513b502f8e86442989ea04da1c89767b2f6b1ae58f844432d52673d",
+      "path": "framework/site/tooling/check-kfx-site-impact.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6b38e1971f0aba740b8597dd8109f2f760363975c32a74dbe770bf497b9f95d5",
+      "contentRoot": "sha256:75f12652a92cce41ac3d296174bf4ac9b59e5ab51449189da82e5d41b0cc840b",
+      "path": "scripts/check-kfx-site-impact.test.mjs",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Work Control read routing and the KFX impact checker transport change preserve every public Site Bundle behavior, contract, source facet, asset, route, and reader journey.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:d1e5e083acc5832aa24cefd151db64bc11db867cba94ceec8287d72f1a4e27a9"
+}
