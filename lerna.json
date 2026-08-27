@@ -4,6 +4,7 @@
     "framework/*",
     "developer/*",
     "extensions/*",
+    "extensions/*/*",
     "examples/*",
     "product"
   ],
