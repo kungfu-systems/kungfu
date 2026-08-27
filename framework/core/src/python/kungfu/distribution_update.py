@@ -14,7 +14,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from kungfu import runtime_upgrade
 from kungfu.coordination import locks as coordination_locks
@@ -117,19 +117,26 @@ from kungfu._distribution_update.cli import (
 
 release_cut = runtime_upgrade
 
-_account_archive_member = _account_archive_member_dispatch.__wrapped__
-_archive_expanded_limit = _archive_expanded_limit_dispatch.__wrapped__
-_assert_https_response = _assert_https_response_dispatch.__wrapped__
-_assert_tar_member = _assert_tar_member_dispatch.__wrapped__
-_assert_zip_member = _assert_zip_member_dispatch.__wrapped__
-_copy_bounded_download = _copy_bounded_download_dispatch.__wrapped__
-_discard_poisoned_partial = _discard_poisoned_partial_dispatch.__wrapped__
-_download_response_appends = _download_response_appends_dispatch.__wrapped__
-_download_to_partial = _download_to_partial_dispatch.__wrapped__
-_file_digest = _file_digest_dispatch.__wrapped__
-_open_https = _open_https_dispatch.__wrapped__
-_safe_member = _safe_member_dispatch.__wrapped__
-_stage_verified_archive = _stage_verified_archive_dispatch.__wrapped__
+
+def _owner_fallback(dispatch: Callable[..., Any]) -> Callable[..., Any]:
+    """Expose the typed implementation retained by the owner dispatch."""
+
+    return cast(Callable[..., Any], getattr(dispatch, "__wrapped__"))
+
+
+_account_archive_member = _owner_fallback(_account_archive_member_dispatch)
+_archive_expanded_limit = _owner_fallback(_archive_expanded_limit_dispatch)
+_assert_https_response = _owner_fallback(_assert_https_response_dispatch)
+_assert_tar_member = _owner_fallback(_assert_tar_member_dispatch)
+_assert_zip_member = _owner_fallback(_assert_zip_member_dispatch)
+_copy_bounded_download = _owner_fallback(_copy_bounded_download_dispatch)
+_discard_poisoned_partial = _owner_fallback(_discard_poisoned_partial_dispatch)
+_download_response_appends = _owner_fallback(_download_response_appends_dispatch)
+_download_to_partial = _owner_fallback(_download_to_partial_dispatch)
+_file_digest = _owner_fallback(_file_digest_dispatch)
+_open_https = _owner_fallback(_open_https_dispatch)
+_safe_member = _owner_fallback(_safe_member_dispatch)
+_stage_verified_archive = _owner_fallback(_stage_verified_archive_dispatch)
 
 
 def download(
