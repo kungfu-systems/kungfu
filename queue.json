@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7517,
+  "generation": 7518,
   "fencingCounter": 708,
   "policy": {
     "agingSeconds": 900,
@@ -36,12 +36,15 @@
     "sourceWorkflowRunId": 33122039909,
     "deliveryClass": "native-proof-required",
     "generation": 708,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:558f5cef2ecf12289ac23f4130dc5d9d1e9e33950508b2a3308edaf10d384567",
     "issuedAt": "2026-08-27T23:06:10.290Z",
     "expiresAt": "2026-08-28T00:55:25.214Z",
     "fencingToken": "sha256:052f647a9b31128797fcfc72ab1e5ec8d23a35d42b622dacb2b5b664a98d7fad",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:fdb3a0d329f43c80d32e167807b6a26c2b074864d4916f991deb0f789dd68e6e",
+    "nativeProofReuseRoot": "sha256:ba06f4adc73ac1b0ef614ddc5d600276cdd6216d1ae13d12ffc9c11a51b838d1",
+    "qualifiedAt": "2026-08-27T23:25:31.574Z"
   },
   "candidates": [
     {
@@ -49284,10 +49287,10 @@
       "sourceWorkflowRunId": 33122039909,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-27T23:06:06.460Z",
-      "updatedAt": "2026-08-27T23:25:25.214Z",
+      "updatedAt": "2026-08-27T23:25:31.574Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
@@ -49296,6 +49299,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-27T23:25:25.214Z",
-  "stateRoot": "sha256:641e884f85eb46ca6ba56e1fafbb0338c4c4b74363601501d0501fa7d91b88c6"
+  "updatedAt": "2026-08-27T23:25:31.574Z",
+  "stateRoot": "sha256:81722fa4d5e7f4fc69bae3d9d908085bbdb5a06eb5bf14b3944f29562b16958d"
 }
