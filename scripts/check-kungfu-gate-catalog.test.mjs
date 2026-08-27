@@ -592,25 +592,11 @@ test('dirty, unsuccessful, and duration-drifted receipts fail measurement covera
   result.durationMs += 1;
   fs.writeFileSync(receiptPath, JSON.stringify(receipt));
   const issues = validateMeasurementCoverage(root, registry).issues;
-  assert.ok(
-    issues.some((issue) =>
-      issue.includes(
-        'gate.catalog:linux: receipt must match a clean source SHA',
-      ),
-    ),
-  );
-  assert.ok(
-    issues.some((issue) =>
-      issue.includes(
-        'gate.catalog:linux: receipt result must be an attempted pass',
-      ),
-    ),
-  );
-  assert.ok(
-    issues.some((issue) =>
-      issue.includes('gate.catalog:linux: durationMs differs from the receipt'),
-    ),
-  );
+  assert.deepEqual(issues, [
+    '[measurement] gate.catalog:linux: receipt must match a clean source SHA',
+    '[measurement] gate.catalog:linux: receipt result must be an attempted pass',
+    '[measurement] gate.catalog:linux: durationMs differs from the receipt',
+  ]);
 });
 
 test('handler Gate measurements require an intact controller binding receipt', () => {
