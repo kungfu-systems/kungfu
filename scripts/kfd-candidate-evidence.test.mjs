@@ -12,6 +12,7 @@ import {
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
   prepareKfdArtifactWitness,
+  resolveKfdSourcePlatform,
   runVerifiedQualification,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
@@ -119,6 +120,31 @@ function artifactFixture(platform = 'linux-x64') {
   );
   return { root, platform, sourceSha, sourceTree };
 }
+
+test('binds source evidence to the exact native GitHub runner platform', () => {
+  assert.equal(
+    resolveKfdSourcePlatform({ RUNNER_OS: 'Linux', RUNNER_ARCH: 'X64' }),
+    'linux-x64',
+  );
+  assert.equal(
+    resolveKfdSourcePlatform({ RUNNER_OS: 'Linux', RUNNER_ARCH: 'ARM64' }),
+    'linux-arm64',
+  );
+  assert.equal(
+    resolveKfdSourcePlatform({ RUNNER_OS: 'macOS', RUNNER_ARCH: 'ARM64' }),
+    'macos-arm64',
+  );
+  assert.equal(
+    resolveKfdSourcePlatform({ RUNNER_OS: 'Windows', RUNNER_ARCH: 'X64' }),
+    'windows-x64',
+  );
+  assert.equal(resolveKfdSourcePlatform({}), '');
+  assert.throws(
+    () =>
+      resolveKfdSourcePlatform({ RUNNER_OS: 'Linux', RUNNER_ARCH: 'RISCV64' }),
+    /unsupported KFD source runner platform/u,
+  );
+});
 
 test('accepts a complete sealed four-platform KFD payload set', () => {
   const root = fixture();

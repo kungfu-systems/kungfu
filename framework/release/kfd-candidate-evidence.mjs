@@ -88,6 +88,28 @@ const GENERATOR_OWNED_PATHS = [
   'developer/sdk/kfd',
 ];
 
+const GITHUB_RUNNER_PLATFORMS = new Map([
+  ['Linux:X64', 'linux-x64'],
+  ['Linux:ARM64', 'linux-arm64'],
+  ['macOS:ARM64', 'macos-arm64'],
+  ['Windows:X64', 'windows-x64'],
+]);
+
+export function resolveKfdSourcePlatform(env = process.env) {
+  const explicit = env.BUILDCHAIN_PLATFORM_ID || env['INPUT_PLATFORM-ID'];
+  if (explicit) return explicit;
+  const runnerOs = env.RUNNER_OS || '';
+  const runnerArch = env.RUNNER_ARCH || '';
+  if (!runnerOs && !runnerArch) return '';
+  const platform = GITHUB_RUNNER_PLATFORMS.get(`${runnerOs}:${runnerArch}`);
+  if (!platform) {
+    throw new Error(
+      `unsupported KFD source runner platform: ${runnerOs || '<empty>'}/${runnerArch || '<empty>'}`,
+    );
+  }
+  return platform;
+}
+
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -239,9 +261,7 @@ export function sealKfdSourceEvidence({
   expectedInputRoot = '',
   sourceSha = '',
   sourceTree = '',
-  platform = process.env.BUILDCHAIN_PLATFORM_ID ||
-    process.env['INPUT_PLATFORM-ID'] ||
-    '',
+  platform = resolveKfdSourcePlatform(),
 } = {}) {
   if (platform) assertPlatform(platform);
   const prebuild = createKfdPrebuildGate({ root, sourceSha, sourceTree });
