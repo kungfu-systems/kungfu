@@ -25,6 +25,7 @@ import {
   resolveTuiCliProcess,
   resolveTuiCoreDir,
   resolveTuiProductPaths,
+  tuiAttachedAgentSessionEnvironment,
   tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
 
@@ -124,7 +125,7 @@ test('cached Agent Session readiness is revalidated before reuse', () => {
   );
 });
 
-test('deterministic Mock onboarding owns an attached Session host', () => {
+test('deterministic Project Tour and Mock onboarding own an attached Session host', () => {
   const source = fs.readFileSync(
     new URL('./main.tsx', import.meta.url),
     'utf8',
@@ -138,6 +139,7 @@ test('deterministic Mock onboarding owns an attached Session host', () => {
     ensureSession,
     /KUNGFU_MOCK_AGENT_SCENARIO[\s\S]*createAttachedAgentSessionHost/u,
   );
+  assert.match(source, /ensureTuiAgentSession\(paths\.runtimeDir, true\)/u);
   assert.match(ensureSession, /async function closeTuiAgentSession/u);
   assert.match(source, /finally \{\s*await closeTuiAgentSession\(\);\s*\}/u);
 });
@@ -170,6 +172,31 @@ test('child CLI retains installed authority without recursive libnode selection'
     '/product/upgrade/kungfu-release-manifest.json',
   );
   assert.equal(child.KF_BUNDLED_EXTENSION_ROOT, '/product/extensions');
+  assert.equal(parent.KUNGFU_AS_VARIANT, 'node');
+  assert.equal(parent.KUNGFU_NODE_VARIANT_ENTRY, '/product/tui/tui.mjs');
+});
+
+test('attached Agent Session launches Mock Agent outside the active TUI entry', () => {
+  const parent = {
+    KUNGFU_AS_VARIANT: 'node',
+    KUNGFU_NODE_VARIANT_ENTRY: '/product/tui/tui.mjs',
+    KUNGFU_INSTALL_SOURCE: 'archive',
+  };
+
+  const child = tuiAttachedAgentSessionEnvironment({
+    env: parent,
+    packagedBin: '/product/runtime/kungfu',
+    mockPath: '/product/tui/mock-agent.mjs',
+  });
+
+  assert.equal(child.KUNGFU_AS_VARIANT, undefined);
+  assert.equal(child.KUNGFU_NODE_VARIANT_ENTRY, undefined);
+  assert.equal(child.KUNGFU_INSTALL_SOURCE, 'archive');
+  assert.equal(
+    child.KUNGFU_MOCK_AGENT_EXECUTABLE,
+    '/product/runtime/kungfu',
+  );
+  assert.equal(child.KUNGFU_MOCK_AGENT_SCRIPT, '/product/tui/mock-agent.mjs');
   assert.equal(parent.KUNGFU_AS_VARIANT, 'node');
   assert.equal(parent.KUNGFU_NODE_VARIANT_ENTRY, '/product/tui/tui.mjs');
 });

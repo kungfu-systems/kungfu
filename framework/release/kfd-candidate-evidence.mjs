@@ -115,6 +115,21 @@ export function kfdEvidenceRoot(value) {
   return rooted(value);
 }
 
+export function kfdPlatformId(
+  hostPlatform = process.platform,
+  hostArch = process.arch,
+) {
+  const platform =
+    hostPlatform === 'darwin'
+      ? 'macos'
+      : hostPlatform === 'win32'
+        ? 'windows'
+        : hostPlatform;
+  const arch = hostArch === 'x64' ? 'x64' : hostArch;
+  const candidate = `${platform}-${arch}`;
+  return SUPPORTED_KFD_PLATFORMS.includes(candidate) ? candidate : '';
+}
+
 function toPosix(value) {
   return value.split(path.sep).join('/');
 }
@@ -138,15 +153,16 @@ function gitValue(root, args) {
   return result.stdout.trim();
 }
 
-function resolveIdentity(root, sourceSha = '', sourceTree = '') {
-  const head = gitValue(root, ['rev-parse', 'HEAD']);
-  const tree = gitValue(root, ['rev-parse', 'HEAD^{tree}']);
-  const resolvedSha = sourceSha || process.env.BUILDCHAIN_SOURCE_SHA || head;
-  const resolvedTree =
-    sourceTree || process.env.BUILDCHAIN_SOURCE_TREE_SHA || tree;
-  if (resolvedSha !== head) {
+function assertCheckoutIdentity({
+  resolvedSha,
+  resolvedTree,
+  declaredTree,
+  head,
+  tree,
+}) {
+  if (resolvedSha !== head && !declaredTree) {
     throw new Error(
-      `candidate source root mismatch: expected ${resolvedSha}, checkout is ${head}`,
+      `candidate source commit mismatch without an exact tree binding: expected ${resolvedSha}, checkout is ${head}`,
     );
   }
   if (resolvedTree !== tree) {
@@ -154,7 +170,31 @@ function resolveIdentity(root, sourceSha = '', sourceTree = '') {
       `candidate source tree mismatch: expected ${resolvedTree}, checkout is ${tree}`,
     );
   }
-  return { sourceSha: resolvedSha, sourceTree: resolvedTree };
+}
+
+function sourceIdentity(resolvedSha, resolvedTree, head) {
+  return {
+    sourceSha: resolvedSha,
+    sourceTree: resolvedTree,
+    checkoutSha: head,
+    checkoutBinding: 'checkout-tree-verified',
+  };
+}
+
+function resolveIdentity(root, sourceSha = '', sourceTree = '') {
+  const head = gitValue(root, ['rev-parse', 'HEAD']);
+  const tree = gitValue(root, ['rev-parse', 'HEAD^{tree}']);
+  const resolvedSha = sourceSha || process.env.BUILDCHAIN_SOURCE_SHA || head;
+  const declaredTree = sourceTree || process.env.BUILDCHAIN_SOURCE_TREE_SHA;
+  const resolvedTree = declaredTree || tree;
+  assertCheckoutIdentity({
+    resolvedSha,
+    resolvedTree,
+    declaredTree,
+    head,
+    tree,
+  });
+  return sourceIdentity(resolvedSha, resolvedTree, head);
 }
 
 function fileRows(root, relativePaths) {
@@ -241,7 +281,7 @@ export function sealKfdSourceEvidence({
   sourceTree = '',
   platform = process.env.BUILDCHAIN_PLATFORM_ID ||
     process.env['INPUT_PLATFORM-ID'] ||
-    '',
+    kfdPlatformId(),
 } = {}) {
   if (platform) assertPlatform(platform);
   const prebuild = createKfdPrebuildGate({ root, sourceSha, sourceTree });
@@ -371,9 +411,15 @@ export function prepareKfdArtifactWitness({
   if (!fs.existsSync(sourceGatePath))
     throw new Error('missing sealed KFD source gate');
   const sourceGate = readJson(sourceGatePath);
+  if (sourceGate.status !== 'passed') {
+    throw new Error('KFD source gate is not passed');
+  }
+  if (sourceGate.platform !== platform) {
+    throw new Error(
+      `KFD source gate platform mismatch: expected ${platform}, got ${sourceGate.platform || '<empty>'}`,
+    );
+  }
   if (
-    sourceGate.status !== 'passed' ||
-    sourceGate.platform !== platform ||
     sourceGate.candidate?.sourceSha !== identity.sourceSha ||
     sourceGate.candidate?.sourceTree !== identity.sourceTree
   ) {
@@ -597,6 +643,13 @@ export function runVerifiedQualification({
   sourceTree,
   buildArtifactWitness,
 }) {
+  const result = spawnSync(command[0], command.slice(1), {
+    cwd: root,
+    env: process.env,
+    stdio: 'inherit',
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) return result.status || 1;
   prepareKfdArtifactWitness({
     root,
     platform,
@@ -604,27 +657,6 @@ export function runVerifiedQualification({
     sourceTree,
     buildArtifactWitness,
   });
-  const output = path.join(root, 'product', 'release', 'qualification', 'kfd');
-  const sealed = path.join(
-    root,
-    '.buildchain',
-    'runtime',
-    'kfd-candidate-evidence',
-    'artifact-before-verify',
-  );
-  fs.rmSync(sealed, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(sealed), { recursive: true });
-  fs.renameSync(output, sealed);
-  const result = spawnSync(command[0], command.slice(1), {
-    cwd: root,
-    env: process.env,
-    stdio: 'inherit',
-  });
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.renameSync(sealed, output);
-  if (result.error) throw result.error;
-  if (result.status !== 0) return result.status || 1;
   finalizeKfdCandidateEvidence({ root, platform, sourceSha, sourceTree });
   return 0;
 }

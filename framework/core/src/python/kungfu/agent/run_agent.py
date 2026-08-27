@@ -851,6 +851,21 @@ def run_process(
     )
 
 
+def _native_execution_environment(provider, run_id, base_env, **environment):
+    if provider == "synthetic":
+        return base_env
+    adapter = native_provider_adapter(
+        provider,
+        session_id=run_id.removeprefix("agent-"),
+        **{
+            key: environment[key]
+            for key in ("runtime_dir", "config_home", "runtime_home")
+        },
+    )
+    environment.update(adapter=adapter, source=base_env, stdio_is_tty=False)
+    return native_environment(provider, **environment)
+
+
 def execute(
     *,
     prompt: str,
@@ -931,15 +946,10 @@ def execute(
             "sessionAttemptId": run_id,
         }
     )
-    adapter = native_provider_adapter(
+    env = _native_execution_environment(
         provider,
-        runtime_dir=runtime_dir,
-        session_id=run_id.removeprefix("agent-"),
-        config_home=effective_config_home,
-        runtime_home=runtime_home,
-    )
-    env = native_environment(
-        provider,
+        run_id,
+        base_env,
         runtime_dir=runtime_dir,
         config_home=effective_config_home,
         runtime_home=runtime_home,
@@ -949,9 +959,6 @@ def execute(
         profile=selected,
         session_ref=managed_session_ref,
         provider_version=str(verification.get("version") or "unknown"),
-        adapter=adapter,
-        source=base_env,
-        stdio_is_tty=False,
     )
     for key in ("KUNGFU_CONTROL_RUNTIME_DIR", "KUNGFU_AGENT_CONTINUATION"):
         if key in base_env:

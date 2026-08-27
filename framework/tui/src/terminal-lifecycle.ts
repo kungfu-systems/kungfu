@@ -194,6 +194,22 @@ export function bindTuiMockAgentEnvironment({
   };
 }
 
+export function tuiAttachedAgentSessionEnvironment({
+  env,
+  packagedBin,
+  mockPath,
+}: {
+  env: NodeJS.ProcessEnv;
+  packagedBin: string;
+  mockPath: string;
+}): NodeJS.ProcessEnv {
+  return bindTuiMockAgentEnvironment({
+    env: tuiChildCliEnvironment(env),
+    packagedBin,
+    mockPath,
+  });
+}
+
 export function resolveTuiAgentSessionExecutable({
   env,
   cliBin,

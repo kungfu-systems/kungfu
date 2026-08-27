@@ -9,9 +9,12 @@ import test from 'node:test';
 import {
   KFD_CANDIDATE_EVIDENCE_CONTRACT,
   SUPPORTED_KFD_PLATFORMS,
+  createKfdPrebuildGate,
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
+  kfdPlatformId,
   prepareKfdArtifactWitness,
+  releaseArtifactRoot,
   runVerifiedQualification,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
@@ -19,6 +22,17 @@ import {
 
 const SOURCE_SHA = 'a'.repeat(40);
 const SOURCE_TREE = 'b'.repeat(40);
+
+const SOURCE_GATE_INPUTS = [
+  '.buildchain/kfd/kfd-1/contract-world.witness.json',
+  '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
+  '.buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json',
+  '.buildchain/kfd/kfd-2/claims/remote-fact-boundary.json',
+  '.buildchain/kfd/kfd-2/claims/agent-work-state-contract.json',
+  '.buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json',
+  '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
+  '.buildchain/kfd/support-matrix.json',
+];
 
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -120,6 +134,31 @@ function artifactFixture(platform = 'linux-x64') {
   return { root, platform, sourceSha, sourceTree };
 }
 
+function rematerializedSourceFixture() {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfd-rematerialized-source-test-'),
+  );
+  const git = (args) => {
+    const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  git(['init', '-q']);
+  git(['config', 'user.name', 'KFD Test']);
+  git(['config', 'user.email', 'kfd-test@example.invalid']);
+  for (const filePath of SOURCE_GATE_INPUTS)
+    writeJson(path.join(root, filePath), {});
+  git(['add', '.']);
+  git(['commit', '-q', '-m', 'source identity']);
+  const sourceSha = git(['rev-parse', 'HEAD']);
+  const sourceTree = git(['rev-parse', 'HEAD^{tree}']);
+  git(['commit', '-q', '--allow-empty', '-m', 'rematerialized identity']);
+  const checkoutSha = git(['rev-parse', 'HEAD']);
+  assert.notEqual(checkoutSha, sourceSha);
+  assert.equal(git(['rev-parse', 'HEAD^{tree}']), sourceTree);
+  return { root, sourceSha, sourceTree, checkoutSha };
+}
+
 test('accepts a complete sealed four-platform KFD payload set', () => {
   const root = fixture();
   assert.deepEqual(
@@ -132,7 +171,34 @@ test('accepts a complete sealed four-platform KFD payload set', () => {
   );
 });
 
-test('seals the artifact witness before qualification and the capsule after it', () => {
+test('derives every supported Buildchain platform from the native host tuple', () => {
+  assert.equal(kfdPlatformId('linux', 'x64'), 'linux-x64');
+  assert.equal(kfdPlatformId('linux', 'arm64'), 'linux-arm64');
+  assert.equal(kfdPlatformId('darwin', 'arm64'), 'macos-arm64');
+  assert.equal(kfdPlatformId('win32', 'x64'), 'windows-x64');
+  assert.equal(kfdPlatformId('darwin', 'x64'), '');
+});
+
+test('binds a rematerialized checkout only through the exact declared source tree', () => {
+  const fixture = rematerializedSourceFixture();
+  const gate = createKfdPrebuildGate(fixture);
+  assert.deepEqual(gate.candidate, {
+    sourceSha: fixture.sourceSha,
+    sourceTree: fixture.sourceTree,
+    checkoutSha: fixture.checkoutSha,
+    checkoutBinding: 'checkout-tree-verified',
+  });
+  assert.throws(
+    () =>
+      createKfdPrebuildGate({
+        ...fixture,
+        sourceTree: 'f'.repeat(40),
+      }),
+    /candidate source tree mismatch/u,
+  );
+});
+
+test('seals an artifact witness and candidate capsule in two phases', () => {
   const fixture = artifactFixture();
   const witness = prepareKfdArtifactWitness({
     ...fixture,
@@ -167,7 +233,7 @@ test('seals the artifact witness before qualification and the capsule after it',
   assert.equal(capsule.platform, fixture.platform);
 });
 
-test('the Verify wrapper restores pre-qualification evidence after qualification cleanup', () => {
+test('the Verify wrapper seals final artifacts after qualification cleanup', () => {
   const fixture = artifactFixture();
   const qualification = path.join(
     fixture.root,
@@ -175,21 +241,30 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
     'release',
     'qualification',
   );
+  const finalArtifact = path.join(
+    fixture.root,
+    'product',
+    'release',
+    'artifact-after-qualification.bin',
+  );
   const command = [
     process.execPath,
     '-e',
-    `const fs=require('node:fs');fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n')`,
+    `const fs=require('node:fs');fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n');fs.writeFileSync(${JSON.stringify(finalArtifact)},'final artifact\\n')`,
   ];
   assert.equal(
     runVerifiedQualification({
       ...fixture,
       command,
-      buildArtifactWitness: () => ({
-        id: 'kungfu-collaboration-interface',
-        standard: 'kfd-3',
-        witnessKind: 'artifact',
-        exposedSurfaces: [],
-      }),
+      buildArtifactWitness: () => {
+        assert.equal(fs.existsSync(finalArtifact), true);
+        return {
+          id: 'kungfu-collaboration-interface',
+          standard: 'kfd-3',
+          witnessKind: 'artifact',
+          exposedSurfaces: [],
+        };
+      },
     }),
     0,
   );
@@ -200,6 +275,16 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
   assert.equal(
     fs.existsSync(path.join(qualification, 'kfd', 'candidate-evidence.json')),
     true,
+  );
+  const witness = JSON.parse(
+    fs.readFileSync(
+      path.join(qualification, 'kfd', 'artifacts', `${fixture.platform}.json`),
+      'utf8',
+    ),
+  );
+  assert.equal(
+    witness.candidateBinding.artifactRoot,
+    releaseArtifactRoot(fixture.root).root,
   );
 });
 
@@ -221,6 +306,24 @@ test('fails before Verify completion when artifact bytes change after witnessing
   assert.throws(
     () => finalizeKfdCandidateEvidence(fixture),
     /KFD artifact digest mismatch/u,
+  );
+});
+
+test('rejects a source gate sealed for another platform', () => {
+  const fixture = artifactFixture();
+  const sourceGate = path.join(
+    fixture.root,
+    '.buildchain',
+    'runtime',
+    'kfd-candidate-evidence',
+    'source-gate.json',
+  );
+  const gate = JSON.parse(fs.readFileSync(sourceGate, 'utf8'));
+  gate.platform = 'linux-arm64';
+  writeJson(sourceGate, gate);
+  assert.throws(
+    () => prepareKfdArtifactWitness(fixture),
+    /KFD source gate platform mismatch: expected linux-x64, got linux-arm64/u,
   );
 });
 

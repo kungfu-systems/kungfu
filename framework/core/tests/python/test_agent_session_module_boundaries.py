@@ -67,7 +67,22 @@ def test_qualification_mock_retains_its_bounded_managed_environment():
         continuation=None,
         source={},
     )
+    selected = run_agent._native_execution_environment(
+        provider="synthetic",
+        runtime_dir="/runtime",
+        run_id="attempt",
+        config_home="/config",
+        runtime_home="/home",
+        workspace_root="/workspace",
+        work=None,
+        workspace_id="workspace:test",
+        profile={},
+        session_ref={"workConsoleId": "assistant:test", "sessionAttemptId": "attempt"},
+        provider_version="1.1.0",
+        base_env=env,
+    )
 
+    assert selected is env
     assert env["KUNGFU_AS_VARIANT"] == "node"
     assert env["KUNGFU_CONTROL_RUNTIME_DIR"] == "/runtime"
     assert env["KUNGFU_WORKSPACE_ROOT"] == "/workspace"
