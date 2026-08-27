@@ -465,7 +465,9 @@ JSON paths to Buildchain v3; the publish tail neither generates nor repairs KFD
 evidence. Renewing a protected queue cut does not renew or weaken those sealed
 source, candidate, platform, or artifact bindings. A source CheckRun bridge
 that exhausts its bounded v3 retry must renew the source head instead of adding
-an unsealed manual retry.
+an unsealed manual retry. A merge-queue source-runtime timeout likewise
+invalidates that queue cut; it must renew the source head before re-enqueueing
+rather than reuse the failed cut as qualification.
 
 Buildchain owns the passport key, formatting policy, pre-build witness digest,
 and post-build artifact byte checks. Kungfu owns its root
