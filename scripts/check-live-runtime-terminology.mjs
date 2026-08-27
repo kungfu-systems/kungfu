@@ -42,6 +42,8 @@ const RETIRED_TEXT = [
 const COMPATIBILITY_FILES = new Set([
   'framework/core/src/libkungfu/include/kungfu/runtime/live/identity.h',
   'framework/core/src/python/kungfu/runtime_service.py',
+  'framework/core/src/python/kungfu/_runtime_service/common.py',
+  'framework/core/src/python/kungfu/_runtime_service/state.py',
 ]);
 
 function walk(directory) {
@@ -87,10 +89,13 @@ if (legacyWireValues.length !== 2) {
   );
 }
 
-const runtimeService = fs.readFileSync(
-  path.join(ROOT, 'framework/core/src/python/kungfu/runtime_service.py'),
-  'utf8',
-);
+const runtimeService = [
+  'framework/core/src/python/kungfu/runtime_service.py',
+  'framework/core/src/python/kungfu/_runtime_service/common.py',
+  'framework/core/src/python/kungfu/_runtime_service/state.py',
+]
+  .map((relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8'))
+  .join('\n');
 for (const required of [
   'LEGACY_SCHEMA_ROUTES',
   'COORDINATOR_WIRE_NAMESPACE',

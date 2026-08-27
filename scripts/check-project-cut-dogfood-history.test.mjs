@@ -86,7 +86,9 @@ test('registers the Project Cut member in both the public request and composer',
       'project-cut-v1',
     ),
   );
-  const composer = read('framework/core/src/python/kungfu/exit_bundle.py');
+  const composer = read(
+    'framework/core/src/python/kungfu/_exit_bundle/common.py',
+  );
   assert.match(composer, /"project-cut-v1": \{/u);
   assert.match(composer, /_project_cut_build_bundle/u);
   assert.match(composer, /_project_cut_import_bundle/u);
