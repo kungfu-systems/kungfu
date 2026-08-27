@@ -38,7 +38,6 @@ from kungfu.agent.native_launch import (
     provider_interactive_argv as interactive_launch_argv,
     provider_runtime_health as _provider_runtime_health,
     resolve_command_wrapper as _resolve_windows_command_wrapper,
-    work_profile_inspection as _work_profile_inspection,
 )
 from kungfu.agent.provider_bootstrap import refresh_native_skill_runtime_audit
 from kungfu.agent.managed_run import ManagedRunCoordinator
