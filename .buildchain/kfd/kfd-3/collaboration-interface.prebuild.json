@@ -6,7 +6,7 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "abafce0bac53662def68787ef8e6c7186bf770d1",
+    "sourceSha": "b900dfd7aba25ebb67ee22d493728f4cd40e9c85",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:94e3051ed06b5e852b46f3572d28fa36682ee989f6ab4a618993863e8ae33288"
   },
