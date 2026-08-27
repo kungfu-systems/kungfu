@@ -88,20 +88,20 @@ from kungfu.distribution_update_policy import (
 )
 from kungfu._distribution_update.download import (
     _HttpsOnlyRedirectHandler as _HttpsOnlyRedirectHandler,
-    _account_archive_member as _account_archive_member,
-    _archive_expanded_limit as _archive_expanded_limit,
-    _assert_https_response as _assert_https_response,
-    _assert_tar_member as _assert_tar_member,
-    _assert_zip_member as _assert_zip_member,
-    _copy_bounded_download as _copy_bounded_download,
-    _discard_poisoned_partial as _discard_poisoned_partial,
-    _download_response_appends as _download_response_appends,
-    _download_to_partial as _download_to_partial_impl,
+    _account_archive_member as _account_archive_member_dispatch,
+    _archive_expanded_limit as _archive_expanded_limit_dispatch,
+    _assert_https_response as _assert_https_response_dispatch,
+    _assert_tar_member as _assert_tar_member_dispatch,
+    _assert_zip_member as _assert_zip_member_dispatch,
+    _copy_bounded_download as _copy_bounded_download_dispatch,
+    _discard_poisoned_partial as _discard_poisoned_partial_dispatch,
+    _download_response_appends as _download_response_appends_dispatch,
+    _download_to_partial as _download_to_partial_dispatch,
     _extract_archive as _extract_archive,
-    _file_digest as _file_digest,
-    _open_https as _open_https,
-    _safe_member as _safe_member,
-    _stage_verified_archive as _stage_verified_archive,
+    _file_digest as _file_digest_dispatch,
+    _open_https as _open_https_dispatch,
+    _safe_member as _safe_member_dispatch,
+    _stage_verified_archive as _stage_verified_archive_dispatch,
     _validate_archive as _validate_archive_impl,
     download as _download_impl,
 )
@@ -117,13 +117,19 @@ from kungfu._distribution_update.cli import (
 
 release_cut = runtime_upgrade
 
-
-def _download_to_partial(url: str, partial: Path, *, expected_size: int) -> None:
-    return _download_to_partial_impl(
-        url,
-        partial,
-        expected_size=expected_size,
-    )
+_account_archive_member = _account_archive_member_dispatch.__wrapped__
+_archive_expanded_limit = _archive_expanded_limit_dispatch.__wrapped__
+_assert_https_response = _assert_https_response_dispatch.__wrapped__
+_assert_tar_member = _assert_tar_member_dispatch.__wrapped__
+_assert_zip_member = _assert_zip_member_dispatch.__wrapped__
+_copy_bounded_download = _copy_bounded_download_dispatch.__wrapped__
+_discard_poisoned_partial = _discard_poisoned_partial_dispatch.__wrapped__
+_download_response_appends = _download_response_appends_dispatch.__wrapped__
+_download_to_partial = _download_to_partial_dispatch.__wrapped__
+_file_digest = _file_digest_dispatch.__wrapped__
+_open_https = _open_https_dispatch.__wrapped__
+_safe_member = _safe_member_dispatch.__wrapped__
+_stage_verified_archive = _stage_verified_archive_dispatch.__wrapped__
 
 
 def download(
