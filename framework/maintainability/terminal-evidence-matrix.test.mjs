@@ -606,6 +606,17 @@ test('live observation parser preserves object and array authority payloads', ()
     [{ id: 1 }, { id: 2 }],
   );
   assert.deepEqual(
+    parseCommandJson(
+      '{"stale":true}\n[unfinished diagnostic\n  {"ok":true}\n',
+      'latest object',
+    ),
+    { ok: true },
+  );
+  assert.throws(
+    () => parseCommandJson('[unfinished diagnostic\n', 'broken tool'),
+    /broken tool did not return a terminal JSON document/u,
+  );
+  assert.deepEqual(
     parseTerminalReviewAttestation('{"schema":"test","ok":true}'),
     { schema: 'test', ok: true },
   );
