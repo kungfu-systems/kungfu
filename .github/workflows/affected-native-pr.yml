@@ -828,7 +828,11 @@ jobs:
           mkdir -p product/qualification/affected-native/cache
           ccache --show-stats --verbose | tee product/qualification/affected-native/cache/compiler-stats.txt
       - name: Seal portable cache receipts
-        if: ${{ steps.native-gate.outcome == 'success' }}
+        if: >-
+          ${{
+            steps.native-gate.outcome == 'success' &&
+            steps.plan.outputs.native-required == 'true'
+          }}
         shell: bash
         env:
           DEPENDENCY_MATCHED_KEY: ${{ steps.dependency-cache.outputs.cache-matched-key }}
@@ -858,7 +862,8 @@ jobs:
           ${{
             (github.event_name == 'pull_request' ||
              github.event_name == 'merge_group') &&
-            steps.native-gate.outcome == 'success'
+            steps.native-gate.outcome == 'success' &&
+            steps.plan.outputs.native-required == 'true'
           }}
         shell: bash
         run: |

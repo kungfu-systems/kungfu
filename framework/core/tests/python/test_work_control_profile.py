@@ -15,6 +15,7 @@ from kungfu import (
     work_control,
 )
 from kungfu.agent import work_profile
+from kungfu.assignment_runtime.authority import WorkControlAuthority
 from kungfu.rewind import reporting as rewind_reporting
 from kungfu.storage import service as storage_service
 
@@ -111,6 +112,89 @@ def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path)
     )
     assert review["review"]["claimant"] == "test-agent"
     assert review["review"]["reviewer"] == "independent-reviewer"
+
+
+def test_work_control_accepts_only_exact_retired_atlas_source_history(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    migration = profile_sdk.ProfileSdkError(
+        "fact-surface-authority-migration-required",
+        "removed source authorities retain admitted facts and require an explicit migration",
+        factSurface="kungfu.initiative-assignment.initiative",
+        admittedSourceAuthorities=["atlas-adapter"],
+    )
+    monkeypatch.setattr(
+        profile_composition,
+        "contract_materialization_plan",
+        lambda _source, _runtime, **_kwargs: (_ for _ in ()).throw(migration),
+    )
+    monkeypatch.setattr(
+        storage_service,
+        "fact_state",
+        lambda _runtime: {
+            "observation_history": [
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.initiative",
+                    "source_id": "atlas-adapter",
+                },
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.assignment",
+                    "source_id": "kungfu-agent",
+                },
+            ]
+        },
+    )
+
+    contract = work_control._ensure_contract(str(runtime))
+
+    assert contract["status"] == "retained-history-compatible"
+    assert contract["retained_source_authorities"] == ["atlas-adapter"]
+
+
+def test_work_control_rejects_unrecognized_retired_source_history(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    migration = profile_sdk.ProfileSdkError(
+        "fact-surface-authority-migration-required",
+        "removed source authorities retain admitted facts and require an explicit migration",
+        factSurface="kungfu.initiative-assignment.initiative",
+        admittedSourceAuthorities=["atlas-adapter"],
+    )
+    monkeypatch.setattr(
+        profile_composition,
+        "contract_materialization_plan",
+        lambda _source, _runtime, **_kwargs: (_ for _ in ()).throw(migration),
+    )
+    monkeypatch.setattr(
+        storage_service,
+        "fact_state",
+        lambda _runtime: {
+            "observation_history": [
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.initiative",
+                    "source_id": "atlas-adapter",
+                },
+                {
+                    "outcome": "admitted",
+                    "fact_surface_id": "kungfu.initiative-assignment.assignment",
+                    "source_id": "unknown-adapter",
+                },
+            ]
+        },
+    )
+
+    with pytest.raises(
+        profile_sdk.ProfileSdkError,
+        match="outside its exact retained compatibility boundary",
+    ):
+        work_control._ensure_contract(str(runtime))
 
 
 @pytest.mark.parametrize(
@@ -519,6 +603,72 @@ def test_native_work_control_receipts_do_not_leak_compatibility_vocabulary(
     assert status["phase"] == "admitted"
 
 
+def test_exact_source_projection_read_survives_removed_profile_but_actions_do_not(
+    tmp_path,
+):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    _materialize_contract(SOURCE, runtime)
+    work_control.create_initiative(
+        str(runtime),
+        initiative_id="retained-initiative",
+        title="Retained initiative",
+        intent="Remain readable after the Session loses its Profile",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    work_control.create_assignment(
+        str(runtime),
+        initiative_id="retained-initiative",
+        assignment_id="retained-assignment",
+        title="Retained assignment",
+        objective="Remain losslessly readable after Profile removal",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    remove = profile_sdk.lifecycle_plan(
+        runtime, "remove", profile_id="kungfu.work-control"
+    )["corePlan"]
+    profile_sdk.lifecycle_apply(runtime, remove, "test:remove")
+
+    snapshot = WorkControlAuthority(runtime, source=SOURCE).inspect()
+
+    assert snapshot["assignments"][0]["assignmentId"] == "retained-assignment"
+    assert snapshot["assignments"][0]["lifecycle"]["phase"] == "admitted"
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.invoke_member_adapter(
+            SOURCE,
+            runtime,
+            "work-control-actions",
+            "runtime-authority-status",
+            {},
+            authorized_action=True,
+            inactive_projection_read=True,
+        )
+    assert raised.value.diagnosis["code"] == "profile-not-active"
+
+
+def test_inactive_projection_read_rejects_a_conflicting_profile_root(tmp_path):
+    installed = _copy_source(tmp_path)
+    (installed / "work-control-actions" / "root-drift.txt").write_text(
+        "different exact member bytes\n", encoding="utf-8"
+    )
+    runtime = tmp_path / "runtime"
+    _activate(installed, runtime)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.invoke_member_adapter(
+            SOURCE,
+            runtime,
+            "work-control-actions",
+            "portfolio",
+            {},
+            inactive_projection_read=True,
+        )
+
+    assert raised.value.diagnosis["code"] == "profile-not-active"
+
+
 def test_public_work_control_adapter_rejects_legacy_completion_root_names(tmp_path):
     runtime = tmp_path / "runtime"
     _activate(SOURCE, runtime)
@@ -592,10 +742,80 @@ def test_work_control_domain_is_owned_by_the_profile_member():
     assert not list((member / "domain" / "compatibility").glob("*.py"))
 
 
+def test_native_state_reuses_canonical_work_control_projection(monkeypatch):
+    domain = profile_sdk.load_member_python_package(
+        str(SOURCE), "work-control-actions", "domain"
+    )
+    state = {
+        "initiative_subject": "kungfu:initiative-a",
+        "assignments": [
+            {
+                "subject_key": "kungfu:assignment-a",
+                "payload": {"record": {"assignment_id": "assignment-a"}},
+            }
+        ],
+        "claims": [],
+        "reviews": [],
+        "query_proof_root": "sha256:" + "a" * 64,
+    }
+    queries = []
+
+    def query_state(*_args, **_kwargs):
+        queries.append((_args, _kwargs))
+        return state
+
+    monkeypatch.setattr(domain.work_control, "query_state", query_state)
+
+    projected = domain.native_state.query_state(
+        "/runtime",
+        initiative_id="initiative-a",
+    )
+
+    assert len(queries) == 1
+    assert projected == {**state, "authority_mode": "work-control"}
+
+
+def test_assignment_status_reuses_one_canonical_state_projection(monkeypatch):
+    domain = profile_sdk.load_member_python_package(
+        str(SOURCE), "work-control-actions", "domain"
+    )
+    proof_root = "sha256:" + "a" * 64
+    state = {
+        "initiative_subject": "kungfu:initiative-a",
+        "assignments": [
+            {
+                "subject_key": "kungfu:assignment-a",
+                "payload": {"record": {"assignment_id": "assignment-a"}},
+            }
+        ],
+        "claims": [],
+        "reviews": [],
+        "query_proof_root": proof_root,
+    }
+    queries = []
+
+    def query_state(*_args, **_kwargs):
+        queries.append((_args, _kwargs))
+        return state
+
+    monkeypatch.setattr(domain.work_semantics.runtime, "query_state", query_state)
+
+    projected = domain.work_semantics.lifecycle_status(
+        "/runtime",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
+    )
+
+    assert len(queries) == 1
+    assert projected["query_proof_root"] == proof_root
+    assert projected["work_semantics"]["query_proof_root"] == proof_root
+
+
 def test_initiative_assignment_capabilities_are_native_and_preserve_pursuit():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
+    assert callable(domain.work_control.ensure_profile_contract)
     capabilities = domain.work_control.capabilities()
     pursuit = work_profile.capabilities_python(conformance=True)
 

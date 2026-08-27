@@ -1,0 +1,346 @@
+{
+  "schema": "kungfu.python-runtime-responsibility-map/v1",
+  "functionRiskAlgorithmVersion": "qualified-occurrence-v2",
+  "functionExtractorAlgorithmVersion": "python-multiline-v2",
+  "baselineRevision": "ed34f1ecc7151e6418ddca8e9e9a50abdf4c50bb",
+  "owner": "core/package",
+  "measurement": {
+    "functionRisk": "framework/maintainability/source-analysis-kernel.mjs python-multiline-v2 plus function-risk.mjs qualified-occurrence-v2 analyzeTransition over the exact same-owner logical facade-plus-owner path set; exact call-time facade adapters are separately enumerated and budgeted",
+    "physicalLines": "UTF-8 source splitlines over sourcePaths plus ownerFiles",
+    "responsibilities": "top-level classes/functions plus distinct kungfu imports over sourcePaths plus ownerFiles"
+  },
+  "lineageAudit": {
+    "predecessorBase": "ed34f1ecc7151e6418ddca8e9e9a50abdf4c50bb",
+    "predecessorHead": "500eeaccea841b3c8a343f5d7b78776627dbbfc7",
+    "predecessorPullRequest": 3465,
+    "linearSuccessorBase": "ed34f1ecc7151e6418ddca8e9e9a50abdf4c50bb",
+    "queueBlockedHead": null,
+    "protectedDriftIntersection": [],
+    "businessPathIntersection": [],
+    "invariant": "Wave 2 starts from the exact protected post-Wave-1 baseline; every baseline blob is re-hashed from that revision and every current logical owner is measured together rather than replaying predecessor reports."
+  },
+  "sourcePaths": [
+    "framework/core/src/python/kungfu/runtime_service.py",
+    "framework/core/src/python/kungfu/cli/commands/runtime.py"
+  ],
+  "riskBaselinePaths": [
+    "framework/core/src/python/kungfu/runtime_service.py",
+    "framework/core/src/python/kungfu/cli/commands/runtime.py",
+    "framework/core/src/python/kungfu/runtime_processes.py"
+  ],
+  "serviceOwnerFiles": [
+    "framework/core/src/python/kungfu/_runtime_service/common.py",
+    "framework/core/src/python/kungfu/_runtime_service/supervisor.py",
+    "framework/core/src/python/kungfu/_runtime_service/state.py",
+    "framework/core/src/python/kungfu/_runtime_service/engine.py"
+  ],
+  "cliOwnerFiles": [
+    "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/peer.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/service.py"
+  ],
+  "ownerFiles": [
+    "framework/core/src/python/kungfu/runtime_processes.py",
+    "framework/core/src/python/kungfu/_runtime_service/common.py",
+    "framework/core/src/python/kungfu/_runtime_service/supervisor.py",
+    "framework/core/src/python/kungfu/_runtime_service/state.py",
+    "framework/core/src/python/kungfu/_runtime_service/engine.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/peer.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/service.py"
+  ],
+  "baselineSources": [
+    {
+      "path": "framework/core/src/python/kungfu/runtime_service.py",
+      "sha256": "acd6f26c85c3629de8f904ccfa8dcb00ebb1a7b1d8a5a6a4a5e4382eae1e45e5",
+      "predecessorBaseSha256": "acd6f26c85c3629de8f904ccfa8dcb00ebb1a7b1d8a5a6a4a5e4382eae1e45e5"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "sha256": "de9652613403756466ca15d8658e2bcb4e390112fdd5e423a337d869fee925ec",
+      "predecessorBaseSha256": "de9652613403756466ca15d8658e2bcb4e390112fdd5e423a337d869fee925ec"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/runtime_processes.py",
+      "sha256": "d1eafd4b9f83d2353b0e912d8f2fc80282d673268c21898cd76192d7d4e6a636",
+      "predecessorBaseSha256": "d1eafd4b9f83d2353b0e912d8f2fc80282d673268c21898cd76192d7d4e6a636"
+    }
+  ],
+  "currentSources": [
+    {
+      "path": "framework/core/src/python/kungfu/runtime_service.py",
+      "sha256": "7364dbf313fad75a4efb91b7481f0dd562cf46302310e162f99f81971cd9aec6"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/runtime_processes.py",
+      "sha256": "d1eafd4b9f83d2353b0e912d8f2fc80282d673268c21898cd76192d7d4e6a636"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "sha256": "12dee1b9f5be48e1d02d59470ad0ab19f1b00d0c5d18198179ccf42cd4ac7950"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/common.py",
+      "sha256": "09bba6a6aa395ccca3c69f9f642e5b78ae3d288edbfd035fd024cb9a8cac3337"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/supervisor.py",
+      "sha256": "ae34da9d703a81ea75fc7d25387dcd62d200e79cff1c92d120266a78b332a24a"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/state.py",
+      "sha256": "68d475dc6ec635e3bbeccd3a50ca7182aaa0d2fbd99c9b4b152a758861d7d5eb"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/engine.py",
+      "sha256": "d553eb5665a682d287ab4e2322bfc3b3f3d44352539343be4c8c9971b474b9fb"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
+      "sha256": "799fb1a5f01c21ca35fb20b773ce85b472c03fccbd6a022091ef55cd024c8123"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/peer.py",
+      "sha256": "977f32a802b9042f63ad7c294ab7d91020ed5e074d0f8f91826905395a0febae"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+      "sha256": "72245bb04eea56b55f56d11ab44e955685182fd929861c8bd64aa23a4d20ce8f"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/service.py",
+      "sha256": "be0623ab7988e197571ce93003060f651597b06d16e66cf6ee3d76803afcb26c"
+    },
+    {
+      "path": "framework/core/tests/python/test_runtime_cli.py",
+      "sha256": "5874de5462a21abd3dd2b288352ef26cea820b3929fd22e6ed6e091d8e2a205c"
+    },
+    {
+      "path": "framework/core/tests/python/test_runtime_service.py",
+      "sha256": "0b16b3b8ee06e0ea90cd8964cbf43ad1b066ad314132036c92f51936ff13db58"
+    }
+  ],
+  "baseline": {
+    "physicalLines": 3029,
+    "responsibilities": 147,
+    "maximumPhysicalLines": 1961,
+    "maximumResponsibilities": 88,
+    "functionRisk": {
+      "functions": 155,
+      "baseRisk": 2179,
+      "changeRisk": 2191,
+      "maximumBaseRisk": 265,
+      "maximumChangeRisk": 265
+    }
+  },
+  "current": {
+    "physicalLines": 3673,
+    "responsibilities": 191,
+    "maximumPhysicalLines": 850,
+    "maximumResponsibilities": 51,
+    "functionRisk": {
+      "functions": 161,
+      "baseRisk": 2226,
+      "changeRisk": 2558,
+      "maximumBaseRisk": 265,
+      "maximumChangeRisk": 267
+    }
+  },
+  "transitionContribution": {
+    "linked": {
+      "functions": 155,
+      "previousBaseRisk": 2184,
+      "currentBaseRisk": 2179,
+      "currentChangeRisk": 2493
+    },
+    "new": {
+      "functions": 6,
+      "currentBaseRisk": 47,
+      "currentChangeRisk": 65
+    },
+    "retired": {
+      "functions": 2,
+      "previousBaseRisk": 9,
+      "symbols": [
+        "_empty_routes",
+        "_supervisor_always_on"
+      ]
+    }
+  },
+  "functionRiskAdapters": [
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/common.py",
+      "symbol": "_runtime_facade_call"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/common.py",
+      "symbol": "_runtime_facade_seam"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/common.py",
+      "symbol": "_runtime_facade_value"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/common.py",
+      "symbol": "runtime_decorate"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/common.py",
+      "symbol": "runtime_dispatch"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/state.py",
+      "symbol": "route_status"
+    }
+  ],
+  "adapterRiskBudget": {
+    "functions": 6,
+    "baseRisk": 47,
+    "changeRisk": 65
+  },
+  "processIdentityContinuity": [
+    "_terminate_process_if_matches",
+    "_terminate_process_tree_if_matches"
+  ],
+  "publicImports": [
+    "kungfu.runtime_service.RuntimeEngineRequest",
+    "kungfu.runtime_service.RuntimeEngineReceipt",
+    "kungfu.runtime_service.AssessmentExecutor",
+    "kungfu.runtime_service.CoordinatorProcess",
+    "kungfu.runtime_service.AdoptedCoordinatorProcess",
+    "kungfu.runtime_service.CoordinatorEngine",
+    "kungfu.runtime_service.Coordinator",
+    "kungfu.runtime_service.ProcessRuntimeHost",
+    "kungfu.runtime_service.run_coordinator",
+    "kungfu.runtime_service.status",
+    "kungfu.runtime_service.route_status",
+    "kungfu.runtime_service.run_supervisor",
+    "kungfu.runtime_service.ensure_coordinator",
+    "kungfu.runtime_service.stop_supervisor",
+    "kungfu.runtime_service.supervisor_status",
+    "kungfu.runtime_service.service_plan",
+    "kungfu.runtime_service.install_service",
+    "kungfu.runtime_service.uninstall_service",
+    "kungfu.runtime_service.service_status"
+  ],
+  "cliContract": {
+    "module": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+    "renderer": "_plain_status",
+    "exactOutputTests": [
+      "test_runtime_status_preserves_the_plain_line_contract",
+      "test_runtime_status_preserves_falsy_product_and_handle_fallbacks",
+      "test_runtime_status_preserves_error_line_and_trailing_newline_contract"
+    ],
+    "invariant": "Every Click command/group name, decorator, argument, option, default, and Python signature remains AST-identical to the exact baseline; exact plain output bytes, including empty and multiline actionable errors, are golden-tested."
+  },
+  "persistenceContract": {
+    "constants": [
+      "SCHEMA_STATUS",
+      "SCHEMA_ROUTES",
+      "SCHEMA_ASSESSMENT_SUBSCRIPTION",
+      "SCHEMA_COORDINATOR_CONTINUITY",
+      "LEGACY_SCHEMA_ROUTES",
+      "COORDINATOR_WIRE_NAMESPACE",
+      "COORDINATOR_WIRE_NAME",
+      "LEGACY_STATE_DIR_NAME"
+    ],
+    "pathFunctions": [
+      "state_dir",
+      "legacy_state_dir",
+      "supervisor_pid_path",
+      "coordinator_pid_path",
+      "legacy_coordinator_pid_path",
+      "state_path",
+      "coordinator_continuity_path",
+      "legacy_state_path",
+      "supervisor_state_path",
+      "routes_path",
+      "coordinator_log_path",
+      "assessment_subscription_path"
+    ],
+    "invariant": "Schema strings, wire identity, legacy directory name, and path construction remain AST-identical to the exact baseline."
+  },
+  "sideEffectOrder": [
+    "_json_write",
+    "allocate_coordinator_authority",
+    "ProcessRuntimeHost.run_foreground",
+    "ProcessRuntimeHost.spawn_coordinator",
+    "ProcessRuntimeHost.spawn_supervisor",
+    "ProcessRuntimeHost.activate_with_generation",
+    "ProcessRuntimeHost.drain",
+    "run_supervisor",
+    "ensure_coordinator",
+    "_wait_for_coordinator"
+  ],
+  "nativeInterface": [
+    "CoordinatorProcess",
+    "CoordinatorEngine",
+    "Coordinator",
+    "ProcessRuntimeHost"
+  ],
+  "callTimeFacadeContract": {
+    "invariant": "Private test seams and late supervisor calls resolve through the stable runtime_service facade at call time; the exact adapter symbol set and risk budget are closed above, while every baseline business function retains its previousId.",
+    "monkeypatchSurfaces": [
+      "_now",
+      "_is_pid_running",
+      "read_routes",
+      "command_env",
+      "CoordinatorEngine",
+      "_wait_for_coordinator",
+      "route_status"
+    ]
+  },
+  "serviceLocalDefinitions": [
+    "_terminate_and_reap_child"
+  ],
+  "ownedDefinitions": {
+    "moduleFunctions": [
+      "_terminate_process_if_matches",
+      "_terminate_process_tree_if_matches"
+    ]
+  },
+  "crossLanguageInterface": {
+    "invariant": "No C++, public C ABI, Node binding implementation, runtime protocol, or dependency file is changed by this responsibility split.",
+    "protectedSurfaces": [
+      "framework/core/src/libkungfu/",
+      "framework/core/src/libyijinjing/",
+      "framework/core/src/bindings/",
+      "framework/core/src/node/",
+      "framework/core/stubs/pykungfu/",
+      "pnpm-lock.yaml",
+      "package.json",
+      "framework/core/package.json",
+      "framework/core/pyproject.toml"
+    ]
+  },
+  "modificationSurface": {
+    "baselineProcessOwner": "framework/core/src/python/kungfu/runtime_service.py",
+    "baselineOwnerPhysicalLines": 1961,
+    "currentProcessOwner": "framework/core/src/python/kungfu/runtime_processes.py",
+    "currentOwnerPhysicalLines": 59,
+    "baselineOwnerKungfuImports": 14,
+    "currentOwnerKungfuImports": 0,
+    "baselineHotspot": {
+      "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "name": "_plain_status",
+      "baseRisk": 55
+    },
+    "currentHotspot": {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
+      "name": "_plain_status",
+      "baseRisk": 55
+    },
+    "semanticAmplificationInvariant": "maintainability:amplification remains pass with zero blocking issues and introduces no authority, projection, compatibility-reader, platform branch, or duplicate policy surface."
+  },
+  "responsibility": "runtime_service is a stable import facade; _runtime_service/common owns shared contracts and compatibility seams, state owns persistence and route lifecycle, engine owns in-process coordinator execution, supervisor owns ProcessRuntimeHost plus resident-process and service lifecycle, runtime_processes retains fenced termination, and cli/commands/_runtime separates rendering, Peer, upgrade, and service command families while preserving one exact Click surface.",
+  "nonWrapperEvidence": [
+    "The stable runtime_service facade preserves all 118 exact-baseline public symbols, while persistence paths, schema constants, native class signatures, side-effect ordering bodies, CoordinatorProcess, and the service-local child lifecycle remain AST-identical after removing only the declared call-time seam decorator.",
+    "The CLI facade composes four responsibility owners and preserves all 42 exact-baseline Click function signatures and decorators; _plain_status moves to the rendering owner with the same bodyRoot and baseRisk 55.",
+    "Every one of the 155 exact-baseline business functions retains a previousId, previousBaseRisk 2184, and aggregate current baseRisk 2179; the only 6 new functions are the closed call-time facade adapter set, budgeted separately at baseRisk 47 and changeRisk 65, with no additional retired business function.",
+    "The migration raises measured transition changeRisk because same-owner functions acquire renamed-file movement cost; it does not raise business baseRisk or maximum baseRisk. The checker therefore records migration risk without misrepresenting it as steady-state responsibility risk.",
+    "Maximum file size falls from 1961 to 850 physical lines and maximum per-module responsibility count falls from 88 to 51. Aggregate lines and import-count responsibilities are reported honestly at 3673 and 191 because stable facades preserve every baseline module attribute and explicit owner dependencies are retained rather than hidden.",
+    "runtime_processes continues to own PID-reuse-fenced signalling and bounded process-tree termination from Wave 1; Wave 2 adds no cross-language, dependency, persistence-format, public API, or Click-surface change."
+  ]
+}

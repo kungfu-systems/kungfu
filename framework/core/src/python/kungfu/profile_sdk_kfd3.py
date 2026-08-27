@@ -788,7 +788,6 @@ def contract_operations(
     *,
     fail: Callable[..., NoReturn],
     root: Callable[[Any], str],
-    admitted_sources: Mapping[tuple[str, str, str], set[str]],
 ) -> list[dict[str, str]]:
     world = artifact["contractWorld"]
     same_world = [
@@ -822,20 +821,11 @@ def contract_operations(
                     "contract-world-incompatible",
                     "existing contract world has another fact-surface register",
                 )
-            retired_with_facts = sorted(
-                surface_id
-                for surface_id in existing_surface_ids - declared_surface_ids
-                if any(
-                    key[0] == surface_id and key[2] == world["id"] and sources
-                    for key, sources in admitted_sources.items()
-                )
-            )
-            if retired_with_facts:
-                fail(
-                    "contract-world-surface-migration-required",
-                    "removed fact surfaces retain admitted facts and require an explicit migration",
-                    admittedFactSurfaces=retired_with_facts,
-                )
+            # A strict Profile narrowing retires the omitted surface from
+            # the current Profile without mutating the append-only Fact
+            # catalog.  The durable contract-world registration and every
+            # admitted fact remain available as historical evidence.  Only an
+            # expansion or reinterpretation requires an explicit migration.
     operations = []
     if not same_world:
         operations.append(
@@ -898,18 +888,10 @@ def contract_operations(
                     "existing fact surface differs from the Profile declaration",
                     factSurface=surface["id"],
                 )
-            observed_authorities = admitted_sources.get(
-                (surface["id"], schema_root, world["id"]),
-                set(),
-            )
-            retired_with_facts = sorted(observed_authorities - declared_authorities)
-            if retired_with_facts:
-                fail(
-                    "fact-surface-authority-migration-required",
-                    "removed source authorities retain admitted facts and require an explicit migration",
-                    factSurface=surface["id"],
-                    admittedSourceAuthorities=retired_with_facts,
-                )
+            # Retiring a writer from the current Profile does not rewrite the
+            # immutable Fact-surface registration.  Historical observations
+            # admitted by that writer stay readable, while the current Profile
+            # no longer exposes a route that can use the retired authority.
         else:
             operations.append(
                 {

@@ -496,15 +496,16 @@ missing, malformed, unrelated, or non-equivalent binding fails closed.
 ./shifu verify
 ```
 
-The release workflow runs `node scripts/buildchain-custom-publish-evidence.mjs`;
-that script generates KFD evidence before writing custom publish evidence.
-Buildchain v3 then collects:
+The build workflow creates and verifies KFD evidence before candidate Verify
+completes. `node scripts/buildchain-custom-publish-evidence.mjs` only writes
+custom product publication evidence and performs no KFD work. Buildchain v3
+collects the sealed candidate inputs:
 
-- KFD-1 witness `.buildchain/kfd/kfd-1/contract-world.witness.json`;
-- KFD-2 raw claims under `.buildchain/kfd/kfd-2/claims/`;
-- KFD-3 prebuild witness `.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json`;
-- KFD-3 artifact witness from
-  `node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json`.
+- KFD-1 witnesses under `product/release/qualification/kfd/source/kfd-1/`;
+- KFD-2 raw claims under `product/release/qualification/kfd/source/kfd-2/claims/`;
+- KFD-3 prebuild witness under `product/release/qualification/kfd/source/kfd-3/`;
+- one KFD-3 artifact witness for each supported platform under
+  `product/release/qualification/kfd/artifacts/`.
 
 **Maturity.** `draft` for the breadth of the declared interface, because the
 current surface set is agent/SDK/product focused. The Buildchain release

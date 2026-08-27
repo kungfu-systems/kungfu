@@ -270,8 +270,8 @@ test('the shell moves product navigation into the title-bar menu', () => {
     'utf8',
   );
   const body = source.slice(
-    source.indexOf('<div style={chromeBodyStyle}>'),
-    source.indexOf('{notificationToasts}'),
+    source.indexOf('<ShellWorkspaceContent'),
+    source.indexOf('<NotificationToasts'),
   );
 
   assert.match(source, /aria-label="Open product menu"/);
@@ -281,6 +281,7 @@ test('the shell moves product navigation into the title-bar menu', () => {
   assert.match(source, /title: currentProjectTitle/);
   assert.match(source, /title: 'All Projects'/);
   assert.match(source, /title: 'Agent Work Lab'/);
+  assert.ok(body.length > 0);
   assert.doesNotMatch(body, /<ProductNavigation/);
 });
 
@@ -351,15 +352,15 @@ test('the GUI shell uses the shared startup surface policy', () => {
   assert.match(source, /startupSurface === 'work-graph'/);
   assert.match(
     source,
-    /const initialCoreWorkOpen =\s*!initialProjectsOpen && !initialOnboardingOpen/u,
+    /const initialCoreWorkOpen =\s*!initialProjectsOpen && !agentFirst\.initialOpen/u,
   );
   assert.match(
     source,
-    /initialProjectsOpen \|\| initialOnboardingOpen \|\| initialCoreWorkOpen[\s\S]*discoveredKfxCount: 0[\s\S]*: loadKfx\(/,
+    /const skipKfx =[\s\S]*initialProjectsOpen \|\| agentFirst\.initialOpen \|\| initialCoreWorkOpen[\s\S]*skipKfx[\s\S]*emptyKfxLoadResult\(\)[\s\S]*: loadKfx\(/,
   );
   assert.match(
     source,
-    /initialShellSurface\(\{[\s\S]*onboardingOpen: initialOnboardingOpen,[\s\S]*projectsOpen: initialProjectsOpen,[\s\S]*focusedProjectPath: initialFocusedProjectPath/,
+    /initialShellSurface\(\{[\s\S]*onboardingOpen: agentFirst\.initialOpen,[\s\S]*projectsOpen: initialProjectsOpen,[\s\S]*focusedProjectPath: initialFocusedProjectPath/,
   );
   assert.match(source, /projectPath: initialFocusedProjectPath/);
   assert.match(

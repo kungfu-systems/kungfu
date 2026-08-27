@@ -8,12 +8,12 @@
   "sourceAdmissionFactSetRoot": "sha256:504da3e9c9d220470791b0730b165c0c4db74b49ec9f0092a4e8cf7adafed130",
   "sourceAdmissionReceiptRoot": "sha256:3087ee3a4e476773bec759d58ac533a9452cb652006ebccdf11957f602b18d51",
   "sourceAdmissionPathReceiptRoot": "sha256:b82b7f44fe4493cbd1d2dbf000e86536858d405b134188da7eb33ebc567c8a0a",
-  "admissionFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
-  "admissionProofRoot": "sha256:12eed392ce3899eca7b995eaa3ef48a226040668b2da54212117f82372e22007",
+  "admissionFactSetRoot": "sha256:f7948f0f85b4cefa1ce72e9162397b852248a6d0f0ae05ac0ffd75e502a9580f",
+  "admissionProofRoot": "sha256:a77b0558711a7d66256c425a8b65797d0a34efbb6d1e2f8a7d9f9d9e0ee7a1ad",
   "factProjectionRoot": "sha256:b275910c8047541ff2e0292a4ba7611ca8cd7905934eb7e05d3aa44db1e0bba6",
   "factRegistryRoot": "sha256:232fd556a2372b29db586bbc2acbdfce6464a68c93902797ff527f75f7816c42",
   "factCutRoot": "sha256:f61b975d4a96c921cc4bd37fb3ed9a0596b47004fe34dc7219979d697e3707f9",
-  "contractFactSelectionReceiptRoot": "sha256:3ac3f51601c3ffae83085fc5db7a50b0571492116b523d728e17907731e3d113",
+  "contractFactSelectionReceiptRoot": "sha256:8727d797c0a578e34df876d88ee6510bfc4d4fa27795e12885df4dc2b800ad2c",
   "buildchainFactRoots": [
     "sha256:50e5b6e644493ac00d5b1d83a0ec6009f9faaae1bee15e88ee8386c9ec8a775d",
     "sha256:5664da2363bed0b45497215b60763c3be627e568eb3182af5891c23ae3875fbe",
@@ -25,8 +25,8 @@
     "sha256:a91ecf9e0168cb7ad185c7409b887c89580a4a362a071b466aa515ed8f201f85"
   ],
   "digestProjectionAuthority": "non-authoritative",
-  "rollbackSealRoot": "sha256:e8de0b7a102241aa47c9273b84b65b02dd889f92fdd7b8b1295e1454f7416112",
+  "rollbackSealRoot": "sha256:26448df8adbdf43977de448ac8c46dc8fa30eda91c114b02fd3d48a33ab68707",
   "rollbackNormalAdmissionEligible": false,
   "externalPublicationClaimed": false,
-  "qualificationRoot": "sha256:44ff0f87fe032b1e2680e547f17308b73733a39fa6813842cc5e8c4ba2a41cfc"
+  "qualificationRoot": "sha256:150a676eecf1aa4d3c85fc166e9970c6530242cfcea8388170c5626400377c25"
 }

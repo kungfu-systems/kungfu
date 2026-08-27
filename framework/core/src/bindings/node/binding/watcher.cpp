@@ -190,10 +190,17 @@ Napi::Value Watcher::RequestStop(const Napi::CallbackInfo &info) {
   // Stop the coordinator through its per-peer command channel.
   if (app_location->role == location_role::SYSTEM &&
       runtime::live::is_coordinator_wire_namespace(app_location->namespace_)) {
+    std::lock_guard<std::mutex> guard(feed_mutex_);
     if (not has_writer(get_coordinator_command_uid())) {
       return Napi::Boolean::New(info.Env(), false);
     }
-    get_writer(get_coordinator_command_uid())->mark(now(), RequestStop::tag);
+    auto writer = get_writer(get_coordinator_command_uid());
+    writer->mark(now(), RequestStop::tag);
+    writer->get_current_page()->flush();
+    // A Windows peer in low-latency mode cannot rely on notify(), and the
+    // coordinator must observe this frame before the fixture's forced-exit
+    // fallback can run. Publish only after the command page is visible.
+    get_io_device()->get_publisher()->publish("{}", 0);
     return Napi::Boolean::New(info.Env(), true);
   }
 

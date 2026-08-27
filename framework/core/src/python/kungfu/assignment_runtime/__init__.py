@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping
 import json
 import os
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, cast
 
 import click
 
@@ -126,7 +126,6 @@ def create_runtime_host_command(
             runtime_dir,
             realm_id=identity.workspace_id,
             generation=identity.identity_root,
-            profile_source=profile_source(),
         )
         try:
             serve(
@@ -411,7 +410,10 @@ class LocalAssignmentRuntimeApplication:
         self.runtime_dir = Path(runtime_dir).expanduser().resolve()
         self.client_id = _stable(client_id, "clientId")
         self.kind = kind
-        self.source = source or profile_source()
+        # A caller-provided source is an explicit recovery/install coordinate.
+        # Ordinary reads and commands resolve the qualified retained source from
+        # this exact runtime inside WorkControlAuthority.
+        self.source = source
         self.realm_id, self.generation = _workspace_realm(self.runtime_dir)
 
     def _runtime(self) -> EmbeddedLocalAssignmentRuntime:
@@ -423,21 +425,8 @@ class LocalAssignmentRuntimeApplication:
         )
 
     def status(self, initiative_id: str, assignment_id: str) -> dict[str, Any]:
-        with self._runtime() as runtime:
-            client = EmbeddedAssignmentRuntimeClient(
-                runtime, client_id=self.client_id, kind=self.kind
-            )
-            result = _runtime_result(
-                client.get_assignment(initiative_id, assignment_id)
-            )
-        assignment = dict(result.get("assignment") or {})
-        lifecycle = assignment.get("lifecycle")
-        if not isinstance(lifecycle, Mapping):
-            raise LocalRuntimeError(
-                "backend-unavailable",
-                "Assignment Runtime snapshot omitted the lifecycle projection",
-            )
-        return _copy_json(lifecycle)
+        authority = cast(WorkControlAuthority, self._runtime().authority)
+        return authority.assignment_status(initiative_id, assignment_id)
 
     def recovery_plan(self) -> dict[str, Any]:
         with self._runtime() as runtime:

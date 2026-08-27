@@ -146,6 +146,51 @@ test('repository changes bind canonical Git bytes across checkout EOLs', () => {
   }
 });
 
+test('repository changes canonicalize larger worktree files without stdin transport', () => {
+  const repository = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfx-large-file-fixture-'),
+  );
+  try {
+    execFileSync('git', ['init', '--quiet'], { cwd: repository });
+    fs.writeFileSync(
+      path.join(repository, 'large.json'),
+      `${'x'.repeat(512 * 1024)}\n`,
+    );
+    execFileSync('git', ['add', 'large.json'], { cwd: repository });
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'user.name=KFX fixture',
+        '-c',
+        'user.email=kfx-fixture@kungfu.invalid',
+        'commit',
+        '--quiet',
+        '-m',
+        'fixture',
+      ],
+      { cwd: repository },
+    );
+    const base = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: repository,
+      encoding: 'utf8',
+    }).trim();
+
+    fs.writeFileSync(
+      path.join(repository, 'large.json'),
+      `${'y'.repeat(512 * 1024)}\n`,
+    );
+    const [change] = repositoryChanges(base, ['large.json'], repository);
+    assert.equal(change.path, 'large.json');
+    assert.equal(change.status, 'modified');
+    assert.match(change.baseContentRoot, /^sha256:[0-9a-f]{64}$/u);
+    assert.match(change.contentRoot, /^sha256:[0-9a-f]{64}$/u);
+    assert.notEqual(change.baseContentRoot, change.contentRoot);
+  } finally {
+    fs.rmSync(repository, { force: true, recursive: true });
+  }
+});
+
 test('ignores changes outside KFX ownership', () => {
   assert.equal(
     evaluate({ changes: [change('framework/site/README.md')] }).status,
@@ -169,6 +214,17 @@ test('fails closed for an unmapped KFX-owned path', () => {
   assertCode('KFX_SITE_BUNDLE_IMPACT_UNMAPPED', () =>
     evaluate({ changes: [change('framework/new/kfx-engine.ts')] }),
   );
+});
+
+test('routes the Python storage adapter and native KFX tests through proof eligibility', () => {
+  for (const relativePath of [
+    'framework/core/src/python/kungfu/storage/kfx_service.py',
+    'framework/core/tests/python/test_native_kfx_contract.py',
+  ]) {
+    assertCode('KFX_SITE_BUNDLE_UPDATE_REQUIRED', () =>
+      evaluate({ changes: [change(relativePath)] }),
+    );
+  }
 });
 
 test('requires semantic updates for public KFX SDK changes', () => {

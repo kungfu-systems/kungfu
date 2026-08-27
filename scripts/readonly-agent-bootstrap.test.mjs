@@ -968,6 +968,17 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   syncChangedWorktree(ROOT, fixture, git);
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
+  const sourceAuthor = spawnSync(
+    git,
+    ['-C', ROOT, 'show', '-s', '--format=%an%x00%ae', 'HEAD'],
+    { encoding: 'utf8' },
+  );
+  assert.equal(sourceAuthor.status, 0, sourceAuthor.stderr);
+  const [sourceAuthorName, sourceAuthorEmail] = sourceAuthor.stdout
+    .trim()
+    .split('\0');
+  assert.ok(sourceAuthorName && sourceAuthorEmail);
+
   fs.symlinkSync(git, path.join(tools, 'git'));
   fs.symlinkSync(node, path.join(tools, 'node'));
   fs.symlinkSync(executableOnPath('python3'), path.join(tools, 'python3'));
@@ -996,10 +1007,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
 
   const gitEnv = {
     ...process.env,
-    GIT_AUTHOR_NAME: 'Kungfu Fixture',
-    GIT_AUTHOR_EMAIL: 'fixture@kungfu.invalid',
-    GIT_COMMITTER_NAME: 'Kungfu Fixture',
-    GIT_COMMITTER_EMAIL: 'fixture@kungfu.invalid',
+    GIT_AUTHOR_NAME: sourceAuthorName,
+    GIT_AUTHOR_EMAIL: sourceAuthorEmail,
+    GIT_COMMITTER_NAME: sourceAuthorName,
+    GIT_COMMITTER_EMAIL: sourceAuthorEmail,
   };
   for (const args of [
     ['config', 'core.fileMode', 'false'],

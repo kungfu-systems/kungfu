@@ -1,0 +1,12 @@
+{
+  "schema": "kungfu.code-complexity-baseline-transition/v2",
+  "expected_old_measurement_root": "sha256:4fd6d3566bd76b1f999f8528bd3bb60f301a4616fc56c971ff421c5ec22a7b2f",
+  "expected_old_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "new_measurement_root": "sha256:ecb8e5d519a0512291927271d2047d4bf2e43cedf040accdadcc268c54a689a2",
+  "new_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "changed_measurements": 3,
+  "aggregate_line_delta": 0,
+  "requested_by": "keren.dong@kungfu.link",
+  "reason": "Bind the frozen baseline measurements for the three Wave 1 facades to their explicit responsibility owners before retiring their oversized implementations into cohesive private modules.",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition#wave-1-workspace-delivery"
+}

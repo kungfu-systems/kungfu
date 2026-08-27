@@ -108,6 +108,7 @@
       "owner": "release/provenance-object",
       "paths": [
         "framework/core/src/python/kungfu/release_provenance/__init__.py",
+        "framework/core/src/python/kungfu/release_provenance/_v1_graph.py",
         "scripts/release-provenance-object.py",
         "scripts/temporal-provenance-cutover.py"
       ]
@@ -252,14 +253,34 @@
       "owner": "core/python-workspace-federation-read-model",
       "paths": [
         "framework/core/src/python/kungfu/assignment_graph.py",
+        "framework/core/src/python/kungfu/_workspace/federation.py",
+        "framework/core/src/python/kungfu/workspace_federation.py",
         "framework/core/src/python/kungfu/workspace_federation_projection.py"
+      ]
+    },
+    {
+      "owner": "core/python-workspace-locator-continuation",
+      "paths": [
+        "framework/core/src/python/kungfu/_workspace/catalog.py",
+        "framework/core/src/python/kungfu/_workspace/continuation.py",
+        "framework/core/src/python/kungfu/_workspace/io.py",
+        "framework/core/src/python/kungfu/workspace.py"
       ]
     },
     {
       "owner": "core/python-distribution-update-policy",
       "paths": [
+        "framework/core/src/python/kungfu/_distribution_update/cli.py",
+        "framework/core/src/python/kungfu/_distribution_update/download.py",
+        "framework/core/src/python/kungfu/distribution_update.py",
         "framework/core/src/python/kungfu/distribution_update_planning.py",
         "framework/core/src/python/kungfu/distribution_update_policy.py"
+      ]
+    },
+    {
+      "owner": "core/python-kfx-service-contract",
+      "paths": [
+        "framework/core/src/python/kungfu/storage/kfx_service.py"
       ]
     },
     {

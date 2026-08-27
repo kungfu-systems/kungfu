@@ -12,6 +12,7 @@ const SOURCE_ROOT = path.resolve(import.meta.dirname, '..');
 const FILES = [
   'framework/episode-provider/workspace-continuation.contract.json',
   'framework/core/src/python/kungfu/workspace.py',
+  'framework/core/src/python/kungfu/_workspace/continuation.py',
   'framework/gui/src/main/workspace-selection.ts',
   'framework/core/src/python/kungfu/agent/kfd3_api.registry.json',
   'framework/core/src/python/kungfu/agent/commands.json',
@@ -51,5 +52,22 @@ test('missing explicit continuation action fails closed', (t) => {
   assert.throws(
     () => checkWorkspaceContinuationContract(root),
     /action vocabulary drifted/,
+  );
+});
+
+test('missing continuation implementation state fails closed', (t) => {
+  const root = fixture(t);
+  const file = path.join(
+    root,
+    'framework/core/src/python/kungfu/_workspace/continuation.py',
+  );
+  const source = fs.readFileSync(file, 'utf8');
+  fs.writeFileSync(
+    file,
+    source.replaceAll('"shadow-only"', '"shadow-missing"'),
+  );
+  assert.throws(
+    () => checkWorkspaceContinuationContract(root),
+    /state is not projected: shadow-only/,
   );
 });

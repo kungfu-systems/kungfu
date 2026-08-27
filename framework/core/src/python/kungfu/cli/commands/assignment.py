@@ -23,8 +23,9 @@ from kungfu.assignment_runtime import (
     create_runtime_host_command,
     profile_source,
 )
+from kungfu.assignment_runtime import profile_lifecycle
 from kungfu import dogfood as dogfood_api
-from kungfu import profile_composition, profile_sdk
+from kungfu import profile_sdk
 from kungfu.agent import run_agent
 from kungfu.agent import resources as agent_resources
 from kungfu.cli.commands import (
@@ -98,7 +99,7 @@ def _run(operation):
                 "ok": False,
                 "code": "assignment-operation-failed",
                 "message": str(error),
-                "next_actions": [],
+                "next_actions": list(getattr(error, "next_actions", [])),
             }
         )
         raise click.exceptions.Exit(2) from error
@@ -159,58 +160,17 @@ for (
     assignment.add_command(runtime_recovery_command)
 
 
-def _ensure_profile(runtime_dir, authorized_by):
-    source = profile_source()
-    receipts = []
-    validated = profile_sdk.validate_source(source, runtime_dir)
-    inspection = validated["inspection"]
-    profile_id = inspection["profile"]["id"]
-    desired_root = inspection["profile_suite_root"]
-    lifecycle = storage_service.profile_lifecycle(
-        runtime_dir, "list", include_removed=True
+def _reconcile_work_profile(runtime_dir, authorized_by):
+    return profile_lifecycle.ensure_work_profile(
+        profile_source(), runtime_dir, authorized_by
     )
-    state = next(
-        (
-            row
-            for row in lifecycle.get("profiles", [])
-            if row.get("profile_id") == profile_id and not row.get("removed")
-        ),
-        None,
-    )
-    if state is None:
-        actions = ["install", "qualify", "activate"]
-    elif state.get("profile_suite_root") != desired_root:
-        actions = ["upgrade", "qualify", "activate"]
-    else:
-        actions = []
-        if not state.get("qualified"):
-            actions.append("qualify")
-        if not state.get("activated"):
-            actions.append("activate")
-    for action in actions:
-        values = {"granted_permissions": ["storage"]} if action == "activate" else {}
-        plan = profile_sdk.lifecycle_plan(runtime_dir, action, source, **values)
-        answer = profile_sdk.answer_decision(
-            plan["decisionCard"], "approve", authorized_by
-        )
-        receipts.append(
-            profile_sdk.authorized_lifecycle_apply(runtime_dir, plan, answer)
-        )
-    contract = profile_composition.contract_materialization_plan(source, runtime_dir)
-    if contract["operations"]:
-        answer = profile_sdk.answer_decision(
-            contract["decisionCard"], "approve", authorized_by
-        )
-        receipts.append(
-            profile_composition.authorized_contract_materialize(
-                runtime_dir, contract, answer
-            )
-        )
-    return receipts
 
 
-def _prepare_resume_profile(runtime_dir, actor):
-    source = profile_source()
+_ensure_profile = _reconcile_work_profile
+
+
+def _prepare_resume_profile(runtime_dir, actor, source=None):
+    source = profile_lifecycle.resolve_profile_source(source, profile_source)
     validated = profile_sdk.validate_source(source, runtime_dir)
     profile_id = validated["inspection"]["profile"]["id"]
     desired_root = validated["inspection"]["profile_suite_root"]
@@ -225,7 +185,7 @@ def _prepare_resume_profile(runtime_dir, actor):
         ),
         None,
     )
-    receipts = _ensure_profile(runtime_dir, actor)
+    receipts = profile_lifecycle.ensure_work_profile(source, runtime_dir, actor)
     current = storage_service.profile_lifecycle(
         runtime_dir,
         "get",
@@ -270,6 +230,23 @@ def _profile_action(runtime_dir, intent_id, values, authorized_by):
     ).authorize(intent_id, values, authorized_by)
 
 
+def _attach_recovery_continuation(result, runtime_dir, initiative_id, assignment_id):
+    if result.get("phase") != "executing" or result.get("active_lease"):
+        return
+    from kungfu.assignment_runtime import recovery_continuation
+
+    continuation = recovery_continuation.resolve(
+        runtime_dir, initiative_id, assignment_id, result
+    )
+    if continuation is not None:
+        result["recovery_continuation"] = {
+            "continuationRoot": continuation["continuationRoot"],
+            "newSessionAttemptId": continuation["attempt"]["newSessionAttemptId"],
+            "writeAuthority": continuation["writeAuthority"],
+            "allowedNextActions": list(continuation["allowedNextActions"]),
+        }
+
+
 def _status(runtime_dir, initiative_id, assignment_id, now=""):
     result = _profile_read(
         runtime_dir,
@@ -281,8 +258,8 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
             "now": now,
         },
     )
-    result["initiative_id"] = initiative_id
-    result["assignment_id"] = assignment_id
+    _attach_recovery_continuation(result, runtime_dir, initiative_id, assignment_id)
+    result.update(initiative_id=initiative_id, assignment_id=assignment_id)
     result["next_actions"] = orchestration.next_actions(result)
     return result
 
@@ -428,7 +405,7 @@ def _admit_captured_assignment(
 @assignment_context
 @surface(id="kungfu.work.capture")
 def capture(ctx, request_value, workspace_root, home, cwd, json_output):
-    def operation():
+    def capture_operation():
         if request_value == "-":
             request = json.load(click.get_text_stream("stdin"))
         else:
@@ -444,7 +421,7 @@ def capture(ctx, request_value, workspace_root, home, cwd, json_output):
         return orchestration.capture_assignment_request(request, target)
 
     _ = json_output
-    _emit(_run(operation))
+    _emit(_run(capture_operation))
 
 
 @assignment.command(help="admit one verified captured request into this workspace")
@@ -478,7 +455,7 @@ def admit(
     actor_type,
     allow_foreign_binding,
 ):
-    def operation():
+    def admit_operation():
         initiative_admission_stdin = ""
         if initiative_admission:
             initiative_admission_stdin = (
@@ -499,7 +476,7 @@ def admit(
             allow_foreign_binding=allow_foreign_binding,
         )
 
-    result = _run(operation)
+    result = _run(admit_operation)
     if result is not None:
         _emit(result)
         if result.get("ok") is not True:
@@ -1221,7 +1198,7 @@ def relation_event(
     predecessor_roots,
     evidence_roots,
 ):
-    def operation():
+    def relation_event_operation():
         identity, runtime_dir = _runtime(workspace_root)
         _ensure_profile(runtime_dir, actor)
         relation = json.loads(relation_file.read_text(encoding="utf-8"))
@@ -1249,7 +1226,7 @@ def relation_event(
             "workspace": identity.as_dict(),
         }
 
-    result = _run(operation)
+    result = _run(relation_event_operation)
     if result is not None:
         _emit(result)
 
@@ -1684,7 +1661,7 @@ def family_verify_v2(ctx, state_file):
 @click.option("--target", type=click.Choice(["run", "closeout"]), required=True)
 @assignment_context
 def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
-    def operation():
+    def gate_operation():
         _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
         status_value = _status(runtime_dir, initiative_id, assignment_id)
         orchestration_gate = orchestration.gate(status_value, target)
@@ -1711,7 +1688,7 @@ def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
             ],
         }
 
-    result = _run(operation)
+    result = _run(gate_operation)
     _emit(result)
     if not result["ok"]:
         raise click.exceptions.Exit(4)
@@ -1730,7 +1707,7 @@ def _json_action(name, intent_id):
     @assignment_context
     @surface(id=f"kungfu.work.{name.replace('-', '.')}")
     def command(ctx, input_file, workspace_root, home, authorized_by):
-        def operation():
+        def assignment_action_operation():
             values = json.loads(input_file.read_text(encoding="utf-8"))
             _, runtime_dir, _ = _runtime(workspace_root, home)
             _ensure_profile(runtime_dir, authorized_by)
@@ -1748,7 +1725,7 @@ def _json_action(name, intent_id):
                 "next_actions": current["next_actions"],
             }
 
-        _emit(_run(operation))
+        _emit(_run(assignment_action_operation))
 
     return command
 
@@ -1792,7 +1769,7 @@ def binding_create(
     child_status,
     out,
 ):
-    def operation():
+    def binding_create_operation():
         binding = orchestration.cross_workspace_binding(
             json.loads(parent_admission.read_text(encoding="utf-8")),
             json.loads(parent_status.read_text(encoding="utf-8")),
@@ -1821,7 +1798,7 @@ def binding_create(
             ],
         }
 
-    _emit(_run(operation))
+    _emit(_run(binding_create_operation))
 
 
 @assignment.command(
@@ -1845,7 +1822,7 @@ def bind(
     execute,
     expected_binding_root,
 ):
-    def operation():
+    def bind_operation():
         binding = json.loads(binding_file.read_text(encoding="utf-8"))
         identity, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
         current = _status(runtime_dir, initiative_id, assignment_id)
@@ -1869,7 +1846,7 @@ def bind(
             plan, binding, expected_binding_root
         )
 
-    _emit(_run(operation))
+    _emit(_run(bind_operation))
 
 
 @assignment.command(
@@ -1914,7 +1891,7 @@ def seal(
     execute,
     expected_state_root,
 ):
-    def operation():
+    def seal_operation():
         identity, runtime_dir, _ = _runtime(workspace_root, home)
         _ensure_profile(runtime_dir, "assignment-seal")
         current = _status(runtime_dir, initiative_id, assignment_id)
@@ -1933,7 +1910,7 @@ def seal(
             }
         return orchestration.apply_sealed_state(plan, expected_state_root)
 
-    _emit(_run(operation))
+    _emit(_run(seal_operation))
 
 
 @assignment.command(

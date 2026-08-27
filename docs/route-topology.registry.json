@@ -322,7 +322,7 @@
       "id": "python-lock-arbiter",
       "process": "coordinator",
       "language": "python",
-      "anchor": "framework/core/src/python/kungfu/runtime_service.py",
+      "anchor": "framework/core/src/python/kungfu/_runtime_service/engine.py",
       "routes": [
         {
           "name": "_on_lock_action",

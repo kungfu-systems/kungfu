@@ -230,30 +230,22 @@ function normalizedLines(text, minimumLength = 4) {
 
 function evaluateDetector(topology, detector, io) {
   const paths = detector.paths || [];
+  let metric = null;
+  let threshold = null;
+  let findingInput = null;
   if (detector.kind === 'line-count') {
     const path = paths[0];
-    const lineCount = lines(Buffer.from(io.readText(path)));
-    return {
-      detector: detector.id,
+    metric = lines(Buffer.from(io.readText(path)));
+    threshold = detector.maximum;
+    findingInput = {
+      findingClass: detector.findingClass,
       topology: topology.id,
-      kind: detector.kind,
-      status: lineCount > detector.maximum ? 'finding' : 'remediated',
-      metric: lineCount,
-      threshold: detector.maximum,
-      finding:
-        lineCount > detector.maximum
-          ? integrityFinding({
-              findingClass: detector.findingClass,
-              topology: topology.id,
-              target: path,
-              detector: detector.id,
-              message: `${path} has ${lineCount} lines; the governed maximum is ${detector.maximum}`,
-              evidence: { lineCount, maximum: detector.maximum },
-            })
-          : null,
+      target: path,
+      detector: detector.id,
+      message: `${path} has ${metric} lines; the governed maximum is ${threshold}`,
+      evidence: { lineCount: metric, maximum: threshold },
     };
-  }
-  if (detector.kind === 'normalized-line-overlap') {
+  } else if (detector.kind === 'normalized-line-overlap') {
     const [leftPath, rightPath] = paths;
     const left = normalizedLines(
       io.readText(leftPath),
@@ -264,32 +256,21 @@ function evaluateDetector(topology, detector, io) {
       detector.minimumLineLength,
     );
     const shared = [...left].filter((line) => right.has(line)).sort();
-    return {
-      detector: detector.id,
+    metric = shared.length;
+    threshold = detector.maximumSharedLines;
+    findingInput = {
+      findingClass: detector.findingClass,
       topology: topology.id,
-      kind: detector.kind,
-      status:
-        shared.length > detector.maximumSharedLines ? 'finding' : 'remediated',
-      metric: shared.length,
-      threshold: detector.maximumSharedLines,
-      finding:
-        shared.length > detector.maximumSharedLines
-          ? integrityFinding({
-              findingClass: detector.findingClass,
-              topology: topology.id,
-              target: paths.join(','),
-              detector: detector.id,
-              message: `${shared.length} normalized policy lines are duplicated across ${paths.join(' and ')}`,
-              evidence: {
-                sharedLineCount: shared.length,
-                maximumSharedLines: detector.maximumSharedLines,
-                sample: shared.slice(0, 12),
-              },
-            })
-          : null,
+      target: paths.join(','),
+      detector: detector.id,
+      message: `${metric} normalized policy lines are duplicated across ${paths.join(' and ')}`,
+      evidence: {
+        sharedLineCount: metric,
+        maximumSharedLines: threshold,
+        sample: shared.slice(0, 12),
+      },
     };
-  }
-  if (detector.kind === 'token-spread') {
+  } else if (detector.kind === 'token-spread') {
     const matchedPaths = paths
       .map((relative) => {
         const text = io.readText(relative);
@@ -299,44 +280,46 @@ function evaluateDetector(topology, detector, io) {
         return { path: relative, tokens };
       })
       .filter(({ tokens }) => tokens.length > 0);
+    metric = matchedPaths.length;
+    threshold = detector.maximumPaths;
+    findingInput = {
+      findingClass: detector.findingClass,
+      topology: topology.id,
+      target: paths.join(','),
+      detector: detector.id,
+      message: `${metric} files carry the same platform primitive family; the governed maximum is ${threshold}`,
+      evidence: {
+        matchedPaths,
+        maximumPaths: threshold,
+      },
+    };
+  } else {
     return {
       detector: detector.id,
       topology: topology.id,
       kind: detector.kind,
-      status:
-        matchedPaths.length > detector.maximumPaths ? 'finding' : 'remediated',
-      metric: matchedPaths.length,
-      threshold: detector.maximumPaths,
-      finding:
-        matchedPaths.length > detector.maximumPaths
-          ? integrityFinding({
-              findingClass: detector.findingClass,
-              topology: topology.id,
-              target: paths.join(','),
-              detector: detector.id,
-              message: `${matchedPaths.length} files carry the same platform primitive family; the governed maximum is ${detector.maximumPaths}`,
-              evidence: {
-                matchedPaths,
-                maximumPaths: detector.maximumPaths,
-              },
-            })
-          : null,
+      status: 'invalid',
+      metric: null,
+      threshold: null,
+      finding: integrityFinding({
+        findingClass: 'policy-drift',
+        topology: topology.id,
+        target: detector.id || topology.id,
+        detector: detector.id,
+        message: `unknown integrity detector '${detector.kind}'`,
+      }),
     };
   }
+
+  const isFinding = metric > threshold;
   return {
     detector: detector.id,
     topology: topology.id,
     kind: detector.kind,
-    status: 'invalid',
-    metric: null,
-    threshold: null,
-    finding: integrityFinding({
-      findingClass: 'policy-drift',
-      topology: topology.id,
-      target: detector.id || topology.id,
-      detector: detector.id,
-      message: `unknown integrity detector '${detector.kind}'`,
-    }),
+    status: isFinding ? 'finding' : 'remediated',
+    metric,
+    threshold,
+    finding: isFinding ? integrityFinding(findingInput) : null,
   };
 }
 
@@ -955,6 +938,7 @@ function findFamilies(report, manifest, query) {
 }
 
 function queryTaskGraph(report, manifest, query, layers) {
+  const queryLower = query.toLowerCase();
   const ids = findFamilies(report, manifest, query);
   const families = report.families.filter((family) => ids.includes(family.id));
   const pathOwner = fs.existsSync(path.join(ROOT, query))
@@ -962,13 +946,13 @@ function queryTaskGraph(report, manifest, query, layers) {
     : '';
   const integrityTopologies = (report.integrity?.topologies || []).filter(
     (topology) =>
-      topology.id.toLowerCase().includes(query.toLowerCase()) ||
+      topology.id.toLowerCase().includes(queryLower) ||
       (topology.dimensions || []).some((dimension) =>
-        dimension.toLowerCase().includes(query.toLowerCase()),
+        dimension.toLowerCase().includes(queryLower),
       ) ||
       (topology.adapters || []).some(
         (adapter) =>
-          adapter.id.toLowerCase().includes(query.toLowerCase()) ||
+          adapter.id.toLowerCase().includes(queryLower) ||
           (adapter.paths || []).some(
             (relative) =>
               relative === query ||
@@ -977,44 +961,42 @@ function queryTaskGraph(report, manifest, query, layers) {
           ),
       ),
   );
+  const graphResolved =
+    families.length || pathOwner || integrityTopologies.length;
   return {
     schema: 'kungfu.maintainability-task-graph/v1',
-    verdict:
-      families.length || pathOwner || integrityTopologies.length
-        ? 'pass'
-        : 'unresolved',
+    verdict: graphResolved ? 'pass' : 'unresolved',
     query,
     authoritySemantics: report.authoritySemantics,
     owner: pathOwner || [...new Set(families.map((family) => family.owner))],
-    families: families.map((family) => ({
-      id: family.id,
-      authority: family.authority,
-      projections: family.surfaces.filter((surface) =>
+    families: families.map((family) => {
+      const projections = family.surfaces.filter((surface) =>
         ['generated-projection', 'thin-binding'].includes(surface.role),
-      ),
-      compatibilityReaders: family.surfaces.filter(
-        (surface) => surface.role === 'compatibility-reader',
-      ),
-      likelyWriteSet: [
-        ...family.authority.sources,
-        ...family.surfaces
-          .filter((surface) =>
-            ['generated-projection', 'thin-binding'].includes(surface.role),
-          )
-          .map((surface) => surface.path),
-      ],
-      affectedTests: family.surfaces.filter((surface) =>
-        ['test', 'conformance-oracle'].includes(surface.role),
-      ),
-      qualification: family.surfaces.filter(
-        (surface) => surface.role === 'package-release',
-      ),
-      documentation: family.surfaces.filter(
-        (surface) => surface.role === 'documentation',
-      ),
-      knownLimits: family.knownLimits,
-      recovery: family.recovery,
-    })),
+      );
+      return {
+        id: family.id,
+        authority: family.authority,
+        projections,
+        compatibilityReaders: family.surfaces.filter(
+          (surface) => surface.role === 'compatibility-reader',
+        ),
+        likelyWriteSet: [
+          ...family.authority.sources,
+          ...projections.map((surface) => surface.path),
+        ],
+        affectedTests: family.surfaces.filter((surface) =>
+          ['test', 'conformance-oracle'].includes(surface.role),
+        ),
+        qualification: family.surfaces.filter(
+          (surface) => surface.role === 'package-release',
+        ),
+        documentation: family.surfaces.filter(
+          (surface) => surface.role === 'documentation',
+        ),
+        knownLimits: family.knownLimits,
+        recovery: family.recovery,
+      };
+    }),
     integrityTopologies: integrityTopologies.map((topology) => ({
       id: topology.id,
       owner: topology.owner,

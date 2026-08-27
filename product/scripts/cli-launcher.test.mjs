@@ -17,6 +17,10 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
     posix,
     /KUNGFU_AGENT_SESSION_EXECUTABLE="\$here\/runtime\/kungfu"/,
   );
+  assert.match(
+    posix,
+    /KUNGFU_NATIVE_AGENT_SESSION_ENTRY="\$here\/tui\/native-agent-session\.mjs"/,
+  );
   assert.match(posix, /KUNGFU_CONTROLLER_ENTRYPOINT="\$here\/runtime\/kungfu"/);
   assert.match(posix, /while \[ -L "\$target" \]/);
   assert.match(posix, /exec "\$here\/runtime\/kungfu" "\$@"/);
@@ -31,6 +35,10 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
   assert.match(
     windows,
     /KUNGFU_AGENT_SESSION_EXECUTABLE=%~dp0runtime\\kungfu\.exe/,
+  );
+  assert.match(
+    windows,
+    /KUNGFU_NATIVE_AGENT_SESSION_ENTRY=%~dp0tui\\native-agent-session\.mjs/,
   );
   assert.match(
     windows,

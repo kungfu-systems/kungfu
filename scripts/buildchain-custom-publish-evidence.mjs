@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,29 +45,9 @@ function normalizeArtifact(artifact, index) {
   };
 }
 
-function generateKfdEvidence() {
-  const result = spawnSync(
-    process.execPath,
-    [path.join(SCRIPT_DIR, 'buildchain-kfd-evidence.mjs'), '--write'],
-    {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    },
-  );
-  if (result.status !== 0) {
-    throw new Error(
-      `failed to generate Buildchain KFD evidence: ${`${result.stdout || ''}${result.stderr || ''}`.trim()}`,
-    );
-  }
-  const output = `${result.stdout || ''}${result.stderr || ''}`.trim();
-  if (output) console.log(output);
-}
-
 function main() {
   const evidencePath = requireEnv('BUILDCHAIN_PUBLISH_EVIDENCE');
   const version = requireEnv('BUILDCHAIN_VERSION');
-  generateKfdEvidence();
   const requiredArtifactsPath =
     process.env.BUILDCHAIN_PUBLISH_REQUIRED_ARTIFACTS_PATH ||
     path.join(

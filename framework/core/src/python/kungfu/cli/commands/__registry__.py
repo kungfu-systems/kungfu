@@ -15,6 +15,7 @@ from . import rewind
 from . import schema
 from . import cut
 from . import assignment
+from . import work_semantics
 from . import dogfood
 from . import storage
 from . import query
@@ -43,8 +44,10 @@ from . import recover
 from . import exit
 from . import dev
 from . import work_design
+from kungfu.assignment_runtime import fresh_recovery
 
 kfx_authoring.register_authoring_commands(kfx.kfx, kfx.kfx_command_context)
+fresh_recovery.register_commands(assignment)
 
 __all__ = [
     "engage",
@@ -62,6 +65,7 @@ __all__ = [
     "schema",
     "cut",
     "assignment",
+    "work_semantics",
     "dogfood",
     "storage",
     "query",

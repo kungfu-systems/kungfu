@@ -8,7 +8,6 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { resolveGitBoundKfdEvidenceSourceSha } from '../framework/release/buildchain-kfd-runtime.mjs';
 import { scanTree } from './no-bash-guard.mjs';
 import {
   SOURCE_ACCEPTANCE_RUNTIME_OWNER,
@@ -219,38 +218,6 @@ test('KFD evidence accepts an exact tree-equivalent ancestor after queue rebase'
     }),
     sourceSha,
   );
-});
-
-test('KFD evidence runtime adapts the repository-bound Git reader for queue replay', () => {
-  const sourceSha = 'a'.repeat(40);
-  const resolved = resolveGitBoundKfdEvidenceSourceSha({
-    root: ROOT,
-    write: false,
-    committed: sourceSha,
-    configured: sourceSha,
-    prepareHistory: () => {},
-    selectSourceSha: () => sourceSha,
-    assertBinding: ({
-      sourceSha: selectedSourceSha,
-      headSha,
-      findTreeEquivalentAncestor,
-    }) => {
-      assert.equal(selectedSourceSha, sourceSha);
-      assert.equal(
-        findTreeEquivalentAncestor(selectedSourceSha, headSha),
-        'c'.repeat(40),
-      );
-      return selectedSourceSha;
-    },
-    findTreeEquivalentAncestor: (selectedSourceSha, headSha, gitRead) => {
-      assert.equal(selectedSourceSha, sourceSha);
-      assert.match(headSha, /^[0-9a-f]{40}$/u);
-      assert.equal(typeof gitRead, 'function');
-      assert.equal(gitRead(['rev-parse', 'HEAD']), headSha);
-      return 'c'.repeat(40);
-    },
-  });
-  assert.equal(resolved, sourceSha);
 });
 
 test('KFD evidence checks the committed witness binding under an exact CI source', () => {

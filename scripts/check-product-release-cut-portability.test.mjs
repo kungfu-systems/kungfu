@@ -84,7 +84,12 @@ test('copy-forward ordering is cache-independent and interruption-safe', () => {
 });
 
 test('implementation delegates to the existing owner services', () => {
-  const composer = read('framework/core/src/python/kungfu/exit_bundle.py');
+  const composer = read(
+    'framework/core/src/python/kungfu/_exit_bundle/common.py',
+  );
+  const importer = read(
+    'framework/core/src/python/kungfu/_exit_bundle/importer.py',
+  );
   const history = read(
     'framework/core/src/python/kungfu/product_release_history.py',
   );
@@ -98,6 +103,6 @@ test('implementation delegates to the existing owner services', () => {
   assert.match(composer, /"product-release-cut-v1": \{/u);
   assert.match(composer, /_PRODUCT_RELEASE_HISTORY\.build/u);
   assert.match(composer, /_PRODUCT_RELEASE_HISTORY\.verify/u);
-  assert.match(composer, /_PRODUCT_RELEASE_HISTORY\.import_history/u);
+  assert.match(importer, /_PRODUCT_RELEASE_HISTORY\.import_history/u);
   assert.match(cli, /config_home=ctx\.config_home/u);
 });

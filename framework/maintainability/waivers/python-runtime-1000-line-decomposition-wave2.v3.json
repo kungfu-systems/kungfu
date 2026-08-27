@@ -1,0 +1,193 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:0c7b67e4e6da7243ae03aa2441fdc92e61fc0273a90512f15694324e03805295",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "framework/core/src/python/kungfu/_exit_bundle/builder.py",
+    "framework/core/src/python/kungfu/_exit_bundle/common.py",
+    "framework/core/src/python/kungfu/_exit_bundle/importer.py",
+    "framework/core/src/python/kungfu/_exit_bundle/verification.py",
+    "framework/core/src/python/kungfu/_peer_lifecycle/client.py",
+    "framework/core/src/python/kungfu/_peer_lifecycle/host.py",
+    "framework/core/src/python/kungfu/_peer_lifecycle/state.py",
+    "framework/core/src/python/kungfu/_runtime_service/common.py",
+    "framework/core/src/python/kungfu/_runtime_service/engine.py",
+    "framework/core/src/python/kungfu/_runtime_service/state.py",
+    "framework/core/src/python/kungfu/_runtime_service/supervisor.py",
+    "framework/core/src/python/kungfu/_runtime_upgrade/common.py",
+    "framework/core/src/python/kungfu/_runtime_upgrade/image_lifecycle.py",
+    "framework/core/src/python/kungfu/_runtime_upgrade/release_cut.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/peer.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/service.py",
+    "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "framework/core/src/python/kungfu/_exit_bundle/builder.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 261,
+      "contentRoot": "sha256:3d1285f5e6e906a372a7f3c9499ba94a5e5f58b83906b475c2e19c5103427290"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_exit_bundle/common.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 584,
+      "contentRoot": "sha256:1f72d83a22fcb3408daf2b1c0f6f45894443eb91cfb0084d0e08358c344d7da7"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_exit_bundle/importer.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 513,
+      "contentRoot": "sha256:a293f5753fe2c1637f45adbd89394672abbf068bfbdbbf1336e06c1980c289c6"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_exit_bundle/verification.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 246,
+      "contentRoot": "sha256:8dfd8c3a56886564b6e02df9f8ba029c0b50d321dae8f688a98a6c4e72b8a2b3"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_peer_lifecycle/client.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 313,
+      "contentRoot": "sha256:1b388bbd5be67e684049094bb81be47630d8b0c5cf23636955795934254f8dd5"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_peer_lifecycle/host.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 577,
+      "contentRoot": "sha256:7879c33bd44729030291624b143dc8e770b42e8446197026ee0c60791207f810"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_peer_lifecycle/state.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 465,
+      "contentRoot": "sha256:1e7ea0986da81577a5d73538df281dc07c6eea42b08be878fa82cac4f2408c0a"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/common.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 281,
+      "contentRoot": "sha256:09bba6a6aa395ccca3c69f9f642e5b78ae3d288edbfd035fd024cb9a8cac3337"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/engine.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 298,
+      "contentRoot": "sha256:d553eb5665a682d287ab4e2322bfc3b3f3d44352539343be4c8c9971b474b9fb"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/state.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 779,
+      "contentRoot": "sha256:68d475dc6ec635e3bbeccd3a50ca7182aaa0d2fbd99c9b4b152a758861d7d5eb"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_service/supervisor.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 850,
+      "contentRoot": "sha256:ae34da9d703a81ea75fc7d25387dcd62d200e79cff1c92d120266a78b332a24a"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_upgrade/common.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 191,
+      "contentRoot": "sha256:81ae6c4ad3b406598dad144695ab664d8a77020908b52f22e2f14730cb34df8f"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_upgrade/image_lifecycle.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 942,
+      "contentRoot": "sha256:17ad67ea58444432ea2ea8c9afa3100008e2065b4b03d90953bcb92ea0319938"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_runtime_upgrade/release_cut.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 968,
+      "contentRoot": "sha256:749025a112ef6697d94f8f5115eb310634682d1dde2e7d02b0c5d75d41776dfe"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 156,
+      "contentRoot": "sha256:799fb1a5f01c21ca35fb20b773ce85b472c03fccbd6a022091ef55cd024c8123"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/peer.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 208,
+      "contentRoot": "sha256:977f32a802b9042f63ad7c294ab7d91020ed5e074d0f8f91826905395a0febae"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/service.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 400,
+      "contentRoot": "sha256:be0623ab7988e197571ce93003060f651597b06d16e66cf6ee3d76803afcb26c"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 296,
+      "contentRoot": "sha256:72245bb04eea56b55f56d11ab44e955685182fd929861c8bd64aa23a4d20ce8f"
+    }
+  ],
+  "allowed_delta": 8328,
+  "owner": "core/package",
+  "responsibility_boundary": "Wave 2 decomposes five protected Python runtime hotspots into explicit runtime upgrade, exit bundle, peer lifecycle, runtime service, and runtime CLI responsibility owners while retaining stable public facades.",
+  "cohesion_rationale": "The eighteen files are the minimum explicit owner set required to separate the five independently governed runtime responsibilities below 1000 physical lines without hiding behavior in generated code or changing stable import and CLI surfaces.",
+  "rejected_split_alternatives": [
+    "Keeping no more than three helper files would preserve multi-responsibility megamodules above the goal threshold.",
+    "Relabeling the files as generated, vendored, test, or a different coarse architecture owner would launder handwritten production responsibility.",
+    "Removing the stable facades would break supported imports, monkeypatch seams, and Click command registration."
+  ],
+  "affected_tests_and_qualification": [
+    "./shifu test:runtime-upgrade",
+    "focused peer lifecycle, runtime service, runtime CLI, and exit bundle pytest suites",
+    "./shifu check:python-structure",
+    "./shifu maintainability:amplification --json",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong+cx@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-wave2"
+}

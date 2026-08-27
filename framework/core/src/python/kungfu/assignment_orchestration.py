@@ -507,15 +507,18 @@ def assignment_projection(
 
 
 def next_actions(status: Mapping[str, Any]) -> list[dict[str, Any]]:
-    identity = {
-        "initiative_id": str(status.get("initiative_id") or ""),
-        "assignment_id": str(status.get("assignment_id") or ""),
-    }
+    identity_keys = ("initiative_id", "assignment_id")
+    identity = {key: str(status.get(key) or "") for key in identity_keys}
     phase = str(status.get("phase") or "")
+    if phase == "executing" and not status.get("active_lease"):
+        recovered = status.get("recovery_continuation")
+        phase = "recovered-closeout" if recovered else "recovery-required"
     table = {
         "admitted": [("claim", "Mint a bounded owner/agent/slot lease")],
         "claimed": [("kickoff", "Enter execution under the active lease")],
         "executing": [("stage", "Record the stage-ready boundary")],
+        "recovery-required": [("fresh-recovery-plan", "Recover a fresh attempt")],
+        "recovered-closeout": [("claim-completion", "Publish proof-backed completion")],
         "stage-ready": [("claim-completion", "Publish proof-backed completion")],
         "completion-claimed": [("review", "Run independent completion review")],
         "independently-reviewed": [("decide", "Bind a continuation decision")],

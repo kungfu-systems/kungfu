@@ -13,9 +13,13 @@ import {
   type KfxControlStatus,
   type KfxExperienceFlowDescriptor,
   authorizeKfxHostLaunch,
+  openKfxRuntimeWarrant,
   projectKfxControlSuiteHost,
   projectKfxExperienceFlowHost,
 } from '../src/capability/kfx-host.ts';
+import type { KfNativeBinding } from '../src/capability/types.ts';
+
+const root = (char: string) => `sha256:${char.repeat(64)}`;
 
 const descriptor: KfxExperienceFlowDescriptor = {
   schema: 'kungfu.kfx.experience-flow-host/v3',
@@ -175,6 +179,117 @@ test('runtime launch requires the exact grant, generation, and authorization roo
       ),
     /(admission identity|authorization) does not match/,
   );
+});
+
+test('product hosts adopt, heartbeat, and settle only the exact Core Runtime Warrant fence', () => {
+  const calls: Array<Record<string, unknown>> = [];
+  const runtimeAuthorization = descriptor.runtimeAuthorizations[0];
+  assert.ok(runtimeAuthorization);
+  const authorization = {
+    ...runtimeAuthorization,
+    host: 'service-node' as const,
+  };
+  const adoption = {
+    schema: 'kungfu.kfx.runtime-warrant-adoption/v1' as const,
+    executionAllowed: true as const,
+    runtimeWarrant: {
+      schema: 'kungfu.kfx.runtime-warrant/v1' as const,
+      warrantRoot: root('e'),
+      packageKey: authorization.packageKey,
+      host: authorization.host,
+      holder: 'service-host:42',
+      capabilityGrantRoot: authorization.capabilityGrantRoot,
+      hostAuthorizationRoot: authorization.authorizationRoot,
+      mutationWarrantRoot: root('f'),
+      expiresAt: 10_000,
+      heartbeatTtl: 1_000,
+    },
+    leaseState: {
+      schema: 'kungfu.kfx.runtime-lease-state-fact/v1' as const,
+      warrantRoot: root('e'),
+      packageKey: authorization.packageKey,
+      host: authorization.host,
+      holder: 'service-host:42',
+      generation: 3,
+      fencingToken: root('a'),
+      state: 'active' as const,
+      heartbeatAt: 1_000,
+      heartbeatDeadline: 2_000,
+      expiresAt: 10_000,
+    },
+    recovery: null,
+    receipt: {},
+  };
+  const binding = {
+    runStorageServiceOperation: (
+      _operation: string,
+      _runtimeDir: string,
+      options: Record<string, unknown>,
+    ) => {
+      calls.push(options);
+      return calls.length === 1
+        ? adoption
+        : {
+            schema: 'kungfu.kfx.runtime-warrant-transition/v1',
+            event: calls.length === 2 ? 'heartbeat' : 'settled',
+            leaseState: { state: calls.length === 2 ? 'active' : 'settled' },
+            receipt: {},
+          };
+    },
+  } as unknown as KfNativeBinding;
+  const warrant = openKfxRuntimeWarrant({
+    binding,
+    locator: { runtimeDir: '/runtime' },
+  });
+  const adopted = warrant.adopt(authorization, {
+    holder: 'service-host:42',
+    purpose: 'run the authorized service adapter',
+    leaseNonce: 'launch-42',
+    issuedAt: 1_000,
+    expiresAt: 10_000,
+    heartbeatTtl: 1_000,
+    residualResponsibility: 'retained-by-kungfu-core',
+    requestedCapabilities: authorization.grantedCapabilities,
+  });
+  warrant.heartbeat(adopted, 1_500);
+  warrant.settle(adopted, {
+    recordedAt: 1_600,
+    outcome: 'completed',
+    residualResponsibilityDisposition: 'retained-by-kungfu-core',
+  });
+
+  assert.deepEqual(
+    calls.map((call) => call.action),
+    [
+      'runtime-warrant-adopt',
+      'runtime-warrant-heartbeat',
+      'runtime-warrant-settle',
+    ],
+  );
+  const issueRequest = calls[0]?.request as Record<string, unknown>;
+  assert.equal(issueRequest.expectedCapabilityGrantRoot, root('8'));
+  assert.equal(issueRequest.expectedAuthorizationRoot, root('d'));
+  assert.equal(issueRequest.expectedGenerationRoot, root('6'));
+  const heartbeatRequest = calls[1]?.request as Record<string, unknown>;
+  assert.equal(heartbeatRequest.expectedWarrantRoot, root('e'));
+  assert.equal(heartbeatRequest.expectedGeneration, 3);
+  assert.equal(heartbeatRequest.expectedFencingToken, root('a'));
+  assert.notEqual(
+    adoption.runtimeWarrant.warrantRoot,
+    adoption.runtimeWarrant.capabilityGrantRoot,
+  );
+  assert.notEqual(
+    adoption.runtimeWarrant.warrantRoot,
+    adoption.runtimeWarrant.mutationWarrantRoot,
+  );
+
+  const substituted = structuredClone(adoption);
+  substituted.leaseState.warrantRoot = root('0');
+  assert.throws(
+    () => warrant.heartbeat(substituted, 1_700),
+    /adoption identity does not match/,
+  );
+  assert.equal(calls.length, 3);
 });
 
 test('preview and mismatched admissions fail closed before host execution', () => {

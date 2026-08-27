@@ -15,7 +15,7 @@ from typing import Any, Literal, TypeVar, cast
 
 from kungfu import profile_composition, profile_sdk
 from kungfu.canonical_json import canonical_json_text
-from kungfu.storage import service as storage_service
+from kungfu.storage import content_store, service as storage_service
 
 CONTRACT_WORLD_ID = "kungfu.initiative-assignment"
 CONTRACT_VERSION = "1"
@@ -35,6 +35,9 @@ AGENT_FACT_SOURCE_ID = "kungfu-agent"
 _T = TypeVar("_T")
 _BOUND_WORK_CONTROL_SOURCE: ContextVar[str] = ContextVar(
     "kungfu_work_control_profile_source", default=""
+)
+_INACTIVE_PROJECTION_READ: ContextVar[bool] = ContextVar(
+    "kungfu_work_control_inactive_projection_read", default=False
 )
 
 FACT_SURFACES = (INITIATIVE_SURFACE_ID, ASSIGNMENT_SURFACE_ID, CLAIM_SURFACE_ID)
@@ -249,23 +252,121 @@ def work_control_profile_source(runtime_dir: str) -> dict[str, Any]:
     return profile_sdk.discover_source(WORK_CONTROL_PROFILE_ID, runtime_dir)
 
 
-def _with_profile_source(source: str, operation: Callable[[], _T]) -> _T:
-    """Keep one verified adapter invocation on its exact Suite source."""
-
+def _with_profile_source(
+    source: str,
+    operation: Callable[[], _T],
+    *,
+    inactive_projection_read: bool = False,
+) -> _T:
     token = _BOUND_WORK_CONTROL_SOURCE.set(str(Path(source).resolve()))
+    projection_token = _INACTIVE_PROJECTION_READ.set(inactive_projection_read)
     try:
         return operation()
     finally:
+        _INACTIVE_PROJECTION_READ.reset(projection_token)
         _BOUND_WORK_CONTROL_SOURCE.reset(token)
+
+
+_RETIRED_ATLAS_SOURCE = "atlas-adapter"
+_RETIRED_ATLAS_SURFACES = {
+    INITIATIVE_SURFACE_ID,
+    ASSIGNMENT_SURFACE_ID,
+}
+
+
+def _retained_source_authority_compatibility(
+    runtime_dir: str, error: profile_sdk.ProfileSdkError
+) -> dict[str, Any]:
+    """Recognize the exact pre-cutover Atlas writer as retained history only."""
+
+    diagnosis = error.diagnosis
+    if (
+        diagnosis.get("code") != "fact-surface-authority-migration-required"
+        or diagnosis.get("factSurface") not in _RETIRED_ATLAS_SURFACES
+        or diagnosis.get("admittedSourceAuthorities") != [_RETIRED_ATLAS_SOURCE]
+    ):
+        raise error
+    observed = {
+        str(row.get("source_id") or "")
+        for row in storage_service.fact_state(runtime_dir).get(
+            "observation_history", []
+        )
+        if row.get("outcome") == "admitted"
+        and row.get("fact_surface_id") in _RETIRED_ATLAS_SURFACES
+    }
+    allowed = {"kungfu-user", "kungfu-agent", _RETIRED_ATLAS_SOURCE}
+    unexpected = sorted(observed - allowed)
+    if unexpected or _RETIRED_ATLAS_SOURCE not in observed:
+        raise profile_sdk.ProfileSdkError(
+            "fact-surface-authority-migration-required",
+            "Work Control found source-authority history outside its exact retained compatibility boundary",
+            admittedSourceAuthorities=sorted(observed),
+            unexpectedSourceAuthorities=unexpected,
+        ) from error
+    return {
+        "schema": "kungfu.work-control.retained-source-authority/v1",
+        "status": "retained-history-compatible",
+        "operations": [],
+        "retainedSourceAuthorities": [_RETIRED_ATLAS_SOURCE],
+        "factSurfaces": sorted(_RETIRED_ATLAS_SURFACES),
+        "writeAuthority": "kungfu-native",
+        "migrationPerformed": False,
+        "nonClaims": [
+            "retained history does not restore the removed Atlas adapter",
+            "compatibility is not a source-authority migration",
+        ],
+    }
+
+
+def contract_materialization_plan(runtime_dir: str, source: str) -> dict[str, Any]:
+    """Resolve the exact Work contract plan and its retained-history boundary."""
+
+    try:
+        return profile_composition.contract_materialization_plan(
+            source,
+            runtime_dir,
+            require_active=not _INACTIVE_PROJECTION_READ.get(),
+        )
+    except profile_sdk.ProfileSdkError as error:
+        return _retained_source_authority_compatibility(runtime_dir, error)
+
+
+def ensure_profile_contract(
+    runtime_dir: str, source: str, authorized_by: str
+) -> list[dict[str, Any]]:
+    """Materialize Work declarations or prove the retained-history boundary."""
+
+    contract = contract_materialization_plan(runtime_dir, source)
+    if contract.get("status") == "retained-history-compatible":
+        return [
+            {
+                "schema": "kungfu.work.profile-contract-compatibility-receipt/v1",
+                "profileContract": _ensure_contract(runtime_dir),
+                "writeOccurred": False,
+            }
+        ]
+    if not contract["operations"]:
+        return []
+    answer = profile_sdk.answer_decision(
+        contract["decisionCard"], "approve", authorized_by
+    )
+    return [
+        profile_composition.authorized_contract_materialize(
+            runtime_dir, contract, answer
+        )
+    ]
 
 
 def _profile_context(runtime_dir: str) -> dict[str, Any]:
     discovered = work_control_profile_source(runtime_dir)
     source = discovered["source"]
-    composed = profile_composition.catalog(source, runtime_dir, require_active=True)
-    materialization = profile_composition.contract_materialization_plan(
-        source, runtime_dir
+    require_active = not _INACTIVE_PROJECTION_READ.get()
+    composed = profile_composition.catalog(
+        source,
+        runtime_dir,
+        require_active=require_active,
     )
+    materialization = contract_materialization_plan(runtime_dir, source)
     if materialization["operations"]:
         raise profile_sdk.ProfileSdkError(
             "profile-contract-not-materialized",
@@ -286,11 +387,14 @@ def _ensure_contract(runtime_dir: str, system_time: int = 0) -> dict[str, Any]:
     context = _profile_context(runtime_dir)
     return {
         "schema": "kungfu.work-control.profile-contract/v1",
-        "status": "current",
+        "status": context["contractPlan"].get("status", "current"),
         "profile_id": WORK_CONTROL_PROFILE_ID,
         "profile_suite_root": context["catalog"]["profileSuiteRoot"],
         "catalog_root": context["catalog"]["catalogRoot"],
         "source": context["source"],
+        "retained_source_authorities": context["contractPlan"].get(
+            "retainedSourceAuthorities", []
+        ),
     }
 
 
@@ -495,17 +599,27 @@ def _batched_state_query(
             },
             "definition": query,
         }
+        require_active = not _INACTIVE_PROJECTION_READ.get()
         plan = profile_composition.resolved_query_plan(
-            context["source"], runtime_dir, "initiative-state", resolution
+            context["source"],
+            runtime_dir,
+            "initiative-state",
+            resolution,
+            require_active=require_active,
         )
         receipt = profile_composition.execute_query(
-            context["source"], runtime_dir, plan
+            context["source"], runtime_dir, plan, require_active=require_active
         )
         results.append(receipt["result"])
         receipts.append(receipt)
     if len(results) == 1:
         composed_receipt = profile_composition.compose_query_receipt(
-            context["source"], runtime_dir, "initiative-state", receipts, results[0]
+            context["source"],
+            runtime_dir,
+            "initiative-state",
+            receipts,
+            results[0],
+            require_active=not _INACTIVE_PROJECTION_READ.get(),
         )
         return {
             **results[0],
@@ -621,17 +735,17 @@ def query_state(
         cut_system_time=cut_system_time,
     )
     result = _batched_state_query(runtime_dir, definition)
-    materials = storage_service.fact_material_list(
-        runtime_dir, cut_system_time=cut_system_time
-    )
-    payloads = materials.get("payloads", {})
     rows = []
     initiative = None
     assignments = []
     claims = []
     reviews = []
     for row in result.get("rows", []):
-        body = payloads.get(str(row.get("payload_hash") or ""))
+        body = json.loads(
+            content_store.get(
+                runtime_dir, content_store.PAYLOADS_NAMESPACE, row["payload_hash"]
+            )
+        )
         resolved = {**row, "payload": body}
         rows.append(resolved)
         if row.get("fact_surface_id") == INITIATIVE_SURFACE_ID:
@@ -1039,9 +1153,6 @@ def create_assignment(
     _ensure_native_write_allowed(runtime_dir)
     system_time = system_time or time.time_ns()
     _ensure_contract(runtime_dir, system_time)
-    initiative_id = initiative_id
-    assignment_id = assignment_id
-    parent_assignment_id = parent_assignment_id
     explicit_initiative_ref = _validated_work_ref(
         initiative_ref,
         object_kind="initiative",
@@ -1624,6 +1735,23 @@ def claim_assignment_execution(
     }
 
 
+def resolve_canonical_state(
+    runtime_dir: str,
+    initiative_id: str,
+    storage_source_id: str,
+    existing: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Reuse one canonical projection or obtain it from its query authority."""
+
+    if existing is not None:
+        return existing
+    return query_state(
+        runtime_dir,
+        initiative_id=initiative_id,
+        storage_source_id=storage_source_id,
+    )
+
+
 def assignment_orchestration_status(
     runtime_dir: str,
     *,
@@ -1631,15 +1759,14 @@ def assignment_orchestration_status(
     assignment_id: str,
     storage_source_id: str = "kungfu",
     now: str = "",
+    canonical_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fold append-only orchestration facts into one deterministic Assignment phase."""
 
     from . import native_state
 
-    state = native_state.query_state(
-        runtime_dir,
-        initiative_id=initiative_id,
-        storage_source_id=storage_source_id,
+    state = resolve_canonical_state(
+        runtime_dir, initiative_id, storage_source_id, canonical_state
     )
     assignment = native_state.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
@@ -2099,6 +2226,39 @@ def _tracked_completion_evidence(
     return evidence
 
 
+def _require_semantic_completion(
+    runtime_dir: str,
+    *,
+    initiative_id: str,
+    assignment_id: str,
+    storage_source_id: str,
+    proof_roots: list[str] | None,
+) -> None:
+    from . import work_semantics
+
+    semantics = work_semantics.status(
+        runtime_dir,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        storage_source_id=storage_source_id,
+    )
+    if not semantics["current_input_snapshot"]:
+        return
+    if not semantics["completion_eligible"]:
+        raise ValueError(
+            "Work semantics effects must be settled before completion can be claimed"
+        )
+    required = {
+        semantics["current_input_snapshot"]["record_root"],
+        semantics["managed_runs"][-1]["record_root"],
+        *[row["record_root"] for row in semantics["effect_outcomes"]],
+    }
+    if not required.issubset(set(proof_roots or [])):
+        raise ValueError(
+            "completion proof_roots must bind the current Work semantics evidence"
+        )
+
+
 def claim_completion(
     runtime_dir: str,
     *,
@@ -2148,6 +2308,13 @@ def claim_completion(
         raise ValueError(f"Assignment not found under Initiative: {assignment_id}")
     if not statement.strip() or not actor.strip():
         raise ValueError("statement and actor are required")
+    _require_semantic_completion(
+        runtime_dir,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        storage_source_id=storage_source_id,
+        proof_roots=proof_roots,
+    )
     evidence = [
         _verified_episode(runtime_dir, int(episode_id))
         for episode_id in (evidence_episode_ids or [])

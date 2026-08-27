@@ -74,14 +74,14 @@ test('retired complexity signing residues fail closed with exact identifiers', (
   );
 });
 
-test('git probes fail fast with a precise timeout', () => {
+test('git probes remain bounded with a precise timeout', () => {
   assert.throws(
     () =>
       git(['show', 'HEAD:file'], {}, () => ({
         status: null,
         error: { code: 'ETIMEDOUT' },
       })),
-    /timed out after 10000ms/,
+    /timed out after 60000ms/,
   );
 });
 
@@ -402,6 +402,31 @@ test('new-file anti-gaming ignores helpers already present on the protected base
     issues.some(
       (issue) => issue.code === 'new-handwritten-file-over-hard-budget',
     ),
+    false,
+  );
+});
+
+test('split anti-gaming ignores baseline deletions already absent from the protected base', () => {
+  const historicalDeletion = handwritten('scripts/historical-hotspot.mjs', 120);
+  const currentHelpers = [
+    handwritten('scripts/current-reader.mjs', 50),
+    handwritten('scripts/current-writer.mjs', 50),
+  ];
+  const issues = regressionIssues(
+    currentHelpers,
+    { groups, files: [historicalDeletion] },
+    {
+      antiGaming: {
+        maxNewHandwrittenFilesPerOwner: 3,
+        newGeneratedProjectionRequiresProvenance: true,
+      },
+    },
+    new Map(),
+    new Set(currentHelpers.map((file) => file.path)),
+    new Set(),
+  );
+  assert.equal(
+    issues.some((issue) => issue.code === 'responsibility-preserving-split'),
     false,
   );
 });

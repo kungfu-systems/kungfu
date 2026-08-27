@@ -18,6 +18,8 @@ from kungfu import kfx_contract, profile_sdk
 from kungfu.profile_sdk_kfd3 import contract_operations, materialize_contract
 from kungfu.storage import service as storage_service
 
+SourcePath = str | Path
+JsonObject = Mapping[str, Any]
 
 CATALOG_SCHEMA = "kungfu.profile-composition/v1"
 QUERY_PLAN_SCHEMA = "kungfu.profile-query-plan/v1"
@@ -209,14 +211,15 @@ def query_plan(
 
 
 def resolved_query_plan(
-    source: str | Path,
-    runtime_dir: str | Path,
+    source: SourcePath,
+    runtime_dir: SourcePath,
     view_id: str,
-    resolution: Mapping[str, Any],
+    resolution: JsonObject,
+    require_active: bool = True,
 ) -> dict[str, Any]:
     """Bind one member-resolved QueryDefinition to an exact active family."""
 
-    composed = catalog(source, runtime_dir, require_active=True)
+    composed = catalog(source, runtime_dir, require_active=require_active)
     view = _by_id(composed["views"], view_id, "view")
     family = view.get("queryFamily")
     if not isinstance(family, Mapping):
@@ -259,9 +262,10 @@ def resolved_query_plan(
 
 
 def execute_query(
-    source: str | Path,
-    runtime_dir: str | Path,
-    plan: Mapping[str, Any],
+    source: SourcePath,
+    runtime_dir: SourcePath,
+    plan: JsonObject,
+    require_active: bool = True,
 ) -> dict[str, Any]:
     if plan.get("schema") not in {QUERY_PLAN_SCHEMA, RESOLVED_QUERY_PLAN_SCHEMA}:
         _fail("query-plan-invalid", "execute requires a Profile query plan")
@@ -271,6 +275,7 @@ def execute_query(
             runtime_dir,
             str((plan.get("view") or {}).get("id") or ""),
             dict(plan.get("resolution") or {}),
+            require_active=require_active,
         )
     else:
         refreshed = query_plan(
@@ -297,11 +302,12 @@ def execute_query(
 
 
 def compose_query_receipt(
-    source: str | Path,
-    runtime_dir: str | Path,
+    source: SourcePath,
+    runtime_dir: SourcePath,
     view_id: str,
-    receipts: Sequence[Mapping[str, Any]],
-    result: Mapping[str, Any],
+    receipts: Sequence[JsonObject],
+    result: JsonObject,
+    require_active: bool = True,
 ) -> dict[str, Any]:
     """Bind a domain reducer's composite result to exact public subreceipts."""
 
@@ -313,7 +319,7 @@ def compose_query_receipt(
                 "single query receipt result changed during composition",
             )
         return single_receipt
-    composed = catalog(source, runtime_dir, require_active=True)
+    composed = catalog(source, runtime_dir, require_active=require_active)
     view = _by_id(composed["views"], view_id, "view")
     if not receipts:
         _fail("query-composition-empty", "query composition requires subreceipts")
@@ -549,11 +555,13 @@ def authorized_assessment_execute(
 
 
 def contract_materialization_plan(
-    source: str | Path, runtime_dir: str | Path
+    source: SourcePath,
+    runtime_dir: SourcePath,
+    require_active: bool = True,
 ) -> dict[str, Any]:
     """Plan explicit KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 declarations from one active Profile closure."""
 
-    composed = catalog(source, runtime_dir, require_active=True)
+    composed = catalog(source, runtime_dir, require_active=require_active)
     validated = profile_sdk.validate_source(source, runtime_dir)
     inspection = validated["inspection"]
     artifact = _read_typed_ref(
@@ -563,25 +571,11 @@ def contract_materialization_plan(
     )
     _validate_contract_material(inspection["profile"], composed, artifact)
     current = storage_service.fact_type_list(runtime_dir)
-    fact_state = storage_service.fact_state(runtime_dir)
-    admitted_sources: dict[tuple[str, str, str], set[str]] = {}
-    for row in fact_state.get("observation_history") or []:
-        if row.get("outcome") != "admitted":
-            continue
-        key = (
-            str(row.get("fact_surface_id") or ""),
-            str(row.get("schema_owner_root") or ""),
-            str(row.get("contract_world_id") or ""),
-        )
-        source_id = str(row.get("source_id") or "")
-        if all(key) and source_id:
-            admitted_sources.setdefault(key, set()).add(source_id)
     operations = contract_operations(
         artifact,
         current,
         fail=_fail,
         root=_root,
-        admitted_sources=admitted_sources,
     )
     identity = {
         "source": str(Path(source).resolve()),

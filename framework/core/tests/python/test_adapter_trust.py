@@ -74,8 +74,8 @@ def _host_descriptor(package_key, authorization_root):
         "runtimeTier": "integrated-explicit",
         "admissionGrade": "kfd-attested",
         "placement": "co-resident",
-        "requiredCapabilities": [],
-        "grantedCapabilities": [],
+        "requiredCapabilities": ["process"],
+        "grantedCapabilities": ["process"],
         "reportRoot": roots["report"],
         "admissionPlanRoot": roots["admissionPlan"],
         "corePolicyRoot": roots["corePolicy"],
@@ -163,7 +163,11 @@ def _mock_native_authority(
                     "manifestRoot": candidate["manifestRoot"],
                 }
             }
-        if action != "authorize-host":
+        if action == "runtime-warrant-heartbeat":
+            return {"leaseState": {"state": "active"}}
+        if action == "runtime-warrant-settle":
+            return {"leaseState": {"state": "settled"}}
+        if action != "runtime-warrant-adopt":
             raise AssertionError(f"unexpected native KFX action: {action}")
         candidate = next(
             (
@@ -181,8 +185,24 @@ def _mock_native_authority(
         ):
             raise ValueError("KF_KFX_AUTHORIZATION_STALE")
         return {
+            "schema": "kungfu.kfx.runtime-warrant-adoption/v1",
             "executionAllowed": True,
-            "authorization": candidate,
+            "hostLaunch": {"authorization": candidate},
+            "runtimeWarrant": {
+                "warrantRoot": f"sha256:{'6' * 64}",
+                "packageKey": candidate["packageKey"],
+                "host": candidate["host"],
+                "holder": request["holder"],
+                "capabilityGrantRoot": candidate["capabilityGrantRoot"],
+                "mutationWarrantRoot": candidate["warrantRoot"],
+            },
+            "leaseState": {
+                "warrantRoot": f"sha256:{'6' * 64}",
+                "holder": request["holder"],
+                "generation": 1,
+                "fencingToken": f"sha256:{'7' * 64}",
+                "state": "active",
+            },
         }
 
     monkeypatch.setattr(adapters.storage_service, "kfx_registry", kfx_registry)
@@ -200,7 +220,7 @@ def test_discovery_origin_and_package_name_confer_zero_authority(tmp_path, monke
     _setup(tmp_path, monkeypatch)
     _mock_native_authority(monkeypatch, None)
     entries, dirs, refused = adapters.discover_adapters(
-        str(tmp_path / "runtime"), "python"
+        str(tmp_path / "runtime"), "python", []
     )
     assert entries == [] and dirs == []
     assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
@@ -214,16 +234,22 @@ def test_only_the_exact_core_authorization_allows_in_process_injection(
     descriptor = _host_descriptor("external-b", authorization_root)
     calls = _mock_native_authority(monkeypatch, descriptor, "external-b")
 
+    leases = []
     entries, dirs, refused = adapters.discover_adapters(
-        str(tmp_path / "runtime"), "python"
+        str(tmp_path / "runtime"), "python", leases
     )
     assert len(entries) == 1
     assert {os.path.basename(path) for path in dirs} == {"external-b"}
     assert {row["key"] for row in refused} == {"bundled-a"}
-    launch = next(request for action, request, _ in calls if action == "authorize-host")
+    launch = next(
+        request for action, request, _ in calls if action == "runtime-warrant-adopt"
+    )
     assert launch["expectedCutRoot"] == descriptor["cutRoot"]
     assert launch["expectedGenerationRoot"] == descriptor["generationRoot"]
     assert launch["expectedAuthorizationRoot"] == authorization_root
+    assert launch["requestedCapabilities"] == ["process"]
+    for lease in leases:
+        lease.settle("completed")
 
 
 def test_caller_supplied_descriptor_conveys_zero_authority(tmp_path, monkeypatch):
@@ -235,7 +261,7 @@ def test_caller_supplied_descriptor_conveys_zero_authority(tmp_path, monkeypatch
     _mock_native_authority(monkeypatch, None)
 
     entries, dirs, refused = adapters.discover_adapters(
-        str(tmp_path / "runtime"), "python"
+        str(tmp_path / "runtime"), "python", []
     )
     assert entries == [] and dirs == []
     assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
@@ -249,8 +275,8 @@ def test_same_key_shadow_with_different_closure_is_refused(tmp_path, monkeypatch
     )
 
     entries, dirs, refused = adapters.discover_adapters(
-        str(tmp_path / "runtime"), "python"
+        str(tmp_path / "runtime"), "python", []
     )
     assert entries == [] and dirs == []
     assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
-    assert not any(action == "authorize-host" for action, _, _ in calls)
+    assert not any(action == "runtime-warrant-adopt" for action, _, _ in calls)

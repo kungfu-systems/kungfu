@@ -242,7 +242,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 4dabecd7056e168f7345d460e3729465a932db9c
+          ref: 8493bf140a7f567e76aff3119f3d39ff026afc84
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -543,9 +543,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@4dabecd7056e168f7345d460e3729465a932db9c
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@8493bf140a7f567e76aff3119f3d39ff026afc84
     with:
-      buildchain-ref: 4dabecd7056e168f7345d460e3729465a932db9c
+      buildchain-ref: 8493bf140a7f567e76aff3119f3d39ff026afc84
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -638,6 +638,7 @@ jobs:
           EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
           SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
           TARGET_BRANCH: ${{ needs.resolve-target.outputs.target-branch }}
+          DELIVERY_CLASS: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
         run: |
           set -euo pipefail
           evidence=.buildchain/native-check-bridge/warrant
@@ -788,10 +789,17 @@ jobs:
             "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" \
             > "$source_jobs"
           jq -e \
+            --arg deliveryClass "$DELIVERY_CLASS" \
+            --arg priorRunConclusion "$prior_run_conclusion" \
             '[.jobs[] | select(.name == "Provisional Delivery Warrant admission / linux")]
              | select(length == 1)
              | .[0]
-             | select(.status == "completed" and .conclusion == "success")' \
+             | select(
+                 .status == "completed" and
+                 (.conclusion == "success" or
+                  ($priorRunConclusion == "success" and .conclusion == "skipped") or
+                  ($deliveryClass == "source-only" and .conclusion == "skipped"))
+               )' \
             "$source_jobs" >/dev/null
           jq -e \
             '[.jobs[] | select(.name == "affected-native / linux")]
@@ -874,9 +882,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@4dabecd7056e168f7345d460e3729465a932db9c
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@8493bf140a7f567e76aff3119f3d39ff026afc84
     with:
-      buildchain-ref: 4dabecd7056e168f7345d460e3729465a932db9c
+      buildchain-ref: 8493bf140a7f567e76aff3119f3d39ff026afc84
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}

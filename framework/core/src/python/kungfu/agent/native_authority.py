@@ -22,6 +22,58 @@ class ConformanceOracleDisabled(RuntimeError):
     pass
 
 
+def profile_adapter_runtime_failure(
+    error: profile_sdk.ProfileSdkError,
+    *,
+    write: bool,
+    operation: str,
+    retained_codes: set[str],
+) -> dict[str, Any]:
+    """Normalize a Profile adapter failure without importing its caller runtime."""
+
+    code = str(error.diagnosis.get("code") or "")
+    if (
+        write
+        and code == "member-adapter-invoke-failed"
+        and isinstance(error.__cause__, ValueError)
+    ):
+        return {
+            "code": "invalid-command",
+            "message": str(error.__cause__),
+            "details": {"operation": operation},
+        }
+    if code in {
+        "member-resolution-failed",
+        "profile-member-ambiguous",
+        "profile-source-ambiguous",
+    }:
+        return {
+            "code": "ambiguous-identity",
+            "message": "Work Control authority does not resolve exactly once",
+        }
+    retained = code in retained_codes
+    message = str(error) if retained else "Work Control authority is unavailable"
+    return {
+        "code": "backend-unavailable",
+        "message": message,
+        "diagnostics": [
+            {
+                "code": code or "work-control-unavailable",
+                "message": (
+                    message
+                    if retained
+                    else "The exact active Work Control Profile could not be invoked"
+                ),
+                "severity": "error",
+                "recovery": [
+                    "kungfu profile manager --json",
+                    "kungfu profile history kungfu.work-control --json",
+                ],
+            }
+        ],
+    }
+
+
 def _file_root(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:

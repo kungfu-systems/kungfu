@@ -47,17 +47,76 @@
   "evidence": {
     "publish_command": "node scripts/buildchain-custom-publish-evidence.mjs",
     "recovery_publish_command": "node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs",
+    "candidate_payload_path_template": ".buildchain/release-candidate/payloads/kungfu-{platform}-{source_sha}/product/release/qualification/kfd",
+    "supported_platforms": [
+      "linux-x64",
+      "linux-arm64",
+      "macos-arm64",
+      "windows-x64"
+    ],
+    "source_gate": "product/release/qualification/kfd/source-gate.json",
+    "candidate_capsule": "product/release/qualification/kfd/candidate-evidence.json",
     "kfd_1_witnesses": [
-      ".buildchain/kfd/kfd-1/contract-world.witness.json"
+      "source/kfd-1/contract-world.witness.json",
+      "source/kfd-1/documentation-pack.witness.json"
     ],
     "kfd_2_claims": [
-      ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
-      ".buildchain/kfd/kfd-2/claims/remote-fact-boundary.json"
+      "source/kfd-2/claims/agent-onboarding-pack.json",
+      "source/kfd-2/claims/remote-fact-boundary.json",
+      "source/kfd-2/claims/agent-work-state-contract.json",
+      "source/kfd-2/claims/cross-language-authority-membrane.json"
     ],
-    "kfd_3_prebuild_witnesses": [
-      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json"
+    "kfd_3_prebuild_witness_template": "source/kfd-3/collaboration-interface.{platform}.prebuild.json",
+    "kfd_3_artifact_witness_template": "artifacts/{platform}.json"
+  },
+  "tail_command_audit": {
+    "buildchain_contract_sha": "a5f43da50ea4ad5138ccf901135b89a711a1780c",
+    "removed": [
+      {
+        "input": "release-passport-kfd-3-artifact-verify-command",
+        "replacement": "release-passport-kfd-3-artifact-witness-jsons",
+        "contract": "Buildchain v3 release-candidate-promote declarative KFD-3 artifact witness JSON input"
+      }
     ],
-    "kfd_3_artifact_verify_command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
+    "retained": [
+      {
+        "input": "publication-gate-command",
+        "contract_surface": "release-candidate-promote.yml publication-gate-aggregate-json or publication-gate-command",
+        "command": "node scripts/assemble-kungfu-publication-gate.mjs",
+        "reason": "The aggregate depends on the downloaded four-platform candidate, signing evidence, and promotion target; v3 has no integrated provider that derives it from the sealed candidate.",
+        "delete_when": "Buildchain v4 Provider Plane derives and verifies publication-gate-aggregate-json from the candidate capsule."
+      },
+      {
+        "input": "publication-consumer-qualification-command",
+        "contract_surface": "release-candidate-promote.yml publication-consumer-qualification-command; no qualification receipt JSON input",
+        "command": "node scripts/kungfu-release-qualification.mjs",
+        "reason": "Buildchain v3 accepts a consumer predicate command but has no reusable qualification receipt input.",
+        "delete_when": "Buildchain v4 accepts and verifies a source/candidate-bound qualification receipt JSON."
+      },
+      {
+        "input": "publish-command",
+        "contract_surface": "release-candidate-promote.yml publish-command for package-manager custom",
+        "command": "node scripts/buildchain-custom-publish-evidence.mjs",
+        "recovery_command": "node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs",
+        "reason": "Kungfu is a custom multi-artifact product and v3 requires its publish evidence adapter; the adapter performs no KFD work.",
+        "delete_when": "Buildchain v4 Provider Plane emits equivalent custom product publication evidence declaratively."
+      },
+      {
+        "input": "publication-commit-command",
+        "contract_surface": "release-candidate-promote.yml publication-commit-command plus publication-commit-evidence-path",
+        "command": "node scripts/alpha-publication-commit.mjs",
+        "recovery_command": "BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=${{ inputs.resume-candidate-source-sha }} node .buildchain/publication-controller/scripts/alpha-publication-commit.mjs",
+        "reason": "Alpha channel discovery is a product-owned signed provider mutation not implemented by Buildchain v3.",
+        "delete_when": "Buildchain v4 integrated Provider Plane owns the signed Kungfu channel-discovery commit and receipt."
+      },
+      {
+        "input": "release-passport-invariant-passport-command",
+        "contract_surface": "release-candidate-promote.yml release-passport-invariant-passport-jsons or release-passport-invariant-passport-command",
+        "command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
+        "reason": "The cross-platform invariant Passport needs candidate fan-in; v3 has no qualification receipt/aggregate input produced by the build workflow.",
+        "delete_when": "Buildchain v4 qualification receipts carry the complete invariant Passport through the candidate capsule."
+      }
+    ]
   },
   "safety": {
     "forbidden_commands": [
