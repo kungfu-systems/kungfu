@@ -18,6 +18,7 @@ CONTINUATION_SCHEMA = "kungfu.work.fresh-recovery-continuation/v1"
 CONTINUATION_INDEX_SCHEMA = "kungfu.work.fresh-recovery-continuation-index/v1"
 CONTINUATION_MODE = "resume/new-attempt"
 RECEIPT_SCHEMA = "kungfu.work.fresh-recovery-receipt/v1"
+_PROJECTION_KEYS = frozenset({"query_proof_root", "work_semantics"})
 
 
 def _root(value: Any) -> str:
@@ -25,9 +26,7 @@ def _root(value: Any) -> str:
 
 
 def _preserved_state(status: Mapping[str, Any]) -> JsonObject:
-    return {
-        str(key): value for key, value in status.items() if key != "query_proof_root"
-    }
+    return {key: value for key, value in status.items() if key not in _PROJECTION_KEYS}
 
 
 def _storage_root(runtime_dir: str | Path) -> Path:

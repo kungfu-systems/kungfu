@@ -940,14 +940,20 @@ def test_fresh_recovery_records_exact_non_authoritative_continuation(
     assert continuation["writeAuthority"] == "none"
     assert continuation["assignmentWrites"] == []
     assert continuation["allowedNextActions"] == ["claim-completion"]
+    projected = json.loads(json.dumps(status))
+    projected["work_semantics"] = {
+        "schema": "kungfu.work-semantics.status/v1",
+        "phase": "completion-claimed",
+        "next_actions": [{"action": "record-input-snapshot"}],
+    }
     assert (
         recovery_continuation.resolve(
-            tmp_path, "initiative:test", "assignment:test", status
+            tmp_path, "initiative:test", "assignment:test", projected
         )
         == continuation
     )
 
-    drifted = json.loads(json.dumps(status))
+    drifted = json.loads(json.dumps(projected))
     drifted["completion_claim_count"] = 2
     with __import__("pytest").raises(ValueError, match="does not match retained Work"):
         recovery_continuation.resolve(
@@ -1335,6 +1341,44 @@ def test_fresh_recovery_apply_preserves_complete_lifecycle_state():
     assert receipt["assignmentWrites"] == []
     assert receipt["preservation"]["phase"] == "completion-claimed"
     assert [event[0] for event in events] == ["profile", "bind"]
+
+
+def test_fresh_recovery_ignores_profile_reader_work_semantics_projection():
+    status, binding, plan = _fresh_recovery_fixture()
+    projected = json.loads(json.dumps(status))
+    projected["work_semantics"] = {
+        "schema": "kungfu.work-semantics.status/v1",
+        "phase": "completion-claimed",
+        "next_actions": [{"action": "record-input-snapshot"}],
+    }
+    observations = iter(
+        [
+            projected,
+            json.loads(json.dumps(status)),
+            json.loads(json.dumps(status)),
+        ]
+    )
+
+    receipt = assignment_fresh_recovery.apply_plan(
+        plan,
+        expected_plan_root=plan["planRoot"],
+        authorized_by="maintainer:test",
+        status_reader=lambda: next(observations),
+        session_reader=lambda: dict(binding["session"]),
+        prepare_profile=lambda _actor: {},
+        bind_work=lambda expected: {
+            "workRef": dict(expected["workRef"]),
+            "receipt": {"receiptRoot": f"sha256:{'8' * 64}"},
+        },
+        now="2026-08-25T09:01:00Z",
+    )
+
+    assert receipt["ok"] is True
+    assert receipt["assignmentWrites"] == []
+    assert (
+        receipt["preservation"]["lifecycleStateRoot"]
+        == plan["work"]["lifecycleStateRoot"]
+    )
 
 
 def test_fresh_recovery_fails_closed_on_attempt_plan_or_state_drift():
