@@ -2,7 +2,7 @@
   "schema": "kungfu.profile-suite/v1",
   "id": "kungfu.github-webhook-reference",
   "title": "GitHub Webhook Reference",
-  "version": "0.1.0",
+  "version": "4.0.0-alpha.4",
   "members": {
     "required": ["github-webhook-ingress", "github-event-view"],
     "optional": ["github-dogfood-bridge"]
