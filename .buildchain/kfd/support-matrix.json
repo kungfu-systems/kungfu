@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-          "sha256": "sha256:25e2817e15736d976d28f658d17a189cdb8afaf85fe8b43d4ef7477fe5467107"
+          "sha256": "sha256:1331646324c30148c580c4a6d531efdf72eb8f8c20ea739c5fa36312841d36ef"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:afc0d3b5252e05472dbce7aa8536c4ea8cccde8e1ed1778a16d7a7b233eab989"
+            "sha256": "sha256:839a09f40fc0f751869c819b8c996cea7cc09f3a414e1c753ae68d5b05f831ce"
           }
         ]
       },
