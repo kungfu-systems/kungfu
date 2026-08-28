@@ -252,28 +252,32 @@ export function verifyQueueAdmissionLease(input = {}) {
     pullRequestNumber,
     sourceHeadSha,
   );
-  const nonNativeFast =
-    warrant.deliveryClass === 'non-native-fast' &&
-    candidate.deliveryClass === 'non-native-fast';
-  const nativeDelivery =
-    warrant.deliveryClass !== 'non-native-fast' &&
-    candidate.deliveryClass !== 'non-native-fast';
-  const qualifiedNative =
-    nativeDelivery &&
-    warrant.phase === 'qualified' &&
-    candidate.status === 'qualified';
-  const selectedNonNativeFast =
-    nonNativeFast &&
-    !Object.hasOwn(warrant, 'phase') &&
-    candidate.status === 'selected';
-  if (!qualifiedNative && !selectedNonNativeFast) {
+  const delivery = {
+    'true:true:undefined:selected': {
+      deliveryClass: 'non-native-fast',
+      nativeProofFields: [],
+    },
+    'false:false:qualified:qualified': {
+      deliveryClass: 'native',
+      nativeProofFields: ['nativeProofRoot', 'nativeProofReuseRoot'],
+    },
+  }[
+    [
+      warrant.deliveryClass === 'non-native-fast',
+      candidate.deliveryClass === 'non-native-fast',
+      String(warrant.phase),
+      candidate.status,
+    ].join(':')
+  ];
+  if (!delivery) {
     throw new Error(
       `active Warrant candidate is not delivery-ready: ${candidate.status}`,
     );
   }
-  if (qualifiedNative) {
-    for (const field of ['nativeProofRoot', 'nativeProofReuseRoot'])
-      requireRoot(warrant[field], `Warrant ${field}`);
+  const nativeProofs = {};
+  for (const field of delivery.nativeProofFields) {
+    requireRoot(warrant[field], `Warrant ${field}`);
+    nativeProofs[field] = warrant[field];
   }
   const observedAt = new Date(input.now || observation.observedAt).getTime();
   if (
@@ -292,16 +296,13 @@ export function verifyQueueAdmissionLease(input = {}) {
     sourceHeadSha,
     candidateId: warrant.candidateId,
     sourceProofRoot: candidate.sourceProofRoot,
-    deliveryClass: nonNativeFast ? 'non-native-fast' : 'native',
+    ...nativeProofs,
+    deliveryClass: delivery.deliveryClass,
     fencingToken: warrant.fencingToken,
     generation: warrant.generation,
     candidateState: candidate.status,
     observedAt: new Date(observedAt).toISOString(),
   };
-  if (qualifiedNative) {
-    body.nativeProofRoot = warrant.nativeProofRoot;
-    body.nativeProofReuseRoot = warrant.nativeProofReuseRoot;
-  }
   return { ...body, receiptRoot: digest(body) };
 }
 
