@@ -230,6 +230,23 @@ def _profile_action(runtime_dir, intent_id, values, authorized_by):
     ).authorize(intent_id, values, authorized_by)
 
 
+def _attach_recovery_continuation(result, runtime_dir, initiative_id, assignment_id):
+    if result.get("phase") != "executing" or result.get("active_lease"):
+        return
+    from kungfu.assignment_runtime import recovery_continuation
+
+    continuation = recovery_continuation.resolve(
+        runtime_dir, initiative_id, assignment_id, result
+    )
+    if continuation is not None:
+        result["recovery_continuation"] = {
+            "continuationRoot": continuation["continuationRoot"],
+            "newSessionAttemptId": continuation["attempt"]["newSessionAttemptId"],
+            "writeAuthority": continuation["writeAuthority"],
+            "allowedNextActions": list(continuation["allowedNextActions"]),
+        }
+
+
 def _status(runtime_dir, initiative_id, assignment_id, now=""):
     result = _profile_read(
         runtime_dir,
@@ -241,8 +258,8 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
             "now": now,
         },
     )
-    result["initiative_id"] = initiative_id
-    result["assignment_id"] = assignment_id
+    _attach_recovery_continuation(result, runtime_dir, initiative_id, assignment_id)
+    result.update(initiative_id=initiative_id, assignment_id=assignment_id)
     result["next_actions"] = orchestration.next_actions(result)
     return result
 

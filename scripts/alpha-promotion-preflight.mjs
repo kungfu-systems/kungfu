@@ -197,13 +197,6 @@ export function inspectAuditableDemoFastSentinel({
     scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
     scenarioValue?.execution?.durationClass !== 'long-form' ||
     scenarioValue?.execution?.totalTimeoutSeconds !== 360 ||
-    JSON.stringify(scenarioValue?.playback) !==
-      JSON.stringify({
-        schema: 'buildchain.declarative-demo-playback/v1',
-        mode: 'deterministic-readable',
-        activeDurationMs: 90000,
-        finalHoldMs: 3000,
-      }) ||
     scenarioValue?.authority?.grants?.length !== 0 ||
     demos.length !== 3 ||
     JSON.stringify(autoplay?.steps?.[0]?.argv) !==

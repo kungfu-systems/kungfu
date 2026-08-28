@@ -19,17 +19,12 @@ const MATRIX_PATH = path.resolve(
   process.env.KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY || AUTHORITY_MATRIX_PATH,
 );
 const SDK_PROJECTION_PATH = path.join(
-  ROOT,
-  'developer',
-  'sdk',
-  'kfd',
-  'support-matrix.json',
+  process.env.KUNGFU_KFD_SUPPORT_MATRIX_SDK_PROJECTION ||
+    path.join(ROOT, 'developer', 'sdk', 'kfd', 'support-matrix.json'),
 );
 const DOC_PROJECTION_PATH = path.join(
-  ROOT,
-  'docs',
-  'qualification',
-  'kfd-support-matrix.md',
+  process.env.KUNGFU_KFD_SUPPORT_MATRIX_DOC_PROJECTION ||
+    path.join(ROOT, 'docs', 'qualification', 'kfd-support-matrix.md'),
 );
 const KFD3_SURFACE_PATH = path.resolve(
   process.env.KUNGFU_KFD3_SURFACE_AUTHORITY ||
@@ -92,7 +87,10 @@ function canonicalJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
+function validateMatrix(
+  matrix,
+  { verifyInstalledKfd = true, verifyEvidenceRoots = true } = {},
+) {
   if (matrix.contract !== 'kungfu-kfd-support-matrix') {
     fail(
       `unexpected support matrix contract: ${matrix.contract || '<missing>'}`,
@@ -203,7 +201,7 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
       if (!fs.existsSync(evidencePath)) {
         fail(`${row.key} evidence is missing: ${evidence.path}`);
       }
-      if (sha256File(evidencePath) !== evidence.sha256) {
+      if (verifyEvidenceRoots && sha256File(evidencePath) !== evidence.sha256) {
         fail(`${row.key} evidence root drift: ${evidence.path}`);
       }
     }
@@ -277,7 +275,7 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
     if (!fs.existsSync(evidencePath)) {
       fail(`KFD-6 precursor evidence is missing: ${evidence.path}`);
     }
-    if (sha256File(evidencePath) !== evidence.sha256) {
+    if (verifyEvidenceRoots && sha256File(evidencePath) !== evidence.sha256) {
       fail(`KFD-6 precursor evidence root drift: ${evidence.path}`);
     }
   }
@@ -396,6 +394,33 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
     }
   }
   return matrix;
+}
+
+function rebindEvidenceRoots(matrix) {
+  const rebound = JSON.parse(JSON.stringify(matrix));
+  for (const row of rebound.rows) {
+    for (const evidence of [
+      ...row.verification.evidenceRoots,
+      ...row.releaseQualification.evidenceRoots,
+      ...(row.precursorEvidence?.evidenceRoots || []),
+    ]) {
+      const evidencePath = checkoutFile(evidence.path, `${row.key} evidence`);
+      if (!fs.existsSync(evidencePath)) {
+        fail(`${row.key} evidence is missing: ${evidence.path}`);
+      }
+      evidence.sha256 = sha256File(evidencePath);
+    }
+  }
+  return rebound;
+}
+
+function resolveMatrix(mode) {
+  const currentMatrix = readJson(MATRIX_PATH);
+  if (mode !== '--write') return validateMatrix(currentMatrix);
+  const structurallyValid = validateMatrix(currentMatrix, {
+    verifyEvidenceRoots: false,
+  });
+  return validateMatrix(rebindEvidenceRoots(structurallyValid));
 }
 
 function validateKfd3Enforcement(matrix, query, registry) {
@@ -793,12 +818,14 @@ function main() {
   }
   if (mode === '--write' && !KFD_ROOT)
     fail('KFD package is required to write support-matrix projections');
-  const matrix = validateMatrix(readJson(MATRIX_PATH));
+  const matrix = resolveMatrix(mode);
   const sdkProjection = canonicalJson(matrix);
   const docProjection = renderDocument(matrix);
   if (mode === '--write') {
+    fs.mkdirSync(path.dirname(MATRIX_PATH), { recursive: true });
     fs.mkdirSync(path.dirname(SDK_PROJECTION_PATH), { recursive: true });
     fs.mkdirSync(path.dirname(DOC_PROJECTION_PATH), { recursive: true });
+    fs.writeFileSync(MATRIX_PATH, canonicalJson(matrix));
     fs.writeFileSync(SDK_PROJECTION_PATH, sdkProjection);
     fs.writeFileSync(DOC_PROJECTION_PATH, docProjection);
   } else if (mode === '--check') {

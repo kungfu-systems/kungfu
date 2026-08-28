@@ -29108,7 +29108,7 @@
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
       "language": "python",
-      "owner": "core/package",
+      "owner": "core/python-distribution-update-policy",
       "lines": 2284,
       "contentRoot": "sha256:81c359e5d2706223969a1e023499cc5da5f08ca90df58693b376f9a72cb450c8"
     },
@@ -29981,7 +29981,7 @@
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
       "language": "python",
-      "owner": "core/package",
+      "owner": "core/python-workspace-federation-read-model",
       "lines": 2071,
       "contentRoot": "sha256:ab8517845133cb9de166b443efe03f3b8f91a44c76820ff1892a6bc1f675d384"
     },
@@ -29999,7 +29999,7 @@
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
       "language": "python",
-      "owner": "core/package",
+      "owner": "core/python-workspace-locator-continuation",
       "lines": 1611,
       "contentRoot": "sha256:f01ebd9d634f9f3f5a738f1beccd4f6e167e136875030b4e659e388fd98c6ef4"
     },
@@ -39662,5 +39662,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:4fd6d3566bd76b1f999f8528bd3bb60f301a4616fc56c971ff421c5ec22a7b2f"
+  "measurementRoot": "sha256:ecb8e5d519a0512291927271d2047d4bf2e43cedf040accdadcc268c54a689a2"
 }

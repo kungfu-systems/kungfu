@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-          "sha256": "sha256:57edd08ced28e67da22fea86aa542dde8fb18441211be2505125ccdfbdd02102"
+            "sha256": "sha256:2200ddaade3f2c3ae865dcd681b57b839b8a93b64866f1bece75a98e7289e7a2"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -262,7 +262,7 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:5326cafbad68977abb9ff3359192e457ac429ff79c2a526bd3ca5b40c8b05536"
+            "sha256": "sha256:8078c1a1df495816eeefc1be4ceea98212353acf6aa77e9dadbbc91858cabc69"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:0625fdb229e60782636b42fbfcaf5ab6077ec32a68221fe9bce62adbd389ff7f"
+            "sha256": "sha256:3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc"
           }
         ]
       },
@@ -542,7 +542,7 @@
         "evidenceRoots": [
           {
             "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
-        "sha256": "sha256:0c6d92d16659bfede7d5340c66d94d783a632e2af256d2e5771cf6b92f2a384a"
+            "sha256": "sha256:0c6d92d16659bfede7d5340c66d94d783a632e2af256d2e5771cf6b92f2a384a"
           }
         ]
       },
@@ -635,7 +635,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:3386fa2cb8f1b8ab2a0e1a1f3d9d17a3f2893b3e224703cbc9fda914fd92ab06"
+            "sha256": "sha256:009cebcd0abb38435421181c91900ed615a8fbd4e273d2cde6b84cb4073b9b9f"
           }
         ]
       },

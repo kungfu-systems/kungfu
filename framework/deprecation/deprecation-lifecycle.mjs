@@ -485,14 +485,14 @@ function validateClassification(
   }
 }
 
-/**
- * @param {{root?: string, contract: any, registry: any, asOfDate?: string}} options
- */
-export function validateDeprecationAuthority(options) {
-  const root = path.resolve(options.root || ROOT);
-  const { contract, registry } = options;
-  const asOfDate = options.asOfDate || new Date().toISOString().slice(0, 10);
-  const findings = [];
+/** @param {string} root @param {any} contract @param {any} registry @param {string} asOfDate @param {any[]} findings */
+function validateAuthorityEnvelope(
+  root,
+  contract,
+  registry,
+  asOfDate,
+  findings,
+) {
   if (contract.schema !== 'kungfu.deprecation-lifecycle.contract/v1') {
     findings.push('unsupported deprecation lifecycle contract schema');
   }
@@ -520,11 +520,15 @@ export function validateDeprecationAuthority(options) {
   if (!Array.isArray(registry.releaseHistory)) {
     findings.push('releaseHistory must be an explicit array');
   }
+}
+
+/** @param {any} registry @param {string} asOfDate @param {any[]} findings */
+function validateReleaseHistory(registry, asOfDate, findings) {
   const releaseVersions = new Set();
   for (const release of objects(registry.releaseHistory)) {
-    if (!parseSemver(String(release.version || '')))
+    if (!parseSemver(String(release.version || ''))) {
       findings.push('release history contains an invalid semantic version');
-    else if (
+    } else if (
       parseSemver(String(registry.productVersion || '')) &&
       compareSemver(release.version, registry.productVersion) > 0
     ) {
@@ -548,104 +552,454 @@ export function validateDeprecationAuthority(options) {
         ),
       );
     }
-    if (!['alpha', 'stable'].includes(release.channel))
+    if (!['alpha', 'stable'].includes(release.channel)) {
       findings.push(`${release.version}: release history channel is invalid`);
-    if (typeof release.qualified !== 'boolean')
+    }
+    if (typeof release.qualified !== 'boolean') {
       findings.push(`${release.version}: qualified must be boolean`);
-    if (releaseVersions.has(release.version))
+    }
+    if (releaseVersions.has(release.version)) {
       findings.push(`duplicate release history version: ${release.version}`);
+    }
     releaseVersions.add(release.version);
   }
+}
+
+/** @param {any} contract @param {any} entry @param {Set<any>} ids @param {any[]} findings */
+function validateEntryIdentity(contract, entry, ids, findings) {
+  for (const field of strings(contract.requiredEntryFields)) {
+    if (
+      entry[field] === undefined ||
+      entry[field] === null ||
+      entry[field] === ''
+    ) {
+      findings.push(`required field ${field} is missing`);
+    }
+  }
+  if (ids.has(entry.id)) findings.push('entry id is duplicated');
+  ids.add(entry.id);
+  if (!strings(contract.lifecycle?.authored).includes(entry.lifecycle)) {
+    findings.push(`unsupported authored lifecycle ${entry.lifecycle}`);
+  }
+  const surfacePolicy = contract.surfaceClasses?.[entry.surfaceClass];
+  if (!surfacePolicy) {
+    findings.push(`unknown surface class ${entry.surfaceClass}`);
+  }
+  return surfacePolicy;
+}
+
+/** @param {string} root @param {any} entry @param {any[]} findings */
+function validateEntrySurface(root, entry, findings) {
+  if (!entry.surface?.path || !entry.surface?.kind) {
+    findings.push('surface requires kind and path');
+  } else {
+    requireFile(root, entry.surface.path, findings, 'surface path');
+  }
+  requireFile(
+    root,
+    String(entry.migrationGuidance || ''),
+    findings,
+    'migration guidance',
+  );
+}
+
+/** @param {string} root @param {any} registry @param {string} asOfDate @param {any} entry @param {any[]} findings */
+function validateEntryDeprecationPoint(
+  root,
+  registry,
+  asOfDate,
+  entry,
+  findings,
+) {
+  requireDate(
+    String(entry.deprecatedAt?.date || ''),
+    findings,
+    'deprecatedAt.date',
+  );
+  if (
+    isRealDate(entry.deprecatedAt?.date) &&
+    isRealDate(asOfDate) &&
+    entry.deprecatedAt.date > asOfDate
+  ) {
+    findings.push(
+      codedFinding(
+        'deprecation-date-after-context',
+        `deprecatedAt.date ${entry.deprecatedAt.date} is after authority context ${asOfDate}`,
+      ),
+    );
+  }
+  if (!parseSemver(String(entry.deprecatedAt?.productVersion || ''))) {
+    findings.push('deprecatedAt.productVersion must be semantic version');
+  } else if (
+    parseSemver(String(registry.productVersion || '')) &&
+    compareSemver(entry.deprecatedAt.productVersion, registry.productVersion) >
+      0
+  ) {
+    findings.push(
+      codedFinding(
+        'deprecation-version-after-context',
+        `deprecatedAt.productVersion ${entry.deprecatedAt.productVersion} is after registry productVersion ${registry.productVersion}`,
+      ),
+    );
+  }
+  requireFile(
+    root,
+    String(entry.deprecatedAt?.decision || ''),
+    findings,
+    'deprecation decision',
+  );
+}
+
+/** @param {string} root @param {any} entry @param {any[]} findings */
+function validateKnownConsumers(root, entry, findings) {
+  if (objects(entry.knownConsumers).length === 0) {
+    findings.push('knownConsumers must not be empty');
+  }
+  for (const consumer of objects(entry.knownConsumers)) {
+    if (
+      !consumer.id ||
+      !['known', 'migrated', 'retired'].includes(consumer.status)
+    ) {
+      findings.push('consumer requires id and known/migrated/retired status');
+    }
+    requireFile(
+      root,
+      String(consumer.evidence || ''),
+      findings,
+      `consumer ${consumer.id || '<missing>'} evidence`,
+    );
+  }
+}
+
+/** @param {string} root @param {any} contract @param {any} entry @param {any} surfacePolicy @param {boolean} grandfatherValid @param {any[]} findings */
+function validateEntryWindowsAndEvidence(
+  root,
+  contract,
+  entry,
+  surfacePolicy,
+  grandfatherValid,
+  findings,
+) {
+  for (const [field, fallback] of [
+    ['minimumCalendarDays', surfacePolicy?.defaultMinimumCalendarDays],
+    [
+      'minimumQualifiedReleases',
+      surfacePolicy?.defaultMinimumQualifiedReleases,
+    ],
+  ]) {
+    const value = entry.windows?.[field];
+    if (!Number.isInteger(value) || value < 0) {
+      findings.push(`windows.${field} must be a non-negative integer`);
+    }
+    if (fallback === undefined) {
+      findings.push(`${entry.surfaceClass} lacks a default ${field}`);
+    } else if (
+      Number.isInteger(value) &&
+      value < fallback &&
+      !grandfatherValid
+    ) {
+      findings.push(
+        codedFinding(
+          'deprecation-window-below-minimum',
+          `windows.${field} ${value} is below ${entry.surfaceClass} minimum ${fallback}`,
+        ),
+      );
+    }
+  }
+  if (
+    surfacePolicy &&
+    entry.earliestRemovalBoundary !== surfacePolicy.eligibleBoundary
+  ) {
+    findings.push(
+      `earliestRemovalBoundary must be ${surfacePolicy.eligibleBoundary}`,
+    );
+  }
+  if (strings(entry.removalConditions).length === 0) {
+    findings.push('removalConditions must not be empty');
+  }
+  for (const evidence of strings(entry.retainedEvidence)) {
+    requireFile(root, evidence, findings, 'retained evidence');
+  }
+  if (strings(entry.retainedEvidence).length === 0) {
+    findings.push('retainedEvidence must not be empty');
+  }
+  if (!objects(entry.zeroReferenceAudit?.checks).length) {
+    findings.push('zeroReferenceAudit must declare checks');
+  }
+}
+
+/** @param {string} root @param {any} entry @param {any[]} findings */
+function validateEntrySupportPolicy(root, entry, findings) {
+  if (
+    entry.surfaceClass === 'persisted-schema-wire-protocol' &&
+    (!entry.supportPolicy?.historicalReaderOrMigrationQualified ||
+      !entry.supportPolicy?.authority ||
+      strings(entry.supportPolicy?.evidence).length === 0)
+  ) {
+    findings.push(
+      codedFinding(
+        'deprecation-support-evidence-invalid',
+        'persisted schema or protocol needs exact authority and qualified historical reader, export, or migration evidence',
+      ),
+    );
+  } else if (entry.surfaceClass === 'persisted-schema-wire-protocol') {
+    requireFile(
+      root,
+      String(entry.supportPolicy.authority),
+      findings,
+      'support policy authority',
+    );
+    for (const evidence of strings(entry.supportPolicy.evidence)) {
+      requireFile(root, evidence, findings, 'support policy evidence');
+    }
+  }
+}
+
+/** @param {string} root @param {any} entry @param {any[]} findings */
+function validateEntryRestoration(root, entry, findings) {
+  if (entry.lifecycle !== 'active') return;
+  const restoration = entry.restorationEvidence;
+  if (!restoration) {
+    findings.push('restored active entry needs explicit restorationEvidence');
+    return;
+  }
+  requireDate(
+    String(restoration.restoredAt?.date || ''),
+    findings,
+    'restorationEvidence.restoredAt.date',
+  );
+  if (!parseSemver(String(restoration.restoredAt?.productVersion || ''))) {
+    findings.push(
+      'restorationEvidence.restoredAt.productVersion must be semantic version',
+    );
+  }
+  requireFile(
+    root,
+    String(restoration.decision || ''),
+    findings,
+    'restoration decision',
+  );
+  for (const file of strings(restoration.qualification)) {
+    requireFile(root, file, findings, 'restoration qualification');
+  }
+  if (strings(restoration.qualification).length === 0) {
+    findings.push('restoration qualification must not be empty');
+  }
+}
+
+/** @param {string} root @param {any} contract @param {any} entry @param {any[]} findings */
+function validateEntryWarrant(root, contract, entry, findings) {
+  if (!entry.extensionWarrant) return;
+  const warrant = entry.extensionWarrant;
+  for (const field of strings(
+    contract.warrantPolicy?.requiredProjectionFields,
+  )) {
+    if (!warrant[field]) findings.push(`extension Warrant lacks ${field}`);
+  }
+  for (const field of strings(
+    contract.warrantPolicy?.forbiddenProjectionFields,
+  )) {
+    if (warrant[field] !== undefined && warrant[field] !== null) {
+      findings.push(`extension Warrant forbids ${field}`);
+    }
+  }
+  if (warrant.authority !== contract.warrantPolicy.authority) {
+    findings.push('extension Warrant authority is not kungfu.warrant');
+  }
+  if (!SHA256_ROOT.test(String(warrant.warrantRoot || ''))) {
+    findings.push('extension Warrant needs an exact sha256 root');
+  }
+  if (warrant.entryId !== entry.id) {
+    findings.push('extension Warrant entryId is not exact');
+  }
+  requireDate(
+    String(warrant.issuedAt || ''),
+    findings,
+    'extension Warrant issuedAt',
+  );
+  requireDate(
+    String(warrant.expiresOn || ''),
+    findings,
+    'extension Warrant expiresOn',
+  );
+  if (!parseSemver(String(warrant.expiresAfterRelease || ''))) {
+    findings.push(
+      'extension Warrant expiresAfterRelease must be semantic version',
+    );
+  }
+  requireFile(
+    root,
+    String(warrant.evidenceRef || ''),
+    findings,
+    'extension Warrant evidence',
+  );
+  if (
+    DATE.test(String(warrant.issuedAt || '')) &&
+    DATE.test(String(warrant.expiresOn || ''))
+  ) {
+    const maximum = addDays(
+      warrant.issuedAt,
+      contract.warrantPolicy.maximumCalendarExtensionDays,
+    );
+    if (warrant.expiresOn > maximum) {
+      findings.push('extension Warrant exceeds maximum calendar bound');
+    }
+  }
+}
+
+/** @param {any} registry @param {string} asOfDate @param {any} entry @param {any} evidence @param {any[]} findings */
+function validateRemovalTemporalContext(
+  registry,
+  asOfDate,
+  entry,
+  evidence,
+  findings,
+) {
+  requireDate(
+    String(evidence.removedAt?.date || ''),
+    findings,
+    'removalEvidence.removedAt.date',
+  );
+  if (
+    isRealDate(evidence.removedAt?.date) &&
+    isRealDate(asOfDate) &&
+    evidence.removedAt.date > asOfDate
+  ) {
+    findings.push(
+      codedFinding(
+        'deprecation-date-after-context',
+        `removalEvidence.removedAt.date ${evidence.removedAt.date} is after authority context ${asOfDate}`,
+      ),
+    );
+  }
+  if (!parseSemver(String(evidence.removedAt?.productVersion || ''))) {
+    findings.push(
+      'removalEvidence.removedAt.productVersion must be semantic version',
+    );
+  } else if (
+    parseSemver(String(registry.productVersion || '')) &&
+    compareSemver(evidence.removedAt.productVersion, registry.productVersion) >
+      0
+  ) {
+    findings.push(
+      codedFinding(
+        'deprecation-version-after-context',
+        `removalEvidence.removedAt.productVersion ${evidence.removedAt.productVersion} is after registry productVersion ${registry.productVersion}`,
+      ),
+    );
+  }
+  if (
+    isRealDate(evidence.removedAt?.date) &&
+    isRealDate(entry.deprecatedAt?.date) &&
+    evidence.removedAt.date < entry.deprecatedAt.date
+  ) {
+    findings.push(
+      codedFinding(
+        'deprecation-removal-boundary-invalid',
+        'removalEvidence.removedAt.date precedes deprecatedAt.date',
+      ),
+    );
+  }
+  if (
+    parseSemver(String(evidence.removedAt?.productVersion || '')) &&
+    parseSemver(String(entry.deprecatedAt?.productVersion || '')) &&
+    compareSemver(
+      evidence.removedAt.productVersion,
+      entry.deprecatedAt.productVersion,
+    ) < 0
+  ) {
+    findings.push(
+      codedFinding(
+        'deprecation-removal-boundary-invalid',
+        'removalEvidence.removedAt.productVersion precedes deprecatedAt.productVersion',
+      ),
+    );
+  }
+}
+
+/** @param {string} root @param {any} entry @param {any} evidence @param {any[]} findings */
+function validateRemovalArtifacts(root, entry, evidence, findings) {
+  if (!/^[0-9a-f]{40}$/u.test(String(evidence.gitCommit || ''))) {
+    findings.push('removalEvidence.gitCommit must be exact');
+  }
+  for (const file of strings(evidence.migrationQualification)) {
+    requireFile(root, file, findings, 'migration qualification');
+  }
+  if (strings(evidence.migrationQualification).length === 0) {
+    findings.push('migration qualification must not be empty');
+  }
+  requireFile(
+    root,
+    String(evidence.releaseNote || ''),
+    findings,
+    'release note',
+  );
+  for (const file of strings(evidence.retainedEvidence)) {
+    requireFile(root, file, findings, 'settlement retained evidence');
+  }
+  if (strings(evidence.retainedEvidence).length === 0) {
+    findings.push('settlement retained evidence must not be empty');
+  }
+  const zero = evaluateZeroReferenceAudit(root, entry.zeroReferenceAudit);
+  findings.push(...zero.findings);
+}
+
+/** @param {string} root @param {any} registry @param {string} asOfDate @param {any} entry @param {any[]} findings */
+function validateEntrySettlement(root, registry, asOfDate, entry, findings) {
+  if (!['removed', 'settled'].includes(entry.lifecycle)) return;
+  const evidence = entry.removalEvidence;
+  if (!evidence) {
+    findings.push('removed or settled entry needs removalEvidence');
+    return;
+  }
+  validateRemovalTemporalContext(registry, asOfDate, entry, evidence, findings);
+  validateRemovalArtifacts(root, entry, evidence, findings);
+}
+
+/** @param {any[]} findings @param {string} prefix @param {any[]} entryFindings */
+function appendEntryFindings(findings, prefix, entryFindings) {
+  findings.push(
+    ...entryFindings.map((finding) => ({
+      code:
+        typeof finding === 'string' ? 'deprecation-authority' : finding.code,
+      entry: prefix,
+      message: `${prefix}: ${
+        typeof finding === 'string' ? finding : finding.message
+      }`,
+    })),
+  );
+}
+
+/**
+ * @param {{root?: string, contract: any, registry: any, asOfDate?: string}} options
+ */
+export function validateDeprecationAuthority(options) {
+  const root = path.resolve(options.root || ROOT);
+  const { contract, registry } = options;
+  const asOfDate = options.asOfDate || new Date().toISOString().slice(0, 10);
+  const findings = [];
+  validateAuthorityEnvelope(root, contract, registry, asOfDate, findings);
+  validateReleaseHistory(registry, asOfDate, findings);
 
   const ids = new Set();
   for (const entry of objects(registry.entries)) {
     const prefix = entry.id || '<missing-entry-id>';
     const entryFindings = [];
-    for (const field of strings(contract.requiredEntryFields)) {
-      if (
-        entry[field] === undefined ||
-        entry[field] === null ||
-        entry[field] === ''
-      ) {
-        entryFindings.push(`required field ${field} is missing`);
-      }
-    }
-    if (ids.has(entry.id)) entryFindings.push('entry id is duplicated');
-    ids.add(entry.id);
-    if (!strings(contract.lifecycle?.authored).includes(entry.lifecycle)) {
-      entryFindings.push(`unsupported authored lifecycle ${entry.lifecycle}`);
-    }
-    const surfacePolicy = contract.surfaceClasses?.[entry.surfaceClass];
-    if (!surfacePolicy)
-      entryFindings.push(`unknown surface class ${entry.surfaceClass}`);
-    if (!entry.surface?.path || !entry.surface?.kind)
-      entryFindings.push('surface requires kind and path');
-    else requireFile(root, entry.surface.path, entryFindings, 'surface path');
-    requireFile(
+    const surfacePolicy = validateEntryIdentity(
+      contract,
+      entry,
+      ids,
+      entryFindings,
+    );
+    validateEntrySurface(root, entry, entryFindings);
+    validateEntryDeprecationPoint(
       root,
-      String(entry.migrationGuidance || ''),
+      registry,
+      asOfDate,
+      entry,
       entryFindings,
-      'migration guidance',
     );
-    requireDate(
-      String(entry.deprecatedAt?.date || ''),
-      entryFindings,
-      'deprecatedAt.date',
-    );
-    if (
-      isRealDate(entry.deprecatedAt?.date) &&
-      isRealDate(asOfDate) &&
-      entry.deprecatedAt.date > asOfDate
-    ) {
-      entryFindings.push(
-        codedFinding(
-          'deprecation-date-after-context',
-          `deprecatedAt.date ${entry.deprecatedAt.date} is after authority context ${asOfDate}`,
-        ),
-      );
-    }
-    if (!parseSemver(String(entry.deprecatedAt?.productVersion || ''))) {
-      entryFindings.push(
-        'deprecatedAt.productVersion must be semantic version',
-      );
-    } else if (
-      parseSemver(String(registry.productVersion || '')) &&
-      compareSemver(
-        entry.deprecatedAt.productVersion,
-        registry.productVersion,
-      ) > 0
-    ) {
-      entryFindings.push(
-        codedFinding(
-          'deprecation-version-after-context',
-          `deprecatedAt.productVersion ${entry.deprecatedAt.productVersion} is after registry productVersion ${registry.productVersion}`,
-        ),
-      );
-    }
-    requireFile(
-      root,
-      String(entry.deprecatedAt?.decision || ''),
-      entryFindings,
-      'deprecation decision',
-    );
-    if (objects(entry.knownConsumers).length === 0) {
-      entryFindings.push('knownConsumers must not be empty');
-    }
-    for (const consumer of objects(entry.knownConsumers)) {
-      if (
-        !consumer.id ||
-        !['known', 'migrated', 'retired'].includes(consumer.status)
-      )
-        entryFindings.push(
-          'consumer requires id and known/migrated/retired status',
-        );
-      requireFile(
-        root,
-        String(consumer.evidence || ''),
-        entryFindings,
-        `consumer ${consumer.id || '<missing>'} evidence`,
-      );
-    }
+    validateKnownConsumers(root, entry, entryFindings);
     const grandfatherValid = validateHistoricalGrandfather(
       root,
       contract,
@@ -659,264 +1013,23 @@ export function validateDeprecationAuthority(options) {
       grandfatherValid,
       entryFindings,
     );
-    for (const [field, fallback] of [
-      ['minimumCalendarDays', surfacePolicy?.defaultMinimumCalendarDays],
-      [
-        'minimumQualifiedReleases',
-        surfacePolicy?.defaultMinimumQualifiedReleases,
-      ],
-    ]) {
-      const value = entry.windows?.[field];
-      if (!Number.isInteger(value) || value < 0)
-        entryFindings.push(`windows.${field} must be a non-negative integer`);
-      if (fallback === undefined)
-        entryFindings.push(`${entry.surfaceClass} lacks a default ${field}`);
-      else if (
-        Number.isInteger(value) &&
-        value < fallback &&
-        !grandfatherValid
-      ) {
-        entryFindings.push(
-          codedFinding(
-            'deprecation-window-below-minimum',
-            `windows.${field} ${value} is below ${entry.surfaceClass} minimum ${fallback}`,
-          ),
-        );
-      }
-    }
-    if (
-      surfacePolicy &&
-      entry.earliestRemovalBoundary !== surfacePolicy.eligibleBoundary
-    ) {
-      entryFindings.push(
-        `earliestRemovalBoundary must be ${surfacePolicy.eligibleBoundary}`,
-      );
-    }
-    if (strings(entry.removalConditions).length === 0)
-      entryFindings.push('removalConditions must not be empty');
-    for (const evidence of strings(entry.retainedEvidence)) {
-      requireFile(root, evidence, entryFindings, 'retained evidence');
-    }
-    if (strings(entry.retainedEvidence).length === 0)
-      entryFindings.push('retainedEvidence must not be empty');
-    if (!objects(entry.zeroReferenceAudit?.checks).length)
-      entryFindings.push('zeroReferenceAudit must declare checks');
-
-    if (
-      entry.surfaceClass === 'persisted-schema-wire-protocol' &&
-      (!entry.supportPolicy?.historicalReaderOrMigrationQualified ||
-        !entry.supportPolicy?.authority ||
-        strings(entry.supportPolicy?.evidence).length === 0)
-    ) {
-      entryFindings.push(
-        codedFinding(
-          'deprecation-support-evidence-invalid',
-          'persisted schema or protocol needs exact authority and qualified historical reader, export, or migration evidence',
-        ),
-      );
-    } else if (entry.surfaceClass === 'persisted-schema-wire-protocol') {
-      requireFile(
-        root,
-        String(entry.supportPolicy.authority),
-        entryFindings,
-        'support policy authority',
-      );
-      for (const evidence of strings(entry.supportPolicy.evidence)) {
-        requireFile(root, evidence, entryFindings, 'support policy evidence');
-      }
-    }
-
-    if (entry.lifecycle === 'active') {
-      const restoration = entry.restorationEvidence;
-      if (!restoration) {
-        entryFindings.push(
-          'restored active entry needs explicit restorationEvidence',
-        );
-      } else {
-        requireDate(
-          String(restoration.restoredAt?.date || ''),
-          entryFindings,
-          'restorationEvidence.restoredAt.date',
-        );
-        if (
-          !parseSemver(String(restoration.restoredAt?.productVersion || ''))
-        ) {
-          entryFindings.push(
-            'restorationEvidence.restoredAt.productVersion must be semantic version',
-          );
-        }
-        requireFile(
-          root,
-          String(restoration.decision || ''),
-          entryFindings,
-          'restoration decision',
-        );
-        for (const file of strings(restoration.qualification)) {
-          requireFile(root, file, entryFindings, 'restoration qualification');
-        }
-        if (strings(restoration.qualification).length === 0) {
-          entryFindings.push('restoration qualification must not be empty');
-        }
-      }
-    }
-
-    if (entry.extensionWarrant) {
-      const warrant = entry.extensionWarrant;
-      for (const field of strings(
-        contract.warrantPolicy?.requiredProjectionFields,
-      )) {
-        if (!warrant[field])
-          entryFindings.push(`extension Warrant lacks ${field}`);
-      }
-      for (const field of strings(
-        contract.warrantPolicy?.forbiddenProjectionFields,
-      )) {
-        if (warrant[field] !== undefined && warrant[field] !== null)
-          entryFindings.push(`extension Warrant forbids ${field}`);
-      }
-      if (warrant.authority !== contract.warrantPolicy.authority)
-        entryFindings.push('extension Warrant authority is not kungfu.warrant');
-      if (!SHA256_ROOT.test(String(warrant.warrantRoot || '')))
-        entryFindings.push('extension Warrant needs an exact sha256 root');
-      if (warrant.entryId !== entry.id)
-        entryFindings.push('extension Warrant entryId is not exact');
-      requireDate(
-        String(warrant.issuedAt || ''),
-        entryFindings,
-        'extension Warrant issuedAt',
-      );
-      requireDate(
-        String(warrant.expiresOn || ''),
-        entryFindings,
-        'extension Warrant expiresOn',
-      );
-      if (!parseSemver(String(warrant.expiresAfterRelease || '')))
-        entryFindings.push(
-          'extension Warrant expiresAfterRelease must be semantic version',
-        );
-      requireFile(
-        root,
-        String(warrant.evidenceRef || ''),
-        entryFindings,
-        'extension Warrant evidence',
-      );
-      if (
-        DATE.test(String(warrant.issuedAt || '')) &&
-        DATE.test(String(warrant.expiresOn || ''))
-      ) {
-        const maximum = addDays(
-          warrant.issuedAt,
-          contract.warrantPolicy.maximumCalendarExtensionDays,
-        );
-        if (warrant.expiresOn > maximum)
-          entryFindings.push(
-            'extension Warrant exceeds maximum calendar bound',
-          );
-      }
-    }
-
-    if (['removed', 'settled'].includes(entry.lifecycle)) {
-      const evidence = entry.removalEvidence;
-      if (!evidence) {
-        entryFindings.push('removed or settled entry needs removalEvidence');
-      } else {
-        requireDate(
-          String(evidence.removedAt?.date || ''),
-          entryFindings,
-          'removalEvidence.removedAt.date',
-        );
-        if (
-          isRealDate(evidence.removedAt?.date) &&
-          isRealDate(asOfDate) &&
-          evidence.removedAt.date > asOfDate
-        ) {
-          entryFindings.push(
-            codedFinding(
-              'deprecation-date-after-context',
-              `removalEvidence.removedAt.date ${evidence.removedAt.date} is after authority context ${asOfDate}`,
-            ),
-          );
-        }
-        if (!parseSemver(String(evidence.removedAt?.productVersion || '')))
-          entryFindings.push(
-            'removalEvidence.removedAt.productVersion must be semantic version',
-          );
-        else if (
-          parseSemver(String(registry.productVersion || '')) &&
-          compareSemver(
-            evidence.removedAt.productVersion,
-            registry.productVersion,
-          ) > 0
-        ) {
-          entryFindings.push(
-            codedFinding(
-              'deprecation-version-after-context',
-              `removalEvidence.removedAt.productVersion ${evidence.removedAt.productVersion} is after registry productVersion ${registry.productVersion}`,
-            ),
-          );
-        }
-        if (
-          isRealDate(evidence.removedAt?.date) &&
-          isRealDate(entry.deprecatedAt?.date) &&
-          evidence.removedAt.date < entry.deprecatedAt.date
-        ) {
-          entryFindings.push(
-            codedFinding(
-              'deprecation-removal-boundary-invalid',
-              'removalEvidence.removedAt.date precedes deprecatedAt.date',
-            ),
-          );
-        }
-        if (
-          parseSemver(String(evidence.removedAt?.productVersion || '')) &&
-          parseSemver(String(entry.deprecatedAt?.productVersion || '')) &&
-          compareSemver(
-            evidence.removedAt.productVersion,
-            entry.deprecatedAt.productVersion,
-          ) < 0
-        ) {
-          entryFindings.push(
-            codedFinding(
-              'deprecation-removal-boundary-invalid',
-              'removalEvidence.removedAt.productVersion precedes deprecatedAt.productVersion',
-            ),
-          );
-        }
-        if (!/^[0-9a-f]{40}$/u.test(String(evidence.gitCommit || '')))
-          entryFindings.push('removalEvidence.gitCommit must be exact');
-        for (const file of strings(evidence.migrationQualification))
-          requireFile(root, file, entryFindings, 'migration qualification');
-        if (strings(evidence.migrationQualification).length === 0)
-          entryFindings.push('migration qualification must not be empty');
-        requireFile(
-          root,
-          String(evidence.releaseNote || ''),
-          entryFindings,
-          'release note',
-        );
-        for (const file of strings(evidence.retainedEvidence))
-          requireFile(
-            root,
-            file,
-            entryFindings,
-            'settlement retained evidence',
-          );
-        if (strings(evidence.retainedEvidence).length === 0)
-          entryFindings.push('settlement retained evidence must not be empty');
-        const zero = evaluateZeroReferenceAudit(root, entry.zeroReferenceAudit);
-        entryFindings.push(...zero.findings);
-      }
-    }
-    findings.push(
-      ...entryFindings.map((finding) => ({
-        code:
-          typeof finding === 'string' ? 'deprecation-authority' : finding.code,
-        entry: prefix,
-        message: `${prefix}: ${
-          typeof finding === 'string' ? finding : finding.message
-        }`,
-      })),
+    validateEntryWindowsAndEvidence(
+      root,
+      contract,
+      entry,
+      surfacePolicy,
+      grandfatherValid,
+      entryFindings,
     );
+
+    validateEntrySupportPolicy(root, entry, entryFindings);
+
+    validateEntryRestoration(root, entry, entryFindings);
+
+    validateEntryWarrant(root, contract, entry, entryFindings);
+
+    validateEntrySettlement(root, registry, asOfDate, entry, entryFindings);
+    appendEntryFindings(findings, prefix, entryFindings);
   }
   if (objects(registry.entries).length === 0) {
     findings.push({

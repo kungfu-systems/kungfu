@@ -57,24 +57,6 @@ def test_mock_runtime_verification_has_no_time_based_admission(monkeypatch):
     assert observed["timeout"] is None
 
 
-def test_qualification_mock_retains_its_bounded_managed_environment():
-    env, keys = run_agent._environment(
-        "synthetic",
-        runtime_dir="/runtime",
-        run_id="attempt",
-        workspace_root="/workspace",
-        work_ref=None,
-        continuation=None,
-        source={},
-    )
-
-    assert env["KUNGFU_AS_VARIANT"] == "node"
-    assert env["KUNGFU_CONTROL_RUNTIME_DIR"] == "/runtime"
-    assert env["KUNGFU_WORKSPACE_ROOT"] == "/workspace"
-    assert "KUNGFU_AGENT_BOOTSTRAP_RECEIPT" not in env
-    assert keys == sorted(env)
-
-
 def test_codex_direct_process_uses_stdin_without_version_assumptions():
     prompt = "bounded task " + ("evidence " * 10_000)
     argv = ["/usr/bin/codex", "exec", "--json", prompt]

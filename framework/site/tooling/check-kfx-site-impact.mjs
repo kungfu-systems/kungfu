@@ -620,6 +620,16 @@ function gitJson(revision, relativePath, optional = false) {
   return JSON.parse(bytes.toString('utf8'));
 }
 
+function canonicalWorktreeBytes(relativePath, currentPath, root, env) {
+  const oid = git(
+    ['hash-object', '-w', `--path=${relativePath}`, currentPath],
+    { env, root },
+  )
+    .toString('utf8')
+    .trim();
+  return git(['cat-file', 'blob', oid], { env, root });
+}
+
 export function repositoryChanges(baseRevision, changedFiles, root = ROOT) {
   const objectDirectory = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-kfx-canonical-'),
@@ -635,24 +645,9 @@ export function repositoryChanges(baseRevision, changedFiles, root = ROOT) {
         root,
       });
       const currentPath = path.join(root, relativePath);
-      const worktreeBytes = fs.existsSync(currentPath)
-        ? fs.readFileSync(currentPath)
+      const currentBytes = fs.existsSync(currentPath)
+        ? canonicalWorktreeBytes(relativePath, currentPath, root, canonicalEnv)
         : null;
-      const currentBytes =
-        worktreeBytes === null
-          ? null
-          : (() => {
-              const oid = git(
-                ['hash-object', '-w', `--path=${relativePath}`, '--stdin'],
-                { env: canonicalEnv, input: worktreeBytes, root },
-              )
-                .toString('utf8')
-                .trim();
-              return git(['cat-file', 'blob', oid], {
-                env: canonicalEnv,
-                root,
-              });
-            })();
       if (
         (baseBytes === null && currentBytes === null) ||
         (baseBytes !== null &&

@@ -133,7 +133,7 @@ test('Agent Python responsibility checker fails closed on a missing owner source
   assert.match(measure, /new Set\(files\.map\(\(\{ path \}\) => path\)\)/u);
 });
 
-test('Python runtime facade plus process owner reduce aggregate responsibility and risk', () => {
+test('Python runtime responsibility owners reduce module size and conserve business risk', () => {
   const map = readJson(
     'framework/maintainability/python-runtime-responsibility-map.json',
   );
@@ -151,12 +151,28 @@ test('Python runtime facade plus process owner reduce aggregate responsibility a
     new Set(report.requiredOwnerPaths),
     new Set([...map.sourcePaths, ...map.ownerFiles]),
   );
-  assert.ok(map.current.responsibilities < map.baseline.responsibilities);
   assert.ok(
-    map.current.functionRisk.baseRisk < map.baseline.functionRisk.baseRisk,
+    map.current.maximumPhysicalLines < map.baseline.maximumPhysicalLines,
+  );
+  assert.ok(map.current.maximumPhysicalLines < 1000);
+  assert.ok(
+    map.current.maximumResponsibilities < map.baseline.maximumResponsibilities,
+  );
+  assert.equal(
+    map.current.functionRisk.functions - map.adapterRiskBudget.functions,
+    map.baseline.functionRisk.functions,
+  );
+  assert.equal(
+    map.transitionContribution.new.functions,
+    map.adapterRiskBudget.functions,
   );
   assert.ok(
-    map.current.functionRisk.changeRisk < map.baseline.functionRisk.changeRisk,
+    map.current.functionRisk.baseRisk - map.adapterRiskBudget.baseRisk <=
+      map.baseline.functionRisk.baseRisk,
+  );
+  assert.ok(
+    map.current.functionRisk.maximumBaseRisk <=
+      map.baseline.functionRisk.maximumBaseRisk,
   );
 });
 

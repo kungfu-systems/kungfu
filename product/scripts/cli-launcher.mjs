@@ -11,6 +11,7 @@ export function cliLauncherContent(platform = process.platform) {
       'set "KF_BUNDLED_EXTENSION_ROOT=%~dp0extensions"',
       'set "KUNGFU_CLI_BIN=%~dp0kungfu.cmd"',
       'set "KUNGFU_AGENT_SESSION_EXECUTABLE=%~dp0runtime\\kungfu.exe"',
+      'set "KUNGFU_NATIVE_AGENT_SESSION_ENTRY=%~dp0tui\\native-agent-session.mjs"',
       'set "KUNGFU_CONTROLLER_ENTRYPOINT=%~dp0runtime\\kungfu.exe"',
       'set "PYTHONUTF8=1"',
       'set "PYTHONIOENCODING=utf-8"',
@@ -36,6 +37,7 @@ export KUNGFU_UPGRADE_MANIFEST="$here/upgrade/kungfu-release-manifest.json"
 export KF_BUNDLED_EXTENSION_ROOT="$here/extensions"
 export KUNGFU_CLI_BIN="$here/kungfu"
 export KUNGFU_AGENT_SESSION_EXECUTABLE="$here/runtime/kungfu"
+export KUNGFU_NATIVE_AGENT_SESSION_ENTRY="$here/tui/native-agent-session.mjs"
 export KUNGFU_CONTROLLER_ENTRYPOINT="$here/runtime/kungfu"
 exec "$here/runtime/kungfu" "$@"
 `;

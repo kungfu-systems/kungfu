@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-08-24
-ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, on 2026-08-04 to split the Project Tour into two independently captured 1x episodes, on 2026-08-05 to bind the consumer-owned three-proof presentation contract, on 2026-08-08 to bind the 720p full-width native PTY geometry, on 2026-08-10 to require terminal-fill geometry and isolate manual media publication to Linux x64, on 2026-08-11 to make the Linux x64 animation pipeline a standalone one-start workflow independent of release qualification, and on 2026-08-24 to bind deterministic readable playback while retaining observed native PTY timing evidence; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
+last_reviewed: 2026-08-11
+ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, on 2026-08-04 to split the Project Tour into two independently captured 1x episodes, on 2026-08-05 to bind the consumer-owned three-proof presentation contract, on 2026-08-08 to bind the 720p full-width native PTY geometry, on 2026-08-10 to require terminal-fill geometry and isolate manual media publication to Linux x64, and on 2026-08-11 to make the Linux x64 animation pipeline a standalone one-start workflow independent of release qualification; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
 ---
 
 # Declarative Multi-demo Animation Pipeline
@@ -33,13 +33,6 @@ All three playback commands are self-driving, deterministic under the declared
 isolated environment, credential-free, and bounded by the `long-form` duration
 class. They intentionally run inside native PTYs and are executed directly as
 argv, never through a shell command string.
-
-The commands retain their real observed PTY timing as non-authoritative
-evidence. Buildchain's reviewed `deterministic-readable` playback contract
-preserves every terminal event payload and its order, then maps each rendition
-onto a 90-second active presentation followed by a 3-second final hold. This
-keeps native Work, independent Review, and Close execution truthful while
-preventing host latency from exceeding the bounded renderer scene contract.
 
 Before upload, a distinct non-interactive transport smoke runs
 `kungfu agent-work-lab demo --json` from the copied standalone distribution and

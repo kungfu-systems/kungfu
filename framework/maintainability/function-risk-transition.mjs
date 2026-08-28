@@ -131,15 +131,17 @@ function qualifiedOccurrenceMatches(current, baseline) {
       (item) => ![...matches.values()].some(({ id }) => id === item.id),
     ),
   });
-  // Reserve only globally unique exact bodies before local occurrence alignment;
-  // otherwise a nearby changed function can consume a baseline that moved files.
-  uniqueGlobalMatches(
-    current,
-    baseline,
-    matches,
-    (item) => `${item.owner}\0${item.symbol}\0${item.bodyRoot}`,
-  );
+  const exactBody = (item) => `${item.owner}\0${item.symbol}\0${item.bodyRoot}`;
+  // Reserve globally unique exact bodies first; identity is unambiguous whether
+  // the function stayed in place or moved to another owner file.
   let remaining = unmatched();
+  uniqueGlobalMatches(
+    remaining.current,
+    remaining.baseline,
+    matches,
+    exactBody,
+  );
+  remaining = unmatched();
   const currentGroups = occurrenceGroups(remaining.current);
   const baselineGroups = occurrenceGroups(remaining.baseline);
   for (const [key, currentItems] of currentGroups) {
@@ -149,6 +151,32 @@ function qualifiedOccurrenceMatches(current, baseline) {
       matches,
     );
   }
+  // Equal-cardinality byte-equivalent bodies are risk-equivalent after every
+  // exact-id and same-path opportunity has been consumed. Pair only the
+  // remainder deterministically; unequal groups still fail closed.
+  remaining = unmatched();
+  const baselineBodies = grouped(remaining.baseline, exactBody);
+  const equivalentPairs = [...grouped(remaining.current, exactBody)]
+    .map(([key, currentItems]) => [currentItems, baselineBodies.get(key) || []])
+    .filter(
+      ([currentItems, baselineItems]) =>
+        currentItems.length === baselineItems.length,
+    )
+    .filter(([currentItems]) => currentItems.length > 1)
+    .flatMap(([currentItems, baselineItems]) => {
+      const orderedCurrent = [...currentItems].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      );
+      const orderedBaseline = [...baselineItems].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      );
+      return orderedCurrent.map((item, index) => [
+        item,
+        orderedBaseline[index],
+      ]);
+    });
+  // biome-ignore lint/complexity/noForEach: matching mutates one bounded identity map
+  equivalentPairs.forEach(([item, previous]) => matches.set(item.id, previous));
   remaining = unmatched();
   uniqueGlobalMatches(
     remaining.current,
@@ -165,20 +193,22 @@ function qualifiedOccurrenceMatches(current, baseline) {
     remaining.baseline,
     (item) => `${item.owner}\0${item.symbol}`,
   );
-  const findings = [];
-  for (const [key, currentItems] of currentCandidates) {
-    const baselineItems = baselineCandidates.get(key) || [];
-    if (!baselineItems.length) continue;
-    findings.push({
-      code: 'ambiguous-function-identity',
-      severity: 'advisory',
-      paths: [
-        ...new Set([...currentItems, ...baselineItems].map(({ path }) => path)),
-      ].sort(),
-      message:
-        'qualified occurrence identity is ambiguous across unmatched functions',
+  const findings = [...currentCandidates]
+    .filter(([key]) => baselineCandidates.has(key))
+    .map(([key, currentItems]) => {
+      const baselineItems = baselineCandidates.get(key) || [];
+      return {
+        code: 'ambiguous-function-identity',
+        severity: 'advisory',
+        paths: [
+          ...new Set(
+            [...currentItems, ...baselineItems].map(({ path }) => path),
+          ),
+        ].sort(),
+        message:
+          'qualified occurrence identity is ambiguous across unmatched functions',
+      };
     });
-  }
   return { matches, findings };
 }
 
