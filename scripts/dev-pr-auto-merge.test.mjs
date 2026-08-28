@@ -696,6 +696,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
+  const workflow = fs.readFileSync(
+    '.github/workflows/dev-pr-auto-merge.yml',
+    'utf8',
+  );
   assert.match(action, /ref: a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab/u);
   assert.match(
     action,
@@ -708,6 +712,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
   assert.match(
     action,
     /BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker\/v1/u,
+  );
+  assert.match(
+    workflow,
+    /BUILDCHAIN_RUNNER_ENVIRONMENT=github-hosted[\s\S]*\.\/shifu dev-delivery:native-under-warrant/u,
   );
 });
 

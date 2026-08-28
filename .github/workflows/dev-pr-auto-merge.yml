@@ -568,6 +568,7 @@ jobs:
       shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
       native-proof-json: ${{ needs.delivery-contract.outputs.native-proof-json }}
       native-command: >-
+        BUILDCHAIN_RUNNER_ENVIRONMENT=github-hosted
         KUNGFU_FNM_DIST_MIRROR=${{ vars.KUNGFU_FNM_DIST_MIRROR }}
         KUNGFU_FNM_SHA256=${{ vars.KUNGFU_FNM_SHA256 }}
         ./shifu dev-delivery:native-under-warrant --
