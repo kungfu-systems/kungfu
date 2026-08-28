@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.code-complexity-budget-waiver/v3",
-  "issue_root": "sha256:359385b20933b215e8a77fb49602b06ce52b9ed8ea5ce366cb31cef022215501",
+  "issue_root": "sha256:f92d02e91d6b9bdca46c735874184ddd18f2c22454ce01552c575ed232ec58df",
   "issue_kind": "new-helper-proliferation",
   "paths_or_scope": [
     "framework/core/src/python/kungfu/_assignment_orchestration/portable.py",
@@ -97,8 +97,8 @@
       "class": "first-party-handwritten-implementation",
       "language": "python",
       "owner": "core/package",
-      "lines": 249,
-      "contentRoot": "sha256:f331f6dfd0d3e8b861a44e9250d3a531027dfe3fb3f27dc861e75b827317276a"
+      "lines": 233,
+      "contentRoot": "sha256:74af019325ea83b4d00b257f880534fe8ca4dcd9a921ac172e05bb8f6ab192d8"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_profile/action.py",
@@ -109,7 +109,7 @@
       "contentRoot": "sha256:dbda478ae44c11e8034f61a085383e0821808a94c6b9946039a503cf7f9cb614"
     }
   ],
-  "allowed_delta": 3857,
+  "allowed_delta": 3841,
   "owner": "core/package",
   "responsibility_boundary": "Wave 3 decomposes six protected Profile and Assignment Python hotspots into explicit action, intent, lifecycle, KFD-3, composition, session, portable-state, starter, review, family, binding, seal, and Profile CLI responsibility owners while retaining stable public facades.",
   "cohesion_rationale": "The eleven files are the minimum cohesive owner set needed to move six independently changing Profile and Assignment responsibilities below 1000 physical lines without duplicating algorithms, hiding handwritten code, introducing import cycles, or changing stable import and CLI surfaces.",
@@ -122,6 +122,7 @@
     "./shifu test:agent-profile-sdk",
     "./shifu test:assignment-runtime",
     "./shifu test:cli-surface-contract",
+    "./shifu test:project-work-runtime",
     "./shifu test:work-authority",
     "./shifu check:agent-work-state-contract",
     "./shifu check:python-structure",
