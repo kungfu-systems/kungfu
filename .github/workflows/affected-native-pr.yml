@@ -485,6 +485,8 @@ jobs:
       toolchain-root: ${{ steps.identity.outputs.toolchain-root }}
       environment-root: ${{ steps.identity.outputs.environment-root }}
       allowed-phases: ${{ steps.identity.outputs.allowed-phases }}
+      delivery-class: ${{ steps.identity.outputs.delivery-class }}
+      native-execution-required: ${{ steps.identity.outputs.native-execution-required }}
     steps:
       - name: Check out exact Buildchain Warrant runtime
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -539,30 +541,58 @@ jobs:
             --repository "$GITHUB_REPOSITORY" \
             --branch "$protected_base" \
             --output .buildchain/warrant-observation.json
-          jq -e \
-            --argjson pullRequest "$pull_request" \
-            --arg sourceHead "$source_head" \
-            --arg allowedPhase "$allowed_phase" \
-            '.observation.activeWarrant.pullRequestNumber == $pullRequest
-             and .observation.activeWarrant.sourceHead == $sourceHead
-             and (.observation.activeCandidate.toolchainRoot | test("^sha256:[0-9a-f]{64}$"))
-             and (.observation.activeCandidate.environmentRoot | test("^sha256:[0-9a-f]{64}$"))
-             and (.observation.activeWarrant.phase | test($allowedPhase))' \
-            .buildchain/warrant-observation.json >/dev/null
+          delivery_class="$(jq -r '.observation.activeWarrant.deliveryClass // "native"' .buildchain/warrant-observation.json)"
+          native_execution_required=true
+          if [ "$delivery_class" = "non-native-fast" ]; then
+            jq -e \
+              --argjson pullRequest "$pull_request" \
+              --arg sourceHead "$source_head" \
+              '.observation.activeWarrant.pullRequestNumber == $pullRequest
+               and .observation.activeWarrant.sourceHead == $sourceHead
+               and .observation.activeCandidate.pullRequestNumber == $pullRequest
+               and .observation.activeCandidate.sourceHead == $sourceHead
+               and .observation.activeWarrant.candidateId == .observation.activeCandidate.candidateId
+               and .observation.activeWarrant.sourceProofRoot == .observation.activeCandidate.sourceProofRoot
+               and (.observation.activeCandidate.sourceProofRoot | test("^sha256:[0-9a-f]{64}$"))
+               and .observation.activeCandidate.deliveryClass == "non-native-fast"
+               and .observation.activeCandidate.status == "selected"
+               and (.observation.activeWarrant | has("phase") | not)' \
+              .buildchain/warrant-observation.json >/dev/null
+            native_execution_required=false
+          else
+            jq -e \
+              --argjson pullRequest "$pull_request" \
+              --arg sourceHead "$source_head" \
+              --arg allowedPhase "$allowed_phase" \
+              '.observation.activeWarrant.pullRequestNumber == $pullRequest
+               and .observation.activeWarrant.sourceHead == $sourceHead
+               and (.observation.activeCandidate.toolchainRoot | test("^sha256:[0-9a-f]{64}$"))
+               and (.observation.activeCandidate.environmentRoot | test("^sha256:[0-9a-f]{64}$"))
+               and (.observation.activeWarrant.phase | test($allowedPhase))' \
+              .buildchain/warrant-observation.json >/dev/null
+          fi
           {
             echo "pull-request=$pull_request"
             echo "source-head=$source_head"
             echo "protected-base=$protected_base"
             echo "qualified-base=$qualified_base"
-            echo "toolchain-root=$(jq -er '.observation.activeCandidate.toolchainRoot' .buildchain/warrant-observation.json)"
-            echo "environment-root=$(jq -er '.observation.activeCandidate.environmentRoot' .buildchain/warrant-observation.json)"
-            if [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
-              echo "allowed-phases=qualified"
+            echo "delivery-class=${delivery_class}"
+            echo "native-execution-required=${native_execution_required}"
+            if [ "$native_execution_required" = "true" ]; then
+              echo "toolchain-root=$(jq -er '.observation.activeCandidate.toolchainRoot' .buildchain/warrant-observation.json)"
+              echo "environment-root=$(jq -er '.observation.activeCandidate.environmentRoot' .buildchain/warrant-observation.json)"
+              if [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
+                echo "allowed-phases=qualified"
+              else
+                echo "allowed-phases=provisional,qualified"
+              fi
             else
-              echo "allowed-phases=provisional,qualified"
+              echo "toolchain-root="
+              echo "environment-root="
+              echo "allowed-phases="
             fi
           } >> "$GITHUB_OUTPUT"
-          echo "Exact $GITHUB_EVENT_NAME Warrant admitted for PR #$pull_request at $source_head."
+          echo "Exact $GITHUB_EVENT_NAME ${delivery_class} Warrant admitted for PR #$pull_request at $source_head."
 
   affected_native_shards:
     name: affected-native shard ${{ matrix.partition }} of 2 / linux
@@ -575,6 +605,7 @@ jobs:
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
         needs.warrant_admission.result == 'success' &&
+        needs.warrant_admission.outputs.native-execution-required == 'true' &&
         needs.proof_probe.outputs.reuse != 'true' &&
         (needs.candidate_preflight.outputs.native-required == 'true' ||
          needs.candidate_preflight.outputs.sdk-required == 'true')
@@ -914,6 +945,7 @@ jobs:
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
         needs.warrant_admission.result == 'success' &&
+        needs.warrant_admission.outputs.native-execution-required == 'true' &&
         needs.proof_probe.outputs.reuse != 'true' &&
         needs.candidate_preflight.outputs.shifu-required == 'true'
       }}
@@ -955,6 +987,7 @@ jobs:
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
         needs.warrant_admission.result == 'success' &&
+        needs.warrant_admission.outputs.native-execution-required == 'true' &&
         needs.proof_probe.outputs.reuse != 'true' &&
         needs.candidate_preflight.outputs.kfd-required == 'true'
       }}
@@ -1053,6 +1086,7 @@ jobs:
           NATIVE_RESULT: ${{ needs.affected_native_shards.result }}
           SHIFU_RESULT: ${{ needs.shifu_workspace.result }}
           KFD_RESULT: ${{ needs.kfd_verifier.result }}
+          NATIVE_EXECUTION_REQUIRED: ${{ needs.warrant_admission.outputs.native-execution-required }}
         run: |
           set -euo pipefail
           require_result() {
@@ -1067,6 +1101,18 @@ jobs:
           require_result "source acceptance" success "$SOURCE_RESULT"
           require_result "candidate preflight" success "$PREFLIGHT_RESULT"
           require_result "impact probe" success "$PROBE_RESULT"
+          if [ "$NATIVE_EXECUTION_REQUIRED" != "true" ]; then
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              require_result "PR DCO" success "$DCO_RESULT"
+            else
+              require_result "queue DCO" skipped "$DCO_RESULT"
+            fi
+            require_result "non-native affected-native" skipped "$NATIVE_RESULT"
+            require_result "non-native Shifu workspace" skipped "$SHIFU_RESULT"
+            require_result "non-native KFD verifier" skipped "$KFD_RESULT"
+            echo "Buildchain selected non-native-fast; native execution is intentionally skipped."
+            exit 0
+          fi
           require_optional_gate() {
             label="$1"
             required="$2"
@@ -1179,6 +1225,7 @@ jobs:
         if: >-
           ${{
             needs.proof_probe.outputs.reuse != 'true' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -1193,6 +1240,7 @@ jobs:
           PARTITION_RESULT: ${{ needs.affected_native_shards.result }}
           NATIVE_REQUIRED: ${{ needs.candidate_preflight.outputs.native-required }}
           SDK_REQUIRED: ${{ needs.candidate_preflight.outputs.sdk-required }}
+          NATIVE_EXECUTION_REQUIRED: ${{ needs.warrant_admission.outputs.native-execution-required }}
           REUSE: ${{ needs.proof_probe.outputs.reuse }}
           PRODUCER_RUN_ID: ${{ needs.proof_probe.outputs.producer-run-id }}
           PRODUCER_EVENT: ${{ needs.proof_probe.outputs.producer-event }}
@@ -1200,8 +1248,9 @@ jobs:
         run: |
           set -euo pipefail
           descriptor=product/qualification/affected-native/proof-admission/descriptor.json
-          if [ "$NATIVE_REQUIRED" != "true" ] && [ "$SDK_REQUIRED" != "true" ]; then
-            echo "The source-impact plan explicitly requires no native or SDK qualification."
+          if [ "$NATIVE_EXECUTION_REQUIRED" != "true" ] || \
+             { [ "$NATIVE_REQUIRED" != "true" ] && [ "$SDK_REQUIRED" != "true" ]; }; then
+            echo "The exact Delivery Warrant requires no native or SDK qualification."
             echo "proof-created=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -1262,6 +1311,7 @@ jobs:
         if: >-
           ${{
             github.event_name == 'pull_request' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -1336,6 +1386,7 @@ jobs:
         if: >-
           ${{
             github.event_name == 'pull_request' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -1349,6 +1400,7 @@ jobs:
         if: >-
           ${{
             github.event_name == 'merge_group' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -1385,6 +1437,7 @@ jobs:
         if: >-
           ${{
             github.event_name == 'merge_group' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -1454,6 +1507,7 @@ jobs:
         if: >-
           ${{
             github.event_name == 'merge_group' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -1467,6 +1521,7 @@ jobs:
         if: >-
           ${{
             github.event_name == 'merge_group' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -1480,6 +1535,7 @@ jobs:
         if: >-
           ${{
             github.event_name == 'merge_group' &&
+            needs.warrant_admission.outputs.native-execution-required == 'true' &&
             needs.proof_probe.outputs.reuse == 'true'
           }}
         shell: bash
