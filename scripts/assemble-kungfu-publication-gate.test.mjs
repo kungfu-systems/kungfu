@@ -7,7 +7,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { createKungfuPublicationGateAggregate } from './assemble-kungfu-publication-gate.mjs';
+import {
+  bindKungfuPublicationGateAggregate,
+  createKungfuPublicationGateAggregate,
+  validateKungfuReleaseCandidatePassport,
+} from './assemble-kungfu-publication-gate.mjs';
 
 const SOURCE_SHA = '1'.repeat(40);
 const PLATFORMS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
@@ -81,6 +85,73 @@ test('publication Gate aggregate binds the exact four-platform artifact set', ()
   assert.deepEqual(aggregate.omitted, []);
   assert.deepEqual(aggregate.issues, []);
   assert.equal(aggregate.digest, `sha256:${'5'.repeat(64)}`);
+});
+
+test('publication Gate aggregate reuses candidate evidence for an exact target tree', () => {
+  const evidenceSourceSha = '6'.repeat(40);
+  const targetSourceSha = '7'.repeat(40);
+  const sourceTreeSha = '8'.repeat(40);
+  const aggregate = { sourceSha: evidenceSourceSha, digest: 'old-digest' };
+  const rebound = bindKungfuPublicationGateAggregate({
+    aggregate,
+    evidenceSourceSha,
+    targetSourceSha,
+    targetSourceTreeSha: sourceTreeSha,
+    expectedSourceTreeSha: sourceTreeSha,
+    rebindPublicationGateAggregateForEquivalentTree: (value, binding) => ({
+      ...value,
+      sourceSha: binding.targetSourceSha,
+      candidateReuse: {
+        action: 'reused',
+        evidenceSourceSha: binding.evidenceSourceSha,
+        sourceTreeSha: binding.expectedSourceTreeSha,
+      },
+    }),
+  });
+
+  assert.equal(rebound.sourceSha, targetSourceSha);
+  assert.deepEqual(rebound.candidateReuse, {
+    action: 'reused',
+    evidenceSourceSha,
+    sourceTreeSha,
+  });
+});
+
+test('release candidate Passport remains bound to its evidence source before promotion rebinding', () => {
+  let validationOptions;
+  const result = validateKungfuReleaseCandidatePassport({
+    candidate: {
+      validateReleaseCandidatePassport: (options) => {
+        validationOptions = options;
+        return { ok: true, errors: [] };
+      },
+    },
+    passport: { source: { headSha: '6'.repeat(40) } },
+    targetRef: 'alpha/v4/v4.0',
+    buildSummary: { status: 'pass' },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(validationOptions.repository, 'kungfu-systems/kungfu');
+  assert.equal(validationOptions.targetChannel, 'alpha/v4/v4.0');
+  assert.equal('sourceHeadSha' in validationOptions, false);
+});
+
+test('publication Gate aggregate rejects candidate reuse for a different target tree', () => {
+  assert.throws(
+    () =>
+      bindKungfuPublicationGateAggregate({
+        aggregate: { sourceSha: '6'.repeat(40), digest: 'old-digest' },
+        evidenceSourceSha: '6'.repeat(40),
+        targetSourceSha: '7'.repeat(40),
+        targetSourceTreeSha: '8'.repeat(40),
+        expectedSourceTreeSha: '9'.repeat(40),
+        rebindPublicationGateAggregateForEquivalentTree: () => {
+          throw new Error('rebind must not run for a mismatched tree');
+        },
+      }),
+    /promotion source tree does not match the release candidate/,
+  );
 });
 
 test('real Buildchain validation starts with empty GitHub command files', () => {
