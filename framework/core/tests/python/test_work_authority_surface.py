@@ -1300,14 +1300,19 @@ def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
         "consoleId": binding["session"]["workConsoleId"],
         "attemptId": binding["session"]["sessionAttemptId"],
     }
-    monkeypatch.setattr(
-        assignment_fresh_recovery.session_surface,
-        "current_native_console",
-        lambda _runtime_dir: {
+
+    def current_native_console(_runtime_dir, **options):
+        observed["console_options"] = options
+        return {
             "source": console_source,
             "envelope": console_envelope,
             "workspaceRoot": str(workspace_root),
-        },
+        }
+
+    monkeypatch.setattr(
+        assignment_fresh_recovery.session_surface,
+        "current_native_console",
+        current_native_console,
     )
 
     def bind_current_native_work(*_args, **kwargs):
@@ -1341,6 +1346,10 @@ def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
     )
 
     assert receipt["ok"] is True
+    assert observed["console_options"] == {
+        "adopt": True,
+        "project_work_binding": False,
+    }
     assert observed["work_profile_source"] == profile_source
     if expects_override:
         assert observed["envelope_override"] == console_envelope
