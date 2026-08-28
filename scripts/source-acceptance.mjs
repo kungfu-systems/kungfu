@@ -721,7 +721,7 @@ export function sourceAcceptancePlan(
       'deprecation lifecycle authority',
       'framework/deprecation/deprecation-lifecycle.mjs',
       '--as-of',
-      '2026-07-29',
+      '2026-08-28',
     ],
     ...(files.length
       ? [
@@ -729,7 +729,7 @@ export function sourceAcceptancePlan(
             'changed deprecation surface enrollment',
             'framework/deprecation/deprecation-lifecycle.mjs',
             '--as-of',
-            '2026-07-29',
+            '2026-08-28',
             ...files.flatMap((file) => ['--changed-file', file]),
           ],
         ]

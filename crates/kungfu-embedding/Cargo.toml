@@ -16,7 +16,7 @@
 
 [package]
 name = "kungfu-embedding"
-version = "4.0.0-alpha.3"
+version = "4.0.0-alpha.4"
 description = "safe Rust wrapper over the standard libkungfu stream and maintenance interfaces"
 publish = false
 edition.workspace = true
