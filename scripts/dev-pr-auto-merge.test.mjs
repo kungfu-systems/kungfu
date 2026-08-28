@@ -19,11 +19,19 @@ const steadyStateDogfoodFixturePath =
   'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 
 test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs', () => {
-  const reusableRef = workflow.match(
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
-  )?.[1];
-  assert.equal(reusableRef, '8493bf140a7f567e76aff3119f3d39ff026afc84');
-  assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
+  const reusableRefs = [
+    ...workflow.matchAll(
+      /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/gu,
+    ),
+  ].map((match) => match[1]);
+  assert.deepEqual(reusableRefs, [
+    '2416a1eacbc87e902eceea467af72a95f24a51f0',
+    '2416a1eacbc87e902eceea467af72a95f24a51f0',
+  ]);
+  const runtimeSelectors = [
+    ...workflow.matchAll(/^\s+buildchain-ref:\s+(\S+)\s*$/gmu),
+  ].map((match) => match[1]);
+  assert.deepEqual(runtimeSelectors, ['v4-alpha', 'v4-alpha']);
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
     workflow,
@@ -280,7 +288,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     landing,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@8493bf140a7f567e76aff3119f3d39ff026afc84/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@2416a1eacbc87e902eceea467af72a95f24a51f0/u,
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
@@ -312,7 +320,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 8493bf140a7f567e76aff3119f3d39ff026afc84/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 2416a1eacbc87e902eceea467af72a95f24a51f0/u,
   );
   assert.match(
     workflow,
@@ -623,10 +631,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
-  assert.match(action, /ref: 8493bf140a7f567e76aff3119f3d39ff026afc84/u);
+  assert.match(action, /ref: 2416a1eacbc87e902eceea467af72a95f24a51f0/u);
   assert.match(
     action,
-    /test "\$\(git rev-parse HEAD\)" = 8493bf140a7f567e76aff3119f3d39ff026afc84/u,
+    /test "\$\(git rev-parse HEAD\)" = 2416a1eacbc87e902eceea467af72a95f24a51f0/u,
   );
   assert.match(
     action,
