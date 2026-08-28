@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7892,
+  "generation": 7893,
   "fencingCounter": 739,
   "policy": {
     "agingSeconds": 900,
@@ -11,56 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:7c2c33b2887b85f60634cfded5b5fd43965a399888d982c7808028cb2a947f1a",
-    "pullRequestNumber": 3511,
-    "sourceHead": "5575223c9bd673a237d4050880d82eb705ae136c",
-    "assignmentRoot": "sha256:f9e34865d0a2cf755bacca37fb30869142892c84f2d3ee207cf49ab42b15cbb1",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:778f24299a59788923e643e26e90fc1bd3f10b3cc2d07cc152b8b2565f210c4b",
-    "sourcePatchRoot": "sha256:82371b45d73748742e90560e1ac3c298b03b4705a6be2781ffd8938061cd5fd1",
-    "sourceProofRoot": "sha256:8e00476c7da849e6def83312da87de540848cb7b3f9f9f30e8d1475159fbfa63",
-    "planRoot": "sha256:7dd0e672de5d3b88d866ce268191afc9f7f3a8c884dab93773926d5343985ee6",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:c279ce7b13bf86c529cde8b56c15c6189847c441c8baf9ceea67b17c9b53208a",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "nativeCommandContract": {
-      "schema": "kungfu.buildchain.native-command-contract/v1",
-      "runner": "bash-lc",
-      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3511 --expected-head 5575223c9bd673a237d4050880d82eb705ae136c --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
-      "commandRoot": "sha256:c804fd7b417b467ebd73e95e934bd2592ae9acdfbf2dcfd45564ba009ef8a7c5"
-    },
-    "affectedPaths": [
-      ".github/actions/native-execution-under-warrant/action.yml",
-      ".github/workflows/dev-delivery-warrant-terminal.yml",
-      ".github/workflows/dev-pr-auto-merge.yml",
-      ".github/workflows/queue-admission-lease.yml",
-      "docs/qualification/gates/dev-queue-admission.contract.json",
-      "docs/qualification/gates/workflow-authority.json",
-      "framework/release/publication-surfaces.json",
-      "scripts/dev-delivery-warrant-input.test.mjs",
-      "scripts/dev-pr-auto-merge.test.mjs",
-      "scripts/queue-admission-lease.test.mjs"
-    ],
-    "shardEvidenceRoots": [
-      "sha256:45685ed064ee5eb1d0814ed925a720605bc955aa0dcf62ad4563bf5f8fcbf6f6",
-      "sha256:add31cf19078f00e2963dfcbe71d1e0ec32db1e1d4b3860f4ced4a1c88be5113"
-    ],
-    "sourceWorkflowRunId": 33191197445,
-    "deliveryClass": "native-proof-required",
-    "priority": "ordinary",
-    "generation": 739,
-    "expectedOldStateRoot": "sha256:a69979e680363e95fe7bcff86f8399025c9a605255414f5c71a4fa21cbe7e7a3",
-    "issuedAt": "2026-08-28T23:36:49.000Z",
-    "expiresAt": "2026-08-29T01:06:49.000Z",
-    "fencingToken": "sha256:1a729b188129189390eb559ecbaefb2aac388ba57c7b89ed507cff40abe5f4ee",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -51715,11 +51666,19 @@
       "sourceWorkflowRunId": 33191197445,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-28T23:34:59.897Z",
-      "updatedAt": "2026-08-28T23:36:49.000Z",
+      "updatedAt": "2026-08-28T23:46:00.000Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "reason": "Exact hosted Core affected native run 33191197445 attempt 4 completed with 2 failed jobs, 2 cancelled jobs, and 0 nonterminal jobs.",
+        "evidenceRoot": "sha256:80cb8a46d0f8761700cd85180779279fe43b8b8f35d68d3b5979646e1dc1b7cd",
+        "closedAt": "2026-08-28T23:46:00.000Z",
+        "fencingToken": "sha256:1a729b188129189390eb559ecbaefb2aac388ba57c7b89ed507cff40abe5f4ee",
+        "leaseGeneration": 739,
+        "successorWake": null
+      },
       "affectedPaths": [
         ".github/actions/native-execution-under-warrant/action.yml",
         ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -51738,6 +51697,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-28T23:36:49.000Z",
-  "stateRoot": "sha256:9af9eae80a6a36ddcd30598238726f8e874bb30404702c5bae449c520f899610"
+  "updatedAt": "2026-08-28T23:46:00.000Z",
+  "stateRoot": "sha256:f9ca50634cd8f93b94515555f61c8f78a0e4f5a0264b243a40ef57debad296e9"
 }
