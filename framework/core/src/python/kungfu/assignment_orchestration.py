@@ -550,31 +550,23 @@ class _NextActionProjection:
             for row in work_semantics.get("next_actions", [])
         ]
 
-    @staticmethod
-    def project(status: Mapping[str, Any]) -> list[dict[str, Any]]:
-        identity = {
-            "initiative_id": str(status.get("initiative_id", "")),
-            "assignment_id": str(status.get("assignment_id", "")),
-        }
-        phase = str(status.get("phase", ""))
-        if phase == "executing" and not status.get("active_lease"):
-            recovered = status.get("recovery_continuation")
-            phase = "recovered-closeout" if recovered else "recovery-required"
-        semantic_actions = _NextActionProjection.semantic_actions(
-            status, phase, identity
-        )
-        if semantic_actions is not None:
-            return semantic_actions
-        return [
-            {"action": action, "description": description, "input": identity}
-            for action, description in _NEXT_ACTIONS_BY_PHASE.get(phase, [])
-        ]
-
 
 def next_actions(status: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """Preserve the public facade seam while delegating projection ownership."""
-
-    return _NextActionProjection.project(status)
+    identity = {
+        "initiative_id": str(status.get("initiative_id", "")),
+        "assignment_id": str(status.get("assignment_id", "")),
+    }
+    phase = str(status.get("phase", ""))
+    if phase == "executing" and not status.get("active_lease"):
+        recovered = status.get("recovery_continuation")
+        phase = "recovered-closeout" if recovered else "recovery-required"
+    semantic_actions = _NextActionProjection.semantic_actions(status, phase, identity)
+    if semantic_actions is not None:
+        return semantic_actions
+    return [
+        {"action": action, "description": description, "input": identity}
+        for action, description in _NEXT_ACTIONS_BY_PHASE.get(phase, [])
+    ]
 
 
 def gate(status: Mapping[str, Any], target: str) -> dict[str, Any]:
