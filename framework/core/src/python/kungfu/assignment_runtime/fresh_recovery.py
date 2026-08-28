@@ -54,10 +54,12 @@ def _current_session(runtime_dir: str) -> JsonObject:
 
 
 def preserved_state(status: Mapping[str, Any]) -> JsonObject:
-    """Retain every native lifecycle field while excluding the query proof cut."""
+    """Retain native lifecycle authority, not reader-specific projections."""
 
     return {
-        str(key): value for key, value in status.items() if key != "query_proof_root"
+        str(key): value
+        for key, value in status.items()
+        if key not in {"query_proof_root", "work_semantics"}
     }
 
 
