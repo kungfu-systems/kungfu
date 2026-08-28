@@ -67,7 +67,7 @@ function qualifiedWarrantView(overrides = {}) {
   };
 }
 
-test('queue admission consumes only an exact qualified two-phase Warrant', () => {
+test('queue admission consumes an exact qualified native Warrant', () => {
   const receipt = verifyQueueAdmissionLease({
     view: qualifiedWarrantView(),
     pullRequestNumber: 1728,
@@ -77,6 +77,30 @@ test('queue admission consumes only an exact qualified two-phase Warrant', () =>
   assert.equal(receipt.candidateState, 'qualified');
   assert.equal(receipt.nativeProofRoot, digest({ proof: 'native' }));
   assert.equal(receipt.nativeProofReuseRoot, digest({ proof: 'native-reuse' }));
+  assert.equal(receipt.deliveryClass, 'native');
+});
+
+test('queue admission consumes an exact non-native-fast Warrant without native proof', () => {
+  const view = qualifiedWarrantView({
+    candidate: { deliveryClass: 'non-native-fast', status: 'selected' },
+    warrant: { deliveryClass: 'non-native-fast' },
+  });
+  const {
+    phase: _phase,
+    nativeProofRoot: _nativeProofRoot,
+    nativeProofReuseRoot: _nativeProofReuseRoot,
+    ...nonNativeFastWarrant
+  } = view.observation.activeWarrant;
+  view.observation.activeWarrant = nonNativeFastWarrant;
+  const receipt = verifyQueueAdmissionLease({
+    view,
+    pullRequestNumber: 1728,
+    sourceHeadSha: SOURCE_HEAD,
+    now: '2026-08-12T11:30:00.000Z',
+  });
+  assert.equal(receipt.deliveryClass, 'non-native-fast');
+  assert.equal(receipt.candidateState, 'selected');
+  assert.equal('nativeProofRoot' in receipt, false);
 });
 
 test('queue admission rejects provisional and legacy single-phase states', () => {
@@ -95,6 +119,36 @@ test('queue admission rejects provisional and legacy single-phase states', () =>
       /not delivery-ready/u,
     );
   }
+});
+
+test('queue admission rejects a phase-less native Warrant and mixed delivery classes', () => {
+  const phaseLessNative = qualifiedWarrantView();
+  const { phase: _phase, ...phaseLessNativeWarrant } =
+    phaseLessNative.observation.activeWarrant;
+  phaseLessNative.observation.activeWarrant = phaseLessNativeWarrant;
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: phaseLessNative,
+        pullRequestNumber: 1728,
+        sourceHeadSha: SOURCE_HEAD,
+        now: '2026-08-12T11:30:00.000Z',
+      }),
+    /not delivery-ready/u,
+  );
+
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: qualifiedWarrantView({
+          candidate: { deliveryClass: 'non-native-fast', status: 'selected' },
+        }),
+        pullRequestNumber: 1728,
+        sourceHeadSha: SOURCE_HEAD,
+        now: '2026-08-12T11:30:00.000Z',
+      }),
+    /not delivery-ready/u,
+  );
 });
 
 test('queue admission rejects qualified state without native proof binding', () => {
