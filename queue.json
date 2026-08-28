@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7668,
+  "generation": 7669,
   "fencingCounter": 716,
   "policy": {
     "agingSeconds": 900,
@@ -49777,8 +49777,38 @@
         "framework/maintainability/waivers/python-1000-line-decomposition-wave3.v1.json",
         "framework/primitive/kungfu-primitive-catalog.contract.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3491,
+      "assignmentRoot": "sha256:df8c91a7352c5c0ca076951299f8c8df1abe319e4670b8d654f292ae7820d6fd",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:516e2654e4de566f6129fd476f4d1f6e922bc85052eac844859ac8400e2494e4",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:de01273ac4ad39b4e4b3dad8d9282f5b39e1a77e05bfc515d7c2d3b2844dad29",
+      "sourceHead": "431656137b9889ca7574d7213635e2e2543e4960",
+      "sourcePatchRoot": "sha256:c16ab60c2cc9e0548524fa9f2b6599e12bd16fa74d75826741465c7c53854811",
+      "sourceProofRoot": "sha256:6e2f9f2314c3402019641e9253816e1f3483306e5a700c7b2237304731ae7522",
+      "planRoot": "sha256:9bfe59b7edb64d41c30005894e08bf75d1a3618a73415f19d657c2df6a8719b2",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:93acdc88d876816998d966cdf4e2d9f3b4e5305e82df59930f7b6c13ad1f823a",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 33151084532,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-28T07:30:05.647Z",
+      "updatedAt": "2026-08-28T07:30:05.647Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/project.json",
+        "crates/xinfa/qualification/context-quality-v1.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-28T07:26:18.329Z",
-  "stateRoot": "sha256:07ae41001a9e2c5bb7f46e7625dd19b76525aece7abafe0d32bb62840a132631"
+  "updatedAt": "2026-08-28T07:30:05.647Z",
+  "stateRoot": "sha256:b68e79683cd58c8e9e95dcce55711af9e97b0882865883aabdf98300c33b0189"
 }
