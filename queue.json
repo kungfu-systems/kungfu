@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7888,
+  "generation": 7889,
   "fencingCounter": 738,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:02fc7f82c8b29dd4594ee5b750bde399b89b6de3b3c91455b31092ddac6713c8",
@@ -80,8 +80,13 @@
     "issuedAt": "2026-08-28T22:32:03.030Z",
     "expiresAt": "2026-08-29T00:43:15.404Z",
     "fencingToken": "sha256:e1fd544ac25a5700c048d1d2b332f98f47b3bfd2c45258b9fe694ef590ab8eaf",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-28T23:13:15.404Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-28T23:13:15.404Z",
+    "nativeProofRoot": "sha256:23e0b3279fb190bcd8de947f3b5978066d142fb72e0327ab886bb8fbc9c4b6aa",
+    "nativeExecutionReceiptRoot": "sha256:8618bf4dc980a21e7b5a393348e2e8f31140e057590ce81f903ce9df95fa571c",
+    "nativeProofReuseRoot": "sha256:0d7da71cd5211fba37b37c85f1e0e42490894c2ef534fbee3f1d474ef5e4b83d",
+    "qualificationReceiptRoot": "sha256:a0d4e889e25db378d2a0dcea11307d2b9f1776842d5793e12d669657855ff56a",
+    "qualifiedAt": "2026-08-28T23:13:43.655Z"
   },
   "candidates": [
     {
@@ -51660,10 +51665,10 @@
       "sourceWorkflowRunId": 33216468922,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-28T22:31:58.260Z",
-      "updatedAt": "2026-08-28T23:13:15.404Z",
+      "updatedAt": "2026-08-28T23:13:43.655Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
@@ -51704,6 +51709,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-28T23:13:15.404Z",
-  "stateRoot": "sha256:d367285b519f67910060c666c9b18b849ba8c6c57e1745f64452fae603dac8ee"
+  "updatedAt": "2026-08-28T23:13:43.655Z",
+  "stateRoot": "sha256:ac206947f3a798ecb82c1d103ce47d6b0316fd30eddac625289fc90eb999de8b"
 }
