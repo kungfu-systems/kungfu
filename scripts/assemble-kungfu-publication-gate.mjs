@@ -223,6 +223,30 @@ export function bindKungfuPublicationGateAggregate({
   });
 }
 
+export function resolveGitTreeSha({ repositoryRoot, sourceSha }) {
+  if (!/^[0-9a-f]{40}$/.test(sourceSha))
+    throw new Error('promotion source SHA must be an exact commit SHA');
+  let treeSha;
+  try {
+    treeSha = execFileSync(
+      'git',
+      ['rev-parse', '--verify', `${sourceSha}^{tree}`],
+      {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    ).trim();
+  } catch {
+    throw new Error(
+      `promotion source commit is unavailable in the publication subject: ${sourceSha}`,
+    );
+  }
+  if (!/^[0-9a-f]{40}$/.test(treeSha))
+    throw new Error('promotion source did not resolve to an exact Git tree');
+  return treeSha;
+}
+
 export function validateKungfuReleaseCandidatePassport({
   candidate,
   passport,
@@ -319,10 +343,10 @@ export async function assembleKungfuPublicationGate({
     throw new Error(
       `release-candidate passport is invalid: ${passportValidation.errors.join('; ')}`,
     );
-  const promotionTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], {
-    cwd: subjectRoot,
-    encoding: 'utf8',
-  }).trim();
+  const promotionTree = resolveGitTreeSha({
+    repositoryRoot: subjectRoot,
+    sourceSha,
+  });
 
   const controllerValidation = controllers.validateControllerReceipt(
     controllerReceipt,

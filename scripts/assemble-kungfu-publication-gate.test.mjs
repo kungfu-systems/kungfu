@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   bindKungfuPublicationGateAggregate,
   createKungfuPublicationGateAggregate,
+  resolveGitTreeSha,
   validateKungfuReleaseCandidatePassport,
 } from './assemble-kungfu-publication-gate.mjs';
 
@@ -56,6 +57,44 @@ function fixture() {
   return { registry, gateReceipt, manifestSet };
 }
 
+function git(repositoryRoot, ...args) {
+  return execFileSync('git', args, {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+}
+
+function gitTreeFixture() {
+  const repositoryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-publication-tree-test-'),
+  );
+  git(repositoryRoot, 'init', '--quiet');
+  git(repositoryRoot, 'config', 'user.name', 'Kungfu Test');
+  git(repositoryRoot, 'config', 'user.email', 'test@kungfu.invalid');
+  fs.writeFileSync(path.join(repositoryRoot, 'candidate.txt'), 'candidate\n');
+  git(repositoryRoot, 'add', 'candidate.txt');
+  git(repositoryRoot, 'commit', '--quiet', '-m', 'candidate');
+  const evidenceSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
+  const evidenceSourceTreeSha = git(repositoryRoot, 'rev-parse', 'HEAD^{tree}');
+
+  git(repositoryRoot, 'commit', '--quiet', '--allow-empty', '-m', 'promotion');
+  const equivalentTargetSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
+
+  fs.writeFileSync(path.join(repositoryRoot, 'candidate.txt'), 'different\n');
+  git(repositoryRoot, 'add', 'candidate.txt');
+  git(repositoryRoot, 'commit', '--quiet', '-m', 'different');
+  const differentTargetSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
+
+  return {
+    repositoryRoot,
+    evidenceSourceSha,
+    evidenceSourceTreeSha,
+    equivalentTargetSourceSha,
+    differentTargetSourceSha,
+  };
+}
+
 test('publication Gate aggregate binds the exact four-platform artifact set', () => {
   const value = fixture();
   const aggregate = createKungfuPublicationGateAggregate({
@@ -88,33 +127,42 @@ test('publication Gate aggregate binds the exact four-platform artifact set', ()
 });
 
 test('publication Gate aggregate reuses candidate evidence for an exact target tree', () => {
-  const evidenceSourceSha = '6'.repeat(40);
-  const targetSourceSha = '7'.repeat(40);
-  const sourceTreeSha = '8'.repeat(40);
-  const aggregate = { sourceSha: evidenceSourceSha, digest: 'old-digest' };
-  const rebound = bindKungfuPublicationGateAggregate({
-    aggregate,
-    evidenceSourceSha,
-    targetSourceSha,
-    targetSourceTreeSha: sourceTreeSha,
-    expectedSourceTreeSha: sourceTreeSha,
-    rebindPublicationGateAggregateForEquivalentTree: (value, binding) => ({
-      ...value,
-      sourceSha: binding.targetSourceSha,
-      candidateReuse: {
-        action: 'reused',
-        evidenceSourceSha: binding.evidenceSourceSha,
-        sourceTreeSha: binding.expectedSourceTreeSha,
-      },
-    }),
-  });
+  const fixture = gitTreeFixture();
+  try {
+    const targetSourceTreeSha = resolveGitTreeSha({
+      repositoryRoot: fixture.repositoryRoot,
+      sourceSha: fixture.equivalentTargetSourceSha,
+    });
+    const aggregate = {
+      sourceSha: fixture.evidenceSourceSha,
+      digest: 'old-digest',
+    };
+    const rebound = bindKungfuPublicationGateAggregate({
+      aggregate,
+      evidenceSourceSha: fixture.evidenceSourceSha,
+      targetSourceSha: fixture.equivalentTargetSourceSha,
+      targetSourceTreeSha,
+      expectedSourceTreeSha: fixture.evidenceSourceTreeSha,
+      rebindPublicationGateAggregateForEquivalentTree: (value, binding) => ({
+        ...value,
+        sourceSha: binding.targetSourceSha,
+        candidateReuse: {
+          action: 'reused',
+          evidenceSourceSha: binding.evidenceSourceSha,
+          sourceTreeSha: binding.expectedSourceTreeSha,
+        },
+      }),
+    });
 
-  assert.equal(rebound.sourceSha, targetSourceSha);
-  assert.deepEqual(rebound.candidateReuse, {
-    action: 'reused',
-    evidenceSourceSha,
-    sourceTreeSha,
-  });
+    assert.equal(rebound.sourceSha, fixture.equivalentTargetSourceSha);
+    assert.deepEqual(rebound.candidateReuse, {
+      action: 'reused',
+      evidenceSourceSha: fixture.evidenceSourceSha,
+      sourceTreeSha: fixture.evidenceSourceTreeSha,
+    });
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+  }
 });
 
 test('release candidate Passport remains bound to its evidence source before promotion rebinding', () => {
@@ -138,20 +186,33 @@ test('release candidate Passport remains bound to its evidence source before pro
 });
 
 test('publication Gate aggregate rejects candidate reuse for a different target tree', () => {
-  assert.throws(
-    () =>
-      bindKungfuPublicationGateAggregate({
-        aggregate: { sourceSha: '6'.repeat(40), digest: 'old-digest' },
-        evidenceSourceSha: '6'.repeat(40),
-        targetSourceSha: '7'.repeat(40),
-        targetSourceTreeSha: '8'.repeat(40),
-        expectedSourceTreeSha: '9'.repeat(40),
-        rebindPublicationGateAggregateForEquivalentTree: () => {
-          throw new Error('rebind must not run for a mismatched tree');
-        },
-      }),
-    /promotion source tree does not match the release candidate/,
-  );
+  const fixture = gitTreeFixture();
+  try {
+    const targetSourceTreeSha = resolveGitTreeSha({
+      repositoryRoot: fixture.repositoryRoot,
+      sourceSha: fixture.differentTargetSourceSha,
+    });
+    assert.notEqual(targetSourceTreeSha, fixture.evidenceSourceTreeSha);
+    assert.throws(
+      () =>
+        bindKungfuPublicationGateAggregate({
+          aggregate: {
+            sourceSha: fixture.evidenceSourceSha,
+            digest: 'old-digest',
+          },
+          evidenceSourceSha: fixture.evidenceSourceSha,
+          targetSourceSha: fixture.differentTargetSourceSha,
+          targetSourceTreeSha,
+          expectedSourceTreeSha: fixture.evidenceSourceTreeSha,
+          rebindPublicationGateAggregateForEquivalentTree: () => {
+            throw new Error('rebind must not run for a mismatched tree');
+          },
+        }),
+      /promotion source tree does not match the release candidate/,
+    );
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+  }
 });
 
 test('real Buildchain validation starts with empty GitHub command files', () => {
