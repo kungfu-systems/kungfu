@@ -1,0 +1,77 @@
+{
+  "artifact": {
+    "binaryRoot": "sha256:35abb6b4e6f8fd5dab329aad1f7641f542d52b11659aee02df457531546435a9",
+    "metadataContract": "kungfu.declarative-demo-binary/v1",
+    "metadataRoot": "sha256:7415e89a1560183e3f08d813f29b3c43a1a4c0ef63ef7e3e23de0a036635dfd7",
+    "platformId": "linux-x64",
+    "runtimeDependencies": []
+  },
+  "authority": {
+    "classification": "capture-source-evidence",
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ]
+  },
+  "demo": {
+    "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+    "id": "project-tour-episode-2",
+    "title": "Who is allowed to complete Work?"
+  },
+  "execution": {
+    "durationClass": "long-form",
+    "playback": {
+      "activeDurationMs": 90000,
+      "finalHoldMs": 3000,
+      "mode": "deterministic-readable",
+      "schema": "buildchain.declarative-demo-playback/v1"
+    }
+  },
+  "networkIsolation": "docker-none",
+  "product": {
+    "binaryName": "kungfu",
+    "displayName": "Kungfu",
+    "distribution": "standalone-binary",
+    "id": "kungfu"
+  },
+  "renditions": [
+    {
+      "columns": 150,
+      "height": 1080,
+      "id": "1080p",
+      "role": "primary",
+      "rows": 36,
+      "runSummary": "renditions/1080p/run-summary.json",
+      "runSummaryRoot": "sha256:5cf2d45f21812083333ad7684357d3c828541f08486a1e07213d049ce5da270f",
+      "terminalCapture": "renditions/1080p/terminal-capture.json",
+      "terminalCaptureRoot": "sha256:eaa289890a9faddbda287a7ab5f5842b3077cb8e960419465345ba71ac67dcc7",
+      "transcript": "renditions/1080p/complete-transcript.txt",
+      "width": 1920
+    },
+    {
+      "columns": 150,
+      "height": 720,
+      "id": "720p",
+      "role": "responsive",
+      "rows": 28,
+      "runSummary": "renditions/720p/run-summary.json",
+      "runSummaryRoot": "sha256:36775458cc06f4232e38fe14acc3c554b4261c35277a61dccff5a06e4412ff0e",
+      "terminalCapture": "renditions/720p/terminal-capture.json",
+      "terminalCaptureRoot": "sha256:c1eca77c53eac76b3269b94818c82bb5557c2c1ea2f6cab022e81c0aafd830b6",
+      "transcript": "renditions/720p/complete-transcript.txt",
+      "width": 1280
+    }
+  ],
+  "root": "sha256:97dd767d0b5c64af1718cae81940539a7a9e3426963a2fafb5d2eafb9deb564a",
+  "scenarioRoot": "sha256:9d9ac60303b77a4adc9941226de60d7d9a4243e7d158655d1d84818936f33740",
+  "schema": "buildchain.declarative-demo-capture/v1",
+  "sourceCoordinateRoot": "sha256:6a485b306ec5536e217c942603b5a51f1b562e424925e62368c8c1dd1ade29da",
+  "status": "qualified"
+}

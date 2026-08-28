@@ -1,0 +1,75 @@
+{
+  "authority": {
+    "authorizationSources": [
+      "exact-release-passport",
+      "core-policy",
+      "work-or-warrant",
+      "explicit-capability-grant",
+      "runtime-isolation"
+    ],
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ],
+    "productSystemRole": "assembly-and-distribution-metadata-only"
+  },
+  "capture": {
+    "binary": {
+      "binaryRoot": "sha256:35abb6b4e6f8fd5dab329aad1f7641f542d52b11659aee02df457531546435a9",
+      "metadataContract": "kungfu.declarative-demo-binary/v1",
+      "metadataRoot": "sha256:7415e89a1560183e3f08d813f29b3c43a1a4c0ef63ef7e3e23de0a036635dfd7",
+      "platformId": "linux-x64",
+      "runtimeDependencies": []
+    },
+    "networkIsolation": "docker-none",
+    "root": "sha256:97dd767d0b5c64af1718cae81940539a7a9e3426963a2fafb5d2eafb9deb564a"
+  },
+  "demo": {
+    "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+    "id": "project-tour-episode-2",
+    "title": "Who is allowed to complete Work?"
+  },
+  "evidenceRoot": "sha256:581c654d7c0ad3e6845094ddc9de9b3f9ab0cd05d7029a5722ec841882f2f350",
+  "gate": {
+    "root": "sha256:3ad89c2a4c8becfc7e3305b32d48de328fb0dc9f46f260cc811f34db44301764"
+  },
+  "media": {
+    "profile": "responsive-long-form-web-delivery-v1",
+    "qualificationRoot": "sha256:08d38aa239de6cc0e29e02c65356805d2857ed8b7bf362e377dfc65c181e18e8",
+    "root": "sha256:3d7382aaf482b11266148a2477efdcef252bb77b7840294810509903f83a7d8e"
+  },
+  "passportRoot": "sha256:1162ed8dc6ea142fbd2ba435aacea6565aa04378dd44fbf584fcc139fa6ededb",
+  "product": {
+    "binaryName": "kungfu",
+    "displayName": "Kungfu",
+    "id": "kungfu"
+  },
+  "scenarioRoot": "sha256:9d9ac60303b77a4adc9941226de60d7d9a4243e7d158655d1d84818936f33740",
+  "schema": "buildchain.declarative-demo-release-passport/v1",
+  "source": {
+    "createdAt": "2026-08-28T09:37:31Z",
+    "digest": "sha256:4101e790c2ddd8215d3cf78b72ed4308d889e2d2ea3d2dc1bcc5f4ae0119a4f1",
+    "expiresAt": "2026-09-11T09:37:24Z",
+    "id": "9681262725",
+    "name": "kungfu-linux-x64-5e56ae9b11aa22e006900ee1a303567d390e4c6c",
+    "nodeId": "MDg6QXJ0aWZhY3Q5NjgxMjYyNzI1",
+    "repository": "kungfu-systems/kungfu",
+    "runAttempt": "1",
+    "runId": "33156600179",
+    "schema": "buildchain.github-artifact-coordinate/v1",
+    "sizeInBytes": 598981329,
+    "sourceSha": "5e56ae9b11aa22e006900ee1a303567d390e4c6c"
+  },
+  "status": "qualified",
+  "toolchain": {
+    "buildchainSha": "41d4dce2f38aa4821c794b49dcfb2bcf59d0984a",
+    "rendererImage": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1"
+  }
+}
