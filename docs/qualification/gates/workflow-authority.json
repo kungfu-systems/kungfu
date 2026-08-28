@@ -632,7 +632,7 @@
     {
       "path": ".github/workflows/dev-pr-auto-merge.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:d68994d555f96448c51055fe2811dc30340a06b61f354d00775af4953e89109d",
+      "definitionDigest": "sha256:623fd44ff87d1fb51903245143f3e2962af43742b8b518d72d02d3a75f6fac17",
       "jobs": [
         {
           "id": "admission",
