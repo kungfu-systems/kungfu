@@ -643,7 +643,7 @@ jobs:
         run: |
           set -euo pipefail
           evidence=.buildchain/native-check-bridge/warrant
-          warrant="$evidence/warrant.json"
+          warrant="$evidence/dev-delivery/warrant.json"
           test -f "$warrant"
 
           live_pr="$evidence/live-pr.json"
