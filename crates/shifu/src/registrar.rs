@@ -46,9 +46,7 @@ use shifu_core::{bootstrap, host, json, style};
 use crate::artifact_catalog::{
     product_mainline_ref, publish_current_registration as publish_current,
 };
-use crate::native_update::{
-    artifact_sha256, installed_release_cut_root, local_artifact_identity_valid, valid_sha256_root,
-};
+use crate::native_update::{artifact_sha256, local_artifact_identity_valid, valid_sha256_root};
 use crate::util;
 
 /// The buildchain self-describe contract shifu asks for the repo's KFD-3
@@ -257,10 +255,8 @@ pub struct DistributionPlan {
 /// the build script inspect Shifu's cache or invent a second selector.
 pub fn configure_child_release_cut(command: &mut Command) {
     let receipt = registry_dir("kungfu").join("installed.meta.env");
-    let Ok(text) = fs::read_to_string(receipt) else {
-        return;
-    };
-    if let Some(root) = installed_release_cut_root(&text) {
+    let receipt = fs::read_to_string(receipt).ok();
+    if let Some(root) = crate::native_update::installed_release_cut_for_child(receipt.as_deref()) {
         command
             .env("KUNGFU_SELECTED_RELEASE_CUT_ROOT", &root)
             .env("KF_PARENT_RELEASE_CUT_ROOTS", &root);
@@ -1201,14 +1197,16 @@ mod tests {
     fn installed_release_cut_projection_accepts_only_an_exact_root() {
         let root = format!("sha256:{}", "a".repeat(64));
         assert_eq!(
-            installed_release_cut_root(&format!(
+            crate::native_update::installed_release_cut_root(&format!(
                 "KUNGFU_INSTALLED_SHA='deadbeef'\n\
                  KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{root}'\n"
             )),
             Some(root)
         );
         assert_eq!(
-            installed_release_cut_root("KUNGFU_INSTALLED_RELEASE_CUT_ROOT='not-a-content-root'\n"),
+            crate::native_update::installed_release_cut_root(
+                "KUNGFU_INSTALLED_RELEASE_CUT_ROOT='not-a-content-root'\n"
+            ),
             None
         );
     }
