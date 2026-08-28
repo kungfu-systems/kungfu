@@ -43,6 +43,100 @@ on:
         required: false
         type: boolean
         default: true
+      # Buildchain's active-Warrant handoff dispatch carries this complete
+      # envelope.  The receiver re-resolves its exact source authority below;
+      # these declarations only make the bounded handoff transport valid on
+      # GitHub Actions, rather than trusting dispatch-provided evidence.
+      target-branch:
+        description: Handoff-only protected branch coordinate
+        required: false
+        type: string
+        default: ""
+      assignment-root:
+        description: Handoff-only assignment evidence root
+        required: false
+        type: string
+        default: ""
+      initiative-root:
+        description: Handoff-only initiative evidence root
+        required: false
+        type: string
+        default: ""
+      source-identity-root:
+        description: Handoff-only source identity root
+        required: false
+        type: string
+        default: ""
+      source-patch-root:
+        description: Handoff-only source patch root
+        required: false
+        type: string
+        default: ""
+      plan-root:
+        description: Handoff-only delivery plan root
+        required: false
+        type: string
+        default: ""
+      closure-root:
+        description: Handoff-only closure root
+        required: false
+        type: string
+        default: ""
+      dependency-root:
+        description: Handoff-only dependency root
+        required: false
+        type: string
+        default: ""
+      toolchain-root:
+        description: Handoff-only toolchain root
+        required: false
+        type: string
+        default: ""
+      environment-root:
+        description: Handoff-only native environment root
+        required: false
+        type: string
+        default: ""
+      affected-paths-json:
+        description: Handoff-only affected paths envelope
+        required: false
+        type: string
+        default: "[]"
+      shard-evidence-roots-json:
+        description: Handoff-only shard evidence roots envelope
+        required: false
+        type: string
+        default: "[]"
+      delivery-class:
+        description: Handoff-only delivery class
+        required: false
+        type: string
+        default: ""
+      delivery-priority:
+        description: Handoff-only delivery priority
+        required: false
+        type: string
+        default: ""
+      native-command:
+        description: Handoff-only native execution command
+        required: false
+        type: string
+        default: ""
+      native-command-root:
+        description: Handoff-only native execution command root
+        required: false
+        type: string
+        default: ""
+      native-heartbeat-seconds:
+        description: Handoff-only native heartbeat cadence
+        required: false
+        type: string
+        default: ""
+      release-blocker-priority-json:
+        description: Handoff-only release blocker priority envelope
+        required: false
+        type: string
+        default: "[]"
 
 permissions:
   contents: read
