@@ -162,6 +162,26 @@ def _work_coordinates(
     }
 
 
+def _stable_work_coordinates(
+    status: Mapping[str, Any],
+    assignment: Mapping[str, Any],
+    work_ref: Mapping[str, Any],
+    expected_request_root: str,
+    expected_work_definition_root: str,
+) -> JsonObject:
+    current = _work_coordinates(
+        status,
+        assignment,
+        expected_request_root,
+        expected_work_definition_root,
+    )
+    return {
+        **current,
+        "systemTimeCut": str(work_ref.get("systemTimeCut") or ""),
+        "currentQueryProofRoot": current["systemTimeCut"],
+    }
+
+
 def build_plan(
     *,
     workspace: Mapping[str, Any],
@@ -196,9 +216,10 @@ def build_plan(
         .isoformat()
         .replace("+00:00", "Z"),
         "workspace": dict(workspace),
-        "work": _work_coordinates(
+        "work": _stable_work_coordinates(
             status,
             assignment,
+            work_ref,
             expected_request_root,
             expected_work_definition_root,
         ),
@@ -542,6 +563,55 @@ def _recovery_plan_authority(
     return current_status, recovery_profile
 
 
+def _recovery_work_ref(
+    *,
+    retained_work_ref: Path | None,
+    expected_work_ref_root: str | None,
+    identity,
+    status: Mapping[str, Any],
+    recovery_profile: Mapping[str, Any],
+    initiative_id: str,
+    assignment_id: str,
+) -> JsonObject:
+    assignment = dict(status.get("assignment") or {})
+    if retained_work_ref is None:
+        if expected_work_ref_root:
+            raise ValueError("expected WorkRef root requires --retained-work-ref")
+        value = {
+            "schema": "kungfu.work-ref/v1",
+            "workspaceId": identity.workspace_id,
+            "profileId": recovery_profile["profileId"],
+            "profileRoot": recovery_profile["profileRoot"],
+            "entityType": "assignment",
+            "entityId": assignment_id,
+            "entityRoot": _root(assignment),
+            "purpose": "continue-project-assignment",
+            "systemTimeCut": status["query_proof_root"],
+            "initiativeId": initiative_id,
+        }
+    else:
+        if not expected_work_ref_root:
+            raise ValueError("retained WorkRef requires --expected-work-ref-root")
+        value = json.loads(retained_work_ref.read_text(encoding="utf-8"))
+    work_ref = session_contract.validate_work_ref(dict(value))
+    checks = (
+        work_ref.get("workspaceId") == identity.workspace_id,
+        work_ref.get("profileId") == recovery_profile.get("profileId"),
+        work_ref.get("profileRoot") == recovery_profile.get("profileRoot"),
+        work_ref.get("entityType") == "assignment",
+        work_ref.get("entityId") == assignment_id,
+        work_ref.get("entityRoot") == _root(assignment),
+        work_ref.get("purpose") == "continue-project-assignment",
+        work_ref.get("initiativeId") == initiative_id,
+    )
+    if not all(checks):
+        raise ValueError("retained WorkRef does not match the existing Assignment")
+    actual_root = _root(work_ref)
+    if expected_work_ref_root and actual_root != expected_work_ref_root:
+        raise ValueError("retained WorkRef root does not match expected root")
+    return work_ref
+
+
 def _verify_recovery_profile_source(
     plan: Mapping[str, Any], recovery_profile_source: Path, runtime_dir
 ) -> None:
@@ -583,6 +653,8 @@ def _plan_from_ports(
     expected_request_root,
     expected_work_definition_root,
     expected_profile_root,
+    retained_work_ref,
+    expected_work_ref_root,
     recovery_profile_source,
     out,
     runtime,
@@ -597,19 +669,14 @@ def _plan_from_ports(
         recovery_profile_source,
         expected_profile_root,
     )
-    work_ref = session_contract.validate_work_ref(
-        {
-            "schema": "kungfu.work-ref/v1",
-            "workspaceId": identity.workspace_id,
-            "profileId": recovery_profile["profileId"],
-            "profileRoot": recovery_profile["profileRoot"],
-            "entityType": "assignment",
-            "entityId": assignment_id,
-            "entityRoot": _root(current_status["assignment"]),
-            "purpose": "continue-project-assignment",
-            "systemTimeCut": current_status["query_proof_root"],
-            "initiativeId": initiative_id,
-        }
+    work_ref = _recovery_work_ref(
+        retained_work_ref=retained_work_ref,
+        expected_work_ref_root=expected_work_ref_root,
+        identity=identity,
+        status=current_status,
+        recovery_profile=recovery_profile,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
     )
     plan = build_plan(
         workspace={
@@ -704,6 +771,15 @@ def _create_plan_command(
     @click.option("--expected-request-root", required=True)
     @click.option("--expected-work-definition-root", required=True)
     @click.option("--expected-profile-root", required=True)
+    @click.option(
+        "--retained-work-ref",
+        type=click.Path(exists=True, dir_okay=False, path_type=Path),
+        help="exact prior kungfu.work-ref/v1 JSON to preserve",
+    )
+    @click.option(
+        "--expected-work-ref-root",
+        help="content root required when a retained WorkRef is supplied",
+    )
     @click.option(
         "--recovery-profile-source",
         required=True,

@@ -204,6 +204,30 @@ def validate_work_ref(
     return result
 
 
+def retain_expected_work_ref(current, expected) -> dict[str, Any]:
+    """Preserve a planned WorkRef when its stable coordinates remain current."""
+
+    value = validate_work_ref(current)
+    if expected is None:
+        return value
+    retained = validate_work_ref(dict(expected.get("workRef") or {}))
+    stable_fields = (
+        "workspaceId",
+        "profileId",
+        "profileRoot",
+        "entityType",
+        "entityId",
+        "entityRoot",
+        "purpose",
+        "initiativeId",
+    )
+    if any(retained.get(field) != value.get(field) for field in stable_fields):
+        raise ValueError(
+            "expected WorkRef does not match the current Assignment coordinates"
+        )
+    return retained
+
+
 def require_expected_binding(expected, work_ref, session) -> None:
     """Fail before mutation when a planned native binding has drifted."""
 
