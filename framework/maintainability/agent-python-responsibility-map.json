@@ -98,11 +98,11 @@
         }
       },
       "current": {
-        "physicalLines": 1072,
+        "physicalLines": 1119,
         "responsibilities": 29,
         "functionRisk": {
-          "functions": 26,
-          "total": 623,
+          "functions": 27,
+          "total": 630,
           "maximum": 108
         }
       },
@@ -230,11 +230,11 @@
         "currentSources": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "d278012399c8132021cd2233f17b4b11732de824881524b855eeaa30d71a923a"
+            "sha256": "009cebcd0abb38435421181c91900ed615a8fbd4e273d2cde6b84cb4073b9b9f"
           },
-      {
-        "path": "framework/core/src/python/kungfu/assignment_outcome.py",
-        "sha256": "eeb8bb3ee24bdacb438f8842bdf969bcd6578ab7d2c1b7237f6837ff102ce44e"
+          {
+            "path": "framework/core/src/python/kungfu/assignment_outcome.py",
+            "sha256": "eeb8bb3ee24bdacb438f8842bdf969bcd6578ab7d2c1b7237f6837ff102ce44e"
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -263,9 +263,9 @@
             ],
             "responsibilities": 97,
             "functionRisk": {
-          "functions": 114,
-          "baseRisk": 1853,
-          "changeRisk": 2249,
+              "functions": 115,
+              "baseRisk": 1860,
+              "changeRisk": 2257,
               "maximum": 254
             }
           }
