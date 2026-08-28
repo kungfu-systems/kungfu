@@ -3,15 +3,61 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7799,
-  "fencingCounter": 728,
+  "generation": 7800,
+  "fencingCounter": 729,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:737e97c157c39bc0e6aac45c9fdadc4eeafddfd3abda161c3246989066384756",
+    "pullRequestNumber": 3509,
+    "sourceHead": "fcf6d2072ceb3386a5c3e7b8c927fda56de89147",
+    "assignmentRoot": "sha256:cd7924c251421ba60365c16f727176a2b0847f63974a9bac83bdd814e50a9862",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:b0dd7ab0302d5d62cc9db6f33f67279ced673be64e6ba3f4fac250722552c96e",
+    "sourcePatchRoot": "sha256:19407d255d97174b7a08aca9a4153bb93785f93b27d2028f46711f3f341c6e0e",
+    "sourceProofRoot": "sha256:a2f0ee6bc6e17b2f0d7f3e40b9431736fd4ab259bf242e393756a737e6b784dc",
+    "planRoot": "sha256:486ff949c77a6c0677e4ccccfee471cde1e57cac4defab1e210e67e990b9d04e",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:f689f8867f69b4128c2b545c3bbbc602fc81a1498a65a3bae1dfd311eeb93507",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "affectedPaths": [
+      ".buildchain/kfd/kfd-2/release-claims.json",
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      ".buildchain/kfd/support-matrix.json",
+      ".github/actions/native-execution-under-warrant/action.yml",
+      ".github/workflows/affected-native-pr.yml",
+      ".github/workflows/dev-delivery-warrant-terminal.yml",
+      ".github/workflows/dev-pr-auto-merge.yml",
+      ".github/workflows/queue-admission-lease.yml",
+      "developer/sdk/kfd/kfd-2/release-claims.json",
+      "developer/sdk/kfd/support-matrix.json",
+      "docs/qualification/gates/dev-queue-admission.contract.json",
+      "docs/qualification/gates/workflow-authority.json",
+      "docs/qualification/gates/workflow-authority.md",
+      "framework/release/publication-surfaces.json",
+      "scripts/dev-delivery-proof-consumer.test.mjs",
+      "scripts/dev-delivery-warrant-input.test.mjs",
+      "scripts/dev-pr-auto-merge.test.mjs",
+      "scripts/queue-admission-lease.test.mjs"
+    ],
+    "sourceWorkflowRunId": 33190981256,
+    "deliveryClass": "native-proof-required",
+    "generation": 729,
+    "phase": "provisional",
+    "expectedOldStateRoot": "sha256:c649a00e9029d8e3a2476b29638438a67182e957f85cf693bc40f1b9bf2d7a1e",
+    "issuedAt": "2026-08-28T17:17:54.022Z",
+    "expiresAt": "2026-08-28T18:47:54.022Z",
+    "fencingToken": "sha256:55a6a1239cb1dbb1afbfe2bc9566583e437fa575f117385b66305d75676ec406",
+    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -50838,10 +50884,10 @@
       "sourceWorkflowRunId": 33190981256,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-28T16:47:28.598Z",
-      "updatedAt": "2026-08-28T16:47:28.598Z",
+      "updatedAt": "2026-08-28T17:17:54.022Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
@@ -50865,6 +50911,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-28T17:17:48.455Z",
-  "stateRoot": "sha256:c649a00e9029d8e3a2476b29638438a67182e957f85cf693bc40f1b9bf2d7a1e"
+  "updatedAt": "2026-08-28T17:17:54.022Z",
+  "stateRoot": "sha256:65dc6b23065d51c46d617a3c8bc8b7ab317ae18267fcc7a7892af7973f818a0f"
 }
