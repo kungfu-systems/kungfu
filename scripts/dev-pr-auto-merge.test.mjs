@@ -137,6 +137,35 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   assert.doesNotMatch(workflow, /delivery-warrant-mode:[^\n]*shadow/u);
 });
 
+test('Warrant handoff accepts its bounded evidence envelope without trusting it', () => {
+  assert.match(
+    workflow,
+    /Buildchain's active-Warrant handoff dispatch carries this complete[\s\S]*receiver re-resolves its exact source authority below/u,
+  );
+  for (const input of [
+    'target-branch',
+    'assignment-root',
+    'initiative-root',
+    'source-identity-root',
+    'source-patch-root',
+    'plan-root',
+    'closure-root',
+    'dependency-root',
+    'toolchain-root',
+    'environment-root',
+    'affected-paths-json',
+    'shard-evidence-roots-json',
+    'delivery-class',
+    'delivery-priority',
+    'native-command',
+    'native-command-root',
+    'native-heartbeat-seconds',
+    'release-blocker-priority-json',
+  ]) {
+    assert.match(workflow, new RegExp(`${input}:[\\s\\S]*type: string`, 'u'));
+  }
+});
+
 test('Dev cadence patrol remains an explicit non-targeted path', () => {
   assert.match(workflow, /expected_pr_number=""/u);
   assert.match(workflow, /expected_head_sha=""/u);
