@@ -12,7 +12,6 @@ import {
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
   prepareKfdArtifactWitness,
-  resolveKfdSourcePlatform,
   runVerifiedQualification,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
@@ -121,31 +120,6 @@ function artifactFixture(platform = 'linux-x64') {
   return { root, platform, sourceSha, sourceTree };
 }
 
-test('binds source evidence to the exact native GitHub runner platform', () => {
-  assert.equal(
-    resolveKfdSourcePlatform({ RUNNER_OS: 'Linux', RUNNER_ARCH: 'X64' }),
-    'linux-x64',
-  );
-  assert.equal(
-    resolveKfdSourcePlatform({ RUNNER_OS: 'Linux', RUNNER_ARCH: 'ARM64' }),
-    'linux-arm64',
-  );
-  assert.equal(
-    resolveKfdSourcePlatform({ RUNNER_OS: 'macOS', RUNNER_ARCH: 'ARM64' }),
-    'macos-arm64',
-  );
-  assert.equal(
-    resolveKfdSourcePlatform({ RUNNER_OS: 'Windows', RUNNER_ARCH: 'X64' }),
-    'windows-x64',
-  );
-  assert.equal(resolveKfdSourcePlatform({}), '');
-  assert.throws(
-    () =>
-      resolveKfdSourcePlatform({ RUNNER_OS: 'Linux', RUNNER_ARCH: 'RISCV64' }),
-    /unsupported KFD source runner platform/u,
-  );
-});
-
 test('accepts a complete sealed four-platform KFD payload set', () => {
   const root = fixture();
   assert.deepEqual(
@@ -229,109 +203,6 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
   );
 });
 
-test('the Verify wrapper binds a successful qualification artifact transition', () => {
-  const fixture = artifactFixture();
-  const artifactPath = path.join(
-    fixture.root,
-    'product',
-    'release',
-    'artifact.bin',
-  );
-  const beforeRoot = kfdEvidenceRoot([
-    {
-      path: 'artifact.bin',
-      bytes: fs.statSync(artifactPath).size,
-      sha256: `sha256:${awaitHash(artifactPath)}`,
-    },
-  ]);
-  const command = [
-    process.execPath,
-    '-e',
-    `require('node:fs').writeFileSync(${JSON.stringify(artifactPath)},'verified artifact\\n')`,
-  ];
-  assert.equal(
-    runVerifiedQualification({
-      ...fixture,
-      command,
-      buildArtifactWitness: () => ({
-        id: 'kungfu-collaboration-interface',
-        standard: 'kfd-3',
-        witnessKind: 'artifact',
-        exposedSurfaces: [],
-      }),
-    }),
-    0,
-  );
-  const witness = JSON.parse(
-    fs.readFileSync(
-      path.join(
-        fixture.root,
-        'product',
-        'release',
-        'qualification',
-        'kfd',
-        'artifacts',
-        `${fixture.platform}.json`,
-      ),
-      'utf8',
-    ),
-  );
-  assert.equal(witness.candidateBinding.preVerifyArtifactRoot, beforeRoot);
-  assert.notEqual(witness.candidateBinding.artifactRoot, beforeRoot);
-  assert.equal(witness.candidateBinding.transition, 'verified-qualification');
-  assert.doesNotThrow(() => finalizeKfdCandidateEvidence(fixture));
-  fs.appendFileSync(artifactPath, 'tampered after verification\n');
-  assert.throws(
-    () => finalizeKfdCandidateEvidence(fixture),
-    /KFD artifact digest mismatch/u,
-  );
-});
-
-test('the Verify wrapper never authorizes a failed qualification artifact transition', () => {
-  const fixture = artifactFixture();
-  const artifactPath = path.join(
-    fixture.root,
-    'product',
-    'release',
-    'artifact.bin',
-  );
-  const command = [
-    process.execPath,
-    '-e',
-    `require('node:fs').writeFileSync(${JSON.stringify(artifactPath)},'failed artifact\\n');process.exit(7)`,
-  ];
-  assert.equal(
-    runVerifiedQualification({
-      ...fixture,
-      command,
-      buildArtifactWitness: () => ({
-        id: 'kungfu-collaboration-interface',
-        standard: 'kfd-3',
-        witnessKind: 'artifact',
-        exposedSurfaces: [],
-      }),
-    }),
-    7,
-  );
-  assert.equal(
-    fs.existsSync(
-      path.join(
-        fixture.root,
-        'product',
-        'release',
-        'qualification',
-        'kfd',
-        'candidate-evidence.json',
-      ),
-    ),
-    false,
-  );
-  assert.throws(
-    () => finalizeKfdCandidateEvidence(fixture),
-    /KFD artifact digest mismatch/u,
-  );
-});
-
 test('fails before Verify completion when artifact bytes change after witnessing', () => {
   const fixture = artifactFixture();
   prepareKfdArtifactWitness({
@@ -348,50 +219,8 @@ test('fails before Verify completion when artifact bytes change after witnessing
     'tampered\n',
   );
   assert.throws(
-    () =>
-      finalizeKfdCandidateEvidence({
-        ...fixture,
-        allowVerifiedArtifactTransition: true,
-      }),
+    () => finalizeKfdCandidateEvidence(fixture),
     /KFD artifact digest mismatch/u,
-  );
-});
-
-test('rejects a tampered witness instead of laundering it through a verified transition', () => {
-  const fixture = artifactFixture();
-  const witnessPath = path.join(
-    fixture.root,
-    '.buildchain',
-    'runtime',
-    'kfd-candidate-evidence',
-    'artifact-before-verify',
-    'artifacts',
-    `${fixture.platform}.json`,
-  );
-  const artifactPath = path.join(
-    fixture.root,
-    'product',
-    'release',
-    'artifact.bin',
-  );
-  const command = [
-    process.execPath,
-    '-e',
-    `const fs=require('node:fs');const p=${JSON.stringify(witnessPath)};const w=JSON.parse(fs.readFileSync(p,'utf8'));w.candidateBinding.candidate.sourceSha='${'f'.repeat(40)}';fs.writeFileSync(p,JSON.stringify(w,null,2)+'\\n');fs.appendFileSync(${JSON.stringify(artifactPath)},'verified artifact change\\n')`,
-  ];
-  assert.throws(
-    () =>
-      runVerifiedQualification({
-        ...fixture,
-        command,
-        buildArtifactWitness: () => ({
-          id: 'kungfu-collaboration-interface',
-          standard: 'kfd-3',
-          witnessKind: 'artifact',
-          exposedSurfaces: [],
-        }),
-      }),
-    /KFD artifact witness candidate\/source root mismatch/u,
   );
 });
 

@@ -272,6 +272,21 @@ class FakeAuthority:
             "diagnostics": [],
         }
 
+    def assignment_status(
+        self, initiative_id: str, assignment_id: str
+    ) -> dict[str, Any]:
+        assignments = [
+            row
+            for row in self.inspect()["assignments"]
+            if row["initiativeId"] == initiative_id
+            and row["assignmentId"] == assignment_id
+        ]
+        if len(assignments) != 1:
+            raise LocalRuntimeError(
+                "ambiguous-identity", "Assignment status did not resolve exactly once"
+            )
+        return copy.deepcopy(assignments[0]["lifecycle"])
+
     def apply(self, command: dict[str, Any]) -> dict[str, Any]:
         state = self._read()
         command_type = command["type"]
@@ -750,6 +765,78 @@ def test_cli_agent_and_kfx_application_edges_share_runtime_state(
     )
     assert len(state["commands"]) == 2
     assert all(record["authorityReceipt"] for record in state["commands"].values())
+
+
+def test_application_status_does_not_compete_with_active_runtime_writer(
+    tmp_path, monkeypatch
+):
+    runtime_dir = tmp_path / ".kungfu" / "runtime"
+    runtime_dir.parent.mkdir(parents=True)
+    (runtime_dir.parent / "workspace-identity.json").write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.workspace.identity-material/v1",
+                "workspaceKind": "project",
+                "workspaceKey": "workspace:test",
+                "identityRoot": ROOT_A,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    authority = FakeAuthority(runtime_dir)
+
+    def runtime():
+        return EmbeddedLocalAssignmentRuntime(
+            runtime_dir,
+            realm_id=f"project:{ROOT_A[7:23]}",
+            generation=ROOT_A,
+            authority=authority,
+            contract=ASSIGNMENT_RUNTIME_CONTRACT,
+            request_schema=ENVELOPE_SCHEMA,
+        )
+
+    writer = runtime().start()
+    try:
+        state_path = runtime_dir / "assignment-runtime" / "local-v1" / "state.json"
+        before = state_path.read_bytes()
+        application = LocalAssignmentRuntimeApplication(
+            runtime_dir,
+            client_id="kungfu.cli.test",
+            kind="cli",
+            source=PROFILE_SOURCE,
+        )
+        monkeypatch.setattr(application, "_runtime", runtime)
+
+        assert application.status("initiative-a", "assignment-a")["phase"] == "admitted"
+        assert writer._started is True
+        assert state_path.read_bytes() == before
+    finally:
+        writer.close()
+
+
+def test_work_control_status_uses_direct_read_only_profile_query(tmp_path, monkeypatch):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+    lifecycle = {"phase": "executing", "query_proof_root": ROOT_A}
+    captured = {}
+
+    def invoke(operation, values, *, write=False):
+        captured.update(operation=operation, values=values, write=write)
+        return {"result": lifecycle}
+
+    monkeypatch.setattr(authority, "_invoke", invoke)
+
+    assert authority.assignment_status("initiative-a", "assignment-a") == lifecycle
+    assert captured == {
+        "operation": "assignment-status",
+        "values": {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+            "source": "kungfu",
+        },
+        "write": False,
+    }
 
 
 def test_work_control_authority_strips_runtime_only_routing_ids(tmp_path, monkeypatch):
@@ -2555,7 +2642,7 @@ def test_production_adapter_reaches_existing_work_control_authority(
         )
         assert stale["error"]["code"] == "stale-revision"
 
-        submit_work(
+        managed_run = submit_work(
             "work.run.record",
             "run",
             {
@@ -2591,7 +2678,7 @@ def test_production_adapter_reaches_existing_work_control_authority(
                 "actor": "agent-a",
             },
         )
-        submit_work(
+        ambiguous_outcome = submit_work(
             "work.effect.outcome",
             "ambiguous-outcome",
             {
@@ -2614,7 +2701,7 @@ def test_production_adapter_reaches_existing_work_control_authority(
             }
         ]
 
-        submit_work(
+        settled_outcome = submit_work(
             "work.effect.outcome",
             "settled-outcome",
             {
@@ -2631,6 +2718,64 @@ def test_production_adapter_reaches_existing_work_control_authority(
         )["result"]["assignments"][0]["lifecycle"]["work_semantics"]
         assert settled["completion_eligible"] is True
         settled_root = settled["effect_outcomes"][-1]["record_root"]
+
+        expired_projection = profile_sdk.invoke_member_adapter(
+            PROFILE_SOURCE,
+            runtime_dir,
+            "work-control-actions",
+            "assignment-status",
+            {
+                "initiativeId": "initiative-a",
+                "assignmentId": "assignment-a",
+                "source": "kungfu",
+                "now": "2999-01-01T00:00:00Z",
+            },
+            authorized_action=False,
+            inactive_projection_read=True,
+        )["result"]
+        assert expired_projection["phase"] == "executing"
+        assert expired_projection["active_lease"] is None
+
+        before_completion = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )
+        completion = _command(
+            before_completion["revision"],
+            command_id="command.completion-after-recovery",
+            idempotency_key="idem.completion-after-recovery",
+            command_type="assignment.completion.claim",
+            expected_phase="executing",
+            to_phase="completion-claimed",
+        )
+        completion["attempt"] = None
+        completion["lease"] = None
+        completion["arguments"] = {
+            "statement": "Complete through retained Work Control authority",
+            "actor": "agent-a",
+            "evidenceEpisodeIds": [],
+            "assignmentSet": ["assignment-a"],
+            "proofRoots": [
+                input_root,
+                managed_run["record"]["record_root"],
+                ambiguous_outcome["record"]["record_root"],
+                settled_outcome["record"]["record_root"],
+            ],
+        }
+        completed = _handle(
+            runtime,
+            _request(
+                "command.submit",
+                "assignment.command.submit",
+                payload=completion,
+                request_id="request.completion-after-recovery",
+            ),
+        )
+        assert completed["status"] == "ok", json.dumps(completed, indent=2)
+        completed_status = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )["result"]["assignments"][0]
+        assert completed_status["phase"] == "completion-claimed"
+        assert completed_status["lifecycle"]["completion_claim_count"] == 1
 
     with EmbeddedLocalAssignmentRuntime(
         runtime_dir,

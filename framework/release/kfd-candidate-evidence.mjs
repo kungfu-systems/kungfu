@@ -88,28 +88,6 @@ const GENERATOR_OWNED_PATHS = [
   'developer/sdk/kfd',
 ];
 
-const GITHUB_RUNNER_PLATFORMS = new Map([
-  ['Linux:X64', 'linux-x64'],
-  ['Linux:ARM64', 'linux-arm64'],
-  ['macOS:ARM64', 'macos-arm64'],
-  ['Windows:X64', 'windows-x64'],
-]);
-
-export function resolveKfdSourcePlatform(env = process.env) {
-  const explicit = env.BUILDCHAIN_PLATFORM_ID || env['INPUT_PLATFORM-ID'];
-  if (explicit) return explicit;
-  const runnerOs = env.RUNNER_OS || '';
-  const runnerArch = env.RUNNER_ARCH || '';
-  if (!runnerOs && !runnerArch) return '';
-  const platform = GITHUB_RUNNER_PLATFORMS.get(`${runnerOs}:${runnerArch}`);
-  if (!platform) {
-    throw new Error(
-      `unsupported KFD source runner platform: ${runnerOs || '<empty>'}/${runnerArch || '<empty>'}`,
-    );
-  }
-  return platform;
-}
-
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -261,7 +239,9 @@ export function sealKfdSourceEvidence({
   expectedInputRoot = '',
   sourceSha = '',
   sourceTree = '',
-  platform = resolveKfdSourcePlatform(),
+  platform = process.env.BUILDCHAIN_PLATFORM_ID ||
+    process.env['INPUT_PLATFORM-ID'] ||
+    '',
 } = {}) {
   if (platform) assertPlatform(platform);
   const prebuild = createKfdPrebuildGate({ root, sourceSha, sourceTree });
@@ -434,7 +414,7 @@ export function prepareKfdArtifactWitness({
   return witness;
 }
 
-function loadKfdArtifactWitness({
+export function finalizeKfdCandidateEvidence({
   root = process.cwd(),
   platform = process.env.BUILDCHAIN_PLATFORM_ID || '',
   sourceSha = '',
@@ -448,8 +428,12 @@ function loadKfdArtifactWitness({
   if (!fs.existsSync(witnessPath))
     throw new Error(`missing KFD artifact witness: ${platform}`);
   const witness = readJson(witnessPath);
-  const { bindingRoot, ...bindingBodyBeforeFinalize } =
-    witness.candidateBinding || {};
+  const artifact = releaseArtifactRoot(root);
+  if (witness.candidateBinding?.artifactRoot !== artifact.root) {
+    throw new Error(
+      `KFD artifact digest mismatch: expected ${witness.candidateBinding?.artifactRoot || '<empty>'}, got ${artifact.root}`,
+    );
+  }
   if (
     witness.candidateBinding?.candidate?.sourceSha !== identity.sourceSha ||
     witness.candidateBinding?.candidate?.sourceTree !== identity.sourceTree ||
@@ -457,44 +441,6 @@ function loadKfdArtifactWitness({
   ) {
     throw new Error('KFD artifact witness candidate/source root mismatch');
   }
-  if (bindingRoot !== rooted(bindingBodyBeforeFinalize)) {
-    throw new Error('KFD artifact witness binding digest mismatch');
-  }
-  return { identity, output, sourceGate, witness, witnessPath };
-}
-
-function bindVerifiedArtifactTransition(args = {}) {
-  const { identity, sourceGate, witness, witnessPath } =
-    loadKfdArtifactWitness(args);
-  const artifact = releaseArtifactRoot(args.root || process.cwd());
-  if (witness.candidateBinding?.artifactRoot !== artifact.root) {
-    const bindingBody = {
-      contract: KFD_ARTIFACT_WITNESS_CONTRACT,
-      platform: witness.candidateBinding.platform,
-      candidate: identity,
-      sourceGateRoot: sourceGate.gateRoot,
-      preVerifyArtifactRoot: witness.candidateBinding.artifactRoot,
-      artifactRoot: artifact.root,
-      transition: 'verified-qualification',
-    };
-    witness.candidateBinding = {
-      ...bindingBody,
-      bindingRoot: rooted(bindingBody),
-    };
-    writeJson(witnessPath, witness);
-  }
-}
-
-export function finalizeKfdCandidateEvidence(args = {}) {
-  const { identity, output, sourceGate, witness } =
-    loadKfdArtifactWitness(args);
-  const artifact = releaseArtifactRoot(args.root || process.cwd());
-  if (witness.candidateBinding?.artifactRoot !== artifact.root) {
-    throw new Error(
-      `KFD artifact digest mismatch: expected ${witness.candidateBinding?.artifactRoot || '<empty>'}, got ${artifact.root}`,
-    );
-  }
-  const platform = args.platform || process.env.BUILDCHAIN_PLATFORM_ID || '';
   const evidenceFiles = listFiles(output, output).filter(
     (row) => row.path !== 'candidate-evidence.json',
   );
@@ -679,12 +625,6 @@ export function runVerifiedQualification({
   fs.renameSync(sealed, output);
   if (result.error) throw result.error;
   if (result.status !== 0) return result.status || 1;
-  bindVerifiedArtifactTransition({
-    root,
-    platform,
-    sourceSha,
-    sourceTree,
-  });
   finalizeKfdCandidateEvidence({ root, platform, sourceSha, sourceTree });
   return 0;
 }

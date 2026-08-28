@@ -161,3 +161,28 @@ test('orphan runtime API and packaged omission fail closed', () => {
     result.issues.includes('agent pack index omits cli_surface.catalog.json'),
   );
 });
+
+test('catalog diagnostics retain their contract-to-consumer ordering', () => {
+  const fixture = inputs();
+  const surface = fixture.catalog.surfaces[0];
+  fixture.registry.aliases = ['kungfu legacy'];
+  surface.aliases = ['kungfu legacy'];
+  fixture.kfd3.apis.push({
+    id: 'kungfu.fixture.orphan',
+    anchor: { kind: 'runtime-click' },
+    projections: [],
+  });
+  fixture.index.documents = fixture.index.documents.filter(
+    (row) => row.path !== 'cli_surface.catalog.json',
+  );
+
+  assert.deepEqual(auditCatalogParity(fixture).issues, [
+    'generated catalog root mismatch',
+    'generated catalog registry root mismatch',
+    'generated catalog surface root mismatch',
+    'CLI registry must contain zero aliases',
+    `surface ${surface.id} retains aliases`,
+    'orphan runtime KFD-3 API kungfu.fixture.orphan',
+    'agent pack index omits cli_surface.catalog.json',
+  ]);
+});

@@ -24,22 +24,45 @@ function ids(items) {
   return new Set((items || []).map((item) => item.id));
 }
 
+function rows(value) {
+  return value || [];
+}
+
+function reportWhen(condition, problems, message) {
+  if (condition) problems.push(message);
+}
+
+function each(items, visit) {
+  let index = 0;
+  for (const item of items) {
+    visit(item, index);
+    index += 1;
+  }
+}
+
 function variable(id) {
   return id.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
 }
 
-function validate(authority, layers) {
-  const problems = [];
-  if (authority.$schema !== 'kungfu.core-build-capabilities/v1') {
-    problems.push(`unsupported schema: ${authority.$schema || '<missing>'}`);
-  }
-  if (!Number.isInteger(authority.authority_version)) {
-    problems.push('authority_version must be an integer');
-  }
-  if (authority.architecture_authority !== 'layers.json') {
-    problems.push('architecture_authority must be layers.json');
-  }
+function validateAuthorityIdentity(authority, problems) {
+  reportWhen(
+    authority.$schema !== 'kungfu.core-build-capabilities/v1',
+    problems,
+    `unsupported schema: ${authority.$schema || '<missing>'}`,
+  );
+  reportWhen(
+    !Number.isInteger(authority.authority_version),
+    problems,
+    'authority_version must be an integer',
+  );
+  reportWhen(
+    authority.architecture_authority !== 'layers.json',
+    problems,
+    'architecture_authority must be layers.json',
+  );
+}
 
+function collectKnownIds(authority, problems) {
   const groups = [
     'components',
     'providers',
@@ -49,165 +72,249 @@ function validate(authority, layers) {
     'profiles',
   ];
   const known = {};
-  for (const group of groups) {
+  each(groups, (group) => {
     known[group] = ids(authority[group]);
-    if (known[group].size !== (authority[group] || []).length) {
-      problems.push(`${group} contains duplicate ids`);
-    }
-  }
+    reportWhen(
+      known[group].size !== rows(authority[group]).length,
+      problems,
+      `${group} contains duplicate ids`,
+    );
+  });
+  return known;
+}
+
+function validateComponents(authority, layers, known, problems) {
   const architectureComponents = ids(layers.components);
-  const architectureTargets = ids(layers.internal_targets);
-  for (const component of authority.components || []) {
-    for (const id of component.architecture_components || []) {
-      if (!architectureComponents.has(id)) {
-        problems.push(`${component.id}: unknown architecture component ${id}`);
-      }
-    }
-    for (const id of component.requires || []) {
-      if (!known.components.has(id))
-        problems.push(`${component.id}: unknown required component ${id}`);
-    }
-    for (const id of component.dependencies || []) {
-      if (!known.dependencies.has(id))
-        problems.push(`${component.id}: unknown dependency ${id}`);
-    }
-  }
+  each(rows(authority.components), (component) => {
+    each(rows(component.architecture_components), (id) =>
+      reportWhen(
+        !architectureComponents.has(id),
+        problems,
+        `${component.id}: unknown architecture component ${id}`,
+      ),
+    );
+    each(rows(component.requires), (id) =>
+      reportWhen(
+        !known.components.has(id),
+        problems,
+        `${component.id}: unknown required component ${id}`,
+      ),
+    );
+    each(rows(component.dependencies), (id) =>
+      reportWhen(
+        !known.dependencies.has(id),
+        problems,
+        `${component.id}: unknown dependency ${id}`,
+      ),
+    );
+  });
+}
+
+function validateArchitectureCoverage(authority, layers, problems) {
   const mappedArchitectureComponents = new Set(
     (authority.components || []).flatMap(
       (component) => component.architecture_components || [],
     ),
   );
-  for (const component of layers.components || []) {
-    if (
+  each(rows(layers.components), (component) =>
+    reportWhen(
       component.layer !== 'qualification' &&
-      !mappedArchitectureComponents.has(component.id)
-    ) {
-      problems.push(
-        `architecture component is absent from build profile authority: ${component.id}`,
+        !mappedArchitectureComponents.has(component.id),
+      problems,
+      `architecture component is absent from build profile authority: ${component.id}`,
+    ),
+  );
+}
+
+function validateCapabilityItems(authority, known, problems) {
+  each(['providers', 'projections', 'bindings'], (group) => {
+    each(rows(authority[group]), (item) => {
+      each(rows(item.requires_components), (id) =>
+        reportWhen(
+          !known.components.has(id),
+          problems,
+          `${item.id}: unknown required component ${id}`,
+        ),
       );
-    }
-  }
-  for (const group of ['providers', 'projections', 'bindings']) {
-    for (const item of authority[group] || []) {
-      for (const id of item.requires_components || []) {
-        if (!known.components.has(id))
-          problems.push(`${item.id}: unknown required component ${id}`);
-      }
-      for (const id of item.dependencies || []) {
-        if (!known.dependencies.has(id))
-          problems.push(`${item.id}: unknown dependency ${id}`);
-      }
-    }
-  }
+      each(rows(item.dependencies), (id) =>
+        reportWhen(
+          !known.dependencies.has(id),
+          problems,
+          `${item.id}: unknown dependency ${id}`,
+        ),
+      );
+    });
+  });
+}
+
+function validateProjectionResponsibilities(authority, problems) {
   const projectionResponsibilities = new Set(
     (authority.projections || []).map((item) => item.responsibility),
   );
-  for (const responsibility of [
-    'projection',
-    'state-cache',
-    'query-acceleration',
-  ]) {
-    if (!projectionResponsibilities.has(responsibility)) {
-      problems.push(
-        `projections miss required responsibility ${responsibility}`,
-      );
-    }
-  }
-
-  const profileById = new Map(
-    (authority.profiles || []).map((item) => [item.id, item]),
+  each(['projection', 'state-cache', 'query-acceleration'], (responsibility) =>
+    reportWhen(
+      !projectionResponsibilities.has(responsibility),
+      problems,
+      `projections miss required responsibility ${responsibility}`,
+    ),
   );
+}
+
+function validateProfileReferences(profile, known, problems) {
   const supported = new Set(['planned', 'supported']);
-  for (const profile of authority.profiles || []) {
-    if (!supported.has(profile.status))
-      problems.push(`${profile.id}: unsupported status ${profile.status}`);
-    for (const [field, group] of [
+  reportWhen(
+    !supported.has(profile.status),
+    problems,
+    `${profile.id}: unsupported status ${profile.status}`,
+  );
+  each(
+    [
       ['components', 'components'],
       ['providers', 'providers'],
       ['projections', 'projections'],
       ['bindings', 'bindings'],
-    ]) {
-      for (const id of profile[field] || []) {
-        if (!known[group].has(id))
-          problems.push(`${profile.id}: unknown ${field} entry ${id}`);
-      }
-    }
-    for (const id of [
-      ...(profile.requires || []),
-      ...(profile.conflicts || []),
-    ]) {
-      if (!known.profiles.has(id))
-        problems.push(`${profile.id}: unknown profile relation ${id}`);
-      if (id === profile.id)
-        problems.push(
-          `${profile.id}: profile relation cannot reference itself`,
-        );
-    }
-    for (const group of ['providers', 'projections', 'bindings']) {
-      for (const id of profile[group] || []) {
-        const item = (authority[group] || []).find((entry) => entry.id === id);
-        for (const component of item?.requires_components || []) {
-          if (!(profile.components || []).includes(component)) {
-            problems.push(
-              `${profile.id}: ${id} requires missing component ${component}`,
-            );
-          }
-        }
-      }
-    }
-    for (const componentId of profile.components || []) {
-      const component = (authority.components || []).find(
-        (entry) => entry.id === componentId,
+    ],
+    ([field, group]) => {
+      each(rows(profile[field]), (id) =>
+        reportWhen(
+          !known[group].has(id),
+          problems,
+          `${profile.id}: unknown ${field} entry ${id}`,
+        ),
       );
-      for (const required of component?.requires || []) {
-        if (!(profile.components || []).includes(required)) {
-          problems.push(
-            `${profile.id}: ${componentId} requires missing component ${required}`,
-          );
-        }
-      }
-    }
-  }
+    },
+  );
+  each([...(profile.requires || []), ...(profile.conflicts || [])], (id) => {
+    reportWhen(
+      !known.profiles.has(id),
+      problems,
+      `${profile.id}: unknown profile relation ${id}`,
+    );
+    reportWhen(
+      id === profile.id,
+      problems,
+      `${profile.id}: profile relation cannot reference itself`,
+    );
+  });
+}
+
+function validateProfileItemClosure(authority, profile, problems) {
+  each(['providers', 'projections', 'bindings'], (group) => {
+    each(rows(profile[group]), (id) => {
+      const item = (authority[group] || []).find((entry) => entry.id === id);
+      each(rows(item?.requires_components), (component) =>
+        reportWhen(
+          !rows(profile.components).includes(component),
+          problems,
+          `${profile.id}: ${id} requires missing component ${component}`,
+        ),
+      );
+    });
+  });
+}
+
+function validateProfileComponentClosure(authority, profile, problems) {
+  each(rows(profile.components), (componentId) => {
+    const component = (authority.components || []).find(
+      (entry) => entry.id === componentId,
+    );
+    each(rows(component?.requires), (required) =>
+      reportWhen(
+        !rows(profile.components).includes(required),
+        problems,
+        `${profile.id}: ${componentId} requires missing component ${required}`,
+      ),
+    );
+  });
+}
+
+function validateProfiles(authority, known, problems) {
+  each(rows(authority.profiles), (profile) => {
+    validateProfileReferences(profile, known, problems);
+    validateProfileItemClosure(authority, profile, problems);
+    validateProfileComponentClosure(authority, profile, problems);
+  });
+}
+
+function validateDefaultProfile(authority, problems) {
+  const profileById = new Map(
+    (authority.profiles || []).map((item) => [item.id, item]),
+  );
   const defaultProfile = profileById.get(authority.default_profile);
   if (!defaultProfile)
     problems.push(`unknown default_profile ${authority.default_profile}`);
   else if (defaultProfile.status !== 'supported')
     problems.push('default_profile must be supported');
+}
 
-  for (const [target, dependencies] of Object.entries(
-    authority.target_dependencies || {},
-  )) {
-    if (!architectureTargets.has(target))
-      problems.push(`target_dependencies: unknown target ${target}`);
-    for (const dependency of dependencies) {
-      if (!known.dependencies.has(dependency))
-        problems.push(`${target}: unknown dependency ${dependency}`);
-    }
-  }
-  for (const target of architectureTargets) {
-    if (!(target in (authority.target_dependencies || {}))) {
-      problems.push(`target_dependencies: missing target ${target}`);
-    }
-  }
+function validateTargetDependencies(authority, layers, known, problems) {
+  const architectureTargets = ids(layers.internal_targets);
+  each(
+    Object.entries(authority.target_dependencies || {}),
+    ([target, dependencies]) => {
+      reportWhen(
+        !architectureTargets.has(target),
+        problems,
+        `target_dependencies: unknown target ${target}`,
+      );
+      each(dependencies, (dependency) =>
+        reportWhen(
+          !known.dependencies.has(dependency),
+          problems,
+          `${target}: unknown dependency ${dependency}`,
+        ),
+      );
+    },
+  );
+  each(architectureTargets, (target) =>
+    reportWhen(
+      !(target in (authority.target_dependencies || {})),
+      problems,
+      `target_dependencies: missing target ${target}`,
+    ),
+  );
+}
 
+function validateBuildIdentity(authority, problems) {
   const fields = authority.build_identity?.fields || [];
-  if (authority.build_identity?.schema !== 'kungfu.core-build-identity/v1') {
-    problems.push('unsupported build identity schema');
-  }
-  for (const required of [
-    'profile',
-    'components',
-    'providers',
-    'projections',
-    'bindings',
-    'dependency_roots',
-    'live_capability',
-    'build_root',
-    'source_revision',
-  ]) {
-    if (!fields.includes(required))
-      problems.push(`build identity misses ${required}`);
-  }
+  reportWhen(
+    authority.build_identity?.schema !== 'kungfu.core-build-identity/v1',
+    problems,
+    'unsupported build identity schema',
+  );
+  each(
+    [
+      'profile',
+      'components',
+      'providers',
+      'projections',
+      'bindings',
+      'dependency_roots',
+      'live_capability',
+      'build_root',
+      'source_revision',
+    ],
+    (required) =>
+      reportWhen(
+        !fields.includes(required),
+        problems,
+        `build identity misses ${required}`,
+      ),
+  );
+}
+
+function validate(authority, layers) {
+  const problems = [];
+  validateAuthorityIdentity(authority, problems);
+  const known = collectKnownIds(authority, problems);
+  validateComponents(authority, layers, known, problems);
+  validateArchitectureCoverage(authority, layers, problems);
+  validateCapabilityItems(authority, known, problems);
+  validateProjectionResponsibilities(authority, problems);
+  validateProfiles(authority, known, problems);
+  validateDefaultProfile(authority, problems);
+  validateTargetDependencies(authority, layers, known, problems);
+  validateBuildIdentity(authority, problems);
   return problems;
 }
 

@@ -35,12 +35,29 @@ pub struct NativeUpdateResult {
     pub receipt_root: String,
 }
 
-pub fn updater(target: &ApplyTarget<'_>) -> Option<PathBuf> {
+fn configured_updater() -> Option<PathBuf> {
     if let Ok(value) = std::env::var("KUNGFU_NATIVE_UPDATER") {
         let path = PathBuf::from(value);
         if path.is_file() {
             return Some(path);
         }
+    }
+    None
+}
+
+pub fn installed_updater() -> Option<PathBuf> {
+    configured_updater().or_else(|| {
+        host::find_on_path(if cfg!(windows) {
+            "kungfu.exe"
+        } else {
+            "kungfu"
+        })
+    })
+}
+
+pub fn updater(target: &ApplyTarget<'_>) -> Option<PathBuf> {
+    if let Some(path) = configured_updater() {
+        return Some(path);
     }
     if target.kind == "app" {
         let candidate = target
@@ -51,11 +68,7 @@ pub fn updater(target: &ApplyTarget<'_>) -> Option<PathBuf> {
             return Some(candidate);
         }
     }
-    host::find_on_path(if cfg!(windows) {
-        "kungfu.exe"
-    } else {
-        "kungfu"
-    })
+    installed_updater()
 }
 
 fn valid_root(value: &str) -> bool {
@@ -251,6 +264,23 @@ pub(crate) fn installed_release_cut_root(text: &str) -> Option<String> {
         .map(|(_, value)| value.to_string())
         .unwrap_or_default();
     valid_sha256_root(&root).then_some(root)
+}
+
+fn release_cut_for_child(
+    native_selection: Option<&NativeSelection>,
+    installed_receipt: Option<&str>,
+) -> Option<String> {
+    native_selection
+        .map(|selection| selection.release_cut_root.as_str())
+        .filter(|root| valid_sha256_root(root))
+        .map(str::to_string)
+        .or_else(|| installed_receipt.and_then(installed_release_cut_root))
+}
+
+pub fn installed_release_cut_for_child(installed_receipt: Option<&str>) -> Option<String> {
+    let native_selection =
+        installed_updater().and_then(|updater| selected_release_cut(&updater).ok());
+    release_cut_for_child(native_selection.as_ref(), installed_receipt)
 }
 
 pub(crate) fn valid_sha256_root(value: &str) -> bool {
@@ -461,5 +491,25 @@ mod tests {
             "explicit stderr"
         );
         assert_eq!(failure_detail(b"", b""), "no diagnostic output");
+    }
+
+    #[test]
+    fn native_selection_outranks_a_stale_shifu_receipt_for_child_cut() {
+        let native_root = format!("sha256:{}", "a".repeat(64));
+        let receipt_root = format!("sha256:{}", "b".repeat(64));
+        let selection = NativeSelection {
+            release_cut_root: native_root.clone(),
+            receipt_root: format!("sha256:{}", "c".repeat(64)),
+        };
+        let receipt = format!("KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{receipt_root}'\n");
+
+        assert_eq!(
+            release_cut_for_child(Some(&selection), Some(&receipt)),
+            Some(native_root)
+        );
+        assert_eq!(
+            release_cut_for_child(None, Some(&receipt)),
+            Some(receipt_root)
+        );
     }
 }

@@ -3,6 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -68,6 +69,36 @@ test('requires the exact KFD-10 witness when the candidate declares it', () => {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function sha256File(filePath) {
+  return `sha256:${createHash('sha256').update(readFileSync(filePath)).digest('hex')}`;
+}
+
+function writeFixture(t, value) {
+  const directory = mkdtempSync(path.join(tmpdir(), 'kungfu-kfd-write-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const matrixPath = path.join(directory, 'support-matrix.json');
+  const sdkProjectionPath = path.join(directory, 'sdk-support-matrix.json');
+  const docProjectionPath = path.join(directory, 'kfd-support-matrix.md');
+  writeFileSync(matrixPath, `${JSON.stringify(value, null, 2)}\n`);
+  const result = spawnSync(process.execPath, [SCRIPT, '--write'], {
+    cwd: ROOT,
+    env: {
+      ...process.env,
+      KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY: matrixPath,
+      KUNGFU_KFD_SUPPORT_MATRIX_SDK_PROJECTION: sdkProjectionPath,
+      KUNGFU_KFD_SUPPORT_MATRIX_DOC_PROJECTION: docProjectionPath,
+    },
+    encoding: 'utf8',
+  });
+  return {
+    directory,
+    docProjectionPath,
+    matrixPath,
+    result,
+    sdkProjectionPath,
+  };
 }
 
 function validateFixture(t, value) {
@@ -162,6 +193,65 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
     ['framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json'],
   );
   assert.equal(kfd10.releaseQualification.shippedSupport, false);
+});
+
+test('write mode rebinds every declared evidence root without changing claims', (t) => {
+  const matrix = clone(BASE);
+  for (const row of matrix.rows) {
+    for (const evidence of [
+      ...row.verification.evidenceRoots,
+      ...row.releaseQualification.evidenceRoots,
+      ...(row.precursorEvidence?.evidenceRoots || []),
+    ]) {
+      evidence.sha256 = `sha256:${'0'.repeat(64)}`;
+    }
+  }
+  const beforeClaims = matrix.rows.map(
+    ({ key, supportStatus, claimClass }) => ({
+      key,
+      supportStatus,
+      claimClass,
+    }),
+  );
+  const fixture = writeFixture(t, matrix);
+  assert.equal(fixture.result.status, 0, fixture.result.stderr);
+  const rebound = JSON.parse(readFileSync(fixture.matrixPath, 'utf8'));
+  assert.deepEqual(
+    rebound.rows.map(({ key, supportStatus, claimClass }) => ({
+      key,
+      supportStatus,
+      claimClass,
+    })),
+    beforeClaims,
+  );
+  for (const row of rebound.rows) {
+    for (const evidence of [
+      ...row.verification.evidenceRoots,
+      ...row.releaseQualification.evidenceRoots,
+      ...(row.precursorEvidence?.evidenceRoots || []),
+    ]) {
+      assert.equal(evidence.sha256, sha256File(path.join(ROOT, evidence.path)));
+    }
+  }
+  assert.deepEqual(
+    JSON.parse(readFileSync(fixture.sdkProjectionPath, 'utf8')),
+    rebound,
+  );
+  assert.match(
+    readFileSync(fixture.docProjectionPath, 'utf8'),
+    /Source implementation is not the same as released support/u,
+  );
+});
+
+test('write mode fails before mutation when declared evidence is missing', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[0].verification.evidenceRoots[0].path =
+    '.buildchain/kfd/kfd-1/does-not-exist.json';
+  const original = `${JSON.stringify(matrix, null, 2)}\n`;
+  const fixture = writeFixture(t, matrix);
+  assert.equal(fixture.result.status, 1);
+  assert.match(fixture.result.stderr, /evidence is missing/u);
+  assert.equal(readFileSync(fixture.matrixPath, 'utf8'), original);
 });
 
 test('fails closed when the KFD-5 candidate loses its passed product gate', (t) => {

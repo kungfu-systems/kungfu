@@ -29,6 +29,14 @@ export function runRuntimeUpgradeTests() {
       'core',
       'tests',
       'python',
+      'test_facade_compatibility.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
       'test_runtime_upgrade.py',
     ),
     path.join(

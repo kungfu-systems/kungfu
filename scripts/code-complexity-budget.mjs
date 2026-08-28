@@ -312,6 +312,7 @@ function regressionIssues(
   policy = {},
   renamedFrom = new Map(),
   candidateAddedPaths = null,
+  candidateDeletedPaths = null,
 ) {
   const issues = [];
   const baselineByPath = new Map(
@@ -452,7 +453,10 @@ function regressionIssues(
       (candidateAddedPaths === null || candidateAddedPaths.has(file.path)),
   );
   const deleted = baseline.files.filter(
-    (file) => !currentByPath.has(file.path) && !renamedSources.has(file.path),
+    (file) =>
+      !currentByPath.has(file.path) &&
+      !renamedSources.has(file.path) &&
+      (candidateDeletedPaths === null || candidateDeletedPaths.has(file.path)),
   );
   for (const previous of deleted) {
     if (previous.class !== 'first-party-handwritten-implementation') continue;
@@ -632,13 +636,19 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
   const protectedPaths = protectedRef
     ? new Set(gitLines(['ls-tree', '-r', '--name-only', protectedRef]))
     : null;
-  const candidateAddedPaths = protectedPaths
-    ? new Set(
-        files
-          .map((file) => file.path)
-          .filter((pathname) => !protectedPaths.has(pathname)),
-      )
-    : null;
+  const currentPaths = new Set(files.map((file) => file.path));
+  const [candidateAddedPaths, candidateDeletedPaths] = protectedPaths
+    ? [
+        new Set(
+          files
+            .map((file) => file.path)
+            .filter((pathname) => !protectedPaths.has(pathname)),
+        ),
+        new Set(
+          [...protectedPaths].filter((pathname) => !currentPaths.has(pathname)),
+        ),
+      ]
+    : [null, null];
   const issues = validateMeasured(files);
   const residueAudit = trackedComplexitySigningResidueAudit();
   issues.push(
@@ -675,6 +685,7 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
       policy,
       renamedFrom,
       candidateAddedPaths,
+      candidateDeletedPaths,
     ),
   );
   const requester = String(git(['show', '-s', '--format=%ae', 'HEAD'])).trim();

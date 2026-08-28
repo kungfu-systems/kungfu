@@ -99,10 +99,8 @@ test('embedded libnode derives its packaged bundle from Product extensions', () 
   assert.deepEqual(
     resolveTuiAgentSessionPaths({
       env: { KF_BUNDLED_EXTENSION_ROOT: '/product/Resources/extensions' },
-      argvEntry: '/product/Resources/runtime/kungfu',
       modulePath: '/product/Resources/kungfu/tui.mjs',
       exists: (candidate) =>
-        candidate === '/product/Resources/runtime/kungfu' ||
         candidate === entry ||
         candidate === path.join(bundleDir, 'agent-session-worker.mjs') ||
         candidate === path.join(bundleDir, 'mock-agent.mjs'),

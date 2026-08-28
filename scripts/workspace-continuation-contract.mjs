@@ -53,7 +53,10 @@ export function checkWorkspaceContinuationContract(root = DEFAULT_ROOT) {
   )
     throw new Error('workspace continuation non-claims drifted');
 
-  const python = read(root, 'framework/core/src/python/kungfu/workspace.py');
+  const python = [
+    read(root, 'framework/core/src/python/kungfu/workspace.py'),
+    read(root, 'framework/core/src/python/kungfu/_workspace/continuation.py'),
+  ].join('\n');
   const desktop = read(root, 'framework/gui/src/main/workspace-selection.ts');
   const apiRegistry = JSON.parse(
     read(root, 'framework/core/src/python/kungfu/agent/kfd3_api.registry.json'),

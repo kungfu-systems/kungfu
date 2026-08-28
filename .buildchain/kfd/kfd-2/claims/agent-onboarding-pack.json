@@ -79,7 +79,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/check-cli-catalog-parity.mjs",
-        "sha256": "c0811cc4588265a0601cba2a42b8c72278ba36c7b487e2ef4cc245dfe7284b9a"
+        "sha256": "6dcbb9e11144a1f2175ffb3e9a16d54fa023d6e8591366907b3b8f9b728b69e8"
       },
       "description": "Build-free source-acceptance verifier for surface roots and Human, Agent, KFD-3, docs, skills, GUI, and package consumers."
     },
@@ -145,7 +145,7 @@
       },
       {
         "path": "scripts/check-cli-catalog-parity.mjs",
-        "sha256": "c0811cc4588265a0601cba2a42b8c72278ba36c7b487e2ef4cc245dfe7284b9a"
+        "sha256": "6dcbb9e11144a1f2175ffb3e9a16d54fa023d6e8591366907b3b8f9b728b69e8"
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.mjs",

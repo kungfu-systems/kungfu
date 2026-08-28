@@ -414,6 +414,13 @@ class WorkControlAuthority:
             )
             raise LocalRuntimeError(**failure) from error
 
+    def assignment_status(
+        self, initiative_id: str, assignment_id: str
+    ) -> dict[str, Any]:
+        values = {"initiativeId": initiative_id, "assignmentId": assignment_id}
+        values["source"] = "kungfu"
+        return _copy_json(dict(self._invoke("assignment-status", values)["result"]))
+
     @staticmethod
     def _record(row: Mapping[str, Any]) -> dict[str, Any]:
         allowed = {
