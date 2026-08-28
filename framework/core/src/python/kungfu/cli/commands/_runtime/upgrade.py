@@ -294,3 +294,19 @@ def upgrade_gc(
         click.echo(
             f"dry-run: pass --execute with --expected-plan-id {expected_plan_id}"
         )
+
+
+for _symbol in (
+    "runtime_upgrade_group",
+    "upgrade_contract",
+    "upgrade_inventory",
+    "upgrade_plan_install",
+    "upgrade_install",
+    "upgrade_plan",
+    "upgrade_stage",
+    "upgrade_reconcile",
+    "upgrade_gc_plan",
+    "upgrade_gc",
+):
+    globals()[_symbol].callback.__module__ = "kungfu.cli.commands.runtime"
+    globals()[_symbol].callback.__qualname__ = _symbol

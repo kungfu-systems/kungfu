@@ -1,0 +1,133 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:359385b20933b215e8a77fb49602b06ce52b9ed8ea5ce366cb31cef022215501",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "framework/core/src/python/kungfu/_assignment_orchestration/portable.py",
+    "framework/core/src/python/kungfu/_profile_composition/support.py",
+    "framework/core/src/python/kungfu/_profile_sdk/action.py",
+    "framework/core/src/python/kungfu/_profile_sdk/intent.py",
+    "framework/core/src/python/kungfu/_profile_sdk/kfd3.py",
+    "framework/core/src/python/kungfu/_profile_sdk/lifecycle.py",
+    "framework/core/src/python/kungfu/agent/_work_profile/session.py",
+    "framework/core/src/python/kungfu/cli/commands/_assignment/family.py",
+    "framework/core/src/python/kungfu/cli/commands/_assignment/review.py",
+    "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
+    "framework/core/src/python/kungfu/cli/commands/_profile/action.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "framework/core/src/python/kungfu/_assignment_orchestration/portable.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 504,
+      "contentRoot": "sha256:81759b4f57dcfb3915a89e7e2e5a406e960101aa31320094651c09ade5ceb0da"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_profile_composition/support.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 514,
+      "contentRoot": "sha256:fba62f1b67f58d809762be3639b24742320372784ec2c06408a3e5f1401728b1"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_profile_sdk/action.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 614,
+      "contentRoot": "sha256:61823174f0c42c0dd0710c3fdf6f43d0ca8b0aa6470ba9ab7874e5f0c9bde530"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_profile_sdk/intent.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 222,
+      "contentRoot": "sha256:18f99ebee030b7d08cdd6c46f1b7e59ba5251ca65380701b43cf4cd106ce7365"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_profile_sdk/kfd3.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 159,
+      "contentRoot": "sha256:c6a76acd940cdde957a52dab8b65b450726d0fb43f73808834471196e8ccce0d"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/_profile_sdk/lifecycle.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 300,
+      "contentRoot": "sha256:d1fa4fb8c6c64b43ea387730ec79bf474996acb9e49d3a1744b7d135eb054c5d"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/_work_profile/session.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 359,
+      "contentRoot": "sha256:11dffd7dcb58635de8d8d71ce632ba510ec5b6213bec695f89354375c5ed001d"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_assignment/family.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 406,
+      "contentRoot": "sha256:33a587959c5c9c1c37f3f5e3d5d32bf7b5211c7a30aeb4a4e1d862858a96e149"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_assignment/review.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 442,
+      "contentRoot": "sha256:5b31a8d6dccd16159218550fdaa6962918bfde283876da620c3a6392ef661f31"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 249,
+      "contentRoot": "sha256:f331f6dfd0d3e8b861a44e9250d3a531027dfe3fb3f27dc861e75b827317276a"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_profile/action.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 88,
+      "contentRoot": "sha256:dbda478ae44c11e8034f61a085383e0821808a94c6b9946039a503cf7f9cb614"
+    }
+  ],
+  "allowed_delta": 3857,
+  "owner": "core/package",
+  "responsibility_boundary": "Wave 3 decomposes six protected Profile and Assignment Python hotspots into explicit action, intent, lifecycle, KFD-3, composition, session, portable-state, starter, review, family, binding, seal, and Profile CLI responsibility owners while retaining stable public facades.",
+  "cohesion_rationale": "The eleven files are the minimum cohesive owner set needed to move six independently changing Profile and Assignment responsibilities below 1000 physical lines without duplicating algorithms, hiding handwritten code, introducing import cycles, or changing stable import and CLI surfaces.",
+  "rejected_split_alternatives": [
+    "Keeping no more than three helper files would preserve multi-responsibility megamodules above the goal threshold.",
+    "Relabeling the files as generated, vendored, test, or artificial architecture owners would launder handwritten production responsibility.",
+    "Removing stable facades or collapsing independent Profile and Assignment domains would break public imports, monkeypatch seams, Click registration, or native Work authority boundaries."
+  ],
+  "affected_tests_and_qualification": [
+    "./shifu test:agent-profile-sdk",
+    "./shifu test:assignment-runtime",
+    "./shifu test:cli-surface-contract",
+    "./shifu test:work-authority",
+    "./shifu check:agent-work-state-contract",
+    "./shifu check:python-structure",
+    "./shifu test:generated-report-authority",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong+cx@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-wave3"
+}
