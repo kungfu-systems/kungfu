@@ -57,6 +57,9 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        # This marker is set by the checked-in protected action, then paired
+        # with the GitHub-hosted Linux /proc ancestry proof in Buildchain.
+        BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker/v1
         KUNGFU_NATIVE_COMMAND: ${{ inputs.command }}
       run: >-
         node framework/dev-delivery/native-execution-under-warrant.mjs
