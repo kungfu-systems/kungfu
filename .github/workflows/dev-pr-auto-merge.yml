@@ -545,7 +545,7 @@ jobs:
       statuses: write
     uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
     with:
-      buildchain-ref: v4
+      buildchain-ref: train/v4/v4.0/release-topology-convergence
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -884,7 +884,7 @@ jobs:
       statuses: write
     uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
     with:
-      buildchain-ref: v4
+      buildchain-ref: train/v4/v4.0/release-topology-convergence
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}

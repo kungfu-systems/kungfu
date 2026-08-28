@@ -18,13 +18,18 @@ const workflow = fs.readFileSync(
 const steadyStateDogfoodFixturePath =
   'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 const protectedWarrantRuntimeRef = 'a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab';
+const protectedWarrantRuntimeSelector =
+  'train/v4/v4.0/release-topology-convergence';
 
 test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs', () => {
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.equal(reusableRef, protectedWarrantRuntimeRef);
-  assert.match(workflow, /buildchain-ref: v4/u);
+  assert.match(
+    workflow,
+    new RegExp(`buildchain-ref: ${protectedWarrantRuntimeSelector}`, 'u'),
+  );
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
     workflow,
@@ -641,13 +646,13 @@ test('every protected Warrant consumer uses one Buildchain runtime authority', (
   assert.deepEqual([...new Set(refs)], [protectedWarrantRuntimeRef]);
 });
 
-test('protected delivery calls pin their workflow while resolving the v4 runtime selector', () => {
+test('protected delivery calls pin their workflow and trusted runtime selector', () => {
   const workflow = fs.readFileSync(
     '.github/workflows/dev-pr-auto-merge.yml',
     'utf8',
   );
   const protectedCall = new RegExp(
-    `uses: kungfu-systems/buildchain/\\.github/workflows/dev-pr-auto-merge\\.yml@${protectedWarrantRuntimeRef}\\n[\\s\\S]*?with:\\n[ \\t]+buildchain-ref: v4`,
+    `uses: kungfu-systems/buildchain/\\.github/workflows/dev-pr-auto-merge\\.yml@${protectedWarrantRuntimeRef}\\n[\\s\\S]*?with:\\n[ \\t]+buildchain-ref: ${protectedWarrantRuntimeSelector}`,
     'gu',
   );
   assert.equal([...workflow.matchAll(protectedCall)].length, 2);
