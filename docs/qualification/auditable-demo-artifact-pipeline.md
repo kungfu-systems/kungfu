@@ -166,7 +166,7 @@ README. A failed or cancelled run is diagnostic evidence, never qualification.
 
 The first proof isolates continuity: one Work continues across two fresh Agent Sessions without copied chat.
 
-[![Can Work survive a new Agent?](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/demo.gif)](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/public-evidence.json)
+[![Can Work survive a new Agent?](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/demo.gif)](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/public-evidence.json)
 
 Commands:
 
@@ -174,11 +174,11 @@ Commands:
 $ kungfu agent-work-lab autoplay
 ```
 
-Native renditions: [1080p MP4](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/demo.mp4) · [1080p WebM](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/demo.webm) · [720p MP4](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/demo-720p.webm)
+Native renditions: [1080p MP4](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/demo.mp4) · [1080p WebM](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/demo.webm) · [720p MP4](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/demo-720p.webm)
 
 Claim boundary: This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.
 
-[Release Passport](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/release-passport.json) · [auditable evidence](evidence/auditable-demo/e2952e8c5f44783203bb3a523221412a19424e6374c4b2bf1f16bd8b209f0eee/agent-work-lab-autoplay/public-evidence.json)
+[Release Passport](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/release-passport.json) · [auditable evidence](evidence/auditable-demo/0340bd9ec97694a8528ecd4c986ffe0e2badcae53a0bbd30eb86e92825b19805/agent-work-lab-autoplay/public-evidence.json)
 
 The mechanism exists; the next proof asks whether it still holds under real failure conditions.
 <!-- kungfu:auditable-demo:technical:agent-work-lab-autoplay:end -->
@@ -188,7 +188,7 @@ The mechanism exists; the next proof asks whether it still holds under real fail
 
 Inside a disposable Project, a dropped connection and a crashed replacement process remain as Attempts under the same Work.
 
-[![Can Work survive failure?](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/demo.gif)](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/public-evidence.json)
+[![Can Work survive failure?](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/demo.gif)](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/public-evidence.json)
 
 Commands:
 
@@ -196,11 +196,11 @@ Commands:
 $ kungfu agent-work-lab project-tour --episode 1 --speed 4
 ```
 
-Native renditions: [1080p MP4](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/demo.mp4) · [1080p WebM](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/demo.webm) · [720p MP4](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/demo-720p.webm)
+Native renditions: [1080p MP4](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/demo.mp4) · [1080p WebM](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/demo.webm) · [720p MP4](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/demo-720p.webm)
 
 Claim boundary: This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 1 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.
 
-[Release Passport](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/release-passport.json) · [auditable evidence](evidence/auditable-demo/042f9a63bce7db29e7f6df7367351e712c6f3cd5feb1cc2cd2baeb50b2fd18f2/project-tour-episode-1/public-evidence.json)
+[Release Passport](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/release-passport.json) · [auditable evidence](evidence/auditable-demo/bc9bdc54e263967bd300493445f316fb816fc8ca596a2facda580fa4f46233e9/project-tour-episode-1/public-evidence.json)
 
 Work survival is only the first step. If an Agent can approve its own result, continuity still is not trustworthy.
 <!-- kungfu:auditable-demo:technical:project-tour-episode-1:end -->
@@ -210,7 +210,7 @@ Work survival is only the first step. If an Agent can approve its own result, co
 
 The final proof separates Agent exit, independent review, and Kungfu settlement: an Agent can produce a candidate and evidence, but cannot approve its own Work.
 
-[![Who is allowed to complete Work?](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/demo.gif)](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/public-evidence.json)
+[![Who is allowed to complete Work?](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/demo.gif)](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/public-evidence.json)
 
 Commands:
 
@@ -218,9 +218,9 @@ Commands:
 $ kungfu agent-work-lab project-tour --episode 2 --speed 4
 ```
 
-Native renditions: [1080p MP4](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/demo.mp4) · [1080p WebM](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/demo.webm) · [720p MP4](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/demo-720p.webm)
+Native renditions: [1080p MP4](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/demo.mp4) · [1080p WebM](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/demo.webm) · [720p MP4](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/demo-720p.webm)
 
 Claim boundary: This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.
 
-[Release Passport](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/release-passport.json) · [auditable evidence](evidence/auditable-demo/df1966c3530ea294f6eb8f7a38c6a79cdc2ad6537810faed8ce93364f2e943ca/project-tour-episode-2/public-evidence.json)
+[Release Passport](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/release-passport.json) · [auditable evidence](evidence/auditable-demo/35a73b8ed0471b2353b304eac3cabcbb617e1d3949705ceaeb7ea0b2ef7af505/project-tour-episode-2/public-evidence.json)
 <!-- kungfu:auditable-demo:technical:project-tour-episode-2:end -->
