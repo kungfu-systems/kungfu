@@ -26,6 +26,7 @@ const CLI = path.join(
   'kungfu',
   'cli',
 );
+const PATH_BOUNDARY_PREFIXES = new Set(['-', '[', '<', '{']);
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -62,7 +63,7 @@ function canonicalPath(name) {
   if (typeof name !== 'string') return null;
   const tokens = [];
   for (const token of name.split(/\s+/u)) {
-    if (/^[-[<{]/u.test(token)) break;
+    if (PATH_BOUNDARY_PREFIXES.has(token[0])) break;
     tokens.push(token.replace(/[;,]$/u, ''));
   }
   return tokens.join(' ');
@@ -107,6 +108,27 @@ export function auditCatalogParity({
 }) {
   const issues = [];
   const fail = (message) => issues.push(message);
+  validateCatalogContract(catalog, registry, schema, fail);
+  const { ids, byPath, linkedApiIds } = indexCatalogSurfaces(
+    catalog,
+    schema,
+    fail,
+  );
+  validateKfd3Linkage(catalog, ids, fail);
+  const { apiById, expectedCommands } = indexKfd3Apis(kfd3, linkedApiIds, fail);
+  validateCommandCatalog(
+    commands,
+    registry,
+    byPath,
+    apiById,
+    expectedCommands,
+    fail,
+  );
+  validatePackIndex(index, fail);
+  return { ok: issues.length === 0, issues, byPath };
+}
+
+function validateCatalogContract(catalog, registry, schema, fail) {
   const { catalogRoot: _catalogRoot, ...catalogPreimage } = catalog;
   if (catalog.catalogRoot !== contentRoot(catalogPreimage))
     fail('generated catalog root mismatch');
@@ -152,7 +174,9 @@ export function auditCatalogParity({
     )
   )
     fail('CLI schema still permits deprecated or compatibility maturity');
+}
 
+function indexCatalogSurfaces(catalog, schema, fail) {
   const ids = new Set();
   const byPath = new Map();
   const linkedApiIds = new Set();
@@ -160,25 +184,32 @@ export function auditCatalogParity({
     const label = row.id || row.canonical_path || '<unknown>';
     if (ids.has(row.id)) fail(`duplicate surface id ${label}`);
     ids.add(row.id);
-    for (const field of schema.surfaceRequiredFields || []) {
-      if (!(field in row)) fail(`surface ${label} missing ${field}`);
-    }
-    if (!(schema.owners || []).includes(row.owner))
-      fail(`surface ${label} invalid owner ${row.owner}`);
-    if (!(schema.maturity || []).includes(row.maturity))
-      fail(`surface ${label} invalid maturity ${row.maturity}`);
-    if (!(schema.visibility || []).includes(row.visibility))
-      fail(`surface ${label} invalid visibility ${row.visibility}`);
-    if (!(schema.mutationClasses || []).includes(row.mutation_class))
-      fail(`surface ${label} invalid mutation class ${row.mutation_class}`);
-    if ((row.aliases || []).length !== 0)
-      fail(`surface ${label} retains aliases`);
+    validateSurfaceSchema(row, schema, label, fail);
     if (byPath.has(row.canonical_path))
       fail(`duplicate surface path ${row.canonical_path}`);
     byPath.set(row.canonical_path, row);
     for (const apiId of row.kfd3_api_ids || []) linkedApiIds.add(apiId);
   }
+  return { ids, byPath, linkedApiIds };
+}
 
+function validateSurfaceSchema(row, schema, label, fail) {
+  for (const field of schema.surfaceRequiredFields || []) {
+    if (!(field in row)) fail(`surface ${label} missing ${field}`);
+  }
+  if (!(schema.owners || []).includes(row.owner))
+    fail(`surface ${label} invalid owner ${row.owner}`);
+  if (!(schema.maturity || []).includes(row.maturity))
+    fail(`surface ${label} invalid maturity ${row.maturity}`);
+  if (!(schema.visibility || []).includes(row.visibility))
+    fail(`surface ${label} invalid visibility ${row.visibility}`);
+  if (!(schema.mutationClasses || []).includes(row.mutation_class))
+    fail(`surface ${label} invalid mutation class ${row.mutation_class}`);
+  if ((row.aliases || []).length !== 0)
+    fail(`surface ${label} retains aliases`);
+}
+
+function validateKfd3Linkage(catalog, ids, fail) {
   const linkageBySurface = new Map();
   for (const link of catalog.kfd3Linkage || []) {
     if (linkageBySurface.has(link.surfaceId))
@@ -211,7 +242,9 @@ export function auditCatalogParity({
   for (const surfaceId of linkageBySurface.keys()) {
     if (!ids.has(surfaceId)) fail(`orphan KFD-3 linkage ${surfaceId}`);
   }
+}
 
+function indexKfd3Apis(kfd3, linkedApiIds, fail) {
   const apiById = new Map((kfd3.apis || []).map((row) => [row.id, row]));
   for (const row of kfd3.apis || []) {
     for (const name of [row.name, ...(row.aliases || [])]) {
@@ -228,6 +261,17 @@ export function auditCatalogParity({
       expectedCommands.set(name, row.id);
     }
   }
+  return { apiById, expectedCommands };
+}
+
+function validateCommandCatalog(
+  commands,
+  registry,
+  byPath,
+  apiById,
+  expectedCommands,
+  fail,
+) {
   const actualCommands = new Map();
   for (const row of commands.commands || []) {
     if (usesInternalModuleEntrypoint(row.name))
@@ -258,14 +302,15 @@ export function auditCatalogParity({
     if (!expectedCommands.has(name))
       fail(`commands.json undeclared projection ${name}`);
   }
+}
 
+function validatePackIndex(index, fail) {
   if (
     !(index.documents || []).some(
       (row) => row.path === 'cli_surface.catalog.json',
     )
   )
     fail('agent pack index omits cli_surface.catalog.json');
-  return { ok: issues.length === 0, issues, byPath };
 }
 
 function readJson(file) {

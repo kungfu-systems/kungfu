@@ -1,12 +1,6 @@
 {
   "schema": "buildchain.declarative-binary-demo/v1",
   "compositionMode": "terminal-fill",
-  "playback": {
-    "schema": "buildchain.declarative-demo-playback/v1",
-    "mode": "deterministic-readable",
-    "activeDurationMs": 90000,
-    "finalHoldMs": 3000
-  },
   "product": {
     "id": "kungfu",
     "displayName": "Kungfu",

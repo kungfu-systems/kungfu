@@ -54,13 +54,12 @@ def _linked_records(
     initiative_id: str,
     assignment_id: str,
     storage_source_id: str,
+    canonical_state: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
     from . import native_state
 
-    state = runtime.query_state(
-        runtime_dir,
-        initiative_id=initiative_id,
-        storage_source_id=storage_source_id,
+    state = runtime.resolve_canonical_state(
+        runtime_dir, initiative_id, storage_source_id, canonical_state
     )
     assignment = native_state.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
@@ -292,12 +291,18 @@ def lifecycle_status(
     storage_source_id: str = "kungfu",
     now: str = "",
 ) -> dict[str, Any]:
+    canonical_state = runtime.query_state(
+        runtime_dir,
+        initiative_id=initiative_id,
+        storage_source_id=storage_source_id,
+    )
     lifecycle = runtime.assignment_orchestration_status(
         runtime_dir,
         initiative_id=initiative_id,
         assignment_id=assignment_id,
         storage_source_id=storage_source_id,
         now=now,
+        canonical_state=canonical_state,
     )
     return _attach_work_semantics(
         runtime_dir,
@@ -305,6 +310,7 @@ def lifecycle_status(
         initiative_id=initiative_id,
         assignment_id=assignment_id,
         storage_source_id=storage_source_id,
+        canonical_state=canonical_state,
     )
 
 
@@ -315,12 +321,14 @@ def _attach_work_semantics(
     initiative_id: str,
     assignment_id: str,
     storage_source_id: str,
+    canonical_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     _, _, records = _linked_records(
         runtime_dir,
         initiative_id=initiative_id,
         assignment_id=assignment_id,
         storage_source_id=storage_source_id,
+        canonical_state=canonical_state,
     )
     lifecycle = dict(lifecycle)
     lifecycle["work_semantics"] = project(

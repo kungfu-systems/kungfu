@@ -993,7 +993,9 @@ def test_contract_accepts_authority_narrowing_without_retired_source_facts(tmp_p
     )
 
 
-def test_contract_rejects_authority_narrowing_with_retired_source_facts(tmp_path):
+def test_contract_retains_history_when_current_profile_retires_a_source_authority(
+    tmp_path,
+):
     source = _dynamic_source(tmp_path)
     runtime = tmp_path / "runtime"
     _set_work_item_authorities(source, ["retired-owner", "workspace-owner"])
@@ -1022,12 +1024,16 @@ def test_contract_rejects_authority_narrowing_with_retired_source_facts(tmp_path
     _set_work_item_authorities(source, ["workspace-owner"])
     _upgrade(source, runtime)
 
-    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
-        profile_composition.contract_materialization_plan(source, runtime)
-    assert raised.value.diagnosis["code"] == (
-        "fact-surface-authority-migration-required"
-    )
-    assert raised.value.diagnosis["admittedSourceAuthorities"] == ["retired-owner"]
+    plan = profile_composition.contract_materialization_plan(source, runtime)
+    assert plan["operations"] == []
+    catalog = storage_service.fact_type_list(runtime)
+    work_item = next(row for row in catalog["fact_types"] if row["id"] == "work-item")
+    assert set(work_item["source_authorities"]) == {
+        "retired-owner",
+        "workspace-owner",
+    }
+    history = storage_service.fact_state(runtime)["observation_history"]
+    assert any(row["observation_id"] == "week-1-retired" for row in history)
 
 
 def test_contract_accepts_surface_narrowing_without_retired_surface_facts(tmp_path):
@@ -1070,7 +1076,9 @@ def test_contract_rejects_surface_register_expansion(tmp_path):
     assert raised.value.diagnosis["code"] == "contract-world-incompatible"
 
 
-def test_contract_rejects_surface_narrowing_with_retired_surface_facts(tmp_path):
+def test_contract_retains_history_when_current_profile_retires_a_fact_surface(
+    tmp_path,
+):
     source = _dynamic_source(tmp_path)
     runtime = tmp_path / "runtime"
     _set_retired_fact_surface(source, present=True)
@@ -1099,9 +1107,9 @@ def test_contract_rejects_surface_narrowing_with_retired_surface_facts(tmp_path)
     _set_retired_fact_surface(source, present=False)
     _upgrade(source, runtime)
 
-    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
-        profile_composition.contract_materialization_plan(source, runtime)
-    assert raised.value.diagnosis["code"] == (
-        "contract-world-surface-migration-required"
-    )
-    assert raised.value.diagnosis["admittedFactSurfaces"] == ["retired-item"]
+    plan = profile_composition.contract_materialization_plan(source, runtime)
+    assert plan["operations"] == []
+    catalog = storage_service.fact_type_list(runtime)
+    assert any(row["id"] == "retired-item" for row in catalog["fact_types"])
+    history = storage_service.fact_state(runtime)["observation_history"]
+    assert any(row["observation_id"] == "retired-1-retained" for row in history)

@@ -931,34 +931,28 @@ def execute(
             "sessionAttemptId": run_id,
         }
     )
-    if provider == "synthetic":
-        # The deterministic Mock Agent is a qualification fixture, not a
-        # registered native Provider. Keep its bounded managed-run environment
-        # instead of inventing a public adapter or provider Skill for it.
-        env = base_env
-    else:
-        adapter = native_provider_adapter(
-            provider,
-            runtime_dir=runtime_dir,
-            session_id=run_id.removeprefix("agent-"),
-            config_home=effective_config_home,
-            runtime_home=runtime_home,
-        )
-        env = native_environment(
-            provider,
-            runtime_dir=runtime_dir,
-            config_home=effective_config_home,
-            runtime_home=runtime_home,
-            workspace_root=workspace_root,
-            work_ref=work,
-            work_selection={"workspaceId": workspace_id},
-            profile=selected,
-            session_ref=managed_session_ref,
-            provider_version=str(verification.get("version") or "unknown"),
-            adapter=adapter,
-            source=base_env,
-            stdio_is_tty=False,
-        )
+    adapter = native_provider_adapter(
+        provider,
+        runtime_dir=runtime_dir,
+        session_id=run_id.removeprefix("agent-"),
+        config_home=effective_config_home,
+        runtime_home=runtime_home,
+    )
+    env = native_environment(
+        provider,
+        runtime_dir=runtime_dir,
+        config_home=effective_config_home,
+        runtime_home=runtime_home,
+        workspace_root=workspace_root,
+        work_ref=work,
+        work_selection={"workspaceId": workspace_id},
+        profile=selected,
+        session_ref=managed_session_ref,
+        provider_version=str(verification.get("version") or "unknown"),
+        adapter=adapter,
+        source=base_env,
+        stdio_is_tty=False,
+    )
     for key in ("KUNGFU_CONTROL_RUNTIME_DIR", "KUNGFU_AGENT_CONTINUATION"):
         if key in base_env:
             env[key] = base_env[key]

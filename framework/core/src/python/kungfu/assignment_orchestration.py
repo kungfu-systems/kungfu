@@ -506,25 +506,75 @@ def assignment_projection(
     }
 
 
-def next_actions(status: Mapping[str, Any]) -> list[dict[str, Any]]:
-    identity = {
-        "initiative_id": str(status.get("initiative_id") or ""),
-        "assignment_id": str(status.get("assignment_id") or ""),
-    }
-    phase = str(status.get("phase") or "")
-    table = {
-        "admitted": [("claim", "Mint a bounded owner/agent/slot lease")],
-        "claimed": [("kickoff", "Enter execution under the active lease")],
-        "executing": [("stage", "Record the stage-ready boundary")],
-        "stage-ready": [("claim-completion", "Publish proof-backed completion")],
-        "completion-claimed": [("review", "Run independent completion review")],
-        "independently-reviewed": [("decide", "Bind a continuation decision")],
-        "continuation-decided": [("seal", "Seal portable orchestration state")],
-    }
-    return [
-        {"action": action, "description": description, "input": identity}
-        for action, description in table.get(phase, [])
-    ]
+_NEXT_ACTIONS_BY_PHASE = {
+    "admitted": [("claim", "Mint a bounded owner/agent/slot lease")],
+    "claimed": [("kickoff", "Enter execution under the active lease")],
+    "executing": [("stage", "Record the stage-ready boundary")],
+    "recovery-required": [("fresh-recovery-plan", "Recover a fresh attempt")],
+    "recovered-closeout": [("claim-completion", "Publish proof-backed completion")],
+    "stage-ready": [("claim-completion", "Publish proof-backed completion")],
+    "completion-claimed": [("review", "Run independent completion review")],
+    "independently-reviewed": [("decide", "Bind a continuation decision")],
+    "continuation-decided": [("seal", "Seal portable orchestration state")],
+}
+
+
+class _NextActionProjection:
+    @staticmethod
+    def semantic_actions(
+        status: Mapping[str, Any], phase: str, identity: Mapping[str, str]
+    ) -> list[dict[str, Any]] | None:
+        work_semantics = status.get("work_semantics")
+        if not isinstance(work_semantics, Mapping):
+            return None
+        semantic_state = (
+            phase,
+            bool(work_semantics.get("current_input_snapshot")),
+            work_semantics.get("completion_eligible") is True,
+        )
+        if semantic_state not in {
+            ("executing", True, False),
+            ("recovered-closeout", True, False),
+            ("stage-ready", True, False),
+        }:
+            return None
+        return [
+            {
+                "action": str(row["action"]),
+                "description": (
+                    "Complete current Work semantics before publishing completion"
+                ),
+                "input": dict(identity),
+                **({"reason": str(row["reason"])} if row.get("reason") else {}),
+            }
+            for row in work_semantics.get("next_actions", [])
+        ]
+
+    @staticmethod
+    def project(status: Mapping[str, Any]) -> list[dict[str, Any]]:
+        identity = {
+            "initiative_id": str(status.get("initiative_id", "")),
+            "assignment_id": str(status.get("assignment_id", "")),
+        }
+        phase = str(status.get("phase", ""))
+        if phase == "executing" and not status.get("active_lease"):
+            recovered = status.get("recovery_continuation")
+            phase = "recovered-closeout" if recovered else "recovery-required"
+        semantic_actions = _NextActionProjection.semantic_actions(
+            status, phase, identity
+        )
+        if semantic_actions is not None:
+            return semantic_actions
+        return [
+            {"action": action, "description": description, "input": identity}
+            for action, description in _NEXT_ACTIONS_BY_PHASE.get(phase, [])
+        ]
+
+
+next_actions = _NextActionProjection.project
+next_actions.__name__ = "next_actions"
+next_actions.__qualname__ = "next_actions"
+next_actions.__module__ = __name__
 
 
 def gate(status: Mapping[str, Any], target: str) -> dict[str, Any]:

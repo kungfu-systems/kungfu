@@ -203,6 +203,64 @@ export function createKungfuPublicationGateAggregate({
   return { ...payload, digest: `sha256:${sha256Json(payload)}` };
 }
 
+export function bindKungfuPublicationGateAggregate({
+  aggregate,
+  evidenceSourceSha,
+  targetSourceSha,
+  targetSourceTreeSha,
+  expectedSourceTreeSha,
+  rebindPublicationGateAggregateForEquivalentTree,
+}) {
+  if (targetSourceTreeSha !== expectedSourceTreeSha)
+    throw new Error(
+      'promotion source tree does not match the release candidate',
+    );
+  return rebindPublicationGateAggregateForEquivalentTree(aggregate, {
+    evidenceSourceSha,
+    targetSourceSha,
+    targetSourceTreeSha,
+    expectedSourceTreeSha,
+  });
+}
+
+export function resolveGitTreeSha({ repositoryRoot, sourceSha }) {
+  if (!/^[0-9a-f]{40}$/.test(sourceSha))
+    throw new Error('promotion source SHA must be an exact commit SHA');
+  let treeSha;
+  try {
+    treeSha = execFileSync(
+      'git',
+      ['rev-parse', '--verify', `${sourceSha}^{tree}`],
+      {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    ).trim();
+  } catch {
+    throw new Error(
+      `promotion source commit is unavailable in the publication subject: ${sourceSha}`,
+    );
+  }
+  if (!/^[0-9a-f]{40}$/.test(treeSha))
+    throw new Error('promotion source did not resolve to an exact Git tree');
+  return treeSha;
+}
+
+export function validateKungfuReleaseCandidatePassport({
+  candidate,
+  passport,
+  targetRef,
+  buildSummary,
+}) {
+  return candidate.validateReleaseCandidatePassport({
+    passport,
+    repository: 'kungfu-systems/kungfu',
+    targetChannel: targetRef,
+    buildSummary,
+  });
+}
+
 export async function assembleKungfuPublicationGate({
   root = ROOT,
   subjectRoot = root,
@@ -244,6 +302,11 @@ export async function assembleKungfuPublicationGate({
       path.join(runtimeRoot, 'packages/core/controller-evidence.js'),
     ).href
   );
+  const recovery = await import(
+    pathToFileURL(
+      path.join(runtimeRoot, 'packages/core/release-candidate-recovery.js'),
+    ).href
+  );
 
   const passport = oneJson(
     path.join(evidenceRoot, 'passport'),
@@ -270,25 +333,20 @@ export async function assembleKungfuPublicationGate({
     'downloaded manifests',
   );
 
-  const passportValidation = candidate.validateReleaseCandidatePassport({
+  const passportValidation = validateKungfuReleaseCandidatePassport({
+    candidate,
     passport,
-    repository: 'kungfu-systems/kungfu',
-    targetChannel: targetRef,
-    sourceHeadSha: sourceSha,
+    targetRef,
     buildSummary,
   });
   if (!passportValidation.ok)
     throw new Error(
       `release-candidate passport is invalid: ${passportValidation.errors.join('; ')}`,
     );
-  const promotionTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], {
-    cwd: subjectRoot,
-    encoding: 'utf8',
-  }).trim();
-  if (passport.source?.treeHash !== promotionTree)
-    throw new Error(
-      'promotion source tree does not match the release candidate',
-    );
+  const promotionTree = resolveGitTreeSha({
+    repositoryRoot: subjectRoot,
+    sourceSha,
+  });
 
   const controllerValidation = controllers.validateControllerReceipt(
     controllerReceipt,
@@ -402,13 +460,22 @@ export async function assembleKungfuPublicationGate({
       },
       writer: process.stderr,
     });
-    const aggregate = createKungfuPublicationGateAggregate({
-      sourceSha,
+    const candidateAggregate = createKungfuPublicationGateAggregate({
+      sourceSha: passport.source.headSha,
       registry,
       gateReceipt,
       manifestSet,
       publicationAuthorityDigest: authority.publicationAuthorityDigest,
       sha256Json: candidate.sha256Json,
+    });
+    const aggregate = bindKungfuPublicationGateAggregate({
+      aggregate: candidateAggregate,
+      evidenceSourceSha: passport.source.headSha,
+      targetSourceSha: sourceSha,
+      targetSourceTreeSha: promotionTree,
+      expectedSourceTreeSha: passport.source.treeHash,
+      rebindPublicationGateAggregateForEquivalentTree:
+        recovery.rebindPublicationGateAggregateForEquivalentTree,
     });
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, `${JSON.stringify(aggregate, null, 2)}\n`);

@@ -406,6 +406,31 @@ test('new-file anti-gaming ignores helpers already present on the protected base
   );
 });
 
+test('split anti-gaming ignores baseline deletions already absent from the protected base', () => {
+  const historicalDeletion = handwritten('scripts/historical-hotspot.mjs', 120);
+  const currentHelpers = [
+    handwritten('scripts/current-reader.mjs', 50),
+    handwritten('scripts/current-writer.mjs', 50),
+  ];
+  const issues = regressionIssues(
+    currentHelpers,
+    { groups, files: [historicalDeletion] },
+    {
+      antiGaming: {
+        maxNewHandwrittenFilesPerOwner: 3,
+        newGeneratedProjectionRequiresProvenance: true,
+      },
+    },
+    new Map(),
+    new Set(currentHelpers.map((file) => file.path)),
+    new Set(),
+  );
+  assert.equal(
+    issues.some((issue) => issue.code === 'responsibility-preserving-split'),
+    false,
+  );
+});
+
 test('one-to-one Git renames preserve the old budget without becoming helper splits', () => {
   const deleted = handwritten('scripts/legacy-lab.mjs', 120);
   const renamed = handwritten('scripts/current-lab.mjs', 121);
