@@ -53,7 +53,6 @@ from kungfu.storage._service_episode import (
     _episode_write_edge,
     _episode_write_options,
     episode_abort,
-    episode_admission,
     episode_attach_frame,
     episode_attach_ref,
     episode_begin,
@@ -199,6 +198,49 @@ def export_records(
             str(runtime_dir), source_id, range_filter or {}
         )
     ]
+
+
+def episode_admission(
+    destination_runtime_dir: str | Path,
+    *,
+    action: str = "plan",
+    source_runtime_dir: str | Path | None = None,
+    episode_ids: list[int] | None = None,
+    transport: str = "local-direct",
+    initiator: str = "destination-pull",
+    plan: dict[str, Any] | None = None,
+    plan_root: str = "",
+    episode_bundles: list[dict[str, Any]] | None = None,
+    source_identity: dict[str, Any] | None = None,
+    destination_identity: dict[str, Any] | None = None,
+    project_cut_roots: list[str] | None = None,
+) -> dict[str, Any]:
+    """Run the destination-owned Episode Admission protocol in libkungfu."""
+
+    options: dict[str, Any] = {
+        "action": action,
+        "transport": transport,
+        "initiator": initiator,
+        "episode_ids": [_u64(value) for value in (episode_ids or [])],
+        "project_cut_roots": project_cut_roots or [],
+    }
+    if source_runtime_dir is not None:
+        options["source_runtime_dir"] = str(source_runtime_dir)
+    if plan is not None:
+        options["plan"] = _binding_json(plan)
+    if plan_root:
+        options["plan_root"] = plan_root
+    if episode_bundles is not None:
+        options["episode_bundles"] = _binding_json(episode_bundles)
+    if source_identity is not None:
+        options["source_identity"] = _binding_json(source_identity)
+    if destination_identity is not None:
+        options["destination_identity"] = _binding_json(destination_identity)
+    return dict(
+        _runtime().run_storage_service_operation(
+            "episode_admission", str(destination_runtime_dir), options
+        )
+    )
 
 
 export_jsonl = StorageTransfer.export_jsonl
