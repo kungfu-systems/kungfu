@@ -252,7 +252,7 @@
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
-            "sha256": "f331f6dfd0d3e8b861a44e9250d3a531027dfe3fb3f27dc861e75b827317276a"
+            "sha256": "74af019325ea83b4d00b257f880534fe8ca4dcd9a921ac172e05bb8f6ab192d8"
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/_assignment/review.py",

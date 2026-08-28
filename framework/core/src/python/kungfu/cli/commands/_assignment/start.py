@@ -16,22 +16,6 @@ assignment_context = _facade.assignment_context
 surface = _facade.surface
 assignment_start = _facade.assignment_start
 assignment_evidence = _facade.assignment_evidence
-_emit = _facade._emit
-_run = _facade._run
-_runtime = _facade._runtime
-_status = _facade._status
-_work_start_plan = _facade._work_start_plan
-_work_start_receipt = _facade._work_start_receipt
-_admit_captured_assignment = _facade._admit_captured_assignment
-_admission_summary = _facade._admission_summary
-_profile_action = _facade._profile_action
-_claim_summary = _facade._claim_summary
-_advance = _facade._advance
-_kickoff_summary = _facade._kickoff_summary
-_project_work_prompt = _facade._project_work_prompt
-_agent_report_summary = _facade._agent_report_summary
-_prepare_resume_profile = _facade._prepare_resume_profile
-_EVIDENCE_SERVICES = _facade._EVIDENCE_SERVICES
 
 
 @assignment.command(
@@ -64,9 +48,9 @@ def start_plan(
     actor,
     allow_foreign_binding,
 ):
-    _emit(
-        _run(
-            lambda: _work_start_plan(
+    _facade._emit(
+        _facade._run(
+            lambda: _facade._work_start_plan(
                 config_home=ctx.config_home,
                 runtime_home=ctx.home,
                 request_file=request_file,
@@ -143,17 +127,17 @@ def start_work(
             click.get_text_stream("stdout").flush()
 
     services = assignment_start.StartServices(
-        plan=_work_start_plan,
-        receipt=_work_start_receipt,
-        status=_status,
-        admit=_admit_captured_assignment,
-        admission_summary=_admission_summary,
-        profile_action=_profile_action,
-        claim_summary=_claim_summary,
-        advance_bound=_advance,
-        kickoff_summary=_kickoff_summary,
-        project_prompt=_project_work_prompt,
-        agent_report_summary=_agent_report_summary,
+        plan=_facade._work_start_plan,
+        receipt=_facade._work_start_receipt,
+        status=_facade._status,
+        admit=_facade._admit_captured_assignment,
+        admission_summary=_facade._admission_summary,
+        profile_action=_facade._profile_action,
+        claim_summary=_facade._claim_summary,
+        advance_bound=_facade._advance,
+        kickoff_summary=_facade._kickoff_summary,
+        project_prompt=_facade._project_work_prompt,
+        agent_report_summary=_facade._agent_report_summary,
     )
     request = assignment_start.StartRequest(
         config_home=ctx.config_home,
@@ -174,7 +158,7 @@ def start_work(
         if events_json:
             click.echo(json.dumps(result, sort_keys=True))
         else:
-            _emit(result)
+            _facade._emit(result)
     return result
 
 
@@ -200,17 +184,17 @@ def resume_prepare(
     def operation():
         if not execute:
             raise ValueError("resume-prepare requires explicit --execute")
-        identity, runtime_dir, _ = _runtime(
+        identity, runtime_dir, _ = _facade._runtime(
             workspace_root,
             home,
             "read-only",
         )
         return {
-            **_prepare_resume_profile(runtime_dir, actor),
+            **_facade._prepare_resume_profile(runtime_dir, actor),
             "workspace": identity.as_dict(),
         }
 
-    _emit(_run(operation))
+    _facade._emit(_facade._run(operation))
 
 
 @assignment.command(
@@ -231,14 +215,14 @@ def start_resume(
     assignment_id,
 ):
     del ctx
-    _emit(
-        _run(
+    _facade._emit(
+        _facade._run(
             lambda: assignment_evidence.resume_starter_work(
                 workspace_root=workspace_root,
                 home=home,
                 initiative_id=initiative_id,
                 assignment_id=assignment_id,
-                services=_EVIDENCE_SERVICES,
+                services=_facade._EVIDENCE_SERVICES,
             )
         )
     )
