@@ -670,6 +670,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
   );
   assert.match(
     action,
+    /BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY:\s*github-actions-runner-worker\/v1/u,
+  );
+  assert.match(
+    action,
     /native-execution-under-warrant\.mjs[\s\S]*--qualified-base[\s\S]*--toolchain-root[\s\S]*--environment-root[\s\S]*--heartbeat-seconds 300[\s\S]*--lease-seconds 5400/u,
   );
 });
