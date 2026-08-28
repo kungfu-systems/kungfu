@@ -793,6 +793,59 @@ test('qualified occurrence v2 fails closed on ambiguous cross-file identity', ()
   );
 });
 
+test('qualified occurrence v2 deterministically pairs equivalent moved bodies', () => {
+  const bodyRoot = digest('equivalent body');
+  const baseline = [
+    metric({ path: 'scripts/old-a.mjs', id: 'old-a', bodyRoot }),
+    metric({ path: 'scripts/old-b.mjs', id: 'old-b', bodyRoot }),
+  ];
+  const current = [
+    metric({ path: 'scripts/new-b.mjs', id: 'new-b', bodyRoot }),
+    metric({ path: 'scripts/new-a.mjs', id: 'new-a', bodyRoot }),
+  ];
+  const transition = analyzeTransition(current, baseline, [], [], policy, {
+    identityAlgorithm: 'qualified-occurrence-v2',
+    movementScope: 'same-owner',
+  });
+  assert.deepEqual(
+    transition.functions.map(({ previousId }) => previousId),
+    ['old-b', 'old-a'],
+  );
+  assert.equal(
+    transition.findings.some(
+      ({ code }) => code === 'ambiguous-function-identity',
+    ),
+    false,
+  );
+});
+
+test('qualified occurrence v2 preserves an in-place duplicate before pairing a move', () => {
+  const bodyRoot = digest('equivalent body');
+  const baseline = [
+    metric({ path: 'scripts/a.mjs', id: 'a', bodyRoot }),
+    metric({ path: 'scripts/b.mjs', id: 'b', bodyRoot }),
+  ];
+  const current = [
+    metric({ path: 'scripts/b.mjs', id: 'b', bodyRoot }),
+    metric({ path: 'scripts/c.mjs', id: 'c', bodyRoot }),
+  ];
+  const transition = analyzeTransition(current, baseline, [], [], policy, {
+    identityAlgorithm: 'qualified-occurrence-v2',
+    movementScope: 'same-owner',
+  });
+  assert.deepEqual(
+    transition.functions.map(({ id, previousId, movement }) => ({
+      id,
+      previousId,
+      movement,
+    })),
+    [
+      { id: 'b', previousId: 'b', movement: 'same-path' },
+      { id: 'c', previousId: 'a', movement: 'renamed-file' },
+    ],
+  );
+});
+
 test('qualified occurrence v2 locks unique moved bodies before same-path order matching', () => {
   const baselineA = metric({
     path: 'scripts/a.mjs',

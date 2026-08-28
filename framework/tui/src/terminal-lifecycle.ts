@@ -194,6 +194,28 @@ export function bindTuiMockAgentEnvironment({
   };
 }
 
+export function tuiAttachedAgentSessionEnvironment({
+  env,
+  packagedBin,
+  mockPath,
+}: {
+  env: NodeJS.ProcessEnv;
+  packagedBin: string;
+  mockPath: string;
+}): NodeJS.ProcessEnv {
+  const child = bindTuiMockAgentEnvironment({
+    env: tuiChildCliEnvironment(env),
+    packagedBin,
+    mockPath,
+  });
+  // The attached host executes the deterministic Mock Agent script through
+  // the installed Kungfu front door. Select its embedded Node variant after
+  // removing the parent TUI entry pin; otherwise the front door interprets
+  // mock-agent.mjs as a Python CLI command and exits 127.
+  child.KUNGFU_AS_VARIANT = 'node';
+  return child;
+}
+
 export function resolveTuiAgentSessionExecutable({
   env,
   cliBin,
@@ -242,7 +264,7 @@ export function resolveTuiAgentSessionPaths({
         ),
       ]
     : [];
-  const activeEntry = [configuredEntry, ...extensionDerivedEntries, argvEntry]
+  const activeEntry = [configuredEntry, argvEntry, ...extensionDerivedEntries]
     .filter((candidate): candidate is string => Boolean(candidate))
     .find(exists);
   const resolvedEntry = path.resolve(activeEntry || modulePath);

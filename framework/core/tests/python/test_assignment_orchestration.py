@@ -22,6 +22,7 @@ from kungfu import (
 from kungfu.initiative_family import canonical as assignment_canonical
 from kungfu.initiative_family import typed_v2 as initiative_family_v2
 from kungfu import work_control
+from kungfu.assignment_runtime import LocalRuntimeError
 from kungfu.cli.commands import kfc
 from kungfu.workspace import (
     ensure_workspace_data_home,
@@ -1440,6 +1441,11 @@ def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
         source / "node_modules" / "@kungfu-tech" / "kfx-view-work-dashboard",
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "node_modules"),
     )
+    workspace = inspect_workspace(
+        str(tmp_path), env={"HOME": str(tmp_path.parent / "home")}
+    )
+    assert workspace is not None
+    ensure_workspace_data_home(workspace, "retained-work-resume-fixture")
     runtime = tmp_path / ".kungfu" / "runtime"
     for action in ("install", "qualify", "activate"):
         plan = profile_sdk.lifecycle_plan(
@@ -1490,15 +1496,16 @@ def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
     assert desired_root != previous_root
     monkeypatch.setattr(ASSIGNMENT_CLI, "profile_source", lambda: source)
 
-    with pytest.raises(
-        profile_sdk.ProfileSdkError,
-        match="active exact Profile root",
-    ):
+    with pytest.raises(LocalRuntimeError) as stale_profile:
         ASSIGNMENT_CLI._status(
             runtime,
             "retained-project",
             "retained-assignment",
         )
+    assert stale_profile.value.code == "backend-unavailable"
+    assert stale_profile.value.diagnostics[0]["code"] == (
+        "work-control-profile-source-root-drift"
+    )
 
     prepared = ASSIGNMENT_CLI._prepare_resume_profile(
         runtime,
@@ -1610,6 +1617,63 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
     assert reviewed["completion_claim_count"] == 2
     assert reviewed["independent_review_count"] == 2
     assert second_review["review"]["claim_id"] == second_claim["claim"]["claim_id"]
+
+
+@pytest.mark.parametrize("phase", ["executing", "recovered-closeout", "stage-ready"])
+def test_next_actions_defers_to_incomplete_work_semantics(phase):
+    status = {
+        "initiative_id": "initiative-a",
+        "assignment_id": "assignment-a",
+        "phase": phase,
+        "active_lease": {"lease_id": "lease-a"},
+        "work_semantics": {
+            "current_input_snapshot": {"record_root": _sha256("a")},
+            "completion_eligible": False,
+            "next_actions": [
+                {
+                    "action": "authorize-effect",
+                    "reason": "no-fresh-effect-authorization",
+                }
+            ],
+        },
+    }
+
+    assert assignment_orchestration.next_actions(status) == [
+        {
+            "action": "authorize-effect",
+            "description": (
+                "Complete current Work semantics before publishing completion"
+            ),
+            "input": {
+                "initiative_id": "initiative-a",
+                "assignment_id": "assignment-a",
+            },
+            "reason": "no-fresh-effect-authorization",
+        }
+    ]
+
+
+def test_next_actions_keeps_completion_after_work_semantics_settle():
+    status = {
+        "initiative_id": "initiative-a",
+        "assignment_id": "assignment-a",
+        "phase": "stage-ready",
+        "active_lease": {"lease_id": "lease-a"},
+        "work_semantics": {
+            "current_input_snapshot": {"record_root": _sha256("a")},
+            "completion_eligible": True,
+            "next_actions": [
+                {
+                    "action": "claim-completion",
+                    "reason": "effects-settled-and-accepted",
+                }
+            ],
+        },
+    }
+
+    assert assignment_orchestration.next_actions(status)[0]["action"] == (
+        "claim-completion"
+    )
 
 
 def test_gate_field_equivalence_and_runtime_independent_seal(tmp_path):

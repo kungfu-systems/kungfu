@@ -16,6 +16,9 @@ from kungfu import initiative_family, profile_sdk
 from kungfu.agent import run_agent, session_contract, session_surface
 from kungfu.assignment_runtime import LocalAssignmentRuntimeApplication
 from kungfu.assignment_runtime import profile_lifecycle
+from kungfu.assignment_runtime.recovery_continuation import (
+    register as register_continuation,
+)
 from kungfu.storage import service as storage_service
 
 JsonObject = dict[str, Any]
@@ -54,10 +57,12 @@ def _current_session(runtime_dir: str) -> JsonObject:
 
 
 def preserved_state(status: Mapping[str, Any]) -> JsonObject:
-    """Retain every native lifecycle field while excluding the query proof cut."""
+    """Retain native lifecycle authority, not reader-specific projections."""
 
     return {
-        str(key): value for key, value in status.items() if key != "query_proof_root"
+        str(key): value
+        for key, value in status.items()
+        if key not in {"query_proof_root", "work_semantics"}
     }
 
 
@@ -98,7 +103,9 @@ def _verify_retained_roots(
 
 
 def _recovery_effects(
-    work_ref: Mapping[str, Any], current_attempt: str, profile_active: bool
+    work_ref: Mapping[str, Any],
+    current_attempt: str,
+    profile_active: bool,
 ) -> list[JsonObject]:
     profile_effects = []
     if not profile_active:
@@ -117,6 +124,24 @@ def _recovery_effects(
             "workRefRoot": _root(work_ref),
         },
     ]
+
+
+def _recovery_effects_with_continuation(
+    work_ref: Mapping[str, Any],
+    current_attempt: str,
+    profile_active: bool,
+    status: Mapping[str, Any],
+) -> list[JsonObject]:
+    effects = _recovery_effects(work_ref, current_attempt, profile_active)
+    if str(status.get("phase") or "") == "executing" and not status.get("active_lease"):
+        effects.append(
+            {
+                "stage": "record-recovery-continuation",
+                "sessionAttemptId": current_attempt,
+                "workRefRoot": _root(work_ref),
+            }
+        )
+    return effects
 
 
 def _work_coordinates(
@@ -184,7 +209,9 @@ def build_plan(
         },
         "workRef": work_ref,
         "recoveryProfile": dict(recovery_profile),
-        "effects": _recovery_effects(work_ref, current_attempt, profile_active),
+        "effects": _recovery_effects_with_continuation(
+            work_ref, current_attempt, profile_active, status
+        ),
         "forbiddenEffects": ["admit", "claim", "kickoff"],
         "writeOccurred": False,
         "nextActions": ["apply-exact-fresh-recovery-plan"],
@@ -206,7 +233,17 @@ def _verify_plan_envelope(
     _verify_recovery_profile_identity(plan)
     effects = [dict(effect) for effect in plan.get("effects") or []]
     stages = [str(effect.get("stage") or "") for effect in effects]
-    if stages not in (["bind-new-attempt"], ["activate-profile", "bind-new-attempt"]):
+    allowed_stages = {
+        ("bind-new-attempt",),
+        ("activate-profile", "bind-new-attempt"),
+        ("bind-new-attempt", "record-recovery-continuation"),
+        (
+            "activate-profile",
+            "bind-new-attempt",
+            "record-recovery-continuation",
+        ),
+    }
+    if tuple(stages) not in allowed_stages:
         raise ValueError("fresh recovery plan has an invalid effect sequence")
     if _now(now) > _now(str(plan.get("expiresAt") or "")):
         raise ValueError("fresh recovery plan expired; create a new plan")
@@ -241,7 +278,7 @@ def _binding_coordinates(
         attempt.get("previousSessionAttemptId") == expected_session["sessionAttemptId"]
     ):
         raise ValueError("fresh recovery plan does not bind a new SessionAttempt")
-    binding_effect = effects[-1]
+    binding_effect = effects[int(effects[0].get("stage") == "activate-profile")]
     checks = (
         binding_effect.get("sessionAttemptId") == expected_session["sessionAttemptId"],
         binding_effect.get("workRefRoot") == _root(work_ref),
@@ -513,6 +550,28 @@ def _verify_recovery_profile_source(
         raise ValueError("fresh recovery Profile source differs from the plan")
 
 
+def _current_binding_context(runtime_dir: str) -> tuple[JsonObject, JsonObject]:
+    current = session_surface.current_native_console(runtime_dir)
+    if current is None:
+        raise ValueError("fresh recovery requires a current native Agent Console")
+    source = str(current["source"])
+    envelope = dict(current["envelope"])
+    session = {
+        "workConsoleId": str(envelope["consoleId"]),
+        "sessionAttemptId": str(envelope["attemptId"]),
+    }
+    if source not in {"injected-native-console", "ambient-provider-session"}:
+        raise ValueError("fresh recovery requires an exact native Console source")
+    options = {
+        "injected-native-console": {},
+        "ambient-provider-session": {
+            "envelope_override": envelope,
+            "console_workspace_root": str(current["workspaceRoot"]),
+        },
+    }
+    return session, options[source]
+
+
 def _plan_from_ports(
     *,
     ctx,
@@ -596,14 +655,15 @@ def _apply_from_ports(
     ) or identity.identity_root != workspace.get("identityRoot"):
         raise ValueError("fresh recovery workspace identity changed")
     _verify_recovery_profile_source(plan, recovery_profile_source, runtime_dir)
-    return apply_plan(
+    current_session, bind_options = _current_binding_context(str(ctx.runtime_dir))
+    receipt = apply_plan(
         plan,
         expected_plan_root=expected_plan_root,
         authorized_by=authorized_by,
         status_reader=lambda: _retained_status(
             runtime_dir, initiative_id, assignment_id
         ),
-        session_reader=lambda: _current_session(str(ctx.runtime_dir)),
+        session_reader=lambda: dict(current_session),
         prepare_profile=lambda actor: prepare_resume_profile(
             runtime_dir, actor, recovery_profile_source
         ),
@@ -615,10 +675,13 @@ def _apply_from_ports(
                 work_workspace_root=workspace_root,
                 work_profile_source=recovery_profile_source,
                 expected_binding=expected,
+                **bind_options,
             )
             or {}
         ),
     )
+    register_continuation(runtime_dir, plan, receipt)
+    return receipt
 
 
 def _create_plan_command(
