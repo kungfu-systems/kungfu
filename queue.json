@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7599,
+  "generation": 7600,
   "fencingCounter": 712,
   "policy": {
     "agingSeconds": 900,
@@ -37,12 +37,15 @@
     "sourceWorkflowRunId": 33141817181,
     "deliveryClass": "native-proof-required",
     "generation": 712,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:fc2e7e696fb5814320f40541b80cf9892a336fbde906425a4ee520ae51a126ed",
     "issuedAt": "2026-08-28T04:34:52.612Z",
     "expiresAt": "2026-08-28T06:06:18.181Z",
     "fencingToken": "sha256:299778ba8e84501cdef39e27b859729a9c14ca70cd912eb328a735601d816609",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:f38301a14f48dcf7d344ea2f5673127ac721a34f32394da355c1037d5c911245",
+    "nativeProofReuseRoot": "sha256:6477479e4397b95a31f2f5e2f635cc3e530aecce17da44cad35a6a2ee44221e9",
+    "qualifiedAt": "2026-08-28T04:36:23.966Z"
   },
   "candidates": [
     {
@@ -49471,10 +49474,10 @@
       "sourceWorkflowRunId": 33141817181,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-28T04:34:47.398Z",
-      "updatedAt": "2026-08-28T04:36:18.181Z",
+      "updatedAt": "2026-08-28T04:36:23.966Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
@@ -49484,6 +49487,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-28T04:36:18.181Z",
-  "stateRoot": "sha256:ed87429551197218798740185f7408a69a804594820b0ccfecd28f0179bee88c"
+  "updatedAt": "2026-08-28T04:36:23.966Z",
+  "stateRoot": "sha256:b1aa1f5ff01f37ed805504bdbbcd2d20b5efcad3498ca1063d1996e3cf9eef9a"
 }
