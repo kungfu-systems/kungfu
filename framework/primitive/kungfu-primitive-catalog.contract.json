@@ -1593,7 +1593,7 @@
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-                "root": "sha256:fd9899e0aded8577d2a4d0c154a66f40c27b3d354189797466d136405729f1a3"
+                "root": "sha256:1e4830b0c5b9ba6d755ba1c14e6525c7ccdef6050e688c1f80b2a7951943f2b2"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1635,7 +1635,7 @@
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-                "root": "sha256:fd9899e0aded8577d2a4d0c154a66f40c27b3d354189797466d136405729f1a3"
+                "root": "sha256:1e4830b0c5b9ba6d755ba1c14e6525c7ccdef6050e688c1f80b2a7951943f2b2"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1669,7 +1669,7 @@
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-                "root": "sha256:fd9899e0aded8577d2a4d0c154a66f40c27b3d354189797466d136405729f1a3"
+                "root": "sha256:1e4830b0c5b9ba6d755ba1c14e6525c7ccdef6050e688c1f80b2a7951943f2b2"
               }
             ],
             "proofRefs": []
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:191db76bb650eda2efd9e0d164fb9572e99a2b82c9e3c6654314cf451fdb5fc5"
+  "catalogRoot": "sha256:c93c74e69bdaba917f1a5e9fee88d0bbaae53f59de7055ea2b40be8f7a1e3068"
 }
