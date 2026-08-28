@@ -164,7 +164,7 @@ def bind_current_native_work(
         "systemTimeCut": status["query_proof_root"],
         "initiativeId": initiative_id,
     }
-    session_contract.validate_work_ref(work_ref)
+    work_ref = session_contract.retain_expected_work_ref(work_ref, expected_binding)
     session = {
         "workConsoleId": str(envelope["consoleId"]),
         "sessionAttemptId": str(envelope["attemptId"]),
