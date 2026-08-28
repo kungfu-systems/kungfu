@@ -10,6 +10,16 @@ function fail(message) {
   throw new Error(message);
 }
 
+const npmRegistry = JSON.parse(
+  fs.readFileSync(
+    path.resolve('framework/release/npm-package-registry.json'),
+    'utf8',
+  ),
+);
+const expectedNpmCount = npmRegistry.releaseInventory?.expectedPackageCount;
+if (!Number.isInteger(expectedNpmCount))
+  fail('npm package registry lacks an integer expectedPackageCount');
+
 function sha256(file) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
@@ -36,14 +46,14 @@ function classify(file) {
   return '';
 }
 
-function expectedCounts(entries) {
+function expectedCounts(entries, expectedNpmCount) {
   const counts = Object.fromEntries(
     ['npm', 'pypi', 'cargo', 'github'].map((kind) => [
       kind,
       entries.filter((entry) => entry.kind === kind).length,
     ]),
   );
-  const expected = { npm: 29, pypi: 3, cargo: 1, github: 6 };
+  const expected = { npm: expectedNpmCount, pypi: 3, cargo: 1, github: 6 };
   for (const [kind, count] of Object.entries(expected)) {
     if (counts[kind] !== count)
       fail(`expected ${count} unique ${kind} artifacts, found ${counts[kind]}`);
@@ -75,7 +85,7 @@ function main() {
   const entries = [...byName.values()].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
-  expectedCounts(entries);
+  expectedCounts(entries, expectedNpmCount);
   fs.mkdirSync(outputRoot, { recursive: true });
   for (const entry of entries) {
     const directory = path.join(outputRoot, entry.kind);

@@ -11,6 +11,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 test('KFD evidence runtime adapts the repository-bound Git reader for queue replay', () => {
   const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
   const resolved = resolveGitBoundKfdEvidenceSourceSha({
     root: ROOT,
     write: false,
@@ -37,6 +38,8 @@ test('KFD evidence runtime adapts the repository-bound Git reader for queue repl
       assert.equal(gitRead(['rev-parse', 'HEAD']), headSha);
       return 'c'.repeat(40);
     },
+    gitRead: (args) =>
+      args.join(' ') === 'rev-parse --verify --quiet MERGE_HEAD' ? '' : headSha,
   });
   assert.equal(resolved, sourceSha);
 });
@@ -66,6 +69,68 @@ test('KFD evidence runtime hydrates a recovered write source before binding', ()
       return selectedSourceSha;
     },
     findTreeEquivalentAncestor: () => '',
+  });
+  assert.equal(resolved, sourceSha);
+});
+
+test('KFD evidence runtime binds an in-progress merge to MERGE_HEAD', () => {
+  const sourceSha = 'a'.repeat(40);
+  const mergeHead = 'b'.repeat(40);
+  const currentHead = 'c'.repeat(40);
+  const resolved = resolveGitBoundKfdEvidenceSourceSha({
+    root: ROOT,
+    write: false,
+    committed: sourceSha,
+    configured: sourceSha,
+    prepareHistory: (root, options) => {
+      assert.equal(root, ROOT);
+      assert.deepEqual(options, { requiredCommit: sourceSha });
+    },
+    selectSourceSha: ({ headSha }) => {
+      assert.equal(headSha, currentHead);
+      return sourceSha;
+    },
+    assertBinding: ({ sourceSha: selectedSourceSha, headSha }) => {
+      assert.equal(selectedSourceSha, sourceSha);
+      assert.equal(headSha, mergeHead);
+      return selectedSourceSha;
+    },
+    findTreeEquivalentAncestor: () => '',
+    gitRead: (args) =>
+      args.join(' ') === 'rev-parse --verify --quiet MERGE_HEAD'
+        ? mergeHead
+        : currentHead,
+    isAncestor: (_sourceSha, candidateHeadSha) =>
+      candidateHeadSha === mergeHead,
+  });
+  assert.equal(resolved, sourceSha);
+});
+
+test('KFD evidence runtime keeps HEAD when merge evidence is already on HEAD', () => {
+  const sourceSha = 'a'.repeat(40);
+  const mergeHead = 'b'.repeat(40);
+  const currentHead = 'c'.repeat(40);
+  const resolved = resolveGitBoundKfdEvidenceSourceSha({
+    root: ROOT,
+    write: false,
+    committed: sourceSha,
+    configured: sourceSha,
+    prepareHistory: () => {},
+    selectSourceSha: ({ headSha }) => {
+      assert.equal(headSha, currentHead);
+      return sourceSha;
+    },
+    assertBinding: ({ headSha }) => {
+      assert.equal(headSha, currentHead);
+      return sourceSha;
+    },
+    findTreeEquivalentAncestor: () => '',
+    gitRead: (args) =>
+      args.join(' ') === 'rev-parse --verify --quiet MERGE_HEAD'
+        ? mergeHead
+        : currentHead,
+    isAncestor: (_sourceSha, candidateHeadSha) =>
+      candidateHeadSha === currentHead,
   });
   assert.equal(resolved, sourceSha);
 });

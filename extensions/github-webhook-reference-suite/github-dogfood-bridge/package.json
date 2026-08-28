@@ -1,9 +1,17 @@
 {
-  "name": "@kungfu-kfx/github-dogfood-bridge",
-  "version": "0.1.0",
+  "name": "@kungfu-tech/kfx-github-dogfood-bridge",
+  "version": "4.0.0-alpha.3",
   "description": "Optional authorized bridge from normalized GitHub observations to immutable Dogfood Findings",
   "license": "Apache-2.0",
   "type": "module",
+  "main": "package.json",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "files": [
     "README.md",
     "fixtures",

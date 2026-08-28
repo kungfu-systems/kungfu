@@ -576,20 +576,34 @@ export function resolveGitBoundKfdEvidenceSourceSha({
   assertBinding,
   selectSourceSha,
   findTreeEquivalentAncestor,
+  gitRead = (args) => gitValue(root, args),
+  isAncestor = (sourceSha, candidateHeadSha) =>
+    isGitAncestor(root, sourceSha, candidateHeadSha),
 }) {
-  const headSha = gitValue(root, ['rev-parse', 'HEAD']);
-  const sourceSha = selectSourceSha({ write, configured, committed, headSha });
+  const currentHead = gitRead(['rev-parse', 'HEAD']);
+  const mergeHead = gitRead(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD']);
+  const sourceSha = selectSourceSha({
+    write,
+    configured,
+    committed,
+    headSha: currentHead,
+  });
+  const headSha =
+    /^[0-9a-f]{40}$/u.test(mergeHead) &&
+    !isAncestor(sourceSha, currentHead) &&
+    isAncestor(sourceSha, mergeHead)
+      ? mergeHead
+      : currentHead;
   if (!write || (/^[0-9a-f]{40}$/u.test(sourceSha) && sourceSha !== headSha)) {
     prepareHistory(root, { requiredCommit: sourceSha });
   }
   return assertBinding({
     sourceSha,
     headSha,
-    isAncestor: (sourceSha, candidateHeadSha) =>
-      isGitAncestor(root, sourceSha, candidateHeadSha),
+    isAncestor,
     findTreeEquivalentAncestor: (sourceSha, candidateHeadSha) =>
       findTreeEquivalentAncestor(sourceSha, candidateHeadSha, (args) =>
-        gitValue(root, args),
+        gitRead(args),
       ),
   });
 }
