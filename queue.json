@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7584,
+  "generation": 7585,
   "fencingCounter": 711,
   "policy": {
     "agingSeconds": 900,
@@ -35,12 +35,15 @@
     "sourceWorkflowRunId": 33139282514,
     "deliveryClass": "native-proof-required",
     "generation": 711,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:60365299099ca4ebc6fd57d6c12874d541da4e4714c2e7713d37d6719c7cba7b",
     "issuedAt": "2026-08-28T03:41:46.866Z",
     "expiresAt": "2026-08-28T05:34:15.013Z",
     "fencingToken": "sha256:35387324277ffc110e4c7f321a0c4463fcc7201f9f54f0cce366088f70ec8f6c",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:bd16abee1b75d8215691f225edc2792a711136aafdf8cc1523d9daee2906fff4",
+    "nativeProofReuseRoot": "sha256:2027e4cbe309cc0c98539f6910b167231f2a0fe2ca4ec4b0b61fd7db640460ac",
+    "qualifiedAt": "2026-08-28T04:04:20.802Z"
   },
   "candidates": [
     {
@@ -49429,10 +49432,10 @@
       "sourceWorkflowRunId": 33139282514,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-28T03:41:42.763Z",
-      "updatedAt": "2026-08-28T04:04:15.013Z",
+      "updatedAt": "2026-08-28T04:04:20.802Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
@@ -49440,6 +49443,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-28T04:04:15.013Z",
-  "stateRoot": "sha256:54e767273bf98c4dfd6938bac2c284b39bb8ad8ff947cd638f59309b4efd9fae"
+  "updatedAt": "2026-08-28T04:04:20.802Z",
+  "stateRoot": "sha256:fc523605505202625899df58698ce6643b1e1739286bf64efacf3429fdf2598d"
 }
