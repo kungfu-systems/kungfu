@@ -208,7 +208,7 @@ jobs:
     if: needs.prepare.outputs.active == 'true' || needs.prepare.outputs.retry-terminal == 'true'
     uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@30cbbc46870871a0eacbe952935ea753e473ff25
     with:
-      buildchain-ref: 30cbbc46870871a0eacbe952935ea753e473ff25
+      buildchain-ref: train/v4/v4.0/warrant-readiness-fence
       target-branch: ${{ github.event.pull_request.base.ref }}
       expected-pr-number: ${{ github.event.pull_request.number }}
       expected-head-sha: ${{ needs.prepare.outputs.active-source-head-sha }}
@@ -228,7 +228,7 @@ jobs:
     if: needs.prepare.outputs.queued == 'true'
     uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@30cbbc46870871a0eacbe952935ea753e473ff25
     with:
-      buildchain-ref: 30cbbc46870871a0eacbe952935ea753e473ff25
+      buildchain-ref: train/v4/v4.0/warrant-readiness-fence
       target-branch: ${{ github.event.pull_request.base.ref }}
       expected-pr-number: ${{ github.event.pull_request.number }}
       expected-candidate-id: ${{ needs.prepare.outputs.queued-candidate-id }}
