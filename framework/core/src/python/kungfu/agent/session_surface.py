@@ -586,6 +586,7 @@ def current_native_console(
     runtime_dir: str,
     *,
     adopt: bool = False,
+    project_work_binding: bool = True,
     cwd: str | None = None,
     environ: Mapping[str, str] | None = None,
     process_identity: Mapping[str, Any] | None = None,
@@ -597,6 +598,19 @@ def current_native_console(
     raw = str(current.get("KUNGFU_AGENT_CONSOLE_ENVELOPE") or "").strip()
     if raw:
         envelope = session_contract.validate_agent_console_envelope(json.loads(raw))
+        if not project_work_binding:
+            body = {
+                **{
+                    key: value
+                    for key, value in envelope.items()
+                    if key != "envelopeRoot"
+                },
+                "activeProfiles": [],
+                "workRef": None,
+            }
+            envelope = session_contract.validate_agent_console_envelope(
+                {**body, "envelopeRoot": semantic_root(body)}
+            )
         return {
             "source": "injected-native-console",
             "envelope": envelope,
@@ -732,6 +746,7 @@ def current_native_console(
     cli_bin = str(
         current.get("KUNGFU_CLI_BIN") or shutil.which("kungfu") or sys.argv[0]
     )
+    projected_work_ref = work_ref if project_work_binding else None
     body = {
         "schema": "kungfu.agent-console-envelope/v1",
         "workspaceId": workspace_id,
@@ -739,8 +754,12 @@ def current_native_console(
         "attemptId": session["sessionAttemptId"],
         "runtimeProfileId": "kungfu.agent-runtime.codex.ambient",
         "provider": "codex",
-        "activeProfiles": _qualified_active_work_profiles(target.runtime_dir, work_ref),
-        "workRef": work_ref,
+        "activeProfiles": (
+            _qualified_active_work_profiles(target.runtime_dir, work_ref)
+            if project_work_binding
+            else []
+        ),
+        "workRef": projected_work_ref,
         "entrypoints": {
             "context": [cli_bin, "agent", "context", "--json"],
             "capabilities": [cli_bin, "agent", "capabilities", "--json"],
