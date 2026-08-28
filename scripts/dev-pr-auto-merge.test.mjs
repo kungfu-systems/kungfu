@@ -468,6 +468,35 @@ test('two-phase native adapter fails closed and replaces pending with failure', 
   );
 });
 
+test('credentialless hosted native delegates provider status to the credentialed finalizer', async (t) => {
+  const value = nativeFixture();
+  value.dependencies.client = undefined;
+  value.options.credentialAncestryBoundary = 'github-actions-runner-worker/v1';
+  value.options.runnerEnvironment = 'github-hosted';
+  t.after(() => fs.rmSync(value.cwd, { recursive: true, force: true }));
+
+  const receipt = await runNativeUnderWarrant(
+    value.options,
+    value.dependencies,
+  );
+
+  assert.equal(receipt.outcome, 'succeeded');
+  assert.deepEqual(value.statuses, []);
+});
+
+test('credentialless native fails closed outside the exact hosted provider boundary', async (t) => {
+  const value = nativeFixture();
+  value.dependencies.client = undefined;
+  value.options.credentialAncestryBoundary = 'github-actions-runner-worker/v1';
+  value.options.runnerEnvironment = 'self-hosted';
+  t.after(() => fs.rmSync(value.cwd, { recursive: true, force: true }));
+
+  await assert.rejects(
+    runNativeUnderWarrant(value.options, value.dependencies),
+    /GITHUB_TOKEN is required/u,
+  );
+});
+
 test('native status client retries bounded transient GitHub failures', async () => {
   const attempts = [];
   const delays = [];
