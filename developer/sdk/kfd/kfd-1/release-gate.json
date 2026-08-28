@@ -106,13 +106,13 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "f5a3302b4c146e98019e9e163707ef48e790c8154f80253b933c7e4ff1c28f59",
+      "preBuildWitnessSha256": "d5f8e2cbd9e61525f18f7ef11448eb91b11d6d9885230979ff9d15863af1643b",
       "sourceHashes": {
-        "sha256": "0e05deef475e826b324d4cac96b945ab5b6dd752300efccfc513fcfa6d3cd79e",
+        "sha256": "d57b63b0563ef1385c13741633eea78e55f5186ab1a55c0205f38c8357bd489c",
         "surfaceCount": 23
       },
       "artifactHashes": {
-        "sha256": "cb04a909938565aa4081d25cc349231b2c133bd9c3d8c592db3c4ebe874916a2",
+        "sha256": "2e155b27382fd279fbf793611d35372fd82a4fc7e1d9d42eda01ec8bfc8b4250",
         "surfaceCount": 23
       },
       "witness": {
@@ -152,7 +152,7 @@
         "sourceVerificationRequired": true,
         "canonicalPolicy": {
           "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-          "sha256": "dfa0acd7118383e5f177602a8638314470a7a5ef65604e49baa4289e3f82c3f1"
+          "sha256": "20f65a1d83b2fd901119d0d9b2b0e3a060c3d559bb2c28b9e7b3762016461eac"
         },
         "registry": {
           "path": "framework/contract/kungfu-contracts.registry.json",
@@ -338,9 +338,9 @@
           {
             "name": "kungfu-primitive-catalog",
             "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sourceSha256": "3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc",
+            "sourceSha256": "e6e6d3da8d3547a198e0827952dbc5abf276414b935445917ac5fbd6ae74b43f",
             "artifactPath": "config/primitive/kungfu-primitive-catalog.contract.json",
-            "expectedSha256": "3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc",
+            "expectedSha256": "e6e6d3da8d3547a198e0827952dbc5abf276414b935445917ac5fbd6ae74b43f",
             "byteForByte": true
           }
         ],
@@ -617,8 +617,8 @@
           {
             "name": "kungfu-primitive-catalog",
             "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "expectedSha256": "3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc",
-            "actualSha256": "3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc",
+            "expectedSha256": "e6e6d3da8d3547a198e0827952dbc5abf276414b935445917ac5fbd6ae74b43f",
+            "actualSha256": "e6e6d3da8d3547a198e0827952dbc5abf276414b935445917ac5fbd6ae74b43f",
             "status": "passed",
             "reason": ""
           }
@@ -873,10 +873,10 @@
           {
             "name": "kungfu-primitive-catalog",
             "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sourceSha256": "3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc",
+            "sourceSha256": "e6e6d3da8d3547a198e0827952dbc5abf276414b935445917ac5fbd6ae74b43f",
             "artifactPath": "config/primitive/kungfu-primitive-catalog.contract.json",
-            "expectedSha256": "3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc",
-            "actualSha256": "3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc",
+            "expectedSha256": "e6e6d3da8d3547a198e0827952dbc5abf276414b935445917ac5fbd6ae74b43f",
+            "actualSha256": "e6e6d3da8d3547a198e0827952dbc5abf276414b935445917ac5fbd6ae74b43f",
             "byteForByte": true,
             "status": "passed",
             "reason": ""
