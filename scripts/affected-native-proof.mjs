@@ -252,13 +252,29 @@ export function verifyQueueAdmissionLease(input = {}) {
     pullRequestNumber,
     sourceHeadSha,
   );
-  if (warrant.phase !== 'qualified' || candidate.status !== 'qualified') {
+  const nonNativeFast =
+    warrant.deliveryClass === 'non-native-fast' &&
+    candidate.deliveryClass === 'non-native-fast';
+  const nativeDelivery =
+    warrant.deliveryClass !== 'non-native-fast' &&
+    candidate.deliveryClass !== 'non-native-fast';
+  const qualifiedNative =
+    nativeDelivery &&
+    warrant.phase === 'qualified' &&
+    candidate.status === 'qualified';
+  const selectedNonNativeFast =
+    nonNativeFast &&
+    !Object.hasOwn(warrant, 'phase') &&
+    candidate.status === 'selected';
+  if (!qualifiedNative && !selectedNonNativeFast) {
     throw new Error(
       `active Warrant candidate is not delivery-ready: ${candidate.status}`,
     );
   }
-  for (const field of ['nativeProofRoot', 'nativeProofReuseRoot'])
-    requireRoot(warrant[field], `Warrant ${field}`);
+  if (qualifiedNative) {
+    for (const field of ['nativeProofRoot', 'nativeProofReuseRoot'])
+      requireRoot(warrant[field], `Warrant ${field}`);
+  }
   const observedAt = new Date(input.now || observation.observedAt).getTime();
   if (
     !Number.isFinite(observedAt) ||
@@ -276,13 +292,16 @@ export function verifyQueueAdmissionLease(input = {}) {
     sourceHeadSha,
     candidateId: warrant.candidateId,
     sourceProofRoot: candidate.sourceProofRoot,
-    nativeProofRoot: warrant.nativeProofRoot,
-    nativeProofReuseRoot: warrant.nativeProofReuseRoot,
+    deliveryClass: nonNativeFast ? 'non-native-fast' : 'native',
     fencingToken: warrant.fencingToken,
     generation: warrant.generation,
     candidateState: candidate.status,
     observedAt: new Date(observedAt).toISOString(),
   };
+  if (qualifiedNative) {
+    body.nativeProofRoot = warrant.nativeProofRoot;
+    body.nativeProofReuseRoot = warrant.nativeProofReuseRoot;
+  }
   return { ...body, receiptRoot: digest(body) };
 }
 
