@@ -53,17 +53,16 @@ test('Project Work awaits the shared Agent Session before rendering', () => {
   );
   assert.match(
     lab,
-    /const endpoint = await ensureTuiAgentSession\(paths\.runtimeDir\)/u,
+    /const endpoint = await ensureTuiAgentSession\(paths\.runtimeDir, true\)/u,
   );
   assert.match(lab, /cli\.env\.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint/u);
   assert.match(
     lab,
     /execFileEvents: async[\s\S]*?await ensureTuiAgentSession\(tuiAgentSessionRuntimeDir\)/u,
   );
-  assert.match(lab, /bindTuiMockAgentEnvironment\(\{/u);
+  assert.match(lab, /bindMockAgentEnvironment\(cli, paths\)/u);
   assert.ok(
-    lab.indexOf('bindTuiMockAgentEnvironment') <
-      lab.indexOf('if (projectTour)'),
+    lab.indexOf('bindMockAgentEnvironment') < lab.indexOf('if (projectTour)'),
     'installed Mock Agent paths must be bound outside Project Tour mode',
   );
   assert.doesNotMatch(
