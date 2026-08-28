@@ -1,0 +1,67 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "8dfc996f9c15ad786efdf7f3c4ab4f618d60c7c6",
+  "changeRoot": "sha256:d556accf89bf4211a2c5908ba88197b332755ff352881601c07eae2c5f0211b4",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:d76d70c8f3e9854177c57711dba6b358815c1d018733ae39a23e05d2d9136ad3",
+      "contentRoot": "sha256:5ba5ed608a27108ff256c4f3d4cc2f0dad873161be53655de6178b44624f8049",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:577aa2a29fdc3c27f8ce0135f5d515b0dadd3a0051ad43594e0988dd0849a8f5",
+      "contentRoot": "sha256:d1b5dcb76cd2a44d14ed9efe62f43c2e081a3dfd191400b95c180040acc6c667",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:db6cceafeaa3e9369595c205a651162ea95626a6ce397d6a071a98bdf62814a5",
+      "contentRoot": "sha256:8b272db38fa389bcd329bb3888bf4c41d2d8836cb5664736a21b94613581a4b6",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d76d70c8f3e9854177c57711dba6b358815c1d018733ae39a23e05d2d9136ad3",
+      "contentRoot": "sha256:5ba5ed608a27108ff256c4f3d4cc2f0dad873161be53655de6178b44624f8049",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:db6cceafeaa3e9369595c205a651162ea95626a6ce397d6a071a98bdf62814a5",
+      "contentRoot": "sha256:8b272db38fa389bcd329bb3888bf4c41d2d8836cb5664736a21b94613581a4b6",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:016c67c42618df951be534502108fdbde6b6ee35538094287d7dc10d754bb638",
+      "contentRoot": "sha256:588642db6fd8cccb15ebd0fe003be0715634cd168a34b165ea71566953f6c976",
+      "path": "extensions/system/kfx-manager/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a0fa463f1b4c9f303f22407446a0537616f9a5c63c815e892bedcdd3a70f8784",
+      "contentRoot": "sha256:676a68fd92a4cf29fd37c274272bb24f9f5613b0624ecaf95f1ce7e94c9ed6e1",
+      "path": "extensions/system/settings/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c46e24bb31a915f29676bfa588e8adf04085104bc7ae0fbb47367e3817cf2c87",
+      "contentRoot": "sha256:129a5adf4870a0d04e2b9d36f3991cf9ceacd5ade7d29a64f33dc087228165cf",
+      "path": "extensions/system/skill-manager/src/view/index.tsx",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "UI view refactors split local rendering and interaction responsibilities without changing public KFX facets or Site Bundle semantics; KFD evidence and its support-matrix projections are rebound from the pre-merge feature commit to the exact protected ancestor after merge-queue replay.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:fcbb14e23c283aeb1862d9320914758bd8d54caea879abce93adbfdf045faa94"
+}

@@ -222,7 +222,7 @@ function ProfileCard({
   );
 }
 
-function KfxManagerView({ caps, shell }: KfxViewProps) {
+function useManagerProjection({ caps, shell }: KfxViewProps) {
   const [manager, setManager] = React.useState<ProfileManagerProjection | null>(
     null,
   );
@@ -235,32 +235,8 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
   >({});
   const [loading, setLoading] = React.useState(true);
   const initialLoad = React.useRef(true);
-  const [pending, setPending] = React.useState<{
-    plan: ProfileLifecyclePlan;
-    action: 'qualify' | 'activate' | 'upgrade';
-    source: string;
-  } | null>(null);
-  const [planning, setPlanning] = React.useState(false);
-  const [pendingIntent, setPendingIntent] = React.useState<{
-    plan: ProfileIntentPlan;
-    source: string;
-    intentId: string;
-  } | null>(null);
-  const [pendingKfd3, setPendingKfd3] = React.useState<{
-    plan: ProfileKfd3QualificationPlan;
-    source: string;
-  } | null>(null);
-  const [authorizedBy, setAuthorizedBy] = React.useState('');
   const [controlStatus, setControlStatus] =
     React.useState<KfxControlStatus | null>(null);
-  const [pendingControl, setPendingControl] = React.useState<{
-    plan: KfxControlPlan;
-    operation: 'install' | 'update';
-    path: string;
-  } | null>(null);
-  const profile =
-    shell.profiles.find((p) => p.id === shell.state.profileId) ??
-    shell.profiles[0];
   const onRefresh = shell.onRefresh;
 
   const refresh = React.useCallback(async () => {
@@ -319,6 +295,36 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     return onRefresh(() => void refresh());
   }, [onRefresh, refresh]);
 
+  return {
+    applicationErrors,
+    applications,
+    controlStatus,
+    error,
+    loading,
+    manager,
+    refresh,
+    setControlStatus,
+    setError,
+  };
+}
+
+type PlanningContext = {
+  authorizedBy: string;
+  caps: KfxViewProps['caps'];
+  refresh: () => Promise<void>;
+  setError: React.Dispatch<React.SetStateAction<string>>;
+  setPlanning: React.Dispatch<React.SetStateAction<boolean>>;
+  shell: KfxViewProps['shell'];
+};
+
+function useLifecyclePlanning(context: PlanningContext) {
+  const { authorizedBy, caps, refresh, setError, setPlanning, shell } = context;
+  const [pending, setPending] = React.useState<{
+    plan: ProfileLifecyclePlan;
+    action: 'qualify' | 'activate' | 'upgrade';
+    source: string;
+  } | null>(null);
+
   const previewPlan = async (
     action: 'qualify' | 'activate' | 'upgrade',
     source: string,
@@ -339,6 +345,41 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     }
   };
 
+  const approveAndApply = async () => {
+    if (!caps.profile || !pending || !authorizedBy.trim()) return;
+    setPlanning(true);
+    try {
+      await caps.profile.authorizeLifecycleAsync(
+        pending.action,
+        pending.source,
+        String(pending.plan.corePlan.plan_id ?? ''),
+        'approve',
+        authorizedBy.trim(),
+      );
+      setPending(null);
+      await refresh();
+      shell.notify({
+        level: 'success',
+        title: `Profile ${pending.action} applied`,
+      });
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  return { approveAndApply, pending, previewPlan, setPending };
+}
+
+function useIntentPlanning(context: PlanningContext) {
+  const { authorizedBy, caps, refresh, setError, setPlanning, shell } = context;
+  const [pendingIntent, setPendingIntent] = React.useState<{
+    plan: ProfileIntentPlan;
+    source: string;
+    intentId: string;
+  } | null>(null);
+
   const previewIntent = async (source: string, intentId: string) => {
     if (!caps.profile) return;
     setPlanning(true);
@@ -355,6 +396,42 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
       setPlanning(false);
     }
   };
+
+  const approveIntent = async () => {
+    if (!caps.profile || !pendingIntent || !authorizedBy.trim()) return;
+    setPlanning(true);
+    try {
+      const receipt = await caps.profile.authorizeIntentAsync(
+        pendingIntent.source,
+        pendingIntent.intentId,
+        pendingIntent.plan.planId,
+        'approve',
+        authorizedBy.trim(),
+      );
+      setPendingIntent(null);
+      await refresh();
+      shell.notify({
+        level: receipt.verification?.verified ? 'success' : 'warning',
+        title: receipt.verification?.verified
+          ? 'Intent receipt verified'
+          : 'Intent executed; verification incomplete',
+      });
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  return { approveIntent, pendingIntent, previewIntent, setPendingIntent };
+}
+
+function useKfd3Planning(context: PlanningContext) {
+  const { authorizedBy, caps, refresh, setError, setPlanning, shell } = context;
+  const [pendingKfd3, setPendingKfd3] = React.useState<{
+    plan: ProfileKfd3QualificationPlan;
+    source: string;
+  } | null>(null);
 
   const previewKfd3 = async (source: string) => {
     if (!caps.profile) return;
@@ -392,55 +469,23 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     }
   };
 
-  const approveIntent = async () => {
-    if (!caps.profile || !pendingIntent || !authorizedBy.trim()) return;
-    setPlanning(true);
-    try {
-      const receipt = await caps.profile.authorizeIntentAsync(
-        pendingIntent.source,
-        pendingIntent.intentId,
-        pendingIntent.plan.planId,
-        'approve',
-        authorizedBy.trim(),
-      );
-      setPendingIntent(null);
-      await refresh();
-      shell.notify({
-        level: receipt.verification?.verified ? 'success' : 'warning',
-        title: receipt.verification?.verified
-          ? 'Intent receipt verified'
-          : 'Intent executed; verification incomplete',
-      });
-    } catch (reason) {
-      setError((reason as Error).message);
-    } finally {
-      setPlanning(false);
-    }
-  };
+  return { approveKfd3, pendingKfd3, previewKfd3, setPendingKfd3 };
+}
 
-  const approveAndApply = async () => {
-    if (!caps.profile || !pending || !authorizedBy.trim()) return;
-    setPlanning(true);
-    try {
-      await caps.profile.authorizeLifecycleAsync(
-        pending.action,
-        pending.source,
-        String(pending.plan.corePlan.plan_id ?? ''),
-        'approve',
-        authorizedBy.trim(),
-      );
-      setPending(null);
-      await refresh();
-      shell.notify({
-        level: 'success',
-        title: `Profile ${pending.action} applied`,
-      });
-    } catch (reason) {
-      setError((reason as Error).message);
-    } finally {
-      setPlanning(false);
-    }
-  };
+type ControlPlanningArgs = {
+  context: PlanningContext;
+  projection: ReturnType<typeof useManagerProjection>;
+};
+
+function useControlPlanning(args: ControlPlanningArgs) {
+  const { context, projection } = args;
+  const { authorizedBy, caps, refresh, setError, setPlanning, shell } = context;
+  const { setControlStatus } = projection;
+  const [pendingControl, setPendingControl] = React.useState<{
+    plan: KfxControlPlan;
+    operation: 'install' | 'update';
+    path: string;
+  } | null>(null);
 
   const previewControl = (operation: 'install' | 'update', path: string) => {
     if (!caps.kfxControl) return;
@@ -483,6 +528,29 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     }
   };
 
+  return { approveControl, pendingControl, previewControl, setPendingControl };
+}
+
+function useKfxManagerController({ caps, shell }: KfxViewProps) {
+  const projection = useManagerProjection({ caps, shell });
+  const [planning, setPlanning] = React.useState(false);
+  const [authorizedBy, setAuthorizedBy] = React.useState('');
+  const context = {
+    authorizedBy,
+    caps,
+    refresh: projection.refresh,
+    setError: projection.setError,
+    setPlanning,
+    shell,
+  };
+  const lifecycle = useLifecyclePlanning(context);
+  const intent = useIntentPlanning(context);
+  const kfd3 = useKfd3Planning(context);
+  const control = useControlPlanning({ context, projection });
+  const profile =
+    shell.profiles.find((item) => item.id === shell.state.profileId) ??
+    shell.profiles[0];
+
   const toggleKfx = (id: string, disabled: boolean) => {
     shell.updateState({
       disabledKfx: disabled
@@ -499,17 +567,48 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     });
   };
 
-  const cell: React.CSSProperties = { padding: '2px 12px 2px 0' };
+  return {
+    ...projection,
+    ...lifecycle,
+    ...intent,
+    ...kfd3,
+    ...control,
+    authorizedBy,
+    planning,
+    profile,
+    setAuthorizedBy,
+    toggleKfx,
+    toggleSuite,
+  };
+}
 
+type KfxManagerContentProps = {
+  controller: ReturnType<typeof useKfxManagerController>;
+  shell: KfxViewProps['shell'];
+};
+
+function KfxControlSection(props: KfxManagerContentProps) {
+  const { controller, shell } = props;
+  const {
+    approveControl,
+    authorizedBy,
+    controlStatus,
+    pendingControl,
+    planning,
+    previewControl,
+    setAuthorizedBy,
+    setPendingControl,
+  } = controller;
+  const managerDir = shell.registry.find(
+    (entry) => entry.id === 'kfx-manager',
+  )?.dir;
   return (
-    <section style={panelStyle}>
+    <>
       <h2 style={headingStyle}>KFX Control Suite</h2>
       <div
         style={{
           ...mono,
-          border: `1px solid ${
-            controlStatus?.mode === 'active' ? '#4ec9b0' : '#f48771'
-          }`,
+          border: `1px solid ${controlStatus?.mode === 'active' ? '#4ec9b0' : '#f48771'}`,
           padding: 10,
           marginBottom: 12,
         }}
@@ -527,15 +626,14 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
           Core independently verifies the embedded bootstrap ceiling; every
           mutation settles through the public KFX Fact/Work named-Cut CAS.
         </div>
-        {shell.registry.find((entry) => entry.id === 'kfx-manager')?.dir ? (
+        {managerDir ? (
           <button
             type="button"
             disabled={planning}
             onClick={() =>
               previewControl(
                 controlStatus?.active ? 'update' : 'install',
-                shell.registry.find((entry) => entry.id === 'kfx-manager')
-                  ?.dir as string,
+                managerDir,
               )
             }
             style={{ ...mono, marginTop: 8, marginRight: 8 }}
@@ -603,6 +701,26 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
           </button>
         </div>
       ) : null}
+    </>
+  );
+}
+
+function ProfileOverviewSection(props: KfxManagerContentProps) {
+  const { controller } = props;
+  const {
+    applicationErrors,
+    applications,
+    error,
+    loading,
+    manager,
+    planning,
+    previewIntent,
+    previewKfd3,
+    previewPlan,
+    profile,
+  } = controller;
+  return (
+    <>
       <h2 style={headingStyle}>Profiles · {manager?.count ?? 0}</h2>
       <div style={{ ...mono, color: '#858585', marginBottom: 10 }}>
         Runtime activation controls composition authority. GUI focus is “
@@ -644,61 +762,121 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
           </div>
         ) : null}
       </div>
+    </>
+  );
+}
+
+type DecisionPanelProps = {
+  approve: () => void;
+  approveLabel: string;
+  authorizedBy: string;
+  children: React.ReactNode;
+  dismiss: () => void;
+  planning: boolean;
+  placeholder: string;
+  setAuthorizedBy: React.Dispatch<React.SetStateAction<string>>;
+  title: string;
+};
+
+function DecisionPanel(props: DecisionPanelProps) {
+  const {
+    approve,
+    approveLabel,
+    authorizedBy,
+    children,
+    dismiss,
+    planning,
+    placeholder,
+    setAuthorizedBy,
+    title,
+  } = props;
+  return (
+    <div
+      style={{
+        ...mono,
+        border: '1px solid #dcdcaa',
+        padding: 10,
+        marginBottom: 12,
+      }}
+    >
+      <strong style={{ color: '#dcdcaa' }}>{title}</strong>
+      {children}
+      <label style={{ display: 'block', marginTop: 8 }}>
+        authorized by{' '}
+        <input
+          value={authorizedBy}
+          onChange={(event) => setAuthorizedBy(event.target.value)}
+          placeholder={placeholder}
+          style={{ ...mono, minWidth: 220 }}
+        />
+      </label>
+      <button
+        type="button"
+        disabled={planning || !authorizedBy.trim()}
+        onClick={approve}
+        style={{ ...mono, marginTop: 8, marginRight: 8 }}
+      >
+        {approveLabel}
+      </button>
+      <button
+        type="button"
+        disabled={planning}
+        onClick={dismiss}
+        style={{ ...mono, marginTop: 8 }}
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
+function ProfileDecisionSections(props: KfxManagerContentProps) {
+  const {
+    approveAndApply,
+    approveIntent,
+    approveKfd3,
+    authorizedBy,
+    pending,
+    pendingIntent,
+    pendingKfd3,
+    planning,
+    setAuthorizedBy,
+    setPending,
+    setPendingIntent,
+    setPendingKfd3,
+  } = props.controller;
+  return (
+    <>
       {pendingKfd3 ? (
-        <div
-          style={{
-            ...mono,
-            border: '1px solid #dcdcaa',
-            padding: 10,
-            marginBottom: 12,
-          }}
+        <DecisionPanel
+          approve={() => void approveKfd3()}
+          approveLabel="Run exact test plan"
+          authorizedBy={authorizedBy}
+          dismiss={() => setPendingKfd3(null)}
+          planning={planning}
+          placeholder="workspace profile operator"
+          setAuthorizedBy={setAuthorizedBy}
+          title="◇ KFD-3 test plan"
         >
-          <strong style={{ color: '#dcdcaa' }}>◇ KFD-3 test plan</strong>
           <div>profile {shortRoot(pendingKfd3.plan.profileSuiteRoot)}</div>
           <div>runtime {shortRoot(pendingKfd3.plan.runtimeContractRoot)}</div>
           <div>plan {shortRoot(pendingKfd3.plan.planId)}</div>
           <div style={{ color: '#858585' }}>
             {pendingKfd3.plan.probes.join(' · ')}
           </div>
-          <label style={{ display: 'block', marginTop: 8 }}>
-            authorized by{' '}
-            <input
-              value={authorizedBy}
-              onChange={(event) => setAuthorizedBy(event.target.value)}
-              placeholder="workspace profile operator"
-              style={{ ...mono, minWidth: 220 }}
-            />
-          </label>
-          <button
-            type="button"
-            disabled={planning || !authorizedBy.trim()}
-            onClick={() => void approveKfd3()}
-            style={{ ...mono, marginTop: 8, marginRight: 8 }}
-          >
-            Run exact test plan
-          </button>
-          <button
-            type="button"
-            disabled={planning}
-            onClick={() => setPendingKfd3(null)}
-            style={{ ...mono, marginTop: 8 }}
-          >
-            Dismiss
-          </button>
-        </div>
+        </DecisionPanel>
       ) : null}
       {pending ? (
-        <div
-          style={{
-            ...mono,
-            border: '1px solid #dcdcaa',
-            padding: 10,
-            marginBottom: 12,
-          }}
+        <DecisionPanel
+          approve={() => void approveAndApply()}
+          approveLabel="Approve exact plan"
+          authorizedBy={authorizedBy}
+          dismiss={() => setPending(null)}
+          planning={planning}
+          placeholder="workspace owner identity"
+          setAuthorizedBy={setAuthorizedBy}
+          title="Decision required before mutation"
         >
-          <strong style={{ color: '#dcdcaa' }}>
-            Decision required before mutation
-          </strong>
           <div>plan {String(pending.plan.corePlan.plan_id ?? '—')}</div>
           <div>
             {String(
@@ -710,175 +888,193 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
             GUI and Agent use the same installed decision-card contract. The
             runtime re-plans and rejects drift before apply.
           </div>
-          <label style={{ display: 'block', marginTop: 8 }}>
-            authorized by{' '}
-            <input
-              value={authorizedBy}
-              onChange={(event) => setAuthorizedBy(event.target.value)}
-              placeholder="workspace owner identity"
-              style={{ ...mono, minWidth: 220 }}
-            />
-          </label>
-          <button
-            type="button"
-            disabled={planning || !authorizedBy.trim()}
-            onClick={() => void approveAndApply()}
-            style={{ ...mono, marginTop: 8, marginRight: 8 }}
-          >
-            Approve exact plan
-          </button>
-          <button
-            type="button"
-            disabled={planning}
-            onClick={() => setPending(null)}
-            style={{ ...mono, marginTop: 8 }}
-          >
-            Dismiss
-          </button>
-        </div>
+        </DecisionPanel>
       ) : null}
       {pendingIntent ? (
-        <div
-          style={{
-            ...mono,
-            border: '1px solid #dcdcaa',
-            padding: 10,
-            marginBottom: 12,
-          }}
+        <DecisionPanel
+          approve={() => void approveIntent()}
+          approveLabel="Approve exact intent"
+          authorizedBy={authorizedBy}
+          dismiss={() => setPendingIntent(null)}
+          planning={planning}
+          placeholder="declared authority identity"
+          setAuthorizedBy={setAuthorizedBy}
+          title="Intent decision required"
         >
-          <strong style={{ color: '#dcdcaa' }}>Intent decision required</strong>
           <div>intent {pendingIntent.intentId}</div>
           <div>plan {pendingIntent.plan.planId}</div>
           <div style={{ color: '#858585' }}>
             This exact plan is shared with the Agent CLI. Apply re-plans, emits
             a receipt, and verifies the same Profile and collaboration roots.
           </div>
-          <label style={{ display: 'block', marginTop: 8 }}>
-            authorized by{' '}
-            <input
-              value={authorizedBy}
-              onChange={(event) => setAuthorizedBy(event.target.value)}
-              placeholder="declared authority identity"
-              style={{ ...mono, minWidth: 220 }}
-            />
-          </label>
-          <button
-            type="button"
-            disabled={planning || !authorizedBy.trim()}
-            onClick={() => void approveIntent()}
-            style={{ ...mono, marginTop: 8, marginRight: 8 }}
-          >
-            Approve exact intent
-          </button>
-          <button
-            type="button"
-            disabled={planning}
-            onClick={() => setPendingIntent(null)}
-            style={{ ...mono, marginTop: 8 }}
-          >
-            Dismiss
-          </button>
-        </div>
+        </DecisionPanel>
       ) : null}
+    </>
+  );
+}
+
+const tableCell: React.CSSProperties = { padding: '2px 12px 2px 0' };
+
+type RuntimeRowProps = {
+  disabled: boolean;
+  entry: KfxViewProps['shell']['registry'][number];
+  inProfile: boolean;
+  toggleKfx: (id: string, disabled: boolean) => void;
+};
+
+function KfxRuntimeRow(props: RuntimeRowProps) {
+  const { disabled, entry, inProfile, toggleKfx } = props;
+  return (
+    <tr>
+      <td style={{ ...tableCell, color: '#9cdcfe' }}>{entry.id}</td>
+      <td style={tableCell}>{entry.title}</td>
+      <td style={{ ...tableCell, color: '#858585' }}>{entry.suite ?? '—'}</td>
+      <td style={{ ...tableCell, color: '#ce9178' }}>
+        {entry.capabilities.join(', ') || '—'}
+      </td>
+      <td style={{ ...tableCell, color: '#858585' }}>
+        {entry.packageName
+          ? `${entry.packageName}@${entry.version ?? '?'}`
+          : '—'}
+      </td>
+      <td style={{ ...tableCell, color: '#6a6a6a' }}>{entry.source}</td>
+      <td style={tableCell}>
+        {entry.system ? (
+          <span style={{ color: '#6a6a6a' }}>system · always on</span>
+        ) : !inProfile ? (
+          <span style={{ color: '#6a6a6a' }}>not in profile</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => toggleKfx(entry.id, disabled)}
+            style={{
+              ...mono,
+              padding: '1px 8px',
+              border: '1px solid #3c3c3c',
+              borderRadius: 4,
+              cursor: 'pointer',
+              background: 'transparent',
+              color: disabled ? '#f48771' : '#4ec9b0',
+            }}
+          >
+            {disabled ? 'disabled — enable' : 'enabled — disable'}
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+type SuiteRowProps = {
+  disabled: boolean;
+  isSystem: boolean;
+  name: string;
+  suite: KfxViewProps['shell']['suites'][string];
+  toggleSuite: (key: string, disabled: boolean) => void;
+};
+
+function KfxSuiteRow(props: SuiteRowProps) {
+  const { disabled, isSystem, name, suite, toggleSuite } = props;
+  return (
+    <div style={{ ...mono, padding: '2px 0' }}>
+      <span style={{ color: '#9cdcfe' }}>{name}</span> · {suite.title} ·
+      members: {suite.members.join(', ')}{' '}
+      {isSystem ? (
+        <span style={{ color: '#6a6a6a' }}>system · always on</span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => toggleSuite(name, disabled)}
+          style={{
+            ...mono,
+            padding: '1px 8px',
+            border: '1px solid #3c3c3c',
+            borderRadius: 4,
+            cursor: 'pointer',
+            background: 'transparent',
+            color: disabled ? '#f48771' : '#4ec9b0',
+          }}
+        >
+          {disabled ? 'suite disabled — enable' : 'suite enabled — disable'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function KfxRegistrySection(props: KfxManagerContentProps) {
+  const { controller, shell } = props;
+  const { profile, toggleKfx, toggleSuite } = controller;
+  return (
+    <>
       <h2 style={headingStyle}>KFX runtime · {shell.registry.length} loaded</h2>
       <table style={{ ...mono, borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ color: '#858585', textAlign: 'left' }}>
-            <th style={cell}>id</th>
-            <th style={cell}>title</th>
-            <th style={cell}>suite</th>
-            <th style={cell}>capabilities</th>
-            <th style={cell}>package</th>
-            <th style={cell}>source</th>
-            <th style={cell}>state</th>
+            {[
+              'id',
+              'title',
+              'suite',
+              'capabilities',
+              'package',
+              'source',
+              'state',
+            ].map((label) => (
+              <th key={label} style={tableCell}>
+                {label}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {shell.registry.map((entry) => {
-            const inProfile =
-              entry.system || (profile?.kfx.includes(entry.id) ?? false);
-            const disabled = shell.state.disabledKfx.includes(entry.id);
-            return (
-              <tr key={entry.id}>
-                <td style={{ ...cell, color: '#9cdcfe' }}>{entry.id}</td>
-                <td style={cell}>{entry.title}</td>
-                <td style={{ ...cell, color: '#858585' }}>
-                  {entry.suite ?? '—'}
-                </td>
-                <td style={{ ...cell, color: '#ce9178' }}>
-                  {entry.capabilities.join(', ') || '—'}
-                </td>
-                <td style={{ ...cell, color: '#858585' }}>
-                  {entry.packageName
-                    ? `${entry.packageName}@${entry.version ?? '?'}`
-                    : '—'}
-                </td>
-                <td style={{ ...cell, color: '#6a6a6a' }}>{entry.source}</td>
-                <td style={cell}>
-                  {entry.system ? (
-                    <span style={{ color: '#6a6a6a' }}>system · always on</span>
-                  ) : !inProfile ? (
-                    <span style={{ color: '#6a6a6a' }}>not in profile</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => toggleKfx(entry.id, disabled)}
-                      style={{
-                        ...mono,
-                        padding: '1px 8px',
-                        border: '1px solid #3c3c3c',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        background: 'transparent',
-                        color: disabled ? '#f48771' : '#4ec9b0',
-                      }}
-                    >
-                      {disabled ? 'disabled — enable' : 'enabled — disable'}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
+          {shell.registry.map((entry) => (
+            <KfxRuntimeRow
+              key={entry.id}
+              entry={entry}
+              disabled={shell.state.disabledKfx.includes(entry.id)}
+              inProfile={
+                entry.system || (profile?.kfx.includes(entry.id) ?? false)
+              }
+              toggleKfx={toggleKfx}
+            />
+          ))}
         </tbody>
       </table>
       <h2 style={{ ...headingStyle, marginTop: 12 }}>
         Suites · {Object.keys(shell.suites).length}
       </h2>
-      {Object.entries(shell.suites).map(([key, suite]) => {
-        const disabled = shell.state.disabledSuites.includes(key);
-        const isSystem = shell.registry.some(
-          (entry) => entry.suite === key && entry.system,
-        );
-        return (
-          <div key={key} style={{ ...mono, padding: '2px 0' }}>
-            <span style={{ color: '#9cdcfe' }}>{key}</span> · {suite.title} ·
-            members: {suite.members.join(', ')}{' '}
-            {isSystem ? (
-              <span style={{ color: '#6a6a6a' }}>system · always on</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => toggleSuite(key, disabled)}
-                style={{
-                  ...mono,
-                  padding: '1px 8px',
-                  border: '1px solid #3c3c3c',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: 'transparent',
-                  color: disabled ? '#f48771' : '#4ec9b0',
-                }}
-              >
-                {disabled
-                  ? 'suite disabled — enable'
-                  : 'suite enabled — disable'}
-              </button>
-            )}
-          </div>
-        );
-      })}
+      {Object.entries(shell.suites).map(([name, suite]) => (
+        <KfxSuiteRow
+          key={name}
+          name={name}
+          suite={suite}
+          disabled={shell.state.disabledSuites.includes(name)}
+          isSystem={shell.registry.some(
+            (entry) => entry.suite === name && entry.system,
+          )}
+          toggleSuite={toggleSuite}
+        />
+      ))}
+    </>
+  );
+}
+
+function KfxManagerContent(props: KfxManagerContentProps) {
+  return (
+    <section style={panelStyle}>
+      <KfxControlSection {...props} />
+      <ProfileOverviewSection {...props} />
+      <ProfileDecisionSections {...props} />
+      <KfxRegistrySection {...props} />
     </section>
+  );
+}
+function KfxManagerView(props: KfxViewProps) {
+  return (
+    <KfxManagerContent
+      controller={useKfxManagerController(props)}
+      shell={props.shell}
+    />
   );
 }
 
