@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7625,
+  "generation": 7626,
   "fencingCounter": 714,
   "policy": {
     "agingSeconds": 900,
@@ -49583,8 +49583,39 @@
         "framework/maintainability/waivers/python-1000-line-decomposition-wave3.v1.json",
         "framework/primitive/kungfu-primitive-catalog.contract.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3487,
+      "assignmentRoot": "sha256:5402d99bd8a89b8996bc0b412327f750e76a59c4c59d715f430957a82ba075b9",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:a0e5462bfe753801bae20202002e5031ab8b931c7a84d6c1b933a70e34fa3669",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:be3925370d66ea79b5d5dab319e213da88ddbc6dfa0a41d34043cab96645b4fb",
+      "sourceHead": "945a301f6103c87fa6cee2d099afc0e7d78764c1",
+      "sourcePatchRoot": "sha256:7f55739fa6b03bd827b09ea0c7771ebdcf81936bbad75d055fd062c1c44ea13f",
+      "sourceProofRoot": "sha256:f6011446b4d36fe2346f90c1c5835b9b69afac0527f82719795bfaa6694c25b0",
+      "planRoot": "sha256:743c75b42767ba0f6c532eda76c09091525365178368963b09dcb8f60319c975",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:90ed29e11d34348fa7d62a890f68e7f95941a24afc699cf955a82f6eff464f29",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 33145031699,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-28T05:40:56.743Z",
+      "updatedAt": "2026-08-28T05:40:56.743Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/src/python/kungfu/agent/run_agent.py",
+        "framework/core/tests/python/test_agent_console_contract.py",
+        "framework/maintainability/agent-python-responsibility-map.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-28T05:36:14.225Z",
-  "stateRoot": "sha256:bed0ababf91909f30a6d7aeab91f55a5a7d3271f22ff69f03e1bb3b797fb2ff6"
+  "updatedAt": "2026-08-28T05:40:56.743Z",
+  "stateRoot": "sha256:59d762abdee8b04e7f4202e886eeb7b592914fad282212007df37434855ce863"
 }
