@@ -595,6 +595,12 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
       body,
       /uses: \.\/\.github\/actions\/native-execution-under-warrant/u,
     );
+    assert.match(body, /permissions:\n\s+contents: read/u);
+    assert.doesNotMatch(body, /permissions:\n\s+contents: write/u);
+    assert.match(
+      body,
+      /uses: actions\/checkout@[^\n]+\n\s+with:\n[\s\S]*?persist-credentials: false/u,
+    );
   }
   assert.match(
     sourceWorkflow,
