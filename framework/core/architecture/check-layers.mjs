@@ -121,42 +121,69 @@ function trackedFiles(root, contract) {
   return [...files].sort();
 }
 
-function validate(root, contract) {
-  const problems = [];
+function reportWhen(condition, problems, message) {
+  if (condition) problems.push(message);
+}
+
+// Keep validation passes as named, independently measurable units.
+function each(items, visit) {
+  let index = 0;
+  for (const item of items) {
+    visit(item, index);
+    index += 1;
+  }
+}
+
+function validateContractSchema(contract, problems) {
   if (contract.$schema !== 'kungfu.core-architecture/v1') {
     problems.push(`unsupported schema: ${contract.$schema || '<missing>'}`);
   }
+}
 
+function indexLayers(contract, problems) {
   const layerById = new Map();
   for (const layer of contract.layers || []) {
     if (layerById.has(layer.id)) problems.push(`duplicate layer: ${layer.id}`);
     layerById.set(layer.id, layer);
   }
+  return layerById;
+}
+
+function indexComponents(contract, layerById, problems) {
   const componentById = new Map();
   const usedTargets = new Set();
-  for (const component of contract.components || []) {
-    if (componentById.has(component.id)) {
-      problems.push(`duplicate component: ${component.id}`);
-    }
+  each(contract.components ?? [], (component) => {
+    reportWhen(
+      componentById.has(component.id),
+      problems,
+      `duplicate component: ${component.id}`,
+    );
     componentById.set(component.id, component);
-    if (!layerById.has(component.layer)) {
-      problems.push(`${component.id}: unknown layer ${component.layer}`);
-    }
-    for (const field of ['owner', 'entry_points', 'contract_tests']) {
+    reportWhen(
+      !layerById.has(component.layer),
+      problems,
+      `${component.id}: unknown layer ${component.layer}`,
+    );
+    each(['owner', 'entry_points', 'contract_tests'], (field) => {
       const value = component[field];
-      if (!value || (Array.isArray(value) && value.length === 0)) {
-        problems.push(`${component.id}: ${field} must not be empty`);
-      }
-    }
-    if (
+      reportWhen(
+        !value || (Array.isArray(value) && value.length === 0),
+        problems,
+        `${component.id}: ${field} must not be empty`,
+      );
+    });
+    reportWhen(
       !Array.isArray(component.current_targets) ||
-      component.current_targets.length === 0
-    ) {
-      problems.push(`${component.id}: current_targets must not be empty`);
-    }
-    for (const target of component.current_targets || [])
-      usedTargets.add(target);
-  }
+        component.current_targets.length === 0,
+      problems,
+      `${component.id}: current_targets must not be empty`,
+    );
+    each(component.current_targets ?? [], (target) => usedTargets.add(target));
+  });
+  return { componentById, usedTargets };
+}
+
+function validateComponentBudgetAndCycles(contract, problems) {
   const productionComponentCount = (contract.components || []).filter(
     (component) => component.layer !== 'qualification',
   ).length;
@@ -174,7 +201,9 @@ function validate(root, contract) {
   for (const cycle of findCycles(contract.components || [])) {
     problems.push(`component dependency cycle: ${cycle}`);
   }
+}
 
+function validateInternalTargetDeclarations(contract, componentById, problems) {
   const internalTargetById = new Map();
   for (const target of contract.internal_targets || []) {
     if (internalTargetById.has(target.id)) {
@@ -188,83 +217,103 @@ function validate(root, contract) {
       problems.push(`${target.id}: unsupported target kind ${target.kind}`);
     }
   }
+  return internalTargetById;
+}
 
+function validateTargetEvidence(root, contract, usedTargets, problems) {
   const evidencedTargets = new Set();
-  for (const entry of contract.target_evidence || []) {
+  each(contract.target_evidence ?? [], (entry) => {
     const evidencePath = path.join(root, entry.file);
     if (!fs.existsSync(evidencePath)) {
       problems.push(`missing target evidence file: ${entry.file}`);
-      continue;
+      return;
     }
     const cmake = fs.readFileSync(evidencePath, 'utf8');
-    for (const target of entry.targets || []) {
-      if (evidencedTargets.has(target)) {
-        problems.push(`duplicate target evidence: ${target}`);
-      }
+    each(entry.targets ?? [], (target) => {
+      reportWhen(
+        evidencedTargets.has(target),
+        problems,
+        `duplicate target evidence: ${target}`,
+      );
       evidencedTargets.add(target);
       const token = entry.tokens?.[target] || target;
       const generatedProjection =
         path.resolve(evidencePath) === path.resolve(targetsCmakePath);
-      if (!generatedProjection && !cmake.includes(token)) {
-        problems.push(`${target}: token ${token} is absent from ${entry.file}`);
-      }
-    }
-  }
-  for (const target of usedTargets) {
-    if (!evidencedTargets.has(target))
-      problems.push(`target lacks CMake evidence: ${target}`);
-  }
-  for (const target of evidencedTargets) {
-    if (!usedTargets.has(target))
-      problems.push(`stale unused target evidence: ${target}`);
-  }
-  for (const component of contract.components || []) {
-    for (const target of component.contract_tests || []) {
-      if (!evidencedTargets.has(target)) {
-        problems.push(
-          `${component.id}: contract test lacks CMake evidence: ${target}`,
-        );
-      }
-    }
-  }
-
-  if (contract.target_projection) {
-    const consumerPath = path.join(root, contract.target_projection.consumer);
-    if (!fs.existsSync(consumerPath)) {
-      problems.push(
-        `missing target projection consumer: ${contract.target_projection.consumer}`,
+      reportWhen(
+        !generatedProjection && !cmake.includes(token),
+        problems,
+        `${target}: token ${token} is absent from ${entry.file}`,
       );
-    } else {
-      const consumer = fs.readFileSync(consumerPath, 'utf8');
-      for (const field of ['include_token', 'facade_token']) {
-        const token = contract.target_projection[field];
-        if (!token || !consumer.includes(token)) {
-          problems.push(
-            `${contract.target_projection.consumer}: missing ${field} ${token || '<missing>'}`,
-          );
-        }
-      }
-    }
-  }
+    });
+  });
+  each(usedTargets, (target) =>
+    reportWhen(
+      !evidencedTargets.has(target),
+      problems,
+      `target lacks CMake evidence: ${target}`,
+    ),
+  );
+  each(evidencedTargets, (target) =>
+    reportWhen(
+      !usedTargets.has(target),
+      problems,
+      `stale unused target evidence: ${target}`,
+    ),
+  );
+  each(contract.components ?? [], (component) => {
+    each(component.contract_tests ?? [], (target) =>
+      reportWhen(
+        !evidencedTargets.has(target),
+        problems,
+        `${component.id}: contract test lacks CMake evidence: ${target}`,
+      ),
+    );
+  });
+  return evidencedTargets;
+}
 
+function validateTargetProjection(root, contract, problems) {
+  if (!contract.target_projection) return;
+  const consumerPath = path.join(root, contract.target_projection.consumer);
+  if (!fs.existsSync(consumerPath)) {
+    problems.push(
+      `missing target projection consumer: ${contract.target_projection.consumer}`,
+    );
+    return;
+  }
+  const consumer = fs.readFileSync(consumerPath, 'utf8');
+  each(['include_token', 'facade_token'], (field) => {
+    const token = contract.target_projection[field];
+    reportWhen(
+      !token || !consumer.includes(token),
+      problems,
+      `${contract.target_projection.consumer}: missing ${field} ${token || '<missing>'}`,
+    );
+  });
+}
+
+function classifyTrackedOwnership(root, contract, problems) {
   const excluded = new Set(
     (contract.excluded_files || []).map((entry) => entry.path),
   );
   const ownership = new Map();
-  for (const file of trackedFiles(root, contract)) {
-    if (excluded.has(file)) continue;
+  each(trackedFiles(root, contract), (file) => {
+    if (excluded.has(file)) return;
     const owners = (contract.components || []).filter((component) =>
       owns(component, file),
     );
-    if (owners.length === 0) problems.push(`unclassified file: ${file}`);
-    if (owners.length > 1) {
-      problems.push(
-        `multiply owned file: ${file} -> ${owners.map((item) => item.id).join(', ')}`,
-      );
-    }
+    reportWhen(owners.length === 0, problems, `unclassified file: ${file}`);
+    reportWhen(
+      owners.length > 1,
+      problems,
+      `multiply owned file: ${file} -> ${owners.map((item) => item.id).join(', ')}`,
+    );
     if (owners.length === 1) ownership.set(file, owners[0].id);
-  }
+  });
+  return ownership;
+}
 
+function validateExcludedFiles(root, contract, problems) {
   for (const entry of contract.excluded_files || []) {
     if (!fs.existsSync(path.join(root, entry.path))) {
       problems.push(`stale excluded file: ${entry.path}`);
@@ -272,195 +321,223 @@ function validate(root, contract) {
     if (!entry.reason)
       problems.push(`excluded file lacks reason: ${entry.path}`);
   }
+}
 
-  for (const constraint of contract.source_constraints || []) {
+function validateSourceConstraints(root, contract, ownership, problems) {
+  each(contract.source_constraints ?? [], (constraint) => {
     const sourcePath = path.join(root, constraint.file);
     if (!fs.existsSync(sourcePath)) {
       problems.push(
         `source constraint points to missing file: ${constraint.file}`,
       );
-      continue;
+      return;
     }
-    if (!ownership.has(constraint.file)) {
-      problems.push(
-        `source constraint points to unowned file: ${constraint.file}`,
-      );
-    }
+    reportWhen(
+      !ownership.has(constraint.file),
+      problems,
+      `source constraint points to unowned file: ${constraint.file}`,
+    );
     const source = fs.readFileSync(sourcePath, 'utf8');
     const lineCount = source.split('\n').length;
-    if (constraint.max_lines && lineCount > constraint.max_lines) {
-      problems.push(
-        `${constraint.file}: ${lineCount} lines exceeds architecture budget ${constraint.max_lines}`,
-      );
-    }
-    for (const token of constraint.required_text || []) {
-      if (!source.includes(token)) {
-        problems.push(
-          `${constraint.file}: missing required responsibility token ${token}`,
-        );
-      }
-    }
-    for (const token of constraint.forbidden_text || []) {
-      if (source.includes(token)) {
-        problems.push(
-          `${constraint.file}: forbidden responsibility token ${token}`,
-        );
-      }
-    }
-  }
+    reportWhen(
+      constraint.max_lines && lineCount > constraint.max_lines,
+      problems,
+      `${constraint.file}: ${lineCount} lines exceeds architecture budget ${constraint.max_lines}`,
+    );
+    each(constraint.required_text ?? [], (token) =>
+      reportWhen(
+        !source.includes(token),
+        problems,
+        `${constraint.file}: missing required responsibility token ${token}`,
+      ),
+    );
+    each(constraint.forbidden_text ?? [], (token) =>
+      reportWhen(
+        source.includes(token),
+        problems,
+        `${constraint.file}: forbidden responsibility token ${token}`,
+      ),
+    );
+  });
+}
 
-  for (const component of contract.components || []) {
+function validateComponentDependencies(context, problems) {
+  const { componentById, contract, layerById, ownership } = context;
+  each(contract.components ?? [], (component) => {
     const sourceLayer = layerById.get(component.layer);
-    for (const dependencyId of component.dependencies || []) {
+    each(component.dependencies ?? [], (dependencyId) => {
       const dependency = componentById.get(dependencyId);
       if (!dependency) {
         problems.push(`${component.id}: unknown dependency ${dependencyId}`);
-        continue;
+        return;
       }
-      if (!sourceLayer.may_depend_on.includes(dependency.layer)) {
-        problems.push(
-          `${component.id}: layer ${component.layer} may not depend on ${dependency.layer} (${dependencyId})`,
-        );
-      }
-    }
-    for (const entryPoint of component.entry_points || []) {
-      if (ownership.get(entryPoint) !== component.id) {
-        problems.push(
-          `${component.id}: entry point is missing or owned elsewhere: ${entryPoint}`,
-        );
-      }
-    }
-  }
+      reportWhen(
+        !sourceLayer.may_depend_on.includes(dependency.layer),
+        problems,
+        `${component.id}: layer ${component.layer} may not depend on ${dependency.layer} (${dependencyId})`,
+      );
+    });
+    each(component.entry_points ?? [], (entryPoint) =>
+      reportWhen(
+        ownership.get(entryPoint) !== component.id,
+        problems,
+        `${component.id}: entry point is missing or owned elsewhere: ${entryPoint}`,
+      ),
+    );
+  });
+}
 
-  for (const target of contract.internal_targets || []) {
+function validateInternalTargetDependencies(context, problems) {
+  const { componentById, contract, internalTargetById, layerById } = context;
+  each(contract.internal_targets ?? [], (target) => {
     const sourceComponent = componentById.get(target.component);
-    if (!sourceComponent) continue;
+    if (!sourceComponent) return;
     const sourceLayer = layerById.get(sourceComponent.layer);
-    for (const dependencyId of target.dependencies || []) {
+    each(target.dependencies ?? [], (dependencyId) => {
       const dependency = internalTargetById.get(dependencyId);
       if (!dependency) {
         problems.push(
           `${target.id}: unknown target dependency ${dependencyId}`,
         );
-        continue;
+        return;
       }
       const dependencyComponent = componentById.get(dependency.component);
-      if (
+      reportWhen(
         dependencyComponent &&
-        dependencyComponent.id !== sourceComponent.id &&
-        !(sourceComponent.dependencies || []).includes(dependencyComponent.id)
-      ) {
-        problems.push(
-          `${target.id}: target dependency ${dependencyId} is not declared by component ${sourceComponent.id}`,
-        );
-      }
-      if (
+          dependencyComponent.id !== sourceComponent.id &&
+          !(sourceComponent.dependencies || []).includes(
+            dependencyComponent.id,
+          ),
+        problems,
+        `${target.id}: target dependency ${dependencyId} is not declared by component ${sourceComponent.id}`,
+      );
+      reportWhen(
         dependencyComponent &&
-        !sourceLayer.may_depend_on.includes(dependencyComponent.layer)
-      ) {
-        problems.push(
-          `${target.id}: layer ${sourceComponent.layer} may not depend on target ${dependencyId} (${dependencyComponent.layer})`,
-        );
-      }
-    }
-  }
-  for (const cycle of findCycles(contract.internal_targets || [])) {
-    problems.push(`internal target dependency cycle: ${cycle}`);
-  }
+          !sourceLayer.may_depend_on.includes(dependencyComponent.layer),
+        problems,
+        `${target.id}: layer ${sourceComponent.layer} may not depend on target ${dependencyId} (${dependencyComponent.layer})`,
+      );
+    });
+  });
+  problems.push(
+    ...findCycles(contract.internal_targets ?? []).map(
+      (cycle) => `internal target dependency cycle: ${cycle}`,
+    ),
+  );
+}
 
+function validateInternalTargetSources(contract, ownership, problems) {
   const internalTargetRoots = contract.internal_target_roots || [];
   const internalTargetSourceCounts = new Map(
     (contract.internal_targets || []).map((target) => [target.id, 0]),
   );
-  for (const [file, componentId] of ownership) {
-    if (!internalTargetRoots.some((prefix) => file.startsWith(prefix)))
-      continue;
-    if (!['.c', '.cc', '.cpp', '.cxx'].includes(path.extname(file))) continue;
+  each(ownership, ([file, componentId]) => {
+    if (
+      !internalTargetRoots.some((prefix) => file.startsWith(prefix)) ||
+      !['.c', '.cc', '.cpp', '.cxx'].includes(path.extname(file))
+    )
+      return;
     const targets = (contract.internal_targets || []).filter((target) =>
       targetOwns(target, file, componentId),
     );
-    if (targets.length === 0) {
-      problems.push(`source lacks internal target: ${file}`);
-    }
-    if (targets.length > 1) {
-      problems.push(
-        `source has multiple internal targets: ${file} -> ${targets.map((target) => target.id).join(', ')}`,
-      );
-    }
+    reportWhen(
+      targets.length === 0,
+      problems,
+      `source lacks internal target: ${file}`,
+    );
+    reportWhen(
+      targets.length > 1,
+      problems,
+      `source has multiple internal targets: ${file} -> ${targets.map((target) => target.id).join(', ')}`,
+    );
     if (targets.length === 1) {
       internalTargetSourceCounts.set(
         targets[0].id,
         (internalTargetSourceCounts.get(targets[0].id) || 0) + 1,
       );
     }
-  }
-  for (const target of contract.internal_targets || []) {
+  });
+  each(contract.internal_targets ?? [], (target) => {
     const count = internalTargetSourceCounts.get(target.id) || 0;
-    if (target.kind === 'INTERFACE' && count !== 0) {
-      problems.push(`${target.id}: INTERFACE target owns ${count} sources`);
-    }
-    if (target.kind === 'OBJECT' && count === 0) {
-      problems.push(`${target.id}: OBJECT target owns no sources`);
-    }
-  }
+    reportWhen(
+      target.kind === 'INTERFACE' && count !== 0,
+      problems,
+      `${target.id}: INTERFACE target owns ${count} sources`,
+    );
+    reportWhen(
+      target.kind === 'OBJECT' && count === 0,
+      problems,
+      `${target.id}: OBJECT target owns no sources`,
+    );
+  });
+}
 
-  const includePattern = /^\s*#\s*include\s*[<"]([^>"]+)[>"]/;
+function buildHeaderIndex(ownership) {
   const headerIndex = new Map();
   for (const file of ownership.keys()) {
     const marker = '/include/';
     const index = file.indexOf(marker);
     if (index >= 0) headerIndex.set(file.slice(index + marker.length), file);
   }
-  const usedExceptions = new Set();
-  const dependencyExceptions = contract.dependency_exceptions || [];
-  for (const [file, componentId] of ownership) {
-    const component = componentById.get(componentId);
-    const layer = layerById.get(component.layer);
-    const prefixes = layer.forbidden_include_prefixes || [];
-    const lines = fs.readFileSync(path.join(root, file), 'utf8').split('\n');
-    lines.forEach((line, index) => {
-      const match = line.match(includePattern);
-      if (!match) return;
-      const forbidden = prefixes.find((prefix) => match[1].startsWith(prefix));
-      if (forbidden) {
-        problems.push(
-          `${file}:${index + 1}: ${component.layer} forbids include ${match[1]}`,
-        );
-      }
-      const localCandidate = posix(
-        path.normalize(path.join(path.dirname(file), match[1])),
-      );
-      const targetFile =
-        headerIndex.get(match[1]) ||
-        (ownership.has(localCandidate) ? localCandidate : undefined);
-      if (!targetFile) return;
-      const targetComponentId = ownership.get(targetFile);
-      const targetComponent = componentById.get(targetComponentId);
-      if (
-        targetComponentId !== componentId &&
-        !(component.dependencies || []).includes(targetComponentId)
-      ) {
-        problems.push(
-          `${file}:${index + 1}: ${componentId} has undeclared dependency on ${targetComponentId} via ${match[1]}`,
-        );
-      }
-      if (layer.may_depend_on.includes(targetComponent.layer)) return;
-      const exceptionIndex = dependencyExceptions.findIndex(
-        (entry) =>
-          entry.from_component === componentId &&
-          entry.to_component === targetComponentId &&
-          entry.include === match[1],
-      );
-      if (exceptionIndex >= 0) {
-        usedExceptions.add(exceptionIndex);
-        return;
-      }
-      problems.push(
-        `${file}:${index + 1}: ${componentId} (${component.layer}) may not include ${match[1]} from ${targetComponentId} (${targetComponent.layer})`,
-      );
-    });
+  return headerIndex;
+}
+
+function validateIncludeLine(context, lineContext, usedExceptions, problems) {
+  const { componentId, file, index, line } = lineContext;
+  const match = line.match(includePattern);
+  if (!match) return;
+  const {
+    componentById,
+    dependencyExceptions,
+    headerIndex,
+    layerById,
+    ownership,
+  } = context;
+  const component = componentById.get(componentId);
+  const layer = layerById.get(component.layer);
+  const prefixes = layer.forbidden_include_prefixes || [];
+  const forbidden = prefixes.find((prefix) => match[1].startsWith(prefix));
+  if (forbidden) {
+    problems.push(
+      `${file}:${index + 1}: ${component.layer} forbids include ${match[1]}`,
+    );
   }
-  dependencyExceptions.forEach((entry, index) => {
+  const localCandidate = posix(
+    path.normalize(path.join(path.dirname(file), match[1])),
+  );
+  const targetFile =
+    headerIndex.get(match[1]) ||
+    (ownership.has(localCandidate) ? localCandidate : undefined);
+  if (!targetFile) return;
+  const targetComponentId = ownership.get(targetFile);
+  const targetComponent = componentById.get(targetComponentId);
+  if (
+    targetComponentId !== componentId &&
+    !(component.dependencies || []).includes(targetComponentId)
+  ) {
+    problems.push(
+      `${file}:${index + 1}: ${componentId} has undeclared dependency on ${targetComponentId} via ${match[1]}`,
+    );
+  }
+  if (layer.may_depend_on.includes(targetComponent.layer)) return;
+  const exceptionIndex = dependencyExceptions.findIndex(
+    (entry) =>
+      entry.from_component === componentId &&
+      entry.to_component === targetComponentId &&
+      entry.include === match[1],
+  );
+  if (exceptionIndex >= 0) {
+    usedExceptions.add(exceptionIndex);
+    return;
+  }
+  problems.push(
+    `${file}:${index + 1}: ${componentId} (${component.layer}) may not include ${match[1]} from ${targetComponentId} (${targetComponent.layer})`,
+  );
+}
+
+function validateDependencyExceptions(context, problems) {
+  const { dependencyExceptions, usedExceptions } = context;
+  each(dependencyExceptions, (entry, index) => {
     if (!entry.reason || !entry.follow_up_goal) {
       problems.push(
         `dependency exception ${index} lacks reason or follow_up_goal`,
@@ -472,6 +549,38 @@ function validate(root, contract) {
       );
     }
   });
+}
+
+function validateIncludes(context, problems) {
+  const { componentById, contract, layerById, ownership, root } = context;
+  const headerIndex = buildHeaderIndex(ownership);
+  const usedExceptions = new Set();
+  const dependencyExceptions = contract.dependency_exceptions || [];
+  const includeContext = {
+    componentById,
+    dependencyExceptions,
+    headerIndex,
+    layerById,
+    ownership,
+  };
+  for (const [file, componentId] of ownership) {
+    const lines = fs.readFileSync(path.join(root, file), 'utf8').split('\n');
+    each(lines, (line, index) => {
+      validateIncludeLine(
+        includeContext,
+        { componentId, file, index, line },
+        usedExceptions,
+        problems,
+      );
+    });
+  }
+  validateDependencyExceptions(
+    { dependencyExceptions, usedExceptions },
+    problems,
+  );
+}
+
+function validateNavigation(contract, componentById, ownership, problems) {
   for (const item of contract.navigation || []) {
     if (!componentById.has(item.component)) {
       problems.push(`navigation row has unknown component: ${item.component}`);
@@ -481,213 +590,326 @@ function validate(root, contract) {
       );
     }
   }
+}
 
-  const publicContracts = contract.public_contracts;
-  if (publicContracts) {
-    const buildAuthority = JSON.parse(
-      fs.readFileSync(buildCapabilitiesPath, 'utf8'),
-    );
-    const supportedProfiles = new Set(
-      buildAuthority.profiles
-        .filter((profile) => profile.status === 'supported')
-        .map((profile) => profile.id),
-    );
-    const levelIds = new Set();
-    for (const level of publicContracts.levels || []) {
-      if (levelIds.has(level.id))
-        problems.push(`duplicate public contract level: ${level.id}`);
-      levelIds.add(level.id);
-      if (!level.policy)
-        problems.push(`public contract level ${level.id} lacks policy`);
-    }
-    for (const required of [
-      'stable',
-      'experimental',
-      'internal',
-      'source-embedding-only',
-    ]) {
-      if (!levelIds.has(required))
-        problems.push(`missing public contract level: ${required}`);
-    }
-
-    const publicHeaders = [...ownership.keys()].filter(
-      (file) =>
-        (file.startsWith('src/libkungfu/include/') ||
-          file.startsWith('src/libyijinjing/include/')) &&
-        ['.h', '.hh', '.hpp', '.hxx'].includes(path.extname(file)),
-    );
-    const headerRuleIds = new Set();
-    for (const rule of publicContracts.header_rules || []) {
-      if (headerRuleIds.has(rule.id))
-        problems.push(`duplicate public header rule: ${rule.id}`);
-      headerRuleIds.add(rule.id);
-      if (!levelIds.has(rule.level))
-        problems.push(
-          `${rule.id}: unknown public contract level ${rule.level}`,
-        );
-      if (!supportedProfiles.has(rule.minimum_profile)) {
-        problems.push(
-          `${rule.id}: minimum profile is not supported: ${rule.minimum_profile}`,
-        );
-      }
-      if (!(rule.consumers || []).length || !rule.compatibility_policy) {
-        problems.push(
-          `${rule.id}: consumers and compatibility policy required`,
-        );
-      }
-    }
-    for (const header of publicHeaders) {
-      const rules = (publicContracts.header_rules || []).filter((rule) =>
-        ruleOwns(rule, header),
-      );
-      if (rules.length === 0)
-        problems.push(`unclassified public header: ${header}`);
-      if (rules.length > 1) {
-        problems.push(
-          `multiply classified public header: ${header} -> ${rules.map((rule) => rule.id).join(', ')}`,
-        );
-      }
-    }
-    for (const rule of publicContracts.header_rules || []) {
-      if (!publicHeaders.some((header) => ruleOwns(rule, header))) {
-        problems.push(`public header rule matches no headers: ${rule.id}`);
-      }
-    }
-
-    const symbolNames = new Set();
-    for (const symbol of publicContracts.stable_symbols || []) {
-      if (symbolNames.has(symbol.name))
-        problems.push(`duplicate stable symbol: ${symbol.name}`);
-      symbolNames.add(symbol.name);
-      const header = path.join(root, symbol.header || '');
-      const implementation = path.join(root, symbol.implementation || '');
-      if (
-        !fs.existsSync(header) ||
-        !fs.readFileSync(header, 'utf8').includes(symbol.name)
-      ) {
-        problems.push(`${symbol.name}: stable symbol missing from header`);
-      }
-      if (
-        !fs.existsSync(implementation) ||
-        !fs.readFileSync(implementation, 'utf8').includes(symbol.name)
-      ) {
-        problems.push(
-          `${symbol.name}: stable symbol missing from implementation`,
-        );
-      }
-      if (!componentById.has(symbol.owner_component))
-        problems.push(
-          `${symbol.name}: unknown owner ${symbol.owner_component}`,
-        );
-      if (!supportedProfiles.has(symbol.minimum_profile))
-        problems.push(`${symbol.name}: unsupported minimum profile`);
-      if (
-        !(symbol.abi_versions || []).length ||
-        !(symbol.consumers || []).length ||
-        !symbol.removal_policy
-      ) {
-        problems.push(`${symbol.name}: incomplete stable symbol policy`);
-      }
-    }
-
-    for (const layout of publicContracts.schema_layout_contracts || []) {
-      if (!levelIds.has(layout.level))
-        problems.push(
-          `${layout.id}: unknown schema/layout level ${layout.level}`,
-        );
-      if (!componentById.has(layout.owner_component))
-        problems.push(`${layout.id}: unknown owner ${layout.owner_component}`);
-      if (!supportedProfiles.has(layout.minimum_profile))
-        problems.push(`${layout.id}: unsupported minimum profile`);
-      const authorities = [...(layout.authority_files || [])];
-      for (const prefix of layout.authority_prefixes || []) {
-        const extensionSet = new Set(layout.authority_extensions || []);
-        for (const file of walk(path.join(root, prefix))) {
-          if (extensionSet.has(path.extname(file))) {
-            authorities.push(posix(path.relative(root, file)));
-          }
-        }
-      }
-      if (!authorities.length)
-        problems.push(`${layout.id}: no schema/layout authority files`);
-      for (const file of authorities) {
-        if (!fs.existsSync(path.join(root, file)))
-          problems.push(`${layout.id}: missing authority file ${file}`);
-      }
-      if (
-        layout.retained_fixture &&
-        !fs.existsSync(path.join(root, layout.retained_fixture))
-      ) {
-        problems.push(
-          `${layout.id}: missing retained fixture ${layout.retained_fixture}`,
-        );
-      }
-      if (!(layout.consumers || []).length || !layout.compatibility_policy) {
-        problems.push(`${layout.id}: incomplete schema/layout policy`);
-      }
-    }
-
-    const requiredBindings = new Set(['node', 'python', 'electron', 'wasm']);
-    for (const binding of publicContracts.binding_surfaces || []) {
-      requiredBindings.delete(binding.id);
-      if (!levelIds.has(binding.level))
-        problems.push(`${binding.id}: unknown binding level ${binding.level}`);
-      if (!fs.existsSync(path.join(root, binding.evidence || '')))
-        problems.push(
-          `${binding.id}: missing binding evidence ${binding.evidence}`,
-        );
-      if (!supportedProfiles.has(binding.minimum_profile))
-        problems.push(`${binding.id}: unsupported binding minimum profile`);
-      if (
-        binding.contract !== 'libkungfu-in-process-contracts' ||
-        JSON.stringify(binding.semantic_axes) !==
-          JSON.stringify(['version', 'capability', 'error'])
-      ) {
-        problems.push(`${binding.id}: binding parity semantics drifted`);
-      }
-    }
-    for (const binding of requiredBindings) {
-      problems.push(`missing binding parity surface: ${binding}`);
-    }
-
-    const deprecationAuthority = publicContracts.deprecation_authority;
-    for (const field of ['contract', 'registry']) {
-      const relative = deprecationAuthority?.[field];
-      if (!relative || !fs.existsSync(path.join(root, relative))) {
-        problems.push(
-          `common deprecation ${field} is missing: ${relative || '<missing>'}`,
-        );
-      }
-    }
-    if (
-      deprecationAuthority?.registry &&
-      fs.existsSync(path.join(root, deprecationAuthority.registry))
-    ) {
-      const registry = JSON.parse(
-        fs.readFileSync(path.join(root, deprecationAuthority.registry), 'utf8'),
-      );
-      const byId = new Map(
-        (registry.entries || []).map((entry) => [entry.id, entry]),
-      );
-      for (const id of deprecationAuthority.contributions || []) {
-        const entry = byId.get(id);
-        if (!entry) {
-          problems.push(`missing common deprecation contribution: ${id}`);
-        } else if (
-          entry.contributedFrom?.authority !==
-          'framework/core/architecture/layers.json'
-        ) {
-          problems.push(
-            `${id}: common deprecation contribution lost Core authority provenance`,
-          );
-        }
-      }
-      if (!(deprecationAuthority.contributions || []).length) {
-        problems.push('Core deprecation contributions must not be empty');
-      }
-    }
+function validatePublicLevels(publicContracts, problems) {
+  const levelIds = new Set();
+  for (const level of publicContracts.levels || []) {
+    if (levelIds.has(level.id))
+      problems.push(`duplicate public contract level: ${level.id}`);
+    levelIds.add(level.id);
+    if (!level.policy)
+      problems.push(`public contract level ${level.id} lacks policy`);
   }
+  for (const required of [
+    'stable',
+    'experimental',
+    'internal',
+    'source-embedding-only',
+  ]) {
+    if (!levelIds.has(required))
+      problems.push(`missing public contract level: ${required}`);
+  }
+  return levelIds;
+}
 
+function publicHeaders(ownership) {
+  return [...ownership.keys()].filter(
+    (file) =>
+      (file.startsWith('src/libkungfu/include/') ||
+        file.startsWith('src/libyijinjing/include/')) &&
+      ['.h', '.hh', '.hpp', '.hxx'].includes(path.extname(file)),
+  );
+}
+
+function validatePublicHeaderRules(context, problems) {
+  const { headers, levelIds, publicContracts, supportedProfiles } = context;
+  const headerRuleIds = new Set();
+  each(publicContracts.header_rules ?? [], (rule) => {
+    reportWhen(
+      headerRuleIds.has(rule.id),
+      problems,
+      `duplicate public header rule: ${rule.id}`,
+    );
+    headerRuleIds.add(rule.id);
+    reportWhen(
+      !levelIds.has(rule.level),
+      problems,
+      `${rule.id}: unknown public contract level ${rule.level}`,
+    );
+    reportWhen(
+      !supportedProfiles.has(rule.minimum_profile),
+      problems,
+      `${rule.id}: minimum profile is not supported: ${rule.minimum_profile}`,
+    );
+    reportWhen(
+      !(rule.consumers || []).length || !rule.compatibility_policy,
+      problems,
+      `${rule.id}: consumers and compatibility policy required`,
+    );
+  });
+  each(headers, (header) => {
+    const rules = (publicContracts.header_rules || []).filter((rule) =>
+      ruleOwns(rule, header),
+    );
+    reportWhen(
+      rules.length === 0,
+      problems,
+      `unclassified public header: ${header}`,
+    );
+    reportWhen(
+      rules.length > 1,
+      problems,
+      `multiply classified public header: ${header} -> ${rules.map((rule) => rule.id).join(', ')}`,
+    );
+  });
+  each(publicContracts.header_rules ?? [], (rule) =>
+    reportWhen(
+      !headers.some((header) => ruleOwns(rule, header)),
+      problems,
+      `public header rule matches no headers: ${rule.id}`,
+    ),
+  );
+}
+
+function validateStableSymbols(context, problems) {
+  const { componentById, publicContracts, root, supportedProfiles } = context;
+  const symbolNames = new Set();
+  each(publicContracts.stable_symbols ?? [], (symbol) => {
+    reportWhen(
+      symbolNames.has(symbol.name),
+      problems,
+      `duplicate stable symbol: ${symbol.name}`,
+    );
+    symbolNames.add(symbol.name);
+    const header = path.join(root, symbol.header || '');
+    const implementation = path.join(root, symbol.implementation || '');
+    reportWhen(
+      !fs.existsSync(header) ||
+        !fs.readFileSync(header, 'utf8').includes(symbol.name),
+      problems,
+      `${symbol.name}: stable symbol missing from header`,
+    );
+    reportWhen(
+      !fs.existsSync(implementation) ||
+        !fs.readFileSync(implementation, 'utf8').includes(symbol.name),
+      problems,
+      `${symbol.name}: stable symbol missing from implementation`,
+    );
+    reportWhen(
+      !componentById.has(symbol.owner_component),
+      problems,
+      `${symbol.name}: unknown owner ${symbol.owner_component}`,
+    );
+    reportWhen(
+      !supportedProfiles.has(symbol.minimum_profile),
+      problems,
+      `${symbol.name}: unsupported minimum profile`,
+    );
+    reportWhen(
+      !(symbol.abi_versions || []).length ||
+        !(symbol.consumers || []).length ||
+        !symbol.removal_policy,
+      problems,
+      `${symbol.name}: incomplete stable symbol policy`,
+    );
+  });
+}
+
+function validateSchemaLayouts(context, problems) {
+  const { componentById, levelIds, publicContracts, root, supportedProfiles } =
+    context;
+  each(publicContracts.schema_layout_contracts ?? [], (layout) => {
+    reportWhen(
+      !levelIds.has(layout.level),
+      problems,
+      `${layout.id}: unknown schema/layout level ${layout.level}`,
+    );
+    reportWhen(
+      !componentById.has(layout.owner_component),
+      problems,
+      `${layout.id}: unknown owner ${layout.owner_component}`,
+    );
+    reportWhen(
+      !supportedProfiles.has(layout.minimum_profile),
+      problems,
+      `${layout.id}: unsupported minimum profile`,
+    );
+    const authorities = [...(layout.authority_files || [])];
+    each(layout.authority_prefixes ?? [], (prefix) => {
+      const extensionSet = new Set(layout.authority_extensions || []);
+      authorities.push(
+        ...walk(path.join(root, prefix))
+          .filter((file) => extensionSet.has(path.extname(file)))
+          .map((file) => posix(path.relative(root, file))),
+      );
+    });
+    reportWhen(
+      !authorities.length,
+      problems,
+      `${layout.id}: no schema/layout authority files`,
+    );
+    each(authorities, (file) =>
+      reportWhen(
+        !fs.existsSync(path.join(root, file)),
+        problems,
+        `${layout.id}: missing authority file ${file}`,
+      ),
+    );
+    reportWhen(
+      layout.retained_fixture &&
+        !fs.existsSync(path.join(root, layout.retained_fixture)),
+      problems,
+      `${layout.id}: missing retained fixture ${layout.retained_fixture}`,
+    );
+    reportWhen(
+      !(layout.consumers || []).length || !layout.compatibility_policy,
+      problems,
+      `${layout.id}: incomplete schema/layout policy`,
+    );
+  });
+}
+
+function validateBindingSurfaces(context, problems) {
+  const { levelIds, publicContracts, root, supportedProfiles } = context;
+  const requiredBindings = new Set(['node', 'python', 'electron', 'wasm']);
+  each(publicContracts.binding_surfaces ?? [], (binding) => {
+    requiredBindings.delete(binding.id);
+    reportWhen(
+      !levelIds.has(binding.level),
+      problems,
+      `${binding.id}: unknown binding level ${binding.level}`,
+    );
+    reportWhen(
+      !fs.existsSync(path.join(root, binding.evidence || '')),
+      problems,
+      `${binding.id}: missing binding evidence ${binding.evidence}`,
+    );
+    reportWhen(
+      !supportedProfiles.has(binding.minimum_profile),
+      problems,
+      `${binding.id}: unsupported binding minimum profile`,
+    );
+    reportWhen(
+      binding.contract !== 'libkungfu-in-process-contracts' ||
+        JSON.stringify(binding.semantic_axes) !==
+          JSON.stringify(['version', 'capability', 'error']),
+      problems,
+      `${binding.id}: binding parity semantics drifted`,
+    );
+  });
+  problems.push(
+    ...[...requiredBindings].map(
+      (binding) => `missing binding parity surface: ${binding}`,
+    ),
+  );
+}
+
+function validateDeprecationAuthority(root, publicContracts, problems) {
+  const deprecationAuthority = publicContracts.deprecation_authority;
+  each(['contract', 'registry'], (field) => {
+    const relative = deprecationAuthority?.[field];
+    reportWhen(
+      !relative || !fs.existsSync(path.join(root, relative)),
+      problems,
+      `common deprecation ${field} is missing: ${relative || '<missing>'}`,
+    );
+  });
+  if (
+    deprecationAuthority?.registry &&
+    fs.existsSync(path.join(root, deprecationAuthority.registry))
+  ) {
+    const registry = JSON.parse(
+      fs.readFileSync(path.join(root, deprecationAuthority.registry), 'utf8'),
+    );
+    const byId = new Map(
+      (registry.entries || []).map((entry) => [entry.id, entry]),
+    );
+    each(deprecationAuthority.contributions ?? [], (id) => {
+      const entry = byId.get(id);
+      reportWhen(
+        !entry,
+        problems,
+        `missing common deprecation contribution: ${id}`,
+      );
+      reportWhen(
+        entry &&
+          entry.contributedFrom?.authority !==
+            'framework/core/architecture/layers.json',
+        problems,
+        `${id}: common deprecation contribution lost Core authority provenance`,
+      );
+    });
+    reportWhen(
+      !(deprecationAuthority.contributions || []).length,
+      problems,
+      'Core deprecation contributions must not be empty',
+    );
+  }
+}
+
+function validatePublicContracts(context, problems) {
+  const { componentById, contract, ownership, root } = context;
+  const publicContracts = contract.public_contracts;
+  if (!publicContracts) return;
+  const buildAuthority = JSON.parse(
+    fs.readFileSync(buildCapabilitiesPath, 'utf8'),
+  );
+  const supportedProfiles = new Set(
+    buildAuthority.profiles
+      .filter((profile) => profile.status === 'supported')
+      .map((profile) => profile.id),
+  );
+  const levelIds = validatePublicLevels(publicContracts, problems);
+  const publicContext = {
+    componentById,
+    headers: publicHeaders(ownership),
+    levelIds,
+    publicContracts,
+    root,
+    supportedProfiles,
+  };
+  validatePublicHeaderRules(publicContext, problems);
+  validateStableSymbols(publicContext, problems);
+  validateSchemaLayouts(publicContext, problems);
+  validateBindingSurfaces(publicContext, problems);
+  validateDeprecationAuthority(root, publicContracts, problems);
+}
+
+function validate(root, contract) {
+  const problems = [];
+  validateContractSchema(contract, problems);
+  const layerById = indexLayers(contract, problems);
+  const { componentById, usedTargets } = indexComponents(
+    contract,
+    layerById,
+    problems,
+  );
+  validateComponentBudgetAndCycles(contract, problems);
+  const internalTargetById = validateInternalTargetDeclarations(
+    contract,
+    componentById,
+    problems,
+  );
+  validateTargetEvidence(root, contract, usedTargets, problems);
+  validateTargetProjection(root, contract, problems);
+  const ownership = classifyTrackedOwnership(root, contract, problems);
+  validateExcludedFiles(root, contract, problems);
+  validateSourceConstraints(root, contract, ownership, problems);
+  const context = {
+    componentById,
+    contract,
+    internalTargetById,
+    layerById,
+    ownership,
+    root,
+  };
+  validateComponentDependencies(context, problems);
+  validateInternalTargetDependencies(context, problems);
+  validateInternalTargetSources(contract, ownership, problems);
+  validateIncludes(context, problems);
+  validateNavigation(contract, componentById, ownership, problems);
+  validatePublicContracts(context, problems);
   return { problems, ownership };
 }
 
@@ -1006,7 +1228,7 @@ function renderPublicContractsCmake(contract, ownership) {
     const headers = publicHeaders
       .filter((header) => ruleOwns(rule, header))
       .sort();
-    headers.forEach((header, index) => {
+    each(headers, (header, index) => {
       const includeMarker = '/include/';
       const includeName = header.slice(
         header.indexOf(includeMarker) + includeMarker.length,
@@ -1369,6 +1591,8 @@ function selfTest() {
     'OK: core architecture negative fixtures fail for the intended reasons.',
   );
 }
+
+const includePattern = /^\s*#\s*include\s*[<"]([^>"]+)[>"]/;
 
 if (process.argv.includes('--self-test')) {
   selfTest();

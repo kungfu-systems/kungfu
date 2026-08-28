@@ -121,10 +121,13 @@ test('unified recovery defaults to plan-only and requires exact execution identi
 });
 
 test('high-value command paths declare the registered preflight profiles', () => {
-  const runtimeSource = fs.readFileSync(
-    path.join(ROOT, 'framework/core/src/python/kungfu/cli/commands/runtime.py'),
-    'utf8',
-  );
+  const runtimeSource = [
+    'framework/core/src/python/kungfu/cli/commands/runtime.py',
+    'framework/core/src/python/kungfu/cli/commands/_runtime/peer.py',
+    'framework/core/src/python/kungfu/cli/commands/_runtime/service.py',
+  ]
+    .map((relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8'))
+    .join('\n');
   const storageSource = fs.readFileSync(
     path.join(ROOT, 'framework/core/src/python/kungfu/cli/commands/storage.py'),
     'utf8',

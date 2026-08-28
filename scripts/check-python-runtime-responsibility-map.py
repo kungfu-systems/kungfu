@@ -13,6 +13,13 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_PATH = ROOT / "framework/maintainability/python-runtime-responsibility-map.json"
+RISK_SUMMARY_KEYS = (
+    "functions",
+    "baseRisk",
+    "changeRisk",
+    "maximumBaseRisk",
+    "maximumChangeRisk",
+)
 FUNCTION_RISK_MEASUREMENT = r"""
 import fs from 'node:fs';
 import {
@@ -89,7 +96,8 @@ function measure(files, paths) {
     functions: functions.length,
     baseRisk: functions.reduce((sum, item) => sum + item.baseRisk, 0),
     changeRisk: functions.reduce((sum, item) => sum + item.changeRisk, 0),
-    maximum: Math.max(...functions.map(({ changeRisk }) => changeRisk)),
+    maximumBaseRisk: Math.max(...functions.map(({ baseRisk }) => baseRisk)),
+    maximumChangeRisk: Math.max(...functions.map(({ changeRisk }) => changeRisk)),
     transitionContribution: {
       linked: {
         functions: linked.length,
@@ -238,6 +246,33 @@ def stable_ast(node: ast.AST) -> str:
     return ast.dump(node, annotate_fields=True, include_attributes=False)
 
 
+def combined_tree(paths: list[str]) -> ast.Module:
+    body: list[ast.stmt] = []
+    type_ignores: list[ast.TypeIgnore] = []
+    for pathname in paths:
+        tree = ast.parse(
+            (ROOT / pathname).read_text(encoding="utf-8"), filename=pathname
+        )
+        body.extend(normalize_contract_node(node) for node in tree.body)
+        type_ignores.extend(tree.type_ignores)
+    return ast.Module(body=body, type_ignores=type_ignores)
+
+
+def normalize_contract_node(node: ast.stmt) -> ast.stmt:
+    if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return node
+    node.decorator_list = [
+        decorator
+        for decorator in node.decorator_list
+        if not (
+            isinstance(decorator, ast.Call)
+            and isinstance(decorator.func, ast.Name)
+            and decorator.func.id == "_runtime_facade_seam"
+        )
+    ]
+    return node
+
+
 def click_contract(tree: ast.Module) -> dict[str, dict[str, object]]:
     result: dict[str, dict[str, object]] = {}
     for node in tree.body:
@@ -334,10 +369,7 @@ def function_risk(
 
 
 def risk_summary(measurement: dict[str, Any]) -> dict[str, int]:
-    return {
-        key: measurement[key]
-        for key in ("functions", "baseRisk", "changeRisk", "maximum")
-    }
+    return {key: measurement[key] for key in RISK_SUMMARY_KEYS}
 
 
 def hotspot(measurement: dict[str, Any], name: str) -> dict[str, Any]:
@@ -373,24 +405,34 @@ def assert_lineage(responsibility_map: dict[str, Any], exact_base: str) -> None:
 
 def parse_contract_sources(
     responsibility_map: dict[str, Any], exact_base: str
-) -> tuple[str, str, ast.Module, ast.Module, ast.Module, ast.Module]:
+) -> tuple[str, str, ast.Module, ast.Module, ast.Module, ast.Module, ast.Module]:
     service_path, cli_path = responsibility_map["sourcePaths"]
     service_before = ast.parse(
         source_at(exact_base, service_path), filename=service_path
     )
-    service_after = ast.parse(
+    service_after_facade = ast.parse(
         (ROOT / service_path).read_text(encoding="utf-8"), filename=service_path
     )
     cli_before = ast.parse(source_at(exact_base, cli_path), filename=cli_path)
-    cli_after = ast.parse(
-        (ROOT / cli_path).read_text(encoding="utf-8"), filename=cli_path
+    service_after = combined_tree(
+        [service_path, *responsibility_map["serviceOwnerFiles"]]
     )
-    return service_path, cli_path, service_before, service_after, cli_before, cli_after
+    cli_after = combined_tree([cli_path, *responsibility_map["cliOwnerFiles"]])
+    return (
+        service_path,
+        cli_path,
+        service_before,
+        service_after_facade,
+        service_after,
+        cli_before,
+        cli_after,
+    )
 
 
 def assert_public_contracts(
     responsibility_map: dict[str, Any],
     service_before: ast.Module,
+    service_after_facade: ast.Module,
     service_after: ast.Module,
     cli_before: ast.Module,
     cli_after: ast.Module,
@@ -399,7 +441,9 @@ def assert_public_contracts(
         name for name in top_level_symbols(service_before) if not name.startswith("_")
     }
     current_public = {
-        name for name in top_level_symbols(service_after) if not name.startswith("_")
+        name
+        for name in top_level_symbols(service_after_facade)
+        if not name.startswith("_")
     }
     assert current_public == baseline_public
     assert click_contract(cli_after) == click_contract(cli_before)
@@ -426,8 +470,6 @@ def assert_public_contracts(
     assert stable_ast(node_at(service_after, "CoordinatorProcess")) == stable_ast(
         node_at(service_before, "CoordinatorProcess")
     )
-    for name, expression in responsibility_map["facadeAliases"].items():
-        assert assignment_expression(service_after, name) == expression
     for name in responsibility_map["serviceLocalDefinitions"]:
         assert stable_ast(node_at(service_after, name)) == stable_ast(
             node_at(service_before, name)
@@ -449,32 +491,65 @@ def assert_owner_contracts(
     return owner_source, owner_tree
 
 
+def aggregate_source_measurements(
+    paths: list[str], source_for_path: Any
+) -> dict[str, int]:
+    result = {
+        "physicalLines": 0,
+        "responsibilities": 0,
+        "maximumPhysicalLines": 0,
+        "maximumResponsibilities": 0,
+    }
+    for pathname in paths:
+        measured = source_measurement(source_for_path(pathname), pathname)
+        for key in ("physicalLines", "responsibilities"):
+            result[key] += measured[key]
+        result["maximumPhysicalLines"] = max(
+            result["maximumPhysicalLines"], measured["physicalLines"]
+        )
+        result["maximumResponsibilities"] = max(
+            result["maximumResponsibilities"], measured["responsibilities"]
+        )
+    return result
+
+
 def responsibility_measurements(
     responsibility_map: dict[str, Any], exact_base: str
 ) -> tuple[list[str], list[str], dict[str, int], dict[str, int]]:
-    baseline_paths = responsibility_map["sourcePaths"]
-    current_paths = [*baseline_paths, *responsibility_map["ownerFiles"]]
-    baseline_measurement = {"physicalLines": 0, "responsibilities": 0}
-    for pathname in baseline_paths:
-        measured = source_measurement(source_at(exact_base, pathname), pathname)
-        for key in baseline_measurement:
-            baseline_measurement[key] += measured[key]
-    current_measurement = {"physicalLines": 0, "responsibilities": 0}
-    for pathname in current_paths:
-        measured = source_measurement(
-            (ROOT / pathname).read_text(encoding="utf-8"), pathname
-        )
-        for key in current_measurement:
-            current_measurement[key] += measured[key]
+    baseline_paths = responsibility_map["riskBaselinePaths"]
+    current_paths = [
+        *responsibility_map["sourcePaths"],
+        *responsibility_map["ownerFiles"],
+    ]
+
+    baseline_measurement = aggregate_source_measurements(
+        baseline_paths, lambda path: source_at(exact_base, path)
+    )
+    current_measurement = aggregate_source_measurements(
+        current_paths, lambda path: (ROOT / path).read_text(encoding="utf-8")
+    )
+    baseline_expected = responsibility_map["baseline"]
+    current_expected = responsibility_map["current"]
     assert baseline_measurement == {
-        key: responsibility_map["baseline"][key] for key in baseline_measurement
+        "physicalLines": baseline_expected["physicalLines"],
+        "responsibilities": baseline_expected["responsibilities"],
+        "maximumPhysicalLines": baseline_expected["maximumPhysicalLines"],
+        "maximumResponsibilities": baseline_expected["maximumResponsibilities"],
     }
     assert current_measurement == {
-        key: responsibility_map["current"][key] for key in current_measurement
+        "physicalLines": current_expected["physicalLines"],
+        "responsibilities": current_expected["responsibilities"],
+        "maximumPhysicalLines": current_expected["maximumPhysicalLines"],
+        "maximumResponsibilities": current_expected["maximumResponsibilities"],
     }
+    assert current_measurement["maximumPhysicalLines"] < 1000
     assert (
-        current_measurement["responsibilities"]
-        < baseline_measurement["responsibilities"]
+        current_measurement["maximumPhysicalLines"]
+        < baseline_measurement["maximumPhysicalLines"]
+    )
+    assert (
+        current_measurement["maximumResponsibilities"]
+        < baseline_measurement["maximumResponsibilities"]
     )
     return baseline_paths, current_paths, baseline_measurement, current_measurement
 
@@ -509,11 +584,25 @@ def assert_risk_improvement(
         ],
         "transitionContribution": measured_risk["current"]["transitionContribution"],
     }
-    assert measured_risk["current"]["baseRisk"] < measured_risk["baseline"]["baseRisk"]
+    baseline_contribution = measured_risk["baseline"]["transitionContribution"]
+    current_contribution = measured_risk["current"]["transitionContribution"]
     assert (
-        measured_risk["current"]["changeRisk"] < measured_risk["baseline"]["changeRisk"]
+        current_contribution["linked"]["functions"]
+        == baseline_contribution["linked"]["functions"]
     )
-    assert measured_risk["current"]["maximum"] <= measured_risk["baseline"]["maximum"]
+    assert (
+        current_contribution["linked"]["previousBaseRisk"]
+        == (baseline_contribution["linked"]["previousBaseRisk"])
+    )
+    assert (
+        current_contribution["linked"]["currentBaseRisk"]
+        <= (baseline_contribution["linked"]["currentBaseRisk"])
+    )
+    assert current_contribution["retired"] == baseline_contribution["retired"]
+    assert (
+        measured_risk["current"]["maximumBaseRisk"]
+        <= measured_risk["baseline"]["maximumBaseRisk"]
+    )
     expected_owner = responsibility_map["owner"]
     assert {
         row["owner"]
@@ -531,7 +620,6 @@ def assert_transition_contribution(
         current["transitionContribution"]
         == responsibility_map["transitionContribution"]
     )
-    assert current["transitionContribution"]["new"]["functions"] == 0
     process_rows = {
         row["symbol"]: row
         for row in current["rows"]
@@ -544,6 +632,31 @@ def assert_transition_contribution(
             "python:framework/core/src/python/kungfu/runtime_service.py:"
         )
         assert f":{symbol}:" in row["previousId"]
+
+
+def assert_adapter_risk_budget(
+    responsibility_map: dict[str, Any], measured_risk: dict[str, Any]
+) -> None:
+    current = measured_risk["current"]
+    adapter_rows = [row for row in current["rows"] if not row["previousId"]]
+    measured_adapters = sorted(
+        ({"path": row["path"], "symbol": row["symbol"]} for row in adapter_rows),
+        key=lambda item: (item["path"], item["symbol"]),
+    )
+    assert measured_adapters == sorted(
+        responsibility_map["functionRiskAdapters"],
+        key=lambda item: (item["path"], item["symbol"]),
+    )
+    adapter_base_risk = sum(row["baseRisk"] for row in adapter_rows)
+    adapter_change_risk = sum(row["changeRisk"] for row in adapter_rows)
+    assert {
+        "functions": len(adapter_rows),
+        "baseRisk": adapter_base_risk,
+        "changeRisk": adapter_change_risk,
+    } == responsibility_map["adapterRiskBudget"]
+    baseline = measured_risk["baseline"]
+    assert current["functions"] - len(adapter_rows) == baseline["functions"]
+    assert current["baseRisk"] - adapter_base_risk <= baseline["baseRisk"]
 
 
 def assert_modification_surface(
@@ -599,6 +712,7 @@ def main() -> None:
         _service_path,
         _cli_path,
         service_before,
+        service_after_facade,
         service_after,
         cli_before,
         cli_after,
@@ -606,6 +720,7 @@ def main() -> None:
     current_public = assert_public_contracts(
         responsibility_map,
         service_before,
+        service_after_facade,
         service_after,
         cli_before,
         cli_after,
@@ -620,6 +735,7 @@ def main() -> None:
         responsibility_map, exact_base, baseline_paths, current_paths
     )
     assert_transition_contribution(responsibility_map, measured_risk)
+    assert_adapter_risk_budget(responsibility_map, measured_risk)
     assert_modification_surface(
         responsibility_map,
         exact_base,

@@ -14,6 +14,7 @@ from kungfu import (
 )
 from kungfu.assignment_runtime import fresh_recovery as assignment_fresh_recovery
 from kungfu.assignment_runtime import profile_lifecycle
+from kungfu.assignment_runtime import recovery_continuation
 from kungfu.assignment_runtime.authority import LocalRuntimeError, WorkControlAuthority
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import assignment_review
@@ -874,6 +875,170 @@ def test_fresh_recovery_plan_is_resume_new_attempt_without_lifecycle_replay():
     assert plan["writeOccurred"] is False
 
 
+def test_fresh_recovery_records_exact_non_authoritative_continuation(
+    tmp_path,
+):
+    status, binding, _plan = _fresh_recovery_fixture()
+    status["phase"] = "executing"
+    status["active_lease"] = None
+    status["next_actions"] = [{"action": "fresh-recovery-plan"}]
+    plan = assignment_fresh_recovery.build_plan(
+        workspace={
+            "id": "project:test",
+            "root": "/project",
+            "identityRoot": f"sha256:{'4' * 64}",
+        },
+        status=status,
+        binding=binding,
+        previous_attempt_id="native:old",
+        expected_request_root=f"sha256:{'1' * 64}",
+        expected_work_definition_root=f"sha256:{'2' * 64}",
+        expected_profile_root=f"sha256:{'3' * 64}",
+        recovery_profile={
+            "profileId": "kungfu.work-control",
+            "profileRoot": f"sha256:{'3' * 64}",
+            "sourceContractRoot": f"sha256:{'6' * 64}",
+        },
+        profile_active=True,
+        now="2026-08-25T09:00:00Z",
+    )
+
+    assert [effect["stage"] for effect in plan["effects"]] == [
+        "bind-new-attempt",
+        "record-recovery-continuation",
+    ]
+    assert set(plan["forbiddenEffects"]) == {"admit", "claim", "kickoff"}
+    receipt_body = {
+        "schema": assignment_fresh_recovery.RECEIPT_SCHEMA,
+        "ok": True,
+        "status": "recovered",
+        "continuationMode": assignment_fresh_recovery.CONTINUATION_MODE,
+        "planRoot": plan["planRoot"],
+        "authorizedBy": "maintainer:test",
+        "workRef": plan["workRef"],
+        "attempt": plan["attempt"],
+        "profile": {},
+        "binding": {"receipt": {"receiptRoot": f"sha256:{'8' * 64}"}},
+        "preservation": {
+            "assignmentRoot": plan["work"]["assignmentRoot"],
+            "lifecycleStateRoot": plan["work"]["lifecycleStateRoot"],
+            "phase": "executing",
+            "queryProofRoot": plan["work"]["systemTimeCut"],
+        },
+        "writeOccurred": True,
+        "assignmentWrites": [],
+        "nextActions": [],
+    }
+    receipt = {
+        **receipt_body,
+        "receiptRoot": assignment_fresh_recovery._root(receipt_body),
+    }
+    continuation = assignment_fresh_recovery.register_continuation(
+        tmp_path, plan, receipt
+    )
+    assert continuation is not None
+    assert continuation["writeAuthority"] == "none"
+    assert continuation["assignmentWrites"] == []
+    assert continuation["allowedNextActions"] == ["claim-completion"]
+    projected = json.loads(json.dumps(status))
+    projected["work_semantics"] = {
+        "schema": "kungfu.work-semantics.status/v1",
+        "phase": "completion-claimed",
+        "next_actions": [{"action": "record-input-snapshot"}],
+    }
+    assert (
+        recovery_continuation.resolve(
+            tmp_path, "initiative:test", "assignment:test", projected
+        )
+        == continuation
+    )
+
+    drifted = json.loads(json.dumps(projected))
+    drifted["completion_claim_count"] = 2
+    with __import__("pytest").raises(ValueError, match="does not match retained Work"):
+        recovery_continuation.resolve(
+            tmp_path, "initiative:test", "assignment:test", drifted
+        )
+
+
+def test_status_verifies_recovery_continuation_before_adding_display_identity(
+    tmp_path,
+    monkeypatch,
+):
+    status, binding, _plan = _fresh_recovery_fixture()
+    status["phase"] = "executing"
+    status["active_lease"] = None
+    status["next_actions"] = [{"action": "fresh-recovery-plan"}]
+    plan = assignment_fresh_recovery.build_plan(
+        workspace={
+            "id": "project:test",
+            "root": "/project",
+            "identityRoot": f"sha256:{'4' * 64}",
+        },
+        status=status,
+        binding=binding,
+        previous_attempt_id="native:old",
+        expected_request_root=f"sha256:{'1' * 64}",
+        expected_work_definition_root=f"sha256:{'2' * 64}",
+        expected_profile_root=f"sha256:{'3' * 64}",
+        recovery_profile={
+            "profileId": "kungfu.work-control",
+            "profileRoot": f"sha256:{'3' * 64}",
+            "sourceContractRoot": f"sha256:{'6' * 64}",
+        },
+        profile_active=True,
+        now="2026-08-25T09:00:00Z",
+    )
+    receipt_body = {
+        "schema": assignment_fresh_recovery.RECEIPT_SCHEMA,
+        "ok": True,
+        "status": "recovered",
+        "continuationMode": assignment_fresh_recovery.CONTINUATION_MODE,
+        "planRoot": plan["planRoot"],
+        "authorizedBy": "maintainer:test",
+        "workRef": plan["workRef"],
+        "attempt": plan["attempt"],
+        "profile": {},
+        "binding": {"receipt": {"receiptRoot": f"sha256:{'8' * 64}"}},
+        "preservation": {
+            "assignmentRoot": plan["work"]["assignmentRoot"],
+            "lifecycleStateRoot": plan["work"]["lifecycleStateRoot"],
+            "phase": "executing",
+            "queryProofRoot": plan["work"]["systemTimeCut"],
+        },
+        "writeOccurred": True,
+        "assignmentWrites": [],
+        "nextActions": [],
+    }
+    receipt = {
+        **receipt_body,
+        "receiptRoot": assignment_fresh_recovery._root(receipt_body),
+    }
+    monkeypatch.setattr(
+        assignment_command,
+        "_profile_read",
+        lambda *_args, **_kwargs: json.loads(json.dumps(status)),
+    )
+    unavailable = assignment_command._status(
+        tmp_path, "initiative:test", "assignment:test"
+    )
+    assert unavailable["next_actions"][0]["action"] == "fresh-recovery-plan"
+
+    continuation = assignment_fresh_recovery.register_continuation(
+        tmp_path, plan, receipt
+    )
+    recovered = assignment_command._status(
+        tmp_path, "initiative:test", "assignment:test"
+    )
+    assert recovered["next_actions"][0]["action"] == "claim-completion"
+    assert recovered["recovery_continuation"] == {
+        "continuationRoot": continuation["continuationRoot"],
+        "newSessionAttemptId": "native:new",
+        "writeAuthority": "none",
+        "allowedNextActions": ["claim-completion"],
+    }
+
+
 def test_fresh_recovery_separates_retained_authority_from_target_profile(
     tmp_path, monkeypatch
 ):
@@ -1176,6 +1341,44 @@ def test_fresh_recovery_apply_preserves_complete_lifecycle_state():
     assert receipt["assignmentWrites"] == []
     assert receipt["preservation"]["phase"] == "completion-claimed"
     assert [event[0] for event in events] == ["profile", "bind"]
+
+
+def test_fresh_recovery_ignores_profile_reader_work_semantics_projection():
+    status, binding, plan = _fresh_recovery_fixture()
+    projected = json.loads(json.dumps(status))
+    projected["work_semantics"] = {
+        "schema": "kungfu.work-semantics.status/v1",
+        "phase": "completion-claimed",
+        "next_actions": [{"action": "record-input-snapshot"}],
+    }
+    observations = iter(
+        [
+            projected,
+            json.loads(json.dumps(status)),
+            json.loads(json.dumps(status)),
+        ]
+    )
+
+    receipt = assignment_fresh_recovery.apply_plan(
+        plan,
+        expected_plan_root=plan["planRoot"],
+        authorized_by="maintainer:test",
+        status_reader=lambda: next(observations),
+        session_reader=lambda: dict(binding["session"]),
+        prepare_profile=lambda _actor: {},
+        bind_work=lambda expected: {
+            "workRef": dict(expected["workRef"]),
+            "receipt": {"receiptRoot": f"sha256:{'8' * 64}"},
+        },
+        now="2026-08-25T09:01:00Z",
+    )
+
+    assert receipt["ok"] is True
+    assert receipt["assignmentWrites"] == []
+    assert (
+        receipt["preservation"]["lifecycleStateRoot"]
+        == plan["work"]["lifecycleStateRoot"]
+    )
 
 
 def test_fresh_recovery_fails_closed_on_attempt_plan_or_state_drift():

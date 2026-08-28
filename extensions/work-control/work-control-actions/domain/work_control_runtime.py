@@ -15,7 +15,7 @@ from typing import Any, Literal, TypeVar, cast
 
 from kungfu import profile_composition, profile_sdk
 from kungfu.canonical_json import canonical_json_text
-from kungfu.storage import service as storage_service
+from kungfu.storage import content_store, service as storage_service
 
 CONTRACT_WORLD_ID = "kungfu.initiative-assignment"
 CONTRACT_VERSION = "1"
@@ -735,17 +735,17 @@ def query_state(
         cut_system_time=cut_system_time,
     )
     result = _batched_state_query(runtime_dir, definition)
-    materials = storage_service.fact_material_list(
-        runtime_dir, cut_system_time=cut_system_time
-    )
-    payloads = materials.get("payloads", {})
     rows = []
     initiative = None
     assignments = []
     claims = []
     reviews = []
     for row in result.get("rows", []):
-        body = payloads.get(str(row.get("payload_hash") or ""))
+        body = json.loads(
+            content_store.get(
+                runtime_dir, content_store.PAYLOADS_NAMESPACE, row["payload_hash"]
+            )
+        )
         resolved = {**row, "payload": body}
         rows.append(resolved)
         if row.get("fact_surface_id") == INITIATIVE_SURFACE_ID:
@@ -1735,6 +1735,23 @@ def claim_assignment_execution(
     }
 
 
+def resolve_canonical_state(
+    runtime_dir: str,
+    initiative_id: str,
+    storage_source_id: str,
+    existing: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Reuse one canonical projection or obtain it from its query authority."""
+
+    if existing is not None:
+        return existing
+    return query_state(
+        runtime_dir,
+        initiative_id=initiative_id,
+        storage_source_id=storage_source_id,
+    )
+
+
 def assignment_orchestration_status(
     runtime_dir: str,
     *,
@@ -1742,15 +1759,14 @@ def assignment_orchestration_status(
     assignment_id: str,
     storage_source_id: str = "kungfu",
     now: str = "",
+    canonical_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fold append-only orchestration facts into one deterministic Assignment phase."""
 
     from . import native_state
 
-    state = native_state.query_state(
-        runtime_dir,
-        initiative_id=initiative_id,
-        storage_source_id=storage_source_id,
+    state = resolve_canonical_state(
+        runtime_dir, initiative_id, storage_source_id, canonical_state
     )
     assignment = native_state.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
