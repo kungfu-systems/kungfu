@@ -1,0 +1,57 @@
+{
+  "adapter": {
+    "argumentsRoot": "sha256:37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "path": "scripts/auditable-demo-platform.mjs",
+    "sha256": "sha256:7039a4551d44d8ff033eeb4d0c9ebe84cc4a21f23b70f8a216b07216826fa208"
+  },
+  "qualifiedInputs": {
+    "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+    "evidenceClass": "exact-standalone-binary-declarative-demo/v1",
+    "projection": "sha256:3096bd3fc6bb80af361ddf9555a23ba6c656a65b3e601a97db0a589728be54ff",
+    "renditionSet": {
+      "renditions": [
+        {
+          "captureRoot": "sha256:29a2326c809ffb1b0643fdfa4508ae5e3c8c3565ce8439b859fa56bbbb649856",
+          "id": "1080p",
+          "projectionRoot": "sha256:3096bd3fc6bb80af361ddf9555a23ba6c656a65b3e601a97db0a589728be54ff",
+          "role": "primary",
+          "sceneRoot": "sha256:4ff88a1ad753e4be1ff7bf92a297bd85d722f3bb6c9c1eea403dbc1133324af4",
+          "transcriptRoot": "sha256:f1435e3bfdce32c355bf4fc9a439de3526e8bd1350264aad5c1c3e142d318510"
+        },
+        {
+          "captureRoot": "sha256:06717b88ff674c00316c1e380631e6880a3d0204b83a9962863af99a94988ee0",
+          "id": "720p",
+          "projectionRoot": "sha256:64036fef4975d108a1a9999a966c1324bdd4849680ddd8fbc52eff66990e7921",
+          "role": "responsive",
+          "sceneRoot": "sha256:1d7cb71bb11bb1f6c434607a6f80aa08f83fba71c91793605de93184360ba0fc",
+          "transcriptRoot": "sha256:ab41d0e1ae6278e24f9491a2080fc33a7023be866edfd785a21c0c97cb468c68"
+        }
+      ],
+      "root": "sha256:153d69d8b32b918900cb47155595a7708c04c5cf8dfd16796be684b17c3b62ac",
+      "schema": "kungfu.auditable-demo.rendition-set/v1"
+    },
+    "scene": "sha256:4ff88a1ad753e4be1ff7bf92a297bd85d722f3bb6c9c1eea403dbc1133324af4",
+    "terminalCapture": {
+      "root": "sha256:29a2326c809ffb1b0643fdfa4508ae5e3c8c3565ce8439b859fa56bbbb649856",
+      "schema": "kungfu.terminal-capture/v1"
+    },
+    "transcript": "sha256:f1435e3bfdce32c355bf4fc9a439de3526e8bd1350264aad5c1c3e142d318510"
+  },
+  "renderer": {
+    "image": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1",
+    "mediaProfile": "responsive-long-form-web-delivery-v1",
+    "mediaQualificationRoot": "sha256:9120264ad3e665a08a7045e7821bb6259154ab4fc6796b1c0c51f596f83ab6ab",
+    "smokeManifestRoot": "sha256:262970b8dbb72b13fcada5a749797bedaf5fc251d7bc9ba342527e711910f3ff"
+  },
+  "schema": "buildchain.auditable-demo-gate/v1",
+  "sourceArtifact": {
+    "digest": "sha256:f547523cb2727e773d4d00df22a793277d2d423a7784ab97bf5b7a8dc5eab9ec",
+    "expiresAt": "2026-09-11T15:56:47Z",
+    "id": "9692345872",
+    "name": "declarative-demo-captures-69886a5579a5-33183188545-1",
+    "runId": "33183188545"
+  },
+  "sourceRepository": "kungfu-systems/kungfu",
+  "sourceSha": "69886a5579a53f74cf7e1cabfa3f087a5468a5c1",
+  "status": "passed"
+}

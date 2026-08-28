@@ -1,0 +1,71 @@
+{
+  "artifact": {
+    "binaryRoot": "sha256:6b774ad21f7f65b874448f8aa54164e39fd08ee92b5104497dcaa7debe3be27f",
+    "metadataContract": "kungfu.declarative-demo-binary/v1",
+    "metadataRoot": "sha256:a2a39e6faa71c13934434d30fcf9427344c874f292895ee9080942d03401c717",
+    "platformId": "linux-x64",
+    "runtimeDependencies": []
+  },
+  "authority": {
+    "classification": "capture-source-evidence",
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ]
+  },
+  "demo": {
+    "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.",
+    "id": "agent-work-lab-autoplay",
+    "title": "Can Work survive a new Agent?"
+  },
+  "execution": {
+    "durationClass": "long-form"
+  },
+  "networkIsolation": "docker-none",
+  "product": {
+    "binaryName": "kungfu",
+    "displayName": "Kungfu",
+    "distribution": "standalone-binary",
+    "id": "kungfu"
+  },
+  "renditions": [
+    {
+      "columns": 150,
+      "height": 1080,
+      "id": "1080p",
+      "role": "primary",
+      "rows": 36,
+      "runSummary": "renditions/1080p/run-summary.json",
+      "runSummaryRoot": "sha256:bfa066110c0100a75f2d154264b5aa3913df0539f85c518d6ee181ced9d39ef1",
+      "terminalCapture": "renditions/1080p/terminal-capture.json",
+      "terminalCaptureRoot": "sha256:184917f2b3245981b72796e11bc2ebc91daf54af6519b2174678776d9dffcb06",
+      "transcript": "renditions/1080p/complete-transcript.txt",
+      "width": 1920
+    },
+    {
+      "columns": 150,
+      "height": 720,
+      "id": "720p",
+      "role": "responsive",
+      "rows": 28,
+      "runSummary": "renditions/720p/run-summary.json",
+      "runSummaryRoot": "sha256:662e7d000a7c27ac0478feb70713bf70cb5f125b8a8745d42d0db6fb8567896a",
+      "terminalCapture": "renditions/720p/terminal-capture.json",
+      "terminalCaptureRoot": "sha256:c414075292f2b447b942c373a1ecdc251c03529c8a46321bdb5f4f75ff843453",
+      "transcript": "renditions/720p/complete-transcript.txt",
+      "width": 1280
+    }
+  ],
+  "root": "sha256:f73bf01cc5228e4c4f6c0a45162957d7ade49956e69e54bb6c3848b7f9f8278d",
+  "scenarioRoot": "sha256:6b7601fb0da94a3f1ba7954fde62aeb1660eace1c8880a0793cf577544da0292",
+  "schema": "buildchain.declarative-demo-capture/v1",
+  "sourceCoordinateRoot": "sha256:14d22b4c88431ddb9a00e29a24c6296213ec9e14d44b656614a6e69949e31372",
+  "status": "qualified"
+}
