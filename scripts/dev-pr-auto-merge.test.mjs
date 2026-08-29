@@ -619,6 +619,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
+  const affectedNativeWorkflow = fs.readFileSync(
+    '.github/workflows/affected-native-pr.yml',
+    'utf8',
+  );
   assert.match(action, /ref: e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92/u);
   assert.match(
     action,
@@ -631,6 +635,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
   assert.match(
     action,
     /BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker\/v1/u,
+  );
+  assert.match(
+    affectedNativeWorkflow,
+    /command: \|[\s\S]*?export CC=gcc-14[\s\S]*?export CXX=g\+\+-14[\s\S]*?export KUNGFU_BUILDCHAIN_SOURCE_BUILD=1[\s\S]*?export KUNGFU_AFFECTED_NATIVE_PARTITION_COUNT=2[\s\S]*?export KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX='\$\{\{ matrix\.partition \}\}'[\s\S]*?export PATH="\$PWD\/\$\(dirname "\$cmake_js_bin"\):\$PATH"/u,
   );
   assert.doesNotMatch(action, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(action, /anonymously observed live fenced Warrant/u);
