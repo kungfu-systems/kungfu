@@ -38,6 +38,9 @@ on:
         required: false
         type: number
         default: 0
+      # Buildchain's active-Warrant handoff dispatch carries this complete
+      # envelope. The receiver re-resolves its exact source authority below;
+      # these declarations only make the bounded handoff transport valid.
       target-branch:
         description: Handoff compatibility only; the protected default branch remains authoritative
         required: false
@@ -138,100 +141,6 @@ on:
         required: false
         type: boolean
         default: true
-      # Buildchain's active-Warrant handoff dispatch carries this complete
-      # envelope.  The receiver re-resolves its exact source authority below;
-      # these declarations only make the bounded handoff transport valid on
-      # GitHub Actions, rather than trusting dispatch-provided evidence.
-      target-branch:
-        description: Handoff-only protected branch coordinate
-        required: false
-        type: string
-        default: ""
-      assignment-root:
-        description: Handoff-only assignment evidence root
-        required: false
-        type: string
-        default: ""
-      initiative-root:
-        description: Handoff-only initiative evidence root
-        required: false
-        type: string
-        default: ""
-      source-identity-root:
-        description: Handoff-only source identity root
-        required: false
-        type: string
-        default: ""
-      source-patch-root:
-        description: Handoff-only source patch root
-        required: false
-        type: string
-        default: ""
-      plan-root:
-        description: Handoff-only delivery plan root
-        required: false
-        type: string
-        default: ""
-      closure-root:
-        description: Handoff-only closure root
-        required: false
-        type: string
-        default: ""
-      dependency-root:
-        description: Handoff-only dependency root
-        required: false
-        type: string
-        default: ""
-      toolchain-root:
-        description: Handoff-only toolchain root
-        required: false
-        type: string
-        default: ""
-      environment-root:
-        description: Handoff-only native environment root
-        required: false
-        type: string
-        default: ""
-      affected-paths-json:
-        description: Handoff-only affected paths envelope
-        required: false
-        type: string
-        default: "[]"
-      shard-evidence-roots-json:
-        description: Handoff-only shard evidence roots envelope
-        required: false
-        type: string
-        default: "[]"
-      delivery-class:
-        description: Handoff-only delivery class
-        required: false
-        type: string
-        default: ""
-      delivery-priority:
-        description: Handoff-only delivery priority
-        required: false
-        type: string
-        default: ""
-      native-command:
-        description: Handoff-only native execution command
-        required: false
-        type: string
-        default: ""
-      native-command-root:
-        description: Handoff-only native execution command root
-        required: false
-        type: string
-        default: ""
-      native-heartbeat-seconds:
-        description: Handoff-only native heartbeat cadence
-        required: false
-        type: string
-        default: ""
-      release-blocker-priority-json:
-        description: Handoff-only release blocker priority envelope
-        required: false
-        type: string
-        default: "[]"
 
 permissions:
   contents: read
@@ -437,7 +346,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: cd8318d57b0506493114afcc63b9aacef741d3c4
+          ref: 507d8e17099d2cd02fb38aa5bb49a5c06addfbe3
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -738,9 +647,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cd8318d57b0506493114afcc63b9aacef741d3c4
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@507d8e17099d2cd02fb38aa5bb49a5c06addfbe3
     with:
-      buildchain-ref: cd8318d57b0506493114afcc63b9aacef741d3c4
+      buildchain-ref: 507d8e17099d2cd02fb38aa5bb49a5c06addfbe3
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -1077,9 +986,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cd8318d57b0506493114afcc63b9aacef741d3c4
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@507d8e17099d2cd02fb38aa5bb49a5c06addfbe3
     with:
-      buildchain-ref: cd8318d57b0506493114afcc63b9aacef741d3c4
+      buildchain-ref: 507d8e17099d2cd02fb38aa5bb49a5c06addfbe3
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
