@@ -817,6 +817,7 @@ jobs:
             fi
             ./shifu install --frozen-lockfile
             if [ '${{ steps.plan.outputs.sdk-required }}' = true ] && [ '${{ matrix.partition }}' = 0 ]; then
+              uv run --frozen conan profile detect --force
               cmake_js_bin=""
               for candidate in node_modules/.pnpm/cmake-js@*/node_modules/cmake-js/bin/cmake-js; do
                 if [ -x "$candidate" ]; then cmake_js_bin="$candidate"; break; fi
