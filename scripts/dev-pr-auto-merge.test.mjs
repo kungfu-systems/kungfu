@@ -19,7 +19,7 @@ const steadyStateDogfoodFixturePath =
   'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 const protectedWarrantRuntimeRef = 'a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab';
 const protectedWarrantRuntimeSelector =
-  'train/v4/v4.0/release-topology-convergence';
+  'train/v4/v4.0/dev-delivery-heartbeat-cas-retry-v4';
 
 test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs', () => {
   const reusableRef = workflow.match(
