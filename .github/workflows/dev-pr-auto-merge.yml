@@ -340,7 +340,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
+          ref: 1cb2581c6cb5bd677d32bd242f89b778d23c7018
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -641,7 +641,7 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@1cb2581c6cb5bd677d32bd242f89b778d23c7018
     with:
       buildchain-ref: train/v4/v4.0/dev-delivery-legacy-queued-native-isolation
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
@@ -979,7 +979,7 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@1cb2581c6cb5bd677d32bd242f89b778d23c7018
     with:
       buildchain-ref: train/v4/v4.0/dev-delivery-legacy-queued-native-isolation
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
