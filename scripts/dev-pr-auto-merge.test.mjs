@@ -719,8 +719,9 @@ test('native execution uses one exact protected runtime and continuous fence wra
   );
   assert.match(
     action,
-    /native-execution-under-warrant\.mjs[\s\S]*--qualified-base[\s\S]*--toolchain-root[\s\S]*--environment-root[\s\S]*--heartbeat-seconds 300[\s\S]*--lease-seconds 5400/u,
+    /GITHUB_TOKEN='\$\{\{ github\.token \}\}' node "\$runtime\/scripts\/dev-delivery-warrant\.mjs" observe[\s\S]*fencing-token "\$fence"[\s\S]*lease-generation "\$generation"[\s\S]*setsid env -u GITHUB_TOKEN[\s\S]*native-under-warrant\.mjs[\s\S]*kill -TERM -- "-\$native_pid"/u,
   );
+  assert.doesNotMatch(action, /^ {8}GITHUB_TOKEN:/mu);
 });
 
 test('steady-state Warrant dogfood remains a full-native canary with explicit safety invariants', () => {
