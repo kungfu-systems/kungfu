@@ -22,10 +22,10 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '30cbbc46870871a0eacbe952935ea753e473ff25');
+  assert.equal(reusableRef, '507d8e17099d2cd02fb38aa5bb49a5c06addfbe3');
   assert.match(
     workflow,
-    /buildchain-ref: 30cbbc46870871a0eacbe952935ea753e473ff25/u,
+    /buildchain-ref: 507d8e17099d2cd02fb38aa5bb49a5c06addfbe3/u,
   );
   assert.doesNotMatch(workflow, /buildchain-ref: train\//u);
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
@@ -321,7 +321,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     landing,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@30cbbc46870871a0eacbe952935ea753e473ff25/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@507d8e17099d2cd02fb38aa5bb49a5c06addfbe3/u,
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
@@ -353,7 +353,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 30cbbc46870871a0eacbe952935ea753e473ff25/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 507d8e17099d2cd02fb38aa5bb49a5c06addfbe3/u,
   );
   assert.match(
     workflow,
@@ -664,10 +664,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
-  assert.match(action, /ref: 30cbbc46870871a0eacbe952935ea753e473ff25/u);
+  assert.match(action, /ref: 507d8e17099d2cd02fb38aa5bb49a5c06addfbe3/u);
   assert.match(
     action,
-    /test "\$\(git rev-parse HEAD\)" = 30cbbc46870871a0eacbe952935ea753e473ff25/u,
+    /test "\$\(git rev-parse HEAD\)" = 507d8e17099d2cd02fb38aa5bb49a5c06addfbe3/u,
   );
   assert.match(
     action,
