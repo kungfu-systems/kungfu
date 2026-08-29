@@ -242,7 +242,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 8493bf140a7f567e76aff3119f3d39ff026afc84
+          ref: ddac1876650f2faba5a9e1a2e5f55e7d836ac46b
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -543,9 +543,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@8493bf140a7f567e76aff3119f3d39ff026afc84
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cfdf71eb2297e67b1f606672f714c24adf50c160
     with:
-      buildchain-ref: 8493bf140a7f567e76aff3119f3d39ff026afc84
+      buildchain-ref: v4
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -575,7 +575,6 @@ jobs:
         --target-branch ${{ needs.resolve-target.outputs.target-branch }}
         --pull-request ${{ needs.resolve-target.outputs.expected-pr-number }}
         --expected-head ${{ needs.resolve-target.outputs.expected-head-sha }}
-        --status-context 'affected-native / linux'
         --output ../dev-delivery/kungfu-native-receipt.json
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
@@ -642,7 +641,7 @@ jobs:
         run: |
           set -euo pipefail
           evidence=.buildchain/native-check-bridge/warrant
-          warrant="$evidence/warrant.json"
+          warrant="$evidence/dev-delivery/warrant.json"
           test -f "$warrant"
 
           live_pr="$evidence/live-pr.json"
@@ -882,9 +881,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@8493bf140a7f567e76aff3119f3d39ff026afc84
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cfdf71eb2297e67b1f606672f714c24adf50c160
     with:
-      buildchain-ref: 8493bf140a7f567e76aff3119f3d39ff026afc84
+      buildchain-ref: v4
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -914,7 +913,6 @@ jobs:
         --target-branch ${{ needs.resolve-target.outputs.target-branch }}
         --pull-request ${{ needs.resolve-target.outputs.expected-pr-number }}
         --expected-head ${{ needs.resolve-target.outputs.expected-head-sha }}
-        --status-context 'affected-native / linux'
         --output ../dev-delivery/kungfu-native-receipt.json
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}

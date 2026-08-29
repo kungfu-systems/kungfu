@@ -10,18 +10,6 @@ import { pathToFileURL } from 'node:url';
 import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
-const TRANSIENT_GITHUB_STATUSES = new Set([429, 500, 502, 503, 504]);
-
-function defaultSleep(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function isTransientGitHubFailure(error) {
-  return (
-    error instanceof TypeError ||
-    TRANSIENT_GITHUB_STATUSES.has(Number(error?.status || 0))
-  );
-}
 
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
@@ -42,90 +30,6 @@ function positiveInteger(value, label) {
   if (!Number.isInteger(parsed) || parsed < 1)
     throw new Error(`${label} must be a positive integer`);
   return parsed;
-}
-
-export class GitHubNativeStatusClient {
-  constructor({
-    repository,
-    token,
-    apiUrl = 'https://api.github.com',
-    fetchImpl = globalThis.fetch,
-    retryAttempts = 3,
-    retryDelayMs = 1000,
-    sleepImpl = defaultSleep,
-  }) {
-    if (!repository) throw new Error('repository is required');
-    if (!token) throw new Error('GITHUB_TOKEN is required');
-    this.repository = repository;
-    this.token = token;
-    this.apiUrl = apiUrl.replace(/\/+$/u, '');
-    this.fetch = fetchImpl;
-    this.retryAttempts = positiveInteger(retryAttempts, 'retry attempts');
-    this.retryDelayMs = Number(retryDelayMs);
-    this.sleep = sleepImpl;
-    if (!Number.isFinite(this.retryDelayMs) || this.retryDelayMs < 0)
-      throw new Error('retry delay must be a non-negative number');
-  }
-
-  async request(requestPath, { method = 'GET', body } = {}) {
-    for (let attempt = 1; attempt <= this.retryAttempts; attempt += 1) {
-      try {
-        const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
-          method,
-          headers: {
-            accept: 'application/vnd.github+json',
-            authorization: `Bearer ${this.token}`,
-            'content-type': 'application/json',
-            'x-github-api-version': '2022-11-28',
-          },
-          body: body === undefined ? undefined : JSON.stringify(body),
-        });
-        const raw = await response.text();
-        const data = raw ? JSON.parse(raw) : null;
-        if (!response.ok) {
-          const error = new Error(
-            data?.message || `${method} ${requestPath} failed`,
-          );
-          error.status = response.status;
-          throw error;
-        }
-        return data;
-      } catch (error) {
-        if (attempt === this.retryAttempts || !isTransientGitHubFailure(error))
-          throw error;
-        await this.sleep(this.retryDelayMs * attempt);
-      }
-    }
-    throw new Error(`${method} ${requestPath} exhausted retry attempts`);
-  }
-
-  async requirePullRequest(number, expectedHead, targetBranch) {
-    const pullRequest = await this.request(
-      `/repos/${this.repository}/pulls/${number}`,
-    );
-    if (pullRequest?.head?.repo?.full_name !== this.repository)
-      throw new Error('native Warrant qualification rejects forked PR heads');
-    if (pullRequest?.head?.sha !== expectedHead)
-      throw new Error(
-        'native Warrant qualification observed source head drift',
-      );
-    if (pullRequest?.base?.ref !== targetBranch)
-      throw new Error(
-        'native Warrant qualification observed protected base drift',
-      );
-  }
-
-  async status(head, { state, context, description, targetUrl }) {
-    return this.request(`/repos/${this.repository}/statuses/${head}`, {
-      method: 'POST',
-      body: {
-        state,
-        context,
-        description: String(description).slice(0, 140),
-        target_url: targetUrl || undefined,
-      },
-    });
-  }
 }
 
 function defaultGit(cwd, args, options = {}) {
@@ -175,21 +79,12 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
   const cwd = path.resolve(options.cwd || process.cwd());
   const git = dependencies.git || defaultGit;
   const runStep = dependencies.runStep || defaultRunStep;
-  const client =
-    dependencies.client ||
-    new GitHubNativeStatusClient({
-      repository: options.repository,
-      token: options.token,
-      apiUrl: options.apiUrl,
-    });
   const now = dependencies.now || (() => new Date().toISOString());
   const expectedHead = exactSha(options.expectedHead, 'expected head');
   const pullRequestNumber = positiveInteger(
     options.pullRequestNumber,
     'pull request',
   );
-  const targetUrl = options.targetUrl || '';
-  const context = options.statusContext || 'affected-native / linux';
   const output = path.resolve(cwd, options.output);
   const planPath = path.join(
     cwd,
@@ -197,7 +92,6 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
   );
   const steps = [];
   const startedAt = now();
-  let statusStarted = false;
 
   const execute = (name, args, environment = {}) => {
     runStep(cwd, name, args, environment);
@@ -205,11 +99,6 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
   };
 
   try {
-    await client.requirePullRequest(
-      pullRequestNumber,
-      expectedHead,
-      options.targetBranch,
-    );
     const checkoutHead = exactSha(
       git(cwd, ['rev-parse', 'HEAD']),
       'candidate checkout head',
@@ -220,14 +109,6 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
     if (git(cwd, ['ls-files', '-u']))
       throw new Error('composed candidate contains unresolved conflicts');
     git(cwd, ['diff', '--check'], { stdio: 'pipe' });
-
-    await client.status(expectedHead, {
-      state: 'pending',
-      context,
-      description: 'Provisional Warrant owns native qualification',
-      targetUrl,
-    });
-    statusStarted = true;
 
     fs.mkdirSync(path.dirname(planPath), { recursive: true });
     execute(
@@ -311,11 +192,6 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
         'kfd:verify-owned-fixtures',
       ]);
 
-    await client.requirePullRequest(
-      pullRequestNumber,
-      expectedHead,
-      options.targetBranch,
-    );
     const receiptBody = {
       schema: 'kungfu.dev-delivery-native-under-warrant/v1',
       outcome: 'succeeded',
@@ -336,27 +212,10 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
     const receipt = { ...receiptBody, receiptRoot: digest(receiptBody) };
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, `${JSON.stringify(receipt, null, 2)}\n`);
-    await client.status(expectedHead, {
-      state: 'success',
-      context,
-      description: `Qualified under provisional Warrant: ${receipt.receiptRoot.slice(0, 19)}`,
-      targetUrl,
-    });
     process.stdout.write(`${JSON.stringify(receipt)}\n`);
     return receipt;
   } catch (error) {
-    if (statusStarted) {
-      try {
-        await client.status(expectedHead, {
-          state: 'failure',
-          context,
-          description: `Native Warrant qualification failed: ${error.message}`,
-          targetUrl,
-        });
-      } catch (statusError) {
-        error.message = `${error.message}; failure status update failed: ${statusError.message}`;
-      }
-    }
+    error.message = `credentialless native qualification failed: ${error.message}`;
     throw error;
   }
 }
@@ -368,17 +227,11 @@ async function main() {
     targetBranch: flag(args, 'target-branch', process.env.GITHUB_BASE_REF),
     pullRequestNumber: flag(args, 'pull-request'),
     expectedHead: flag(args, 'expected-head'),
-    statusContext: flag(args, 'status-context', 'affected-native / linux'),
     output: flag(
       args,
       'output',
       'product/qualification/delivery-warrant/native-receipt.json',
     ),
-    targetUrl: process.env.GITHUB_SERVER_URL
-      ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-      : '',
-    token: process.env.GITHUB_TOKEN,
-    apiUrl: process.env.GITHUB_API_URL,
   });
 }
 

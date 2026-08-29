@@ -13,7 +13,7 @@ import {
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const WARRANT_RUNTIME_SHA = '8493bf140a7f567e76aff3119f3d39ff026afc84';
+const WARRANT_RUNTIME_SHA = 'ddac1876650f2faba5a9e1a2e5f55e7d836ac46b';
 const WARRANT_READBACK_RUNTIME_SHA = '0f4004d0d2b2474c2135a3e88d29d9c85bc37834';
 const SOURCE_HEAD = '2'.repeat(40);
 const CONTRACT = JSON.parse(
@@ -228,6 +228,11 @@ test('mutating Warrant controllers share one runtime and read-only qualification
       workflow,
       new RegExp(WARRANT_RUNTIME_SHA, 'u'),
       `${workflowPath} must consume Buildchain ${WARRANT_RUNTIME_SHA}`,
+    );
+    assert.doesNotMatch(
+      workflow,
+      /buildchain-ref: train\//u,
+      `${workflowPath} must not mutate Warrant authority through a floating runtime ref`,
     );
   }
   const qualificationWorkflow = fs.readFileSync(
