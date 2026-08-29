@@ -727,6 +727,11 @@ test('native execution uses one exact protected runtime and continuous fence wra
     action,
     /BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker\/v1/u,
   );
+  assert.doesNotMatch(
+    action,
+    /GITHUB_TOKEN|GH_TOKEN|KUNGFU_GITHUB_TOKEN/u,
+    'credentialless native execution must not inherit a provider token',
+  );
   assert.match(
     affectedNativeWorkflow,
     /command: \|[\s\S]*?export CC=gcc-14[\s\S]*?export CXX=g\+\+-14[\s\S]*?export KUNGFU_BUILDCHAIN_SOURCE_BUILD=1[\s\S]*?export KUNGFU_AFFECTED_NATIVE_PARTITION_COUNT=2[\s\S]*?export KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX='\$\{\{ matrix\.partition \}\}'[\s\S]*?export PATH="\$PWD\/\$\(dirname "\$cmake_js_bin"\):\$PATH"/u,
