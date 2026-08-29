@@ -16,7 +16,7 @@ const steadyStateDogfoodFixturePath =
   'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 const protectedWarrantRuntimeRef = 'e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92';
 const protectedWarrantRuntimeSelector =
-  'train/v4/v4.0/dev-delivery-heartbeat-cas-retry-v4';
+  'train/v4/v4.0/dev-delivery-legacy-queued-native-isolation';
 const staleProtectedWarrantRuntimeSelector =
   'train/v4/v4.0/release-topology-convergence';
 
