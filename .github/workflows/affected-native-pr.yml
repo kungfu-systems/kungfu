@@ -806,7 +806,7 @@ jobs:
                 if [ -x "$candidate" ]; then cmake_js_bin="$candidate"; break; fi
               done
               test -n "$cmake_js_bin"
-              export PATH="$GITHUB_WORKSPACE/$(dirname "$cmake_js_bin"):$PATH"
+              export PATH="$(pwd -P)/$(dirname "$cmake_js_bin"):$PATH"
               cmake-js --version
               ./shifu build:core:sdk
               ./shifu pack:sdk
