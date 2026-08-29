@@ -25,8 +25,9 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   assert.equal(reusableRef, '30cbbc46870871a0eacbe952935ea753e473ff25');
   assert.match(
     workflow,
-    /buildchain-ref: train\/v4\/v4\.0\/warrant-readiness-fence/u,
+    /buildchain-ref: 30cbbc46870871a0eacbe952935ea753e473ff25/u,
   );
+  assert.doesNotMatch(workflow, /buildchain-ref: train\//u);
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
     workflow,

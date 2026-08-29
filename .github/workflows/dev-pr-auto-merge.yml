@@ -645,7 +645,7 @@ jobs:
       statuses: write
     uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@30cbbc46870871a0eacbe952935ea753e473ff25
     with:
-      buildchain-ref: train/v4/v4.0/warrant-readiness-fence
+      buildchain-ref: 30cbbc46870871a0eacbe952935ea753e473ff25
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -984,7 +984,7 @@ jobs:
       statuses: write
     uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@30cbbc46870871a0eacbe952935ea753e473ff25
     with:
-      buildchain-ref: train/v4/v4.0/warrant-readiness-fence
+      buildchain-ref: 30cbbc46870871a0eacbe952935ea753e473ff25
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
