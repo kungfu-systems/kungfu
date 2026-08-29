@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "bae567a2ba0641693782f6ed15688190276222ee725b17a35aa4adeb555f50ac"
+        "sha256": "f5d4af820c18e2ffea25783fb378b2010b99bb6cc2e1455e3aad6ae86ee7baa7"
       },
       "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
     },
@@ -121,7 +121,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "bae567a2ba0641693782f6ed15688190276222ee725b17a35aa4adeb555f50ac"
+        "sha256": "f5d4af820c18e2ffea25783fb378b2010b99bb6cc2e1455e3aad6ae86ee7baa7"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
@@ -171,7 +171,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "bae567a2ba0641693782f6ed15688190276222ee725b17a35aa4adeb555f50ac"
+        "sha256": "f5d4af820c18e2ffea25783fb378b2010b99bb6cc2e1455e3aad6ae86ee7baa7"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
@@ -199,7 +199,7 @@
     {
       "name": "cli-surface-catalog",
       "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-      "sha256": "bae567a2ba0641693782f6ed15688190276222ee725b17a35aa4adeb555f50ac",
+      "sha256": "f5d4af820c18e2ffea25783fb378b2010b99bb6cc2e1455e3aad6ae86ee7baa7",
       "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
     },
     {

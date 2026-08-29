@@ -10,6 +10,7 @@ import click
 
 from kungfu import projects
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.surface_contract import surface
 from kungfu.project_template import BLANK_TEMPLATE_ID
 
 project_context = kfc.pass_context()
@@ -36,8 +37,22 @@ def project():
 
 
 @project.command(name="list", help="list Projects remembered on this machine")
+@surface(
+    output={
+        "defaultMode": "json",
+        "modes": ["json"],
+        "schemaRefs": ["kungfu.projects.catalog/v1"],
+    }
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="emit the default machine-readable JSON response",
+)
 @project_context
-def list_projects(ctx):
+def list_projects(ctx, as_json):
+    del as_json
     _emit(_run(lambda: projects.catalog(config_home=ctx.config_home)))
 
 
@@ -47,8 +62,22 @@ def templates():
 
 
 @project.command(name="works", help="list retained Work captured in one Project")
+@surface(
+    output={
+        "defaultMode": "json",
+        "modes": ["json"],
+        "schemaRefs": ["kungfu.project-work.inventory/v1"],
+    }
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="emit the default machine-readable JSON response",
+)
 @click.argument("path", type=click.Path(exists=True, file_okay=False))
-def works(path):
+def works(path, as_json):
+    del as_json
     _emit(_run(lambda: projects.work_inventory(path)))
 
 
