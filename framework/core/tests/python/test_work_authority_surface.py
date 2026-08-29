@@ -961,6 +961,35 @@ def test_fresh_recovery_plans_exact_lease_without_expanding_authority():
     }
 
 
+def test_fresh_recovery_plan_adopts_current_native_console(monkeypatch, tmp_path):
+    observed = {}
+
+    def current_native_console(runtime_dir, **options):
+        observed.update(runtime_dir=runtime_dir, options=options)
+        return {
+            "source": "ambient-provider-session",
+            "envelope": {
+                "consoleId": "assistant:project:test",
+                "attemptId": "native:codex:ambient:current",
+            },
+        }
+
+    monkeypatch.setattr(
+        assignment_fresh_recovery.session_surface,
+        "current_native_console",
+        current_native_console,
+    )
+
+    assert assignment_fresh_recovery._current_session(str(tmp_path)) == {
+        "workConsoleId": "assistant:project:test",
+        "sessionAttemptId": "native:codex:ambient:current",
+    }
+    assert observed == {
+        "runtime_dir": str(tmp_path),
+        "options": {"adopt": True, "project_work_binding": False},
+    }
+
+
 def test_fresh_recovery_appends_one_exact_current_attempt_lease():
     status, binding, plan = _expired_execution_recovery_fixture()
     effect = plan["effects"][-1]
