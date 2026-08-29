@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from click.testing import CliRunner
 
 from kungfu.agent import run_agent, session_contract, session_surface
+from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.workspace import resolve_workspace_target
 from agent_bootstrap_fixtures import verified_bootstrap_receipt
