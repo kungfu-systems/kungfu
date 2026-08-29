@@ -50,7 +50,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   assert.match(workflow, /max-merges: 1/u);
   assert.match(
     workflow,
-    /group: >-[\s\S]*dev-pr-auto-merge-\$\{\{ github\.repository \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.event\.workflow_run\.pull_requests\[0\]\.number \|\| github\.event\.client_payload\.candidate\.pullRequestNumber \|\| inputs\.expected-pr-number \|\| github\.run_id \}\}-\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.event\.workflow_run\.head_sha \|\| github\.event\.client_payload\.candidate\.sourceHead \|\| inputs\.expected-head-sha \|\| github\.run_id \}\}/u,
+    /group: dev-pr-auto-merge-\$\{\{ github\.repository \}\}-\$\{\{ github\.run_id \}\}/u,
   );
   assert.doesNotMatch(
     workflow,

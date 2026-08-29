@@ -144,12 +144,12 @@ permissions:
 
 concurrency:
   # GitHub retains only one pending run per concurrency group, even with
-  # cancel-in-progress disabled. Scope the orchestration lock to its exact
-  # source instead of the protected branch: Buildchain's Warrant remains the
-  # sole cross-PR delivery serializer, while an unrelated review can no longer
-  # silently cancel this PR's queued admission.
-  group: >-
-    dev-pr-auto-merge-${{ github.repository }}-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.client_payload.candidate.pullRequestNumber || inputs.expected-pr-number || github.run_id }}-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.client_payload.candidate.sourceHead || inputs.expected-head-sha || github.run_id }}
+  # cancel-in-progress disabled. Event payloads do not provide a stable exact
+  # source for every trigger (notably cadence patrols and workflow_run), so a
+  # source-derived group can silently cancel a targeted admission before it
+  # receives a runner. Buildchain's Warrant is the sole cross-PR serializer;
+  # keep each orchestration attempt independently observable here.
+  group: dev-pr-auto-merge-${{ github.repository }}-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
