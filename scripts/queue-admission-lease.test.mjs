@@ -17,7 +17,8 @@ const LEGACY_WARRANT_RUNTIME_SHA = '8493bf140a7f567e76aff3119f3d39ff026afc84';
 const WARRANT_RUNTIME_SHA = 'cd8318d57b0506493114afcc63b9aacef741d3c4';
 const QUEUE_WARRANT_READBACK_RUNTIME_SHA =
   '98a4e38bd8423569e500dbbcad3667842171ab8f';
-const WARRANT_READBACK_RUNTIME_SHA = '0f4004d0d2b2474c2135a3e88d29d9c85bc37834';
+const SOURCE_QUALIFICATION_READBACK_RUNTIME_SHA =
+  '98a4e38bd8423569e500dbbcad3667842171ab8f';
 const SOURCE_HEAD = '2'.repeat(40);
 const CONTRACT = JSON.parse(
   fs.readFileSync(
@@ -142,6 +143,10 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
     `kungfu-systems/buildchain@${WARRANT_RUNTIME_SHA}`,
   );
   assert.equal(
+    CONTRACT.authority.sourceQualificationReadback,
+    `kungfu-systems/buildchain@${SOURCE_QUALIFICATION_READBACK_RUNTIME_SHA}`,
+  );
+  assert.equal(
     CONTRACT.authority.mergeGroupReadback,
     `kungfu-systems/buildchain@${QUEUE_WARRANT_READBACK_RUNTIME_SHA}`,
   );
@@ -248,7 +253,7 @@ test('mutating Warrant controllers share one runtime and read-only consumers use
   );
   assert.match(
     qualificationWorkflow,
-    new RegExp(WARRANT_READBACK_RUNTIME_SHA, 'u'),
+    new RegExp(SOURCE_QUALIFICATION_READBACK_RUNTIME_SHA, 'u'),
   );
   assert.doesNotMatch(
     qualificationWorkflow,
