@@ -56,22 +56,73 @@ runs:
     - name: Execute only under the live fenced Warrant
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ github.token }}
         # This marker is set by the checked-in protected action, then paired
         # with the GitHub-hosted Linux /proc ancestry proof in Buildchain.
         BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker/v1
         KUNGFU_NATIVE_COMMAND: ${{ inputs.command }}
-      run: >-
-        node framework/dev-delivery/native-execution-under-warrant.mjs
-        --repository "$GITHUB_REPOSITORY"
-        --branch "${{ inputs.protected-base }}"
-        --pull-request "${{ inputs.pull-request }}"
-        --source-head "${{ inputs.source-head }}"
-        --qualified-base "${{ inputs.qualified-base }}"
-        --toolchain-root "${{ inputs.toolchain-root }}"
-        --environment-root "${{ inputs.environment-root }}"
-        --allowed-phases "${{ inputs.allowed-phases }}"
-        --runtime-root .buildchain/dev-delivery-native-runtime
-        --heartbeat-seconds 300
-        --lease-seconds 5400
-        --output "${{ inputs.output }}"
+      run: |
+        set -euo pipefail
+        runtime=.buildchain/dev-delivery-native-runtime
+        warrant=.buildchain/dev-delivery-native-runtime/warrant.json
+        # Provider credential use is confined to sibling heartbeat processes.
+        # It must never be inherited by the candidate native process or any of
+        # that process's ancestors.
+        GITHUB_TOKEN='${{ github.token }}' node "$runtime/scripts/dev-delivery-warrant.mjs" observe \
+          --repository "$GITHUB_REPOSITORY" \
+          --branch "${{ inputs.protected-base }}" \
+          --output "$warrant"
+        jq -e \
+          --argjson pr '${{ inputs.pull-request }}' \
+          --arg head '${{ inputs.source-head }}' \
+          --arg phases '${{ inputs.allowed-phases }}' \
+          '.observation.activeWarrant.pullRequestNumber == $pr
+           and .observation.activeCandidate.pullRequestNumber == $pr
+           and .observation.activeWarrant.sourceHead == $head
+           and .observation.activeCandidate.sourceHead == $head
+           and (.observation.activeWarrant.phase | IN($phases | split(",")[]))' \
+          "$warrant" >/dev/null
+        fence="$(jq -er '.observation.activeWarrant.fencingToken' "$warrant")"
+        generation="$(jq -er '.observation.activeWarrant.generation' "$warrant")"
+        heartbeat() {
+          GITHUB_TOKEN='${{ github.token }}' node "$runtime/scripts/dev-delivery-warrant.mjs" heartbeat \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch "${{ inputs.protected-base }}" \
+            --fencing-token "$fence" \
+            --lease-generation "$generation" \
+            --lease-seconds 5400 \
+            --execute
+        }
+        heartbeat
+        setsid env -u GITHUB_TOKEN \
+          BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY="$BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY" \
+          KUNGFU_NATIVE_COMMAND="$KUNGFU_NATIVE_COMMAND" \
+          node framework/dev-delivery/native-under-warrant.mjs \
+          --repository "$GITHUB_REPOSITORY" \
+          --target-branch "${{ inputs.protected-base }}" \
+          --pull-request "${{ inputs.pull-request }}" \
+          --expected-head "${{ inputs.source-head }}" \
+          --status-context 'affected-native / linux' \
+          --output "${{ inputs.output }}" &
+        native_pid=$!
+        (
+          while sleep 300; do
+            if ! heartbeat; then
+              kill -TERM -- "-$native_pid" || true
+              exit 75
+            fi
+          done
+        ) &
+        heartbeat_pid=$!
+        set +e
+        wait "$native_pid"
+        native_status=$?
+        kill "$heartbeat_pid" 2>/dev/null
+        wait "$heartbeat_pid"
+        heartbeat_status=$?
+        set -e
+        if [ "$heartbeat_status" -eq 75 ]; then
+          echo 'native Warrant heartbeat failed and fenced the candidate process' >&2
+          exit 1
+        fi
+        if [ "$native_status" -ne 0 ]; then exit "$native_status"; fi
+        heartbeat
