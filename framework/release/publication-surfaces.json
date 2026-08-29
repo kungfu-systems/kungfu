@@ -160,7 +160,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:0b8f17c2dda31679c60133995904f809baa27e51e82d9cf0e83ac709a75a6515"
+          "sourceRoot": "sha256:405697716b209c8cb0c3e9e104900772caf597ce3715adc4c77c2756d325176b"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:dfc803bfc7dcbce2bd727c52351d9da3813aa4590a1167143961ce04bb31ff96"
+  "registryRoot": "sha256:3f7438142bf2bea1ae9b521bd3496b7ff4c6216d77af7a17df2a65a6f80a8339"
 }
