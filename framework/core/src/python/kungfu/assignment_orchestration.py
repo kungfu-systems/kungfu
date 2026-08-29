@@ -570,10 +570,10 @@ class _NextActionProjection:
         ]
 
 
-def next_actions(status: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """Preserve the public facade seam while delegating projection ownership."""
-
-    return _NextActionProjection.project(status)
+next_actions = _NextActionProjection.project
+next_actions.__name__ = "next_actions"
+next_actions.__qualname__ = "next_actions"
+next_actions.__module__ = __name__
 
 
 def gate(status: Mapping[str, Any], target: str) -> dict[str, Any]:

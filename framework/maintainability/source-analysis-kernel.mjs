@@ -133,8 +133,8 @@ const CORE_PREFIX_OWNERS = [
   ['framework/core/lib/', 'core/bindings'],
 ];
 const COMMENT_STATES = {
-  '//': 'line-comment',
-  '/*': 'block-comment',
+  '/': 'line-comment',
+  '*': 'block-comment',
 };
 const LINE_COMMENT_TRANSITIONS = {
   true: ['\n', 'code'],
@@ -144,22 +144,12 @@ const STRING_QUOTES = {
   python: `"'`,
   rust: `"'`,
   'c-cpp': `"'`,
-  unknown: `"'`,
+  'javascript-typescript': `"'\``,
 };
 const BLANK_EXCEPT_NEWLINE = {
   true: '\n',
   false: ' ',
 };
-const JAVASCRIPT_REGEX_PREFIX =
-  /(?:^|\b(?:await|case|delete|do|else|in|instanceof|new|of|return|throw|typeof|void|yield)|[([{,:;=!?&|+\-*%^~<>])\s*$/u;
-const JAVASCRIPT_REGEX_LITERAL =
-  /\/(?![/*])(?:\\[^\n]|\[(?:\\[^\n]|[^\]\\\n])*\]|[^/\\[\n])+\/[dgimsuvy]*/uy;
-const JAVASCRIPT_SIMPLE_LEXEME =
-  /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/uy;
-const JAVASCRIPT_MODE_STEPS = [
-  javascriptTemplateCodeStep,
-  javascriptTemplateRawStep,
-];
 const NO_DECLARED_OWNER = Symbol('no-declared-owner');
 
 function ordered(value) {
@@ -460,94 +450,20 @@ function trackedFilesAt(ref) {
   });
 }
 
-function blankLexemeRange(chars, start, end) {
-  for (let index = start; index < end; index += 1)
-    chars[index] = BLANK_EXCEPT_NEWLINE[chars[index] === '\n'];
-}
-
-function javascriptTemplateRawStep(_source, chars, modes, index) {
-  const char = chars[index];
-  const next = chars[index + 1];
-  chars[index] = BLANK_EXCEPT_NEWLINE[char === '\n'];
-  if (char === '\\') {
-    chars[index + 1] = BLANK_EXCEPT_NEWLINE[next === '\n'];
-    return index + 1;
-  }
-  if (char === '`') {
-    modes.pop();
-    return index;
-  }
-  if (`${char}${next}` === '${') {
-    chars[index + 1] = ' ';
-    modes.push({ raw: false, depth: 1 });
-    return index + 1;
-  }
-  return index;
-}
-
-function javascriptCodeLexemeEnd(source, chars, index) {
-  JAVASCRIPT_SIMPLE_LEXEME.lastIndex = index;
-  const simple = JAVASCRIPT_SIMPLE_LEXEME.exec(source);
-  if (simple) {
-    blankLexemeRange(chars, index, JAVASCRIPT_SIMPLE_LEXEME.lastIndex);
-    return JAVASCRIPT_SIMPLE_LEXEME.lastIndex - 1;
-  }
-  if (source[index] !== '/') return index;
-  if (!JAVASCRIPT_REGEX_PREFIX.test(chars.slice(0, index).join('')))
-    return index;
-  JAVASCRIPT_REGEX_LITERAL.lastIndex = index;
-  const regex = JAVASCRIPT_REGEX_LITERAL.exec(source);
-  if (!regex) return index;
-  blankLexemeRange(chars, index, JAVASCRIPT_REGEX_LITERAL.lastIndex);
-  return JAVASCRIPT_REGEX_LITERAL.lastIndex - 1;
-}
-
-function javascriptTemplateCodeStep(source, chars, modes, index) {
-  const lexemeEnd = javascriptCodeLexemeEnd(source, chars, index);
-  if (lexemeEnd !== index) return lexemeEnd;
-  const mode = modes.at(-1);
-  const char = chars[index];
-  if (char === '`') {
-    chars[index] = ' ';
-    modes.push({ raw: true });
-    return index;
-  }
-  if (!mode.depth) return index;
-  mode.depth += Number(char === '{') - Number(char === '}');
-  if (!mode.depth) {
-    chars[index] = ' ';
-    modes.pop();
-  }
-  return index;
-}
-
-function stripJavaScriptLexemes(source) {
-  const chars = source.split('');
-  const modes = [{ raw: false, depth: 0 }];
-  for (let index = 0; index < chars.length; index += 1)
-    index = JAVASCRIPT_MODE_STEPS[Number(modes.at(-1).raw)](
-      source,
-      chars,
-      modes,
-      index,
-    );
-  return chars.join('');
-}
-
 function stripStringsAndComments(source, family) {
-  if (family === 'javascript-typescript') return stripJavaScriptLexemes(source);
   const chars = [...source];
-  const stringQuotes = STRING_QUOTES[family];
+  const stringQuotes = STRING_QUOTES[family] || STRING_QUOTES.rust;
   let state = 'code';
   let quote = '';
   for (let index = 0; index < chars.length; index += 1) {
     const char = chars[index];
-    const next = chars[index + 1];
+    const next = chars[index + 1] || '';
     if (state === 'line-comment') {
       [chars[index], state] = LINE_COMMENT_TRANSITIONS[char === '\n'];
       continue;
     }
-    const closesBlockComment = `${state}:${char}${next}` === 'block-comment:*/';
+    const closesBlockComment =
+      state === 'block-comment' && char === '*' && next === '/';
     if (closesBlockComment) {
       chars[index] = chars[index + 1] = ' ';
       index += 1;
@@ -558,14 +474,14 @@ function stripStringsAndComments(source, family) {
       chars[index] = BLANK_EXCEPT_NEWLINE[char === '\n'];
       continue;
     }
-    const escapedString = `${state}:${char}` === 'string:\\';
+    const escapedString = state === 'string' && char === '\\';
     if (escapedString) {
       chars[index] = ' ';
       chars[index + 1] = BLANK_EXCEPT_NEWLINE[chars[index + 1] === '\n'];
       index += 1;
       continue;
     }
-    const closesString = `${state}:${char}` === `string:${quote}`;
+    const closesString = state === 'string' && char === quote;
     if (closesString) {
       chars[index] = ' ';
       state = 'code';
@@ -575,14 +491,14 @@ function stripStringsAndComments(source, family) {
       chars[index] = BLANK_EXCEPT_NEWLINE[char === '\n'];
       continue;
     }
-    const commentState = COMMENT_STATES[`${char}${next}`];
+    const commentState = char === '/' ? COMMENT_STATES[next] : undefined;
     if (commentState) {
       chars[index] = chars[index + 1] = ' ';
       index += 1;
       state = commentState;
       continue;
     }
-    if (`${family}:${char}` === 'python:#') {
+    if (family === 'python' && char === '#') {
       chars[index] = ' ';
       state = 'line-comment';
       continue;

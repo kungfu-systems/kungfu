@@ -173,6 +173,8 @@ def bind_current_native_work(
     actor_id = os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
 
     def invoke_session(request):
+        if injected:
+            return session_surface.invoke(request)
         return session_surface.invoke_for_project(
             request,
             fallback_runtime_dir=project_runtime_dir,

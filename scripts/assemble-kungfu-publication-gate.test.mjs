@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import {
-  bindKungfuPublicationGateAggregate,
-  createKungfuPublicationGateAggregate,
-  resolveGitTreeSha,
-  validateKungfuReleaseCandidatePassport,
-} from './assemble-kungfu-publication-gate.mjs';
+import { createKungfuPublicationGateAggregate } from './assemble-kungfu-publication-gate.mjs';
 
 const SOURCE_SHA = '1'.repeat(40);
 const PLATFORMS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
@@ -57,44 +52,6 @@ function fixture() {
   return { registry, gateReceipt, manifestSet };
 }
 
-function git(repositoryRoot, ...args) {
-  return execFileSync('git', args, {
-    cwd: repositoryRoot,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  }).trim();
-}
-
-function gitTreeFixture() {
-  const repositoryRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-publication-tree-test-'),
-  );
-  git(repositoryRoot, 'init', '--quiet');
-  git(repositoryRoot, 'config', 'user.name', 'Kungfu Test');
-  git(repositoryRoot, 'config', 'user.email', 'test@kungfu.invalid');
-  fs.writeFileSync(path.join(repositoryRoot, 'candidate.txt'), 'candidate\n');
-  git(repositoryRoot, 'add', 'candidate.txt');
-  git(repositoryRoot, 'commit', '--quiet', '-m', 'candidate');
-  const evidenceSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
-  const evidenceSourceTreeSha = git(repositoryRoot, 'rev-parse', 'HEAD^{tree}');
-
-  git(repositoryRoot, 'commit', '--quiet', '--allow-empty', '-m', 'promotion');
-  const equivalentTargetSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
-
-  fs.writeFileSync(path.join(repositoryRoot, 'candidate.txt'), 'different\n');
-  git(repositoryRoot, 'add', 'candidate.txt');
-  git(repositoryRoot, 'commit', '--quiet', '-m', 'different');
-  const differentTargetSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
-
-  return {
-    repositoryRoot,
-    evidenceSourceSha,
-    evidenceSourceTreeSha,
-    equivalentTargetSourceSha,
-    differentTargetSourceSha,
-  };
-}
-
 test('publication Gate aggregate binds the exact four-platform artifact set', () => {
   const value = fixture();
   const aggregate = createKungfuPublicationGateAggregate({
@@ -126,95 +83,6 @@ test('publication Gate aggregate binds the exact four-platform artifact set', ()
   assert.equal(aggregate.digest, `sha256:${'5'.repeat(64)}`);
 });
 
-test('publication Gate aggregate reuses candidate evidence for an exact target tree', () => {
-  const fixture = gitTreeFixture();
-  try {
-    const targetSourceTreeSha = resolveGitTreeSha({
-      repositoryRoot: fixture.repositoryRoot,
-      sourceSha: fixture.equivalentTargetSourceSha,
-    });
-    const aggregate = {
-      sourceSha: fixture.evidenceSourceSha,
-      digest: 'old-digest',
-    };
-    const rebound = bindKungfuPublicationGateAggregate({
-      aggregate,
-      evidenceSourceSha: fixture.evidenceSourceSha,
-      targetSourceSha: fixture.equivalentTargetSourceSha,
-      targetSourceTreeSha,
-      expectedSourceTreeSha: fixture.evidenceSourceTreeSha,
-      rebindPublicationGateAggregateForEquivalentTree: (value, binding) => ({
-        ...value,
-        sourceSha: binding.targetSourceSha,
-        candidateReuse: {
-          action: 'reused',
-          evidenceSourceSha: binding.evidenceSourceSha,
-          sourceTreeSha: binding.expectedSourceTreeSha,
-        },
-      }),
-    });
-
-    assert.equal(rebound.sourceSha, fixture.equivalentTargetSourceSha);
-    assert.deepEqual(rebound.candidateReuse, {
-      action: 'reused',
-      evidenceSourceSha: fixture.evidenceSourceSha,
-      sourceTreeSha: fixture.evidenceSourceTreeSha,
-    });
-  } finally {
-    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
-  }
-});
-
-test('release candidate Passport remains bound to its evidence source before promotion rebinding', () => {
-  let validationOptions;
-  const result = validateKungfuReleaseCandidatePassport({
-    candidate: {
-      validateReleaseCandidatePassport: (options) => {
-        validationOptions = options;
-        return { ok: true, errors: [] };
-      },
-    },
-    passport: { source: { headSha: '6'.repeat(40) } },
-    targetRef: 'alpha/v4/v4.0',
-    buildSummary: { status: 'pass' },
-  });
-
-  assert.equal(result.ok, true);
-  assert.equal(validationOptions.repository, 'kungfu-systems/kungfu');
-  assert.equal(validationOptions.targetChannel, 'alpha/v4/v4.0');
-  assert.equal('sourceHeadSha' in validationOptions, false);
-});
-
-test('publication Gate aggregate rejects candidate reuse for a different target tree', () => {
-  const fixture = gitTreeFixture();
-  try {
-    const targetSourceTreeSha = resolveGitTreeSha({
-      repositoryRoot: fixture.repositoryRoot,
-      sourceSha: fixture.differentTargetSourceSha,
-    });
-    assert.notEqual(targetSourceTreeSha, fixture.evidenceSourceTreeSha);
-    assert.throws(
-      () =>
-        bindKungfuPublicationGateAggregate({
-          aggregate: {
-            sourceSha: fixture.evidenceSourceSha,
-            digest: 'old-digest',
-          },
-          evidenceSourceSha: fixture.evidenceSourceSha,
-          targetSourceSha: fixture.differentTargetSourceSha,
-          targetSourceTreeSha,
-          expectedSourceTreeSha: fixture.evidenceSourceTreeSha,
-          rebindPublicationGateAggregateForEquivalentTree: () => {
-            throw new Error('rebind must not run for a mismatched tree');
-          },
-        }),
-      /promotion source tree does not match the release candidate/,
-    );
-  } finally {
-    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
-  }
-});
-
 test('real Buildchain validation starts with empty GitHub command files', () => {
   const output = SCRIPT.indexOf("fs.writeFileSync(output, '');");
   const summary = SCRIPT.indexOf("fs.writeFileSync(summary, '');");
@@ -227,15 +95,6 @@ test('real Buildchain validation starts with empty GitHub command files', () => 
   assert.notEqual(validator, -1);
   assert.ok(output < validator);
   assert.ok(summary < validator);
-});
-
-test('publication Gate hydrates ADR history before the release-promotion profile', () => {
-  const prepare = SCRIPT.indexOf('prepareGateMeasurementHistory(root);');
-  const execute = SCRIPT.indexOf('const gateReceipt = await executeGateRun');
-
-  assert.notEqual(prepare, -1);
-  assert.notEqual(execute, -1);
-  assert.ok(prepare < execute);
 });
 
 test(

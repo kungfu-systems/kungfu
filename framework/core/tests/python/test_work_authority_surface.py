@@ -6,7 +6,6 @@ import json
 from types import SimpleNamespace
 
 from click.testing import CliRunner
-import pytest
 
 from kungfu import (
     assignment_close,
@@ -1205,15 +1204,8 @@ def test_fresh_recovery_prepare_does_not_require_newer_profile_work_hooks(
     assert receipt["profileContractMutation"] == "not-permitted"
 
 
-@pytest.mark.parametrize(
-    ("console_source", "expects_override"),
-    [
-        ("ambient-provider-session", True),
-        ("injected-native-console", False),
-    ],
-)
-def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
-    tmp_path, monkeypatch, console_source, expects_override
+def test_fresh_recovery_apply_passes_explicit_profile_source_to_binder(
+    tmp_path, monkeypatch
 ):
     status, binding, plan = _fresh_recovery_fixture()
     workspace_root = tmp_path / "project"
@@ -1240,18 +1232,10 @@ def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
         "_retained_status",
         lambda *_args: json.loads(json.dumps(status)),
     )
-    console_envelope = {
-        "consoleId": binding["session"]["workConsoleId"],
-        "attemptId": binding["session"]["sessionAttemptId"],
-    }
     monkeypatch.setattr(
-        assignment_fresh_recovery.session_surface,
-        "current_native_console",
-        lambda _runtime_dir: {
-            "source": console_source,
-            "envelope": console_envelope,
-            "workspaceRoot": str(workspace_root),
-        },
+        assignment_fresh_recovery,
+        "_current_session",
+        lambda _runtime_dir: dict(binding["session"]),
     )
 
     def bind_current_native_work(*_args, **kwargs):
@@ -1286,12 +1270,6 @@ def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
 
     assert receipt["ok"] is True
     assert observed["work_profile_source"] == profile_source
-    if expects_override:
-        assert observed["envelope_override"] == console_envelope
-        assert observed["console_workspace_root"] == str(workspace_root)
-    else:
-        assert "envelope_override" not in observed
-        assert "console_workspace_root" not in observed
     assert observed["expected_binding"] == {
         "workRef": plan["workRef"],
         "session": binding["session"],
