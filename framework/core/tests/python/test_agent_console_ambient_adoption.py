@@ -68,6 +68,88 @@ def console_envelope():
     return {**body, "envelopeRoot": session_contract.semantic_root(body)}
 
 
+def test_prompt_process_adopts_verified_console_before_first_work_bind(
+    monkeypatch, tmp_path
+):
+    requests = []
+    project = tmp_path / "project"
+    project_runtime = project / ".kungfu" / "runtime"
+    project_runtime.mkdir(parents=True)
+    target = resolve_workspace_target("read-only", str(project), cwd=str(project))
+    body = {
+        **console_envelope(),
+        "workspaceId": target.identity.workspace_id,
+        "consoleId": f"assistant:{target.identity.workspace_id}:agent-one",
+        "attemptId": "agent-one",
+        "runtimeProfileId": "codex.test",
+        "knownLimits": [],
+    }
+    body.pop("envelopeRoot")
+    envelope = {**body, "envelopeRoot": session_contract.semantic_root(body)}
+    receipt = verified_bootstrap_receipt(attempt_id="agent-one")
+    monkeypatch.setenv("KUNGFU_AGENT_CONSOLE_ENVELOPE", json.dumps(envelope))
+    monkeypatch.setenv("KUNGFU_AGENT_BOOTSTRAP_RECEIPT", json.dumps(receipt))
+    monkeypatch.setenv("KUNGFU_AGENT_ATTEMPT_ID", "agent-one")
+    monkeypatch.setenv("KUNGFU_AGENT_PROVIDER_VERSION", "0.150.0")
+    monkeypatch.setenv("KUNGFU_AGENT_RUNTIME_PROFILE_ROOT", ROOT_HASH)
+    monkeypatch.setenv("KUNGFU_WORKSPACE_ROOT", str(project))
+    monkeypatch.setenv("KUNGFU_AGENT_RUNTIME_DIR", str(project_runtime))
+    monkeypatch.setattr(
+        "kungfu.cli.commands.assignment._status",
+        lambda *_args: {
+            "assignment": {"assignment_id": "assignment:test"},
+            "query_proof_root": ROOT_HASH,
+        },
+    )
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(tmp_path / "exact-work-control"),
+        },
+    )
+    bind_plans = 0
+
+    def invoke(request, **_kwargs):
+        nonlocal bind_plans
+        requests.append(request)
+        if request["operation"] == "plan-native-bind-work":
+            bind_plans += 1
+            if bind_plans == 1:
+                raise ValueError(
+                    "session_not_found: native SessionAttempt is unavailable"
+                )
+            return {
+                "operation": "native-bind-work",
+                "root": ROOT_HASH,
+                **request["input"]["session"],
+                "workRef": request["input"]["workRef"],
+            }
+        if request["operation"] == "plan-native-start":
+            return {"operation": "native-start", "root": ROOT_HASH}
+        return {"status": "ok", "receiptRoot": ROOT_HASH}
+
+    monkeypatch.setattr(run_agent.session_surface, "invoke", invoke)
+    result = run_agent.bind_current_native_work(
+        str(tmp_path / "fallback"), "initiative:test", "assignment:test"
+    )
+
+    assert result["workRef"]["entityId"] == "assignment:test"
+    assert [request["operation"] for request in requests] == [
+        "plan-native-bind-work",
+        "plan-native-start",
+        "start-native",
+        "heartbeat-native",
+        "plan-native-bind-work",
+        "bind-native-work",
+    ]
+    start = requests[2]
+    assert start["processIdentity"]["attemptId"] == "agent-one"
+    assert start["processIdentity"]["bootstrapReceiptRoot"] == receipt["receiptRoot"]
+    assert requests[3]["processIdentity"] == start["processIdentity"]
+
+
 def test_ambient_codex_identity_uses_exact_thread_and_process_ancestor(monkeypatch):
     monkeypatch.setattr(session_surface.os, "getppid", lambda: 50)
     rows = {

@@ -428,6 +428,9 @@ def native_environment(
     )
     if session_ref is not None:
         attempt_id = str(session_ref["sessionAttemptId"])
+        env["KUNGFU_AGENT_RUNTIME_PROFILE_ROOT"] = agent_resources.canonical_root(
+            selected
+        )
         skill_audit_log_path = os.path.join(
             runtime_dir,
             "skill-manager",

@@ -41,15 +41,16 @@ from kungfu.agent.native_launch import (
 )
 from kungfu.agent.provider_bootstrap import refresh_native_skill_runtime_audit
 from kungfu.agent.managed_run import ManagedRunCoordinator
+from kungfu.agent.native_work_binding import (
+    bind_current_native_work as bind_current_native_work,
+)
 from kungfu.agent.provider_output import (
     parse_provider_output,
     public_activities_from_provider_line,
     public_command_preview as public_command_preview,
 )
 from kungfu.content_hash import compute_content_hash_value
-from kungfu.initiative_family import canonical as assignment_canonical
 from kungfu.skill import build_skill_context
-from kungfu.workspace import resolve_workspace_target
 from kungfu.rewind import (
     ACTION_RUN_BEGIN,
     ACTION_RUN_END,
@@ -64,144 +65,6 @@ REPORT_SCHEMA = "kungfu.agent-run-report/v1"
 CONTINUATION_SCHEMA = "kungfu.agent-continuation-envelope/v1"
 _ROOT = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-
-
-def bind_current_native_work(
-    runtime_dir: str,
-    initiative_id: str,
-    assignment_id: str,
-    *,
-    work_workspace_root: str | None = None,
-    work_profile_source: str | Path | None = None,
-    envelope_override: Mapping[str, Any] | None = None,
-    console_workspace_root: str | None = None,
-    expected_binding: Mapping[str, Any] | None = None,
-) -> dict[str, Any] | None:
-    """Atomically bind the current native attempt before it acts on Work."""
-
-    raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
-    if not raw and envelope_override is None:
-        return None
-    injected = envelope_override is None
-    envelope = (
-        json.loads(raw)
-        if injected
-        else session_contract.validate_agent_console_envelope(
-            dict(envelope_override or {})
-        )
-    )
-    from kungfu.cli.commands import assignment as work_commands
-
-    workspace_root = (
-        os.environ.get("KUNGFU_WORKSPACE_ROOT", "").strip()
-        if injected
-        else str(console_workspace_root or "").strip()
-    )
-    if not workspace_root:
-        raise ValueError(
-            "native Agent Console is missing its Kungfu Project workspace root"
-        )
-    target = resolve_workspace_target("read-only", workspace_root, cwd=workspace_root)
-    if (
-        target.identity.workspace_kind != "project"
-        or target.identity.workspace_id != str(envelope.get("workspaceId") or "")
-    ):
-        raise ValueError(
-            "native Agent Console workspace does not match its Kungfu Project"
-        )
-    project_runtime_dir = str(Path(target.runtime_dir).expanduser().resolve())
-    if injected:
-        injected_runtime_dir = os.environ.get("KUNGFU_AGENT_RUNTIME_DIR", "").strip()
-        if not injected_runtime_dir:
-            raise ValueError(
-                "native Agent Console is missing its stable Kungfu Project runtime"
-            )
-        if Path(injected_runtime_dir).expanduser().resolve() != Path(
-            project_runtime_dir
-        ):
-            raise ValueError(
-                "native Agent Console runtime does not match its Kungfu Project"
-            )
-        agent_resources.validated_current_bootstrap_receipt(envelope)
-
-    # A packaged --home runtime still retains the verified launch workspace.
-    # Explicit --workspace may bind another exact Project while preserving the
-    # current Console and attempt identities.
-    # The resulting WorkRef remains bound to that explicit Project identity.
-    work_runtime_dir = project_runtime_dir
-    work_workspace_id = str(envelope["workspaceId"])
-    binding_scope = "same-project"
-    if work_workspace_root:
-        work_target = resolve_workspace_target(
-            "read-only",
-            work_workspace_root,
-            cwd=work_workspace_root,
-        )
-        if work_target.identity.workspace_kind != "project":
-            raise ValueError("native Work binding requires an exact Project workspace")
-        exact_work_runtime_dir = str(
-            Path(work_target.runtime_dir).expanduser().resolve()
-        )
-        work_runtime_dir = exact_work_runtime_dir
-        work_workspace_id = work_target.identity.workspace_id
-        if work_workspace_id != str(envelope["workspaceId"]):
-            binding_scope = "explicit-external-project"
-
-    status = work_commands._status(work_runtime_dir, initiative_id, assignment_id)
-    work_control = work_commands.profile_lifecycle.resolve_qualified_work_profile(
-        work_runtime_dir,
-        source=work_profile_source,
-    )
-    work_ref = {
-        "schema": "kungfu.work-ref/v1",
-        "workspaceId": work_workspace_id,
-        "profileId": work_control["id"],
-        "profileRoot": work_control["root"],
-        "entityType": "assignment",
-        "entityId": assignment_id,
-        "entityRoot": assignment_canonical.semantic_root(status["assignment"]),
-        "purpose": "continue-project-assignment",
-        "systemTimeCut": status["query_proof_root"],
-        "initiativeId": initiative_id,
-    }
-    session_contract.validate_work_ref(work_ref)
-    session = {
-        "workConsoleId": str(envelope["consoleId"]),
-        "sessionAttemptId": str(envelope["attemptId"]),
-    }
-    session_contract.require_expected_binding(expected_binding, work_ref, session)
-    actor_id = os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
-
-    def invoke_session(request):
-        return session_surface.invoke_for_project(
-            request,
-            fallback_runtime_dir=project_runtime_dir,
-            cwd=workspace_root,
-        )
-
-    plan = invoke_session(
-        {
-            "operation": "plan-native-bind-work",
-            "client": "kfd3-agent",
-            "actorId": actor_id,
-            "input": {
-                "session": session,
-                "workRef": work_ref,
-                "bindingScope": binding_scope,
-                "sourceWorkspaceId": str(envelope["workspaceId"]),
-            },
-        }
-    )
-    receipt = invoke_session(
-        {
-            "operation": "bind-native-work",
-            "client": "kfd3-agent",
-            "actorId": actor_id,
-            "plan": plan,
-            "expectedPlanRoot": plan["root"],
-        }
-    )
-    return {"workRef": work_ref, "session": session, "receipt": receipt}
 
 
 _WINDOWS_PROCESS_ENV_ALLOWLIST = (

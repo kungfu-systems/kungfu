@@ -42,14 +42,23 @@
         "functionRisk": { "functions": 22, "total": 171, "maximum": 28 }
       },
       "current": {
-        "physicalLines": 1209,
-        "responsibilities": 33,
-        "functionRisk": { "functions": 21, "total": 137, "maximum": 27 }
+        "physicalLines": 1072,
+        "responsibilities": 30,
+        "functionRisk": { "functions": 19, "total": 128, "maximum": 27 }
       },
-      "ownerFiles": ["framework/core/src/python/kungfu/agent/native_launch.py"],
-      "ownedDefinitions": ["provider_interactive_argv"],
-      "facadeSymbols": ["interactive_launch_argv"],
-      "responsibility": "Agent process execution remains here; provider-specific interactive launch construction is owned by kungfu.agent.native_launch."
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/agent/native_launch.py",
+        "framework/core/src/python/kungfu/agent/native_work_binding.py"
+      ],
+      "ownedDefinitions": [
+        "provider_interactive_argv",
+        "bind_current_native_work"
+      ],
+      "facadeSymbols": [
+        "interactive_launch_argv",
+        "bind_current_native_work"
+      ],
+      "responsibility": "Agent process execution remains here; provider-specific interactive launch construction is owned by kungfu.agent.native_launch, and exact native Work binding is owned by kungfu.agent.native_work_binding."
     },
     {
       "sourcePath": "framework/core/src/python/kungfu/agent_work_lab.py",
