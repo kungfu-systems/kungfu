@@ -392,9 +392,16 @@ async function main() {
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : '',
     token: process.env.GITHUB_TOKEN,
-    credentialAncestryBoundary:
+    credentialAncestryBoundary: flag(
+      args,
+      'credential-ancestry-boundary',
       process.env.BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY,
-    runnerEnvironment: process.env.BUILDCHAIN_RUNNER_ENVIRONMENT,
+    ),
+    runnerEnvironment: flag(
+      args,
+      'runner-environment',
+      process.env.BUILDCHAIN_RUNNER_ENVIRONMENT,
+    ),
     apiUrl: process.env.GITHUB_API_URL,
   });
 }

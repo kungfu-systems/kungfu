@@ -568,8 +568,6 @@ jobs:
       shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
       native-proof-json: ${{ needs.delivery-contract.outputs.native-proof-json }}
       native-command: >-
-        BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY=github-actions-runner-worker/v1
-        BUILDCHAIN_RUNNER_ENVIRONMENT=github-hosted
         KUNGFU_FNM_DIST_MIRROR=${{ vars.KUNGFU_FNM_DIST_MIRROR }}
         KUNGFU_FNM_SHA256=${{ vars.KUNGFU_FNM_SHA256 }}
         ./shifu dev-delivery:native-under-warrant --
@@ -578,6 +576,8 @@ jobs:
         --pull-request ${{ needs.resolve-target.outputs.expected-pr-number }}
         --expected-head ${{ needs.resolve-target.outputs.expected-head-sha }}
         --status-context 'affected-native / linux'
+        --credential-ancestry-boundary github-actions-runner-worker/v1
+        --runner-environment github-hosted
         --output ../dev-delivery/kungfu-native-receipt.json
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
