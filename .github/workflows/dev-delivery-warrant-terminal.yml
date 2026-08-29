@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
+          ref: e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
           path: .buildchain/runtime
           persist-credentials: false
 
@@ -206,9 +206,9 @@ jobs:
   close:
     needs: prepare
     if: needs.prepare.outputs.active == 'true' || needs.prepare.outputs.retry-terminal == 'true'
-    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
+    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
     with:
-      buildchain-ref: a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
+      buildchain-ref: e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
       target-branch: ${{ github.event.pull_request.base.ref }}
       expected-pr-number: ${{ github.event.pull_request.number }}
       expected-head-sha: ${{ needs.prepare.outputs.active-source-head-sha }}
@@ -226,9 +226,9 @@ jobs:
   cancel-queued:
     needs: prepare
     if: needs.prepare.outputs.queued == 'true'
-    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
+    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
     with:
-      buildchain-ref: a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
+      buildchain-ref: e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
       target-branch: ${{ github.event.pull_request.base.ref }}
       expected-pr-number: ${{ github.event.pull_request.number }}
       expected-candidate-id: ${{ needs.prepare.outputs.queued-candidate-id }}

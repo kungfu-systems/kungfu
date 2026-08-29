@@ -492,7 +492,7 @@ jobs:
           repository: kungfu-systems/buildchain
           # Use the same protected Warrant authority as the scheduler and
           # every other admission, execution, and terminal consumer.
-          ref: a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
+          ref: e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -1046,7 +1046,7 @@ jobs:
           repository: kungfu-systems/buildchain
           # Read and consume the queue through the same protected Warrant
           # authority used by admission, scheduling, and terminal closure.
-          ref: a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab
+          ref: e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0
