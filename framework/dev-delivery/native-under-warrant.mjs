@@ -128,6 +128,28 @@ export class GitHubNativeStatusClient {
   }
 }
 
+export class CredentiallessNativeStatusClient {
+  async requirePullRequest() {
+    // The fenced Buildchain wrapper already verified the exact PR, head, and
+    // Warrant before spawning this credentialless child. This process must not
+    // reacquire provider authority with a token.
+  }
+
+  async status() {
+    // The credentialed provider finalizer publishes the terminal status from
+    // the retained native receipt after this child exits.
+  }
+}
+
+function nativeStatusClient(options) {
+  if (options.credentialless) return new CredentiallessNativeStatusClient();
+  return new GitHubNativeStatusClient({
+    repository: options.repository,
+    token: options.token,
+    apiUrl: options.apiUrl,
+  });
+}
+
 function defaultGit(cwd, args, options = {}) {
   return execFileSync('git', args, {
     cwd,
@@ -175,13 +197,7 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
   const cwd = path.resolve(options.cwd || process.cwd());
   const git = dependencies.git || defaultGit;
   const runStep = dependencies.runStep || defaultRunStep;
-  const client =
-    dependencies.client ||
-    new GitHubNativeStatusClient({
-      repository: options.repository,
-      token: options.token,
-      apiUrl: options.apiUrl,
-    });
+  const client = dependencies.client || nativeStatusClient(options);
   const now = dependencies.now || (() => new Date().toISOString());
   const expectedHead = exactSha(options.expectedHead, 'expected head');
   const pullRequestNumber = positiveInteger(
@@ -378,6 +394,9 @@ async function main() {
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : '',
     token: process.env.GITHUB_TOKEN,
+    credentialless:
+      process.env.BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY ===
+      'github-actions-runner-worker/v1',
     apiUrl: process.env.GITHUB_API_URL,
   });
 }
