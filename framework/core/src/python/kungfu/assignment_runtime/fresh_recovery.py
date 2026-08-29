@@ -550,6 +550,28 @@ def _verify_recovery_profile_source(
         raise ValueError("fresh recovery Profile source differs from the plan")
 
 
+def _current_binding_context(runtime_dir: str) -> tuple[JsonObject, JsonObject]:
+    current = session_surface.current_native_console(runtime_dir)
+    if current is None:
+        raise ValueError("fresh recovery requires a current native Agent Console")
+    source = str(current["source"])
+    envelope = dict(current["envelope"])
+    session = {
+        "workConsoleId": str(envelope["consoleId"]),
+        "sessionAttemptId": str(envelope["attemptId"]),
+    }
+    if source not in {"injected-native-console", "ambient-provider-session"}:
+        raise ValueError("fresh recovery requires an exact native Console source")
+    options = {
+        "injected-native-console": {},
+        "ambient-provider-session": {
+            "envelope_override": envelope,
+            "console_workspace_root": str(current["workspaceRoot"]),
+        },
+    }
+    return session, options[source]
+
+
 def _plan_from_ports(
     *,
     ctx,
@@ -633,6 +655,7 @@ def _apply_from_ports(
     ) or identity.identity_root != workspace.get("identityRoot"):
         raise ValueError("fresh recovery workspace identity changed")
     _verify_recovery_profile_source(plan, recovery_profile_source, runtime_dir)
+    current_session, bind_options = _current_binding_context(str(ctx.runtime_dir))
     receipt = apply_plan(
         plan,
         expected_plan_root=expected_plan_root,
@@ -640,7 +663,7 @@ def _apply_from_ports(
         status_reader=lambda: _retained_status(
             runtime_dir, initiative_id, assignment_id
         ),
-        session_reader=lambda: _current_session(str(ctx.runtime_dir)),
+        session_reader=lambda: dict(current_session),
         prepare_profile=lambda actor: prepare_resume_profile(
             runtime_dir, actor, recovery_profile_source
         ),
@@ -652,6 +675,7 @@ def _apply_from_ports(
                 work_workspace_root=workspace_root,
                 work_profile_source=recovery_profile_source,
                 expected_binding=expected,
+                **bind_options,
             )
             or {}
         ),
