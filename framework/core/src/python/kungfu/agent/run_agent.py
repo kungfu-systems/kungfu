@@ -43,6 +43,7 @@ from kungfu.agent.provider_bootstrap import refresh_native_skill_runtime_audit
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.native_work_binding import (
     bind_current_native_work as bind_current_native_work,
+    settle_current_prompt_console as settle_current_prompt_console,
 )
 from kungfu.agent.provider_output import (
     parse_provider_output,
@@ -910,6 +911,12 @@ def execute(
                     ),
                     stdin_text=stdin_text,
                     output_sink=project_output,
+                )
+                settle_current_prompt_console(
+                    runtime_dir=runtime_dir,
+                    workspace_root=workspace_root,
+                    environ=env,
+                    exit_code=result.exit_code,
                 )
             else:
                 result = process_runner(

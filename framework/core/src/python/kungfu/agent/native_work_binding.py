@@ -23,21 +23,22 @@ _ROOT = re.compile(r"sha256:[0-9a-f]{64}\Z")
 def _verified_prompt_process(
     envelope: Mapping[str, Any],
     bootstrap_receipt: Mapping[str, Any],
+    *,
+    environ: Mapping[str, str] | None = None,
 ) -> tuple[dict[str, Any], str, dict[str, Any], str]:
+    current = os.environ if environ is None else environ
     session = {
         "workConsoleId": str(envelope["consoleId"]),
         "sessionAttemptId": str(envelope["attemptId"]),
     }
-    actor_id = os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
+    actor_id = current.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
     process_identity = {
         "attemptId": session["sessionAttemptId"],
         "bootstrapReceiptRoot": str(bootstrap_receipt["receiptRoot"]),
         "provider": str(envelope.get("provider") or "unknown"),
         "workspaceId": str(envelope["workspaceId"]),
     }
-    runtime_profile_root = str(
-        os.environ.get("KUNGFU_AGENT_RUNTIME_PROFILE_ROOT") or ""
-    )
+    runtime_profile_root = str(current.get("KUNGFU_AGENT_RUNTIME_PROFILE_ROOT") or "")
     if _ROOT.fullmatch(runtime_profile_root) is None:
         raise ValueError(
             "verified prompt Agent is missing its exact Runtime Profile root"
@@ -52,13 +53,16 @@ def _prompt_native_start_plan(
     session: Mapping[str, Any],
     actor_id: str,
     runtime_profile_root: str,
+    *,
+    environ: Mapping[str, str] | None = None,
 ) -> Mapping[str, Any]:
+    current = os.environ if environ is None else environ
     start_input = {
         "workspaceId": str(envelope["workspaceId"]),
         **session,
         "provider": str(envelope.get("provider") or "unknown"),
         "providerVersion": str(
-            os.environ.get("KUNGFU_AGENT_PROVIDER_VERSION") or "unknown"
+            current.get("KUNGFU_AGENT_PROVIDER_VERSION") or "unknown"
         ),
         "profileRoot": runtime_profile_root,
         "runtimeProfileId": str(envelope.get("runtimeProfileId") or "unknown"),
@@ -129,6 +133,97 @@ def _adopt_verified_injected_console(
         profile_root,
     )
     _start_and_observe_prompt_console(invoke, plan, session, actor_id, process_identity)
+
+
+def _prompt_settlement_context(
+    runtime_dir: str, workspace_root: str, environ: Mapping[str, str]
+) -> tuple[dict[str, Any], dict[str, Any], str, dict[str, Any], str]:
+    raw = str(environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE") or "").strip()
+    if not raw:
+        raise ValueError("prompt Agent settlement requires an injected Console")
+    envelope = session_contract.validate_agent_console_envelope(json.loads(raw))
+    target = resolve_workspace_target("read-only", workspace_root, cwd=workspace_root)
+    expected_runtime = str(Path(target.runtime_dir).expanduser().resolve())
+    injected_runtime = str(
+        Path(str(environ.get("KUNGFU_AGENT_RUNTIME_DIR") or "")).expanduser().resolve()
+    )
+    if (
+        target.identity.workspace_kind != "project"
+        or target.identity.workspace_id != str(envelope.get("workspaceId") or "")
+        or expected_runtime != str(Path(runtime_dir).expanduser().resolve())
+        or injected_runtime != expected_runtime
+    ):
+        raise ValueError(
+            "adopted prompt Agent settlement does not match its Kungfu Project"
+        )
+    bootstrap_receipt = agent_resources.validated_current_bootstrap_receipt(
+        envelope, environ=environ
+    )
+    session, actor_id, process_identity, _profile_root = _verified_prompt_process(
+        envelope, bootstrap_receipt, environ=environ
+    )
+    return session, process_identity, actor_id, envelope, expected_runtime
+
+
+def _registered_prompt_console_status(invoke, session):
+    try:
+        return invoke({"operation": "show", "session": session})
+    except ValueError as error:
+        if "session_not_found" in str(error):
+            return None
+        raise
+
+
+def _prompt_console_is_ended(
+    status: Mapping[str, Any], process_identity: Mapping[str, Any]
+) -> bool:
+    attempt = dict(status.get("attempt") or {})
+    observer = dict(attempt.get("observer") or {})
+    if observer.get("processIdentityRoot") != session_contract.semantic_root(
+        process_identity
+    ):
+        raise ValueError(
+            "adopted prompt Agent settlement process identity does not verify"
+        )
+    return status.get("lifecycleState") == "ended"
+
+
+def settle_current_prompt_console(
+    *,
+    runtime_dir: str,
+    workspace_root: str,
+    environ: Mapping[str, str],
+    exit_code: int | None,
+    session_invoker: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+) -> Mapping[str, Any] | None:
+    """End an exact prompt attempt if it adopted itself during the child run."""
+
+    if not str(environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE") or "").strip():
+        return None
+    session, process_identity, actor_id, _envelope, expected_runtime = (
+        _prompt_settlement_context(runtime_dir, workspace_root, environ)
+    )
+
+    def invoke(request):
+        if session_invoker is not None:
+            return session_invoker(request)
+        return session_surface.invoke_for_project(
+            request, fallback_runtime_dir=expected_runtime, cwd=workspace_root
+        )
+
+    status = _registered_prompt_console_status(invoke, session)
+    if status is None or _prompt_console_is_ended(status, process_identity):
+        return None
+    return invoke(
+        {
+            "operation": "end-native",
+            "client": "kfd3-agent",
+            "actorId": actor_id,
+            "session": session,
+            "processIdentity": process_identity,
+            "exit": {"exitCode": exit_code, "signal": None},
+        }
+    )
 
 
 def _verified_injected_bootstrap(
