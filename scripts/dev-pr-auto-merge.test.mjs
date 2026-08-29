@@ -44,6 +44,14 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   assert.match(workflow, /require-approval: true/u);
   assert.match(workflow, /same-repository-only: true/u);
   assert.match(workflow, /max-merges: 1/u);
+  assert.match(
+    workflow,
+    /group: dev-pr-auto-merge-\$\{\{ github\.repository \}\}-\$\{\{ github\.run_id \}\}/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /group: dev-pr-auto-merge-\$\{\{ github\.repository \}\}-\$\{\{ github\.event\.repository\.default_branch \}\}/u,
+  );
 });
 
 test('Warrant wake uses the bounded candidate envelope and resolves source authority independently', () => {

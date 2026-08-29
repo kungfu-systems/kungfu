@@ -238,9 +238,13 @@ permissions:
   pull-requests: read
 
 concurrency:
-  # Keep an exact targeted recovery outside the controller slot. Automatic
-  # events may replace one another, but cannot cancel a provider for one PR.
-  group: dev-pr-auto-merge-${{ github.repository }}-${{ github.event.repository.default_branch }}-${{ github.event_name == 'workflow_dispatch' && inputs.expected-pr-number != 0 && format('target-{0}', inputs.expected-pr-number) || 'controller' }}
+  # GitHub retains only one pending run per concurrency group, even with
+  # cancel-in-progress disabled. Event payloads do not provide a stable exact
+  # source for every trigger (notably cadence patrols and workflow_run), so a
+  # source-derived group can silently cancel a targeted admission before it
+  # receives a runner. Buildchain's Warrant is the sole cross-PR serializer;
+  # keep each orchestration attempt independently observable here.
+  group: dev-pr-auto-merge-${{ github.repository }}-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
