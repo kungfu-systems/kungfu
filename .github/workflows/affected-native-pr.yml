@@ -797,9 +797,24 @@ jobs:
           output: product/qualification/affected-native/warrant-execution-${{ matrix.partition }}.json
           command: |
             set -euo pipefail
+            export CC=gcc-14
+            export CXX=g++-14
             export GITHUB_BASE_SHA='${{ steps.revisions.outputs.base_sha }}'
             export GITHUB_HEAD_SHA='${{ steps.revisions.outputs.head_sha }}'
+            export KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
             export KUNGFU_AFFECTED_NATIVE_PLAN=product/qualification/affected-native/plan.json
+            export KUNGFU_AFFECTED_NATIVE_PARTITION_COUNT=2
+            export KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX='${{ matrix.partition }}'
+            export KUNGFU_CANDIDATE_GATE_ID=source.changed-scope
+            export KUNGFU_CANDIDATE_TIMELINE_EVENTS="$PWD/product/qualification/affected-native/candidate-events.jsonl"
+            if [ '${{ steps.compiler-cache-tool.outputs.available }}' = true ]; then
+              export CMAKE_C_COMPILER_LAUNCHER=ccache
+              export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+              export CCACHE_BASEDIR="$PWD"
+              export CCACHE_NOHASHDIR=true
+              export CCACHE_COMPRESS=true
+              export CCACHE_MAXSIZE=1G
+            fi
             ./shifu install --frozen-lockfile
             if [ '${{ steps.plan.outputs.sdk-required }}' = true ] && [ '${{ matrix.partition }}' = 0 ]; then
               cmake_js_bin=""
@@ -807,7 +822,7 @@ jobs:
                 if [ -x "$candidate" ]; then cmake_js_bin="$candidate"; break; fi
               done
               test -n "$cmake_js_bin"
-              export PATH="$GITHUB_WORKSPACE/$(dirname "$cmake_js_bin"):$PATH"
+              export PATH="$PWD/$(dirname "$cmake_js_bin"):$PATH"
               cmake-js --version
               ./shifu build:core:sdk
               ./shifu pack:sdk
