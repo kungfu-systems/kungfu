@@ -15,7 +15,8 @@ const workflow = fs.readFileSync(
 const steadyStateDogfoodFixturePath =
   'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 const protectedWarrantRuntimeRef = 'e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92';
-const protectedWarrantRuntimeSelector = protectedWarrantRuntimeRef;
+const protectedWarrantRuntimeSelector =
+  'train/v4/v4.0/release-topology-convergence';
 
 test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs', () => {
   const reusableRef = workflow.match(
@@ -597,7 +598,7 @@ test('every protected Warrant consumer uses one Buildchain runtime authority', (
   assert.deepEqual([...new Set(refs)], [protectedWarrantRuntimeRef]);
 });
 
-test('protected delivery calls pin their workflow and runtime to one exact revision', () => {
+test('protected delivery calls pin their workflow and trusted runtime selector', () => {
   const workflow = fs.readFileSync(
     '.github/workflows/dev-pr-auto-merge.yml',
     'utf8',
@@ -607,13 +608,9 @@ test('protected delivery calls pin their workflow and runtime to one exact revis
     'gu',
   );
   assert.equal([...workflow.matchAll(protectedCall)].length, 2);
-  assert.equal(
-    [
-      ...workflow.matchAll(
-        new RegExp(`buildchain-ref: ${protectedWarrantRuntimeRef}`, 'gu'),
-      ),
-    ].length,
-    2,
+  assert.doesNotMatch(
+    workflow,
+    new RegExp(`buildchain-ref: ${protectedWarrantRuntimeRef}`, 'u'),
   );
 });
 
