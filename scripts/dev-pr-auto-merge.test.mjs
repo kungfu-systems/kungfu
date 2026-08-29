@@ -719,7 +719,7 @@ test('native execution uses one exact protected runtime and continuous fence wra
   );
   assert.match(
     workflow,
-    /BUILDCHAIN_RUNNER_ENVIRONMENT=github-hosted[\s\S]*\.\/shifu dev-delivery:native-under-warrant/u,
+    /BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY=github-actions-runner-worker\/v1[\s\S]*BUILDCHAIN_RUNNER_ENVIRONMENT=github-hosted[\s\S]*\.\/shifu dev-delivery:native-under-warrant/u,
   );
 });
 
