@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7967,
+  "generation": 7968,
   "fencingCounter": 751,
   "policy": {
     "agingSeconds": 900,
@@ -11,44 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:f3e6589aff4bab8e6fbe3abe76a7aa830f90784d191f5a3a1ccb5c72f993a61b",
-    "pullRequestNumber": 3519,
-    "sourceHead": "234c3997fbe14b26e749f8bc78e0fa1c0b453292",
-    "assignmentRoot": "sha256:e80b5f6ad848943fb215dae032c7fc6e9d28660d0d87c9bacf30715208522056",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:e81dccd7cebe549f7f500cbac36708f8a0aede6625317c454c07ccf0d13dc6de",
-    "sourcePatchRoot": "sha256:5e610f1f0a7fa28754e81677e5e149cd15bfe2033f858af9a80e9f89948d712c",
-    "sourceProofRoot": "sha256:46737e7195985f3310d52064a53dd02d478f21837e504a46703721b7c59e6814",
-    "planRoot": "sha256:e8e111c13036f6f82b9cdae8a2a48b83de6c8a9ff39af61b8f0da2a2f38189dd",
-    "closureRoot": "sha256:820f1fee407b495ae7be6b07a3bdcb69905d9b0589a484554ba9cc2bbc724e0d",
-    "dependencyRoot": "sha256:00ec413ecf0c815557746ad5351be716a009ae19f5a3e613056cfd11bef76d0e",
-    "toolchainRoot": "sha256:122348302498f99f13ecea8a90a52b9710b4f62a60e0619ea5696bc396d838f9",
-    "affectedPaths": [
-      ".buildchain/kfd/kfd-2/release-claims.json",
-      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
-      ".buildchain/kfd/support-matrix.json",
-      "developer/sdk/kfd/kfd-2/release-claims.json",
-      "developer/sdk/kfd/support-matrix.json",
-      "scripts/assemble-kungfu-publication-gate.mjs",
-      "scripts/assemble-kungfu-publication-gate.test.mjs"
-    ],
-    "shardEvidenceRoots": [
-      "sha256:46b2ea03d0958bb9fc7394e79db56762dabfb85c3b8eb77302695d62bb01db44"
-    ],
-    "sourceWorkflowRunId": 33233120348,
-    "deliveryClass": "non-native-fast",
-    "priority": "ordinary",
-    "generation": 751,
-    "expectedOldStateRoot": "sha256:b6cdb76b07b79b3402050d93cddfc4550e5d015da2f1ba5f6350a46be565d5ab",
-    "issuedAt": "2026-08-29T05:05:43.424Z",
-    "expiresAt": "2026-08-29T06:35:43.424Z",
-    "fencingToken": "sha256:823ea12e2ebb7d0ff846c6167bea6a5656a2ea85cd4b1c15c627818b017362cd",
-    "nextAction": "Replay on the exact current dev base, prove required checks, then enqueue the unchanged PR head."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -52609,11 +52572,19 @@
       "sourceWorkflowRunId": 33233120348,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-29T05:04:59.822Z",
-      "updatedAt": "2026-08-29T05:05:43.424Z",
+      "updatedAt": "2026-08-29T05:14:10.958Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
-      "terminal": null,
+      "status": "dequeued",
+      "terminal": {
+        "outcome": "dequeued",
+        "reason": "Merge-group Queue admission lease run 33235456466 failed on obsolete Buildchain stateRoot reader; repair marker 5460496795 requires a new head.",
+        "evidenceRoot": "sha256:48d230c0987d9b7e1e35c311bf6c01b05b2309982c3aa3241b6386899bc41a3f",
+        "closedAt": "2026-08-29T05:14:10.958Z",
+        "fencingToken": "sha256:823ea12e2ebb7d0ff846c6167bea6a5656a2ea85cd4b1c15c627818b017362cd",
+        "leaseGeneration": 751,
+        "successorWake": null
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
         ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
@@ -52628,6 +52599,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-29T05:05:43.424Z",
-  "stateRoot": "sha256:7df3c5a29431df1bdd2b97e6d90089afa076bf902a2bc27a1e6972a897b7ee15"
+  "updatedAt": "2026-08-29T05:14:10.958Z",
+  "stateRoot": "sha256:70ba7da97bda7d4751ab7068bd4535f4e677fd047d91cb0c38fbddb156ee2749"
 }
