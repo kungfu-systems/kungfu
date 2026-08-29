@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import { executeGateRun } from './shifu-gate-executor.mjs';
 import { gateDigest } from './shifu-gate-runtime.mjs';
 
@@ -436,6 +437,12 @@ export async function assembleKungfuPublicationGate({
   };
 
   try {
+    // Buildchain v3 checks out the consumer Gate controller at depth 1. The
+    // release-promotion profile validates historical ADR evidence commits, so
+    // hydrate that transient checkout before running the profile. Remove this
+    // once the integrated Buildchain provider plane supplies complete consumer
+    // history (the v4 qualification-receipt contract).
+    prepareGateMeasurementHistory(root);
     const gateReceipt = await executeGateRun(registry, {
       root,
       registryRef: 'shifu.gates.json',

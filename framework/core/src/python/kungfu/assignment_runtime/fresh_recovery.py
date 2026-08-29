@@ -48,7 +48,7 @@ def _root(value: Any) -> str:
 
 def _current_session(runtime_dir: str) -> JsonObject:
     current = session_surface.current_native_console(
-        runtime_dir, project_work_binding=False
+        runtime_dir, adopt=True, project_work_binding=False
     )
     if current is None:
         raise ValueError("fresh recovery requires a current native Agent Console")

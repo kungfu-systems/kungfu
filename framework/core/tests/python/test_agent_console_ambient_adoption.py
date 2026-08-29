@@ -5,7 +5,12 @@ from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from kungfu.agent import run_agent, session_contract, session_surface
+from kungfu.agent import (
+    native_work_binding,
+    run_agent,
+    session_contract,
+    session_surface,
+)
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.workspace import resolve_workspace_target
@@ -66,6 +71,192 @@ def console_envelope():
         "knownLimits": ["Console observation does not grant Work authority"],
     }
     return {**body, "envelopeRoot": session_contract.semantic_root(body)}
+
+
+def test_prompt_process_adopts_verified_console_before_first_work_bind(
+    monkeypatch, tmp_path
+):
+    requests = []
+    project = tmp_path / "project"
+    project_runtime = project / ".kungfu" / "runtime"
+    project_runtime.mkdir(parents=True)
+    target = resolve_workspace_target("read-only", str(project), cwd=str(project))
+    body = {
+        **console_envelope(),
+        "workspaceId": target.identity.workspace_id,
+        "consoleId": f"assistant:{target.identity.workspace_id}:agent-one",
+        "attemptId": "agent-one",
+        "runtimeProfileId": "codex.test",
+        "knownLimits": [],
+    }
+    body.pop("envelopeRoot")
+    envelope = {**body, "envelopeRoot": session_contract.semantic_root(body)}
+    receipt = verified_bootstrap_receipt(attempt_id="agent-one")
+    monkeypatch.setenv("KUNGFU_AGENT_CONSOLE_ENVELOPE", json.dumps(envelope))
+    monkeypatch.setenv("KUNGFU_AGENT_BOOTSTRAP_RECEIPT", json.dumps(receipt))
+    monkeypatch.setenv("KUNGFU_AGENT_ATTEMPT_ID", "agent-one")
+    monkeypatch.setenv("KUNGFU_AGENT_PROVIDER_VERSION", "0.150.0")
+    monkeypatch.setenv("KUNGFU_AGENT_RUNTIME_PROFILE_ROOT", ROOT_HASH)
+    monkeypatch.setenv("KUNGFU_WORKSPACE_ROOT", str(project))
+    monkeypatch.setenv("KUNGFU_AGENT_RUNTIME_DIR", str(project_runtime))
+    monkeypatch.setattr(
+        "kungfu.cli.commands.assignment._status",
+        lambda *_args: {
+            "assignment": {"assignment_id": "assignment:test"},
+            "query_proof_root": ROOT_HASH,
+        },
+    )
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": ROOT_HASH,
+            "source": str(tmp_path / "exact-work-control"),
+        },
+    )
+    bind_plans = 0
+
+    def invoke(request, **_kwargs):
+        nonlocal bind_plans
+        requests.append(request)
+        if request["operation"] == "plan-native-bind-work":
+            bind_plans += 1
+            if bind_plans == 1:
+                raise ValueError(
+                    "session_not_found: native SessionAttempt is unavailable"
+                )
+            return {
+                "operation": "native-bind-work",
+                "root": ROOT_HASH,
+                **request["input"]["session"],
+                "workRef": request["input"]["workRef"],
+            }
+        if request["operation"] == "plan-native-start":
+            return {"operation": "native-start", "root": ROOT_HASH}
+        return {"status": "ok", "receiptRoot": ROOT_HASH}
+
+    monkeypatch.setattr(run_agent.session_surface, "invoke", invoke)
+    result = run_agent.bind_current_native_work(
+        str(tmp_path / "fallback"), "initiative:test", "assignment:test"
+    )
+
+    assert result["workRef"]["entityId"] == "assignment:test"
+    assert [request["operation"] for request in requests] == [
+        "plan-native-bind-work",
+        "plan-native-start",
+        "start-native",
+        "heartbeat-native",
+        "plan-native-bind-work",
+        "bind-native-work",
+    ]
+    start = requests[2]
+    assert start["processIdentity"]["attemptId"] == "agent-one"
+    assert start["processIdentity"]["bootstrapReceiptRoot"] == receipt["receiptRoot"]
+    assert requests[3]["processIdentity"] == start["processIdentity"]
+
+
+def test_prompt_process_settles_exact_adopted_console_after_exit(tmp_path):
+    requests = []
+    project = tmp_path / "project"
+    project_runtime = project / ".kungfu" / "runtime"
+    project_runtime.mkdir(parents=True)
+    target = resolve_workspace_target("read-only", str(project), cwd=str(project))
+    body = {
+        **console_envelope(),
+        "workspaceId": target.identity.workspace_id,
+        "consoleId": f"assistant:{target.identity.workspace_id}:agent-one",
+        "attemptId": "agent-one",
+        "runtimeProfileId": "codex.test",
+        "knownLimits": [],
+    }
+    body.pop("envelopeRoot")
+    envelope = {**body, "envelopeRoot": session_contract.semantic_root(body)}
+    receipt = verified_bootstrap_receipt(attempt_id="agent-one")
+    environ = {
+        "KUNGFU_AGENT_CONSOLE_ENVELOPE": json.dumps(envelope),
+        "KUNGFU_AGENT_BOOTSTRAP_RECEIPT": json.dumps(receipt),
+        "KUNGFU_AGENT_ATTEMPT_ID": "agent-one",
+        "KUNGFU_AGENT_PROVIDER_VERSION": "0.150.0",
+        "KUNGFU_AGENT_RUNTIME_PROFILE_ROOT": ROOT_HASH,
+        "KUNGFU_AGENT_RUNTIME_DIR": str(project_runtime),
+        "KUNGFU_AGENT_SESSION_ACTOR": "native:codex:agent-one",
+    }
+    process_identity = {
+        "attemptId": "agent-one",
+        "bootstrapReceiptRoot": receipt["receiptRoot"],
+        "provider": "codex",
+        "workspaceId": target.identity.workspace_id,
+    }
+
+    def invoke(request):
+        requests.append(request)
+        if request["operation"] == "show":
+            return {
+                "lifecycleState": "running",
+                "attempt": {
+                    "observer": {
+                        "processIdentityRoot": session_contract.semantic_root(
+                            process_identity
+                        )
+                    }
+                },
+            }
+        if request["operation"] == "end-native":
+            return {"status": "ended", "receiptRoot": ROOT_HASH}
+        raise AssertionError(request["operation"])
+
+    result = native_work_binding.settle_current_prompt_console(
+        runtime_dir=str(project_runtime),
+        workspace_root=str(project),
+        environ=environ,
+        exit_code=0,
+        session_invoker=invoke,
+    )
+
+    assert result == {"status": "ended", "receiptRoot": ROOT_HASH}
+    assert [request["operation"] for request in requests] == ["show", "end-native"]
+    assert requests[1]["processIdentity"] == process_identity
+    assert requests[1]["exit"] == {"exitCode": 0, "signal": None}
+
+
+def test_prompt_process_settlement_is_noop_when_console_was_not_adopted(tmp_path):
+    project = tmp_path / "project"
+    project_runtime = project / ".kungfu" / "runtime"
+    project_runtime.mkdir(parents=True)
+    target = resolve_workspace_target("read-only", str(project), cwd=str(project))
+    body = {
+        **console_envelope(),
+        "workspaceId": target.identity.workspace_id,
+        "consoleId": f"assistant:{target.identity.workspace_id}:agent-one",
+        "attemptId": "agent-one",
+        "runtimeProfileId": "codex.test",
+        "knownLimits": [],
+    }
+    body.pop("envelopeRoot")
+    envelope = {**body, "envelopeRoot": session_contract.semantic_root(body)}
+    receipt = verified_bootstrap_receipt(attempt_id="agent-one")
+    environ = {
+        "KUNGFU_AGENT_CONSOLE_ENVELOPE": json.dumps(envelope),
+        "KUNGFU_AGENT_BOOTSTRAP_RECEIPT": json.dumps(receipt),
+        "KUNGFU_AGENT_ATTEMPT_ID": "agent-one",
+        "KUNGFU_AGENT_RUNTIME_PROFILE_ROOT": ROOT_HASH,
+        "KUNGFU_AGENT_RUNTIME_DIR": str(project_runtime),
+    }
+
+    def invoke(request):
+        assert request["operation"] == "show"
+        raise ValueError("session_not_found: native SessionAttempt is unavailable")
+
+    assert (
+        native_work_binding.settle_current_prompt_console(
+            runtime_dir=str(project_runtime),
+            workspace_root=str(project),
+            environ=environ,
+            exit_code=0,
+            session_invoker=invoke,
+        )
+        is None
+    )
 
 
 def test_ambient_codex_identity_uses_exact_thread_and_process_ancestor(monkeypatch):

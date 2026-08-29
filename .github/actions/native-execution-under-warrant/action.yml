@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Run native execution under Delivery Warrant
-description: Observe, heartbeat, and continuously fence one native command with the exact protected Buildchain runtime.
+description: Anonymously observe and continuously fence one native command with the exact protected Buildchain runtime.
 
 inputs:
   command:
@@ -39,7 +39,7 @@ runs:
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: kungfu-systems/buildchain
-        ref: ddac1876650f2faba5a9e1a2e5f55e7d836ac46b
+        ref: 1cb2581c6cb5bd677d32bd242f89b778d23c7018
         path: .buildchain/dev-delivery-native-runtime
         fetch-depth: 1
         persist-credentials: false
@@ -48,15 +48,15 @@ runs:
       working-directory: .buildchain/dev-delivery-native-runtime
       run: |
         set -euo pipefail
-        test "$(git rev-parse HEAD)" = ddac1876650f2faba5a9e1a2e5f55e7d836ac46b
+        test "$(git rev-parse HEAD)" = 1cb2581c6cb5bd677d32bd242f89b778d23c7018
         if [ ! -d node_modules ]; then
           # shifu-entry-contract: allow exact pinned Buildchain dependency bootstrap before its CLI is runnable
           corepack pnpm install --frozen-lockfile --ignore-scripts
         fi
-    - name: Execute only under the live fenced Warrant
+    - name: Execute only under the anonymously observed live fenced Warrant
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker/v1
         KUNGFU_NATIVE_COMMAND: ${{ inputs.command }}
       run: >-
         node framework/dev-delivery/native-execution-under-warrant.mjs

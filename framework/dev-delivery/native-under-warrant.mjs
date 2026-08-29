@@ -80,6 +80,8 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
   const git = dependencies.git || defaultGit;
   const runStep = dependencies.runStep || defaultRunStep;
   const now = dependencies.now || (() => new Date().toISOString());
+  if (!options.repository) throw new Error('repository is required');
+  if (!options.targetBranch) throw new Error('target branch is required');
   const expectedHead = exactSha(options.expectedHead, 'expected head');
   const pullRequestNumber = positiveInteger(
     options.pullRequestNumber,
@@ -98,7 +100,7 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
     steps.push({ name, commandRoot: digest({ executable: './shifu', args }) });
   };
 
-  try {
+  {
     const checkoutHead = exactSha(
       git(cwd, ['rev-parse', 'HEAD']),
       'candidate checkout head',
@@ -214,9 +216,6 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
     fs.writeFileSync(output, `${JSON.stringify(receipt, null, 2)}\n`);
     process.stdout.write(`${JSON.stringify(receipt)}\n`);
     return receipt;
-  } catch (error) {
-    error.message = `credentialless native qualification failed: ${error.message}`;
-    throw error;
   }
 }
 

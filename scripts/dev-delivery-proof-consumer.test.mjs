@@ -407,7 +407,7 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
     /Consume Warrant and record exact Integration Delivery Proof[\s\S]*dev warrant observe[\s\S]*affected-native-proof\.mjs queue-lease-verify[\s\S]*affected-native-proof\.mjs integration-input[\s\S]*dev proof integration[\s\S]*--warrant-result/u,
   );
   assert.match(aggregate, /--branch "\$protected_base"/u);
-  assert.match(aggregate, /ref: 0f4004d0d2b2474c2135a3e88d29d9c85bc37834/u);
+  assert.match(aggregate, /ref: 1cb2581c6cb5bd677d32bd242f89b778d23c7018/u);
   assert.match(
     aggregate,
     /name: Install pinned Buildchain proof runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts/u,
