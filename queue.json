@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 7923,
+  "generation": 7924,
   "fencingCounter": 743,
   "policy": {
     "agingSeconds": 900,
@@ -52014,14 +52014,14 @@
       "nativeCommandContract": {
         "schema": "kungfu.buildchain.native-command-contract/v1",
         "runner": "bash-lc",
-        "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3502 --expected-head 313cc91119a11b1ed67b4e3585099eaafb3067b7 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
-        "commandRoot": "sha256:fbcb9119a078d87e39a194748c49a5e81089a5f914098e6ed54681b4aced3b84"
+        "command": "BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY=github-actions-runner-worker/v1 BUILDCHAIN_RUNNER_ENVIRONMENT=github-hosted KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3502 --expected-head 313cc91119a11b1ed67b4e3585099eaafb3067b7 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+        "commandRoot": "sha256:5ac352e87194d0cbe020e6de37b6ccfdda8a4c74404148b36a62c30fc605dfd0"
       },
       "sourceWorkflowRunId": 33193593516,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-29T01:34:21.146Z",
-      "updatedAt": "2026-08-29T01:34:21.146Z",
-      "attempts": 1,
+      "updatedAt": "2026-08-29T02:02:52.461Z",
+      "attempts": 2,
       "recoveries": 0,
       "status": "queued",
       "terminal": null,
@@ -52139,6 +52139,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-29T01:59:04.897Z",
-  "stateRoot": "sha256:3867107f997a35c18ea09bac71d583295682de31b00f74d3d64e617683f21169"
+  "updatedAt": "2026-08-29T02:02:52.461Z",
+  "stateRoot": "sha256:43f701152e2551730334d3e2d3d6e958125b3d8c5fc43f7378f6ab8a0e39046d"
 }
