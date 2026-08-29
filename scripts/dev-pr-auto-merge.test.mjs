@@ -7,6 +7,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  CredentiallessNativeStatusClient,
   GitHubNativeStatusClient,
   runNativeUnderWarrant,
 } from '../framework/dev-delivery/native-under-warrant.mjs';
@@ -568,6 +569,15 @@ test('native status client does not retry authoritative client errors', async ()
 
   await assert.rejects(client.request('/repos/test'), /source head rejected/u);
   assert.equal(attempts, 1);
+});
+
+test('credentialless native child never requires or uses a provider token', async () => {
+  const client = new CredentiallessNativeStatusClient();
+  await client.requirePullRequest(42, '1'.repeat(40), 'dev/v4/v4.0');
+  await client.status('1'.repeat(40), {
+    state: 'success',
+    context: 'affected-native / linux',
+  });
 });
 
 test('hosted native jobs remain fail-closed behind the exact active Warrant', () => {
