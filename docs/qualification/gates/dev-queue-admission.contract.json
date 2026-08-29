@@ -19,7 +19,7 @@
     "mergeGroup": ".github/workflows/queue-admission-lease.yml",
     "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml",
     "dequeueControllerSource": "current-protected-pull-request-base-ref",
-    "queueAndWarrant": "kungfu-systems/buildchain@8493bf140a7f567e76aff3119f3d39ff026afc84",
+    "queueAndWarrant": "kungfu-systems/buildchain@a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab",
     "stateRefPattern": "buildchain/dev-delivery-warrant/dev-vN-vN.N"
   },
   "admission": {

@@ -13,8 +13,7 @@ import {
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const WARRANT_RUNTIME_SHA = '8493bf140a7f567e76aff3119f3d39ff026afc84';
-const WARRANT_READBACK_RUNTIME_SHA = '0f4004d0d2b2474c2135a3e88d29d9c85bc37834';
+const WARRANT_RUNTIME_SHA = 'a7b5144bc1b0a50ef2637dfab23588b3f10ba8ab';
 const SOURCE_HEAD = '2'.repeat(40);
 const CONTRACT = JSON.parse(
   fs.readFileSync(
@@ -216,10 +215,11 @@ test('merge-group continuation consumes the exact durable Warrant lease', () => 
   );
 });
 
-test('mutating Warrant controllers share one runtime and read-only qualification uses the protected compatibility reader', () => {
+test('all Warrant controllers and qualification share one protected runtime', () => {
   const workflowPaths = [
     '.github/workflows/dev-pr-auto-merge.yml',
     '.github/workflows/dev-delivery-warrant-terminal.yml',
+    '.github/workflows/affected-native-pr.yml',
     CONTRACT.authority.mergeGroup,
   ];
   for (const workflowPath of workflowPaths) {
@@ -230,18 +230,6 @@ test('mutating Warrant controllers share one runtime and read-only qualification
       `${workflowPath} must consume Buildchain ${WARRANT_RUNTIME_SHA}`,
     );
   }
-  const qualificationWorkflow = fs.readFileSync(
-    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
-    'utf8',
-  );
-  assert.match(
-    qualificationWorkflow,
-    new RegExp(WARRANT_READBACK_RUNTIME_SHA, 'u'),
-  );
-  assert.doesNotMatch(
-    qualificationWorkflow,
-    new RegExp(WARRANT_RUNTIME_SHA, 'u'),
-  );
 });
 
 test('trusted dequeue controller revokes the same exact-head context', () => {
