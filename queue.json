@@ -3,15 +3,60 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8007,
-  "fencingCounter": 757,
+  "generation": 8008,
+  "fencingCounter": 758,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:0712ee8a900f7b890552718ee293b6bde92805a699dcf7d4db152632f238d866",
+    "pullRequestNumber": 3519,
+    "sourceHead": "81fb6980fd85138e7a90645c84a5d4aede0249db",
+    "assignmentRoot": "sha256:e80b5f6ad848943fb215dae032c7fc6e9d28660d0d87c9bacf30715208522056",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:c5abd57515892033abfe78aa457cc50043f0732a7e2be94a06d8ad70ff97e5dc",
+    "sourcePatchRoot": "sha256:daffb3239779019dc6be60ff29457e8c6f2222d3bc416b1728f2b514c1b50b04",
+    "sourceProofRoot": "sha256:bd2021441efd191e6d26dd1fae26ad8ed2addc421311aebf865b8bc623b0ff1f",
+    "planRoot": "sha256:ce1afa3b92533907c846d0b8a6ff25774b2f8b26da21bff419dd9eef554e6eb0",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:3f4d2875e286ff81cb6a0fa6719f7258f1330297b4a6fd3859a793cc932b88ac",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "affectedPaths": [
+      ".buildchain/kfd/kfd-2/release-claims.json",
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      ".buildchain/kfd/support-matrix.json",
+      ".github/actions/native-execution-under-warrant/action.yml",
+      ".github/workflows/dev-delivery-warrant-terminal.yml",
+      ".github/workflows/dev-pr-auto-merge.yml",
+      ".github/workflows/queue-admission-lease.yml",
+      "developer/sdk/kfd/kfd-2/release-claims.json",
+      "developer/sdk/kfd/support-matrix.json",
+      "docs/qualification/gates/dev-queue-admission.contract.json",
+      "docs/qualification/gates/workflow-authority.json",
+      "framework/release/publication-surfaces.json",
+      "scripts/assemble-kungfu-publication-gate.mjs",
+      "scripts/assemble-kungfu-publication-gate.test.mjs",
+      "scripts/dev-delivery-warrant-input.test.mjs",
+      "scripts/dev-pr-auto-merge.test.mjs",
+      "scripts/queue-admission-lease.test.mjs"
+    ],
+    "sourceWorkflowRunId": 33238395372,
+    "deliveryClass": "native-proof-required",
+    "generation": 758,
+    "phase": "provisional",
+    "expectedOldStateRoot": "sha256:047c8bdafa255fa1864ca6625ecc568c150efff7c44d2e505a18dd94394b0087",
+    "issuedAt": "2026-08-29T08:34:19.035Z",
+    "expiresAt": "2026-08-29T10:04:19.035Z",
+    "fencingToken": "sha256:094ca0f230102158977f33aa53d4e3efcaf958fcbbc5e4fc3bff52f606a636ec",
+    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -53266,10 +53311,10 @@
       "sourceWorkflowRunId": 33238395372,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-29T08:34:12.991Z",
-      "updatedAt": "2026-08-29T08:34:12.991Z",
+      "updatedAt": "2026-08-29T08:34:19.035Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
@@ -53292,6 +53337,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-29T08:34:12.991Z",
-  "stateRoot": "sha256:047c8bdafa255fa1864ca6625ecc568c150efff7c44d2e505a18dd94394b0087"
+  "updatedAt": "2026-08-29T08:34:19.035Z",
+  "stateRoot": "sha256:9739a394011030ac94dda7a42516b786a4a676124c59e0d0a9c85c3428439391"
 }
