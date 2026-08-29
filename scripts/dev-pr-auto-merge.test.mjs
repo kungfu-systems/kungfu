@@ -15,7 +15,8 @@ const workflow = fs.readFileSync(
 const steadyStateDogfoodFixturePath =
   'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 const protectedWarrantRuntimeRef = 'e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92';
-const protectedWarrantRuntimeSelector = 'v4-alpha';
+const protectedWarrantRuntimeSelector =
+  'train/v4/v4.0/dev-delivery-heartbeat-cas-retry-v4';
 const staleProtectedWarrantRuntimeSelector =
   'train/v4/v4.0/release-topology-convergence';
 
@@ -147,6 +148,14 @@ test('Dev cadence patrol remains an explicit non-targeted path', () => {
   assert.match(workflow, /if \[ "\$expected_pr_number" = "0" \]; then/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
   assert.doesNotMatch(workflow, /auto-merge-enabled|autoMergeEnabled/u);
+});
+
+test('exact targeted recovery is isolated from replaceable controller events', () => {
+  assert.match(
+    workflow,
+    /group: dev-pr-auto-merge-\$\{\{ github\.repository \}\}-\$\{\{ github\.event\.repository\.default_branch \}\}-\$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.expected-pr-number != 0 && format\('target-\{0\}', inputs\.expected-pr-number\) \|\| 'controller' \}\}/u,
+  );
+  assert.match(workflow, /cancel-in-progress: false/u);
 });
 
 test('Dev auto-merge waits for PR checks and lands through the native queue', () => {

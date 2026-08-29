@@ -49,7 +49,10 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: dev-pr-auto-merge-${{ github.repository }}-${{ github.event.repository.default_branch }}
+  # Keep an exact targeted recovery outside the controller slot. Automatic
+  # review, workflow-run, wake, and cadence events may replace one another,
+  # but they must not cancel a native provider already proving a specific PR.
+  group: dev-pr-auto-merge-${{ github.repository }}-${{ github.event.repository.default_branch }}-${{ github.event_name == 'workflow_dispatch' && inputs.expected-pr-number != 0 && format('target-{0}', inputs.expected-pr-number) || 'controller' }}
   cancel-in-progress: false
 
 jobs:
@@ -545,7 +548,7 @@ jobs:
       statuses: write
     uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
     with:
-      buildchain-ref: v4-alpha
+      buildchain-ref: train/v4/v4.0/dev-delivery-heartbeat-cas-retry-v4
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -883,7 +886,7 @@ jobs:
       statuses: write
     uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e52a186b13c5ecd5d2d0e4d88947f1ce505f2f92
     with:
-      buildchain-ref: v4-alpha
+      buildchain-ref: train/v4/v4.0/dev-delivery-heartbeat-cas-retry-v4
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
