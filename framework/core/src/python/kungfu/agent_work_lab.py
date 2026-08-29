@@ -76,6 +76,20 @@ human_agent_catalog = runtime_profiles.human_agent_catalog
 resolve_agent_selector = runtime_profiles.resolve_human_selector
 
 
+def _catalog_suite(
+    suite_catalog: Mapping[str, Any],
+    suite_catalog_path: Path,
+    suite_catalog_root: str,
+) -> dict[str, Any]:
+    return {
+        **suite_catalog,
+        "catalogRoot": suite_catalog_root,
+        "catalogPath": str(suite_catalog_path),
+        "fixture": FIXTURE_ID,
+        "oracle": "exact-partial-state-recognized-and-completed",
+    }
+
+
 def catalog(
     runtime_dir: str | Path,
     *,
@@ -87,13 +101,7 @@ def catalog(
     return {
         "schema": CATALOG_SCHEMA,
         "startup": startup,
-        "suite": {
-            **suite_catalog,
-            "catalogRoot": suite_catalog_root,
-            "catalogPath": str(suite_catalog_path),
-            "fixture": FIXTURE_ID,
-            "oracle": "exact-partial-state-recognized-and-completed",
-        },
+        "suite": _catalog_suite(suite_catalog, suite_catalog_path, suite_catalog_root),
         "actions": [
             {
                 "id": "agent-work-lab.open",
