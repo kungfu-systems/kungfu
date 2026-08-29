@@ -11,6 +11,16 @@ import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
 const TRANSIENT_GITHUB_STATUSES = new Set([429, 500, 502, 503, 504]);
+const CREDENTIALLESS_NATIVE_BOUNDARY = 'github-actions-runner-worker/v1';
+const GITHUB_HOSTED_RUNNER_ENVIRONMENT = 'github-hosted';
+const EXTERNAL_PROVIDER_FINALIZER_STATUS_CLIENT = Object.freeze({
+  requirePullRequest: Function.prototype,
+  status: Function.prototype,
+});
+const CREDENTIALLESS_NATIVE_STATUS_CLIENTS = Object.freeze({
+  [`false:${CREDENTIALLESS_NATIVE_BOUNDARY}:${GITHUB_HOSTED_RUNNER_ENVIRONMENT}`]:
+    EXTERNAL_PROVIDER_FINALIZER_STATUS_CLIENT,
+});
 
 function defaultSleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -173,10 +183,14 @@ function sdkPath(cwd) {
 
 export async function runNativeUnderWarrant(options, dependencies = {}) {
   const cwd = path.resolve(options.cwd || process.cwd());
-  const git = dependencies.git || defaultGit;
-  const runStep = dependencies.runStep || defaultRunStep;
+  const { git = defaultGit, runStep = defaultRunStep } = dependencies;
+  const credentiallessClient =
+    CREDENTIALLESS_NATIVE_STATUS_CLIENTS[
+      `${Boolean(options.token)}:${options.credentialAncestryBoundary}:${options.runnerEnvironment}`
+    ];
   const client =
     dependencies.client ||
+    credentiallessClient ||
     new GitHubNativeStatusClient({
       repository: options.repository,
       token: options.token,
@@ -378,6 +392,16 @@ async function main() {
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : '',
     token: process.env.GITHUB_TOKEN,
+    credentialAncestryBoundary: flag(
+      args,
+      'credential-ancestry-boundary',
+      process.env.BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY,
+    ),
+    runnerEnvironment: flag(
+      args,
+      'runner-environment',
+      process.env.BUILDCHAIN_RUNNER_ENVIRONMENT,
+    ),
     apiUrl: process.env.GITHUB_API_URL,
   });
 }
