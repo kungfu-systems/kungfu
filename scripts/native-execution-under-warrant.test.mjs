@@ -3,7 +3,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { runNativeExecutionUnderWarrant } from '../framework/dev-delivery/native-execution-under-warrant.mjs';
+import {
+  fetchPublicWarrantQueue,
+  runNativeExecutionUnderWarrant,
+} from '../framework/dev-delivery/native-execution-under-warrant.mjs';
 
 const HEAD = '1'.repeat(40);
 const TOKEN = `sha256:${'2'.repeat(64)}`;
@@ -57,20 +60,19 @@ function options() {
 
 function fixture(initial = observation()) {
   let spawned = false;
-  let heartbeats = 0;
+  let observations = 0;
   return {
     get spawned() {
       return spawned;
     },
-    get heartbeats() {
-      return heartbeats;
+    get observations() {
+      return observations;
     },
     dependencies: {
       now: () => NOW,
-      observe: async () => initial,
-      heartbeat: async () => {
-        heartbeats += 1;
-        return observation();
+      observe: async () => {
+        observations += 1;
+        return initial;
       },
       runNative: async ({ heartbeat, executionBinding }) => {
         await heartbeat();
@@ -90,14 +92,39 @@ function fixture(initial = observation()) {
   };
 }
 
-test('exact observe and heartbeat precede native execution', async () => {
+test('public Warrant queue reads retain a bounded buffer above one MiB', () => {
+  const queue = JSON.stringify({ padding: 'x'.repeat(1024 * 1024) });
+  const calls = [];
+  const values = ['', `${HEAD}\n`, queue];
+  const fetched = fetchPublicWarrantQueue({
+    observerRoot: '/tmp/kungfu-public-warrant-observer',
+    repository: 'kungfu-systems/kungfu',
+    branch: 'dev/v4/v4.0',
+    stateRef: 'buildchain/dev-delivery-warrant/dev-v4-v4.0',
+    execGit: (file, args, options) => {
+      calls.push({ file, args, options });
+      return values.shift();
+    },
+  });
+
+  assert.equal(fetched.stateCommit, HEAD);
+  assert.equal(fetched.queue.padding.length, 1024 * 1024);
+  assert.equal(calls.length, 3);
+  for (const call of calls) {
+    assert.equal(call.file, 'git');
+    assert.ok(call.options.maxBuffer >= Buffer.byteLength(queue));
+  }
+});
+
+test('exact credentialless observations continuously fence native execution', async () => {
   const value = fixture();
   const receipt = await runNativeExecutionUnderWarrant(
     options(),
     value.dependencies,
   );
   assert.equal(value.spawned, true);
-  assert.equal(value.heartbeats, 3);
+  assert.equal(value.observations, 4);
+  assert.equal(receipt.fenceMode, 'credentialless-observation');
   assert.equal(receipt.fencingToken, TOKEN);
   assert.equal(receipt.leaseGeneration, 7);
   assert.equal(
@@ -119,7 +146,7 @@ test('queued emergency contender cannot preempt the active Warrant binding', asy
     },
   ];
   const value = fixture(active);
-  value.dependencies.heartbeat = async () => active;
+  value.dependencies.observe = async () => active;
 
   const receipt = await runNativeExecutionUnderWarrant(
     options(),
@@ -159,16 +186,16 @@ for (const [label, changed, pattern] of [
       pattern,
     );
     assert.equal(value.spawned, false);
-    assert.equal(value.heartbeats, 0);
+    assert.equal(value.observations, 1);
   });
 }
 
 test('fence change during execution fails closed', async () => {
   const value = fixture();
-  value.dependencies.heartbeat = async () => {
-    value.dependencies.heartbeat.calls =
-      (value.dependencies.heartbeat.calls || 0) + 1;
-    return value.dependencies.heartbeat.calls === 1
+  value.dependencies.observe = async () => {
+    value.dependencies.observe.calls =
+      (value.dependencies.observe.calls || 0) + 1;
+    return value.dependencies.observe.calls === 1
       ? observation()
       : observation({ fencingToken: `sha256:${'6'.repeat(64)}` });
   };
@@ -178,46 +205,17 @@ test('fence change during execution fails closed', async () => {
   );
 });
 
-test('same-fence concurrent heartbeat write is observed and retried', async () => {
+test('transient credentialless observation failure fails closed', async () => {
   const value = fixture();
   let attempts = 0;
-  let waits = 0;
-  value.dependencies.heartbeat = async () => {
-    attempts += 1;
-    if (attempts === 1) throw new Error('Update is not a fast forward');
-    return observation();
-  };
-  value.dependencies.wait = async (milliseconds) => {
-    waits += 1;
-    assert.equal(milliseconds, 200);
-  };
-  const receipt = await runNativeExecutionUnderWarrant(
-    options(),
-    value.dependencies,
-  );
-  assert.equal(value.spawned, true);
-  assert.equal(waits, 1);
-  assert.equal(receipt.fencingToken, TOKEN);
-});
-
-test('concurrent heartbeat retry fails closed when the fence changed', async () => {
-  const value = fixture();
-  let observations = 0;
   value.dependencies.observe = async () => {
-    observations += 1;
-    return observations === 1
-      ? observation()
-      : observation({ fencingToken: `sha256:${'6'.repeat(64)}` });
-  };
-  value.dependencies.heartbeat = async () => {
-    throw new Error('Update is not a fast forward');
-  };
-  value.dependencies.wait = async () => {
-    assert.fail('changed fence must not be retried');
+    attempts += 1;
+    if (attempts === 2) throw new Error('public state ref unavailable');
+    return observation();
   };
   await assert.rejects(
     runNativeExecutionUnderWarrant(options(), value.dependencies),
-    /stale Delivery Warrant fencing token/u,
+    /public state ref unavailable/u,
   );
-  assert.equal(value.spawned, false);
+  assert.equal(attempts, 2);
 });
