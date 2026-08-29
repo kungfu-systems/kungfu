@@ -145,6 +145,44 @@ test('Dev cadence patrol remains an explicit non-targeted path', () => {
   assert.doesNotMatch(workflow, /auto-merge-enabled|autoMergeEnabled/u);
 });
 
+test('active Warrant handoff inputs are accepted without becoming source authority', () => {
+  const dispatchInputs = workflow.match(
+    /workflow_dispatch:\n\s+inputs:\n([\s\S]*?)\n\npermissions:/u,
+  )?.[1];
+  assert.ok(dispatchInputs, 'workflow_dispatch inputs must remain explicit');
+  for (const name of [
+    'target-branch',
+    'assignment-root',
+    'initiative-root',
+    'source-identity-root',
+    'source-patch-root',
+    'plan-root',
+    'closure-root',
+    'dependency-root',
+    'toolchain-root',
+    'environment-root',
+    'affected-paths-json',
+    'shard-evidence-roots-json',
+    'native-command',
+    'native-command-root',
+    'release-blocker-priority-json',
+    'delivery-class',
+    'delivery-priority',
+    'native-heartbeat-seconds',
+    'legacy-active-owner-binding-json',
+  ]) {
+    assert.match(
+      dispatchInputs,
+      new RegExp(`^ {6}${name}:`, 'mu'),
+      `${name} must be accepted for exact active-Warrant handoff`,
+    );
+  }
+  assert.doesNotMatch(
+    workflow,
+    /DISPATCH_(?:ASSIGNMENT|INITIATIVE|SOURCE_IDENTITY|SOURCE_PATCH|PLAN|CLOSURE|DEPENDENCY|TOOLCHAIN|ENVIRONMENT|AFFECTED|SHARD|NATIVE|RELEASE_BLOCKER|DELIVERY|LEGACY)/u,
+  );
+});
+
 test('Dev auto-merge waits for PR checks and lands through the native queue', () => {
   const requiredChecks = workflow.match(
     /required-status-checks: \|-\n([\s\S]*?)\n\s+queue-admission-context:/u,
