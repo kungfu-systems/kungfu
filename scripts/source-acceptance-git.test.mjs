@@ -10,11 +10,104 @@ import { test } from 'node:test';
 import { resolveCompositionBase } from './check-project-cut-composition-gate.mjs';
 import {
   fetchSourceAcceptanceCommit,
+  findGitTreeEquivalentAncestor,
   readSourceAcceptanceGit,
   sourceAcceptanceMergeBaseCandidates,
   sourceAcceptancePlan,
   sourceMergeGroupBase,
 } from './source-acceptance.mjs';
+
+test('KFD replay traverses only a composition-preserving Project Cut', (t) => {
+  const repository = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfd-project-cut-replay-'),
+  );
+  t.after(() => fs.rmSync(repository, { recursive: true, force: true }));
+  const gitRead = (args) => readSourceAcceptanceGit(args, { cwd: repository });
+  gitRead(['init', '--quiet']);
+  gitRead(['config', 'user.name', 'KFD Fixture']);
+  gitRead(['config', 'user.email', 'kfd-fixture@kungfu.invalid']);
+  fs.writeFileSync(path.join(repository, 'base.txt'), 'base\n');
+  gitRead(['add', 'base.txt']);
+  gitRead(['commit', '--quiet', '-m', 'shared base']);
+  const sharedBase = gitRead(['rev-parse', 'HEAD']);
+
+  gitRead(['switch', '--quiet', '-c', 'kfd-source']);
+  fs.writeFileSync(
+    path.join(repository, 'runtime.txt'),
+    'semantic authority\n',
+  );
+  gitRead(['add', 'runtime.txt']);
+  gitRead(['commit', '--quiet', '-m', 'original KFD source']);
+  const sourceSha = gitRead(['rev-parse', 'HEAD']);
+
+  gitRead(['switch', '--quiet', '-c', 'dev', sharedBase]);
+  gitRead(['cherry-pick', '--quiet', sourceSha]);
+  const protectedReplay = gitRead(['rev-parse', 'HEAD']);
+  fs.writeFileSync(
+    path.join(repository, 'work-design.txt'),
+    'install closure\n',
+  );
+  gitRead(['add', 'work-design.txt']);
+  gitRead(['commit', '--quiet', '-m', 'later dev work']);
+  const developmentHead = gitRead(['rev-parse', 'HEAD']);
+
+  gitRead(['switch', '--quiet', '-c', 'alpha', sharedBase]);
+  fs.writeFileSync(path.join(repository, 'alpha.txt'), 'previous release\n');
+  gitRead(['add', 'alpha.txt']);
+  gitRead(['commit', '--quiet', '-m', 'protected alpha']);
+  const alphaHead = gitRead(['rev-parse', 'HEAD']);
+  const cutSha = gitRead([
+    'commit-tree',
+    `${developmentHead}^{tree}`,
+    '-p',
+    alphaHead,
+    '-p',
+    developmentHead,
+    '-m',
+    'composition-preserving Project Cut',
+  ]);
+  const syntheticHead = gitRead([
+    'commit-tree',
+    `${cutSha}^{tree}`,
+    '-p',
+    alphaHead,
+    '-p',
+    cutSha,
+    '-m',
+    'synthetic protected merge',
+  ]);
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, syntheticHead, gitRead),
+    protectedReplay,
+  );
+
+  fs.writeFileSync(path.join(repository, 'changed.txt'), 'changed cut tree\n');
+  gitRead(['add', 'changed.txt']);
+  const changedCut = gitRead([
+    'commit-tree',
+    gitRead(['write-tree']),
+    '-p',
+    alphaHead,
+    '-p',
+    developmentHead,
+    '-m',
+    'changed Project Cut',
+  ]);
+  const changedSyntheticHead = gitRead([
+    'commit-tree',
+    `${changedCut}^{tree}`,
+    '-p',
+    alphaHead,
+    '-p',
+    changedCut,
+    '-m',
+    'synthetic changed merge',
+  ]);
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, changedSyntheticHead, gitRead),
+    '',
+  );
+});
 
 test('Project Cut composition uses the exact merge-group base without ancestry', () => {
   const baseSha = 'a'.repeat(40);

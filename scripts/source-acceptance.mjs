@@ -495,6 +495,33 @@ export function findGitTreeEquivalentAncestor(
   );
   if (treeMatch) return treeMatch;
 
+  // A qualified Project Cut is itself a two-parent composition commit: its
+  // first parent is the protected release base and its second parent is the
+  // protected development head, while its tree is exactly the development
+  // tree. GitHub then wraps that cut in the synthetic PR merge inspected
+  // above. Admit a retained exact-tree replay from the development chain only
+  // when every edge and tree in that nested topology is unchanged. An
+  // ordinary merge, a differently based cut, or a composed/conflict-resolved
+  // cut cannot enter this path.
+  const [cutSha, cutBaseParent, cutDevelopmentParent, ...cutExtraParents] =
+    gitRead(['rev-list', '--parents', '-n', '1', candidateParent])
+      .trim()
+      .split(/\s+/u);
+  if (
+    cutSha === candidateParent &&
+    cutBaseParent === baseParent &&
+    cutDevelopmentParent &&
+    cutExtraParents.length === 0 &&
+    gitRead(['rev-parse', `${cutDevelopmentParent}^{tree}`]) === candidateTree
+  ) {
+    const projectCutTreeMatch = findFirstParentTreeEquivalent(
+      sourceTree,
+      cutDevelopmentParent,
+      gitRead,
+    );
+    if (projectCutTreeMatch) return projectCutTreeMatch;
+  }
+
   // A protected base may advance in unrelated paths while GitHub exactly
   // replays the candidate's Project Cut. The whole trees then differ even
   // though the cumulative binary patch is byte-for-byte identical. Admit only
