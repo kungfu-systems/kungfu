@@ -354,7 +354,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
+          ref: e9df589c67f7caab43abb1a288d45734d33a72f9
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -666,9 +666,12 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
+    # Keep admission, native-check landing, and runtime checkout on one exact
+    # Buildchain SHA. A bootstrap upgrade must use a fresh source-run retry
+    # budget; it must not reuse an already-consumed CheckRun attempt.
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e9df589c67f7caab43abb1a288d45734d33a72f9
     with:
-      buildchain-ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
+      buildchain-ref: e9df589c67f7caab43abb1a288d45734d33a72f9
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -765,8 +768,24 @@ jobs:
         run: |
           set -euo pipefail
           evidence=.buildchain/native-check-bridge/warrant
-          warrant="$evidence/warrant.json"
-          test -f "$warrant"
+          warrant_candidates=(
+            "$evidence/warrant.json"
+            "$evidence/dev-delivery/warrant.json"
+          )
+          warrant=""
+          for candidate in "${warrant_candidates[@]}"; do
+            if [ -f "$candidate" ]; then
+              if [ -n "$warrant" ]; then
+                echo "qualified Warrant evidence resolved more than once" >&2
+                exit 1
+              fi
+              warrant="$candidate"
+            fi
+          done
+          if [ -z "$warrant" ]; then
+            echo "qualified Warrant evidence was not found" >&2
+            exit 1
+          fi
 
           live_pr="$evidence/live-pr.json"
           gh api "repos/$GITHUB_REPOSITORY/pulls/$EXPECTED_PR" > "$live_pr"
@@ -1005,9 +1024,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e9df589c67f7caab43abb1a288d45734d33a72f9
     with:
-      buildchain-ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
+      buildchain-ref: e9df589c67f7caab43abb1a288d45734d33a72f9
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}

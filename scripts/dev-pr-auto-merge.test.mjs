@@ -19,7 +19,7 @@ test('Dev auto-merge admits only explicitly ready reviewed source-bound PRs', ()
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, 'fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1');
+  assert.equal(reusableRef, 'e9df589c67f7caab43abb1a288d45734d33a72f9');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
@@ -258,6 +258,10 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
+    /warrant_candidates=\([\s\S]*"\$evidence\/warrant\.json"[\s\S]*"\$evidence\/dev-delivery\/warrant\.json"[\s\S]*qualified Warrant evidence resolved more than once[\s\S]*qualified Warrant evidence was not found/u,
+  );
+  assert.match(
+    bridge,
     /\.after\.stateRoot == \.observation\.stateRoot[\s\S]*\.warrant == \.observation\.activeWarrant[\s\S]*\.warrant\.sourceWorkflowRunId == \$sourceRun[\s\S]*\.warrant\.phase == "qualified"[\s\S]*\.warrant\.nativeProofRoot/u,
   );
   assert.match(
@@ -319,7 +323,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     landing,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@e9df589c67f7caab43abb1a288d45734d33a72f9/u,
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
@@ -351,7 +355,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: e9df589c67f7caab43abb1a288d45734d33a72f9/u,
   );
   assert.match(
     workflow,
