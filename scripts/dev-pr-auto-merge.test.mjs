@@ -15,11 +15,11 @@ const workflow = fs.readFileSync(
 const steadyStateDogfoodFixturePath =
   'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 
-test('Dev auto-merge admits only explicitly ready reviewed source-bound PRs', () => {
+test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs', () => {
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, 'fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1');
+  assert.equal(reusableRef, 'cd8318d57b0506493114afcc63b9aacef741d3c4');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
@@ -39,7 +39,7 @@ test('Dev auto-merge admits only explicitly ready reviewed source-bound PRs', ()
     /allowed-head-prefixes: feature\/,fix\/,chore\/,docs\/,ci\/,refactor\//u,
   );
   assert.match(workflow, /require-approval: true/u);
-  assert.match(workflow, /same-repository-only: false/u);
+  assert.match(workflow, /same-repository-only: true/u);
   assert.match(workflow, /max-merges: 1/u);
 });
 
@@ -89,10 +89,6 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   );
   assert.match(
     workflow,
-    /commits\/\$WORKFLOW_HEAD_SHA\/pulls\?per_page=100[\s\S]*\.state == "open"[\s\S]*\.base\.ref == \$branch[\s\S]*\.head\.sha == \$head[\s\S]*fork fallback must resolve to exactly one open pull request/u,
-  );
-  assert.match(
-    workflow,
     /expected-pr-number and expected-head-sha must be provided together/u,
   );
   assert.match(
@@ -105,7 +101,11 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   );
   assert.match(
     workflow,
-    /Verify exact source qualification run[\s\S]*\.name == "Core affected native"[\s\S]*\.path == "\.github\/workflows\/affected-native-pr\.yml"[\s\S]*\.head_sha == \$head[\s\S]*\.pull_requests\[0\]\.number == \$pullRequest[\s\S]*\(\.pull_requests \| length\) == 0[\s\S]*source-pull-request\.json[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
+    /Verify exact source qualification run[\s\S]*\.name == "Core affected native"[\s\S]*\.path == "\.github\/workflows\/affected-native-pr\.yml"[\s\S]*\.head_sha == \$head/u,
+  );
+  assert.match(
+    workflow,
+    /source_run_pull_request_count=.*\(\.pull_requests \/\/ \[\]\) \| length[\s\S]*case "\$source_run_pull_request_count" in[\s\S]*1\)[\s\S]*\.pull_requests\[0\]\.number == \$pullRequest[\s\S]*0\)[\s\S]*repos\/\$GITHUB_REPOSITORY\/pulls\/\$EXPECTED_PR[\s\S]*\.state == "open"[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch/u,
   );
   assert.match(
     workflow,
@@ -319,7 +319,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     landing,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@cd8318d57b0506493114afcc63b9aacef741d3c4/u,
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
@@ -351,7 +351,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: cd8318d57b0506493114afcc63b9aacef741d3c4/u,
   );
   assert.match(
     workflow,
