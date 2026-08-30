@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784, https://github.com/kungfu-systems/kungfu/pull/3140, https://github.com/kungfu-systems/kungfu/pull/3395, https://github.com/kungfu-systems/kungfu/pull/3436]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784, https://github.com/kungfu-systems/kungfu/pull/3140, https://github.com/kungfu-systems/kungfu/pull/3395, https://github.com/kungfu-systems/kungfu/pull/3436, https://github.com/kungfu-systems/kungfu/pull/3523]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1784
 qualification_refs: [framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/api/tests/kfx-host.test.ts, framework/gui/src/agent-work-lab.test.ts, framework/tui/src/agent-work-lab-view.test.ts, framework/core/src/libkungfu/tests/native_kfx_service_host_tests.cpp, framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp, framework/core/src/bindings/python/binding/py-runtime.cpp, framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json]
 review_state: self-reviewed
@@ -14,8 +14,8 @@ period: 2026-07-15
 theme: surface-neutral-kfx-contributions-thin-bindings
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-08-26
-ai_provenance: GPT-5 via Codex on 2026-08-26; based on repository contracts, the exact feature diff, local source qualification, and the protected pull request; installed-product, cross-platform artifact, native Warrant, and public release qualification are not claimed
+last_reviewed: 2026-08-29
+ai_provenance: GPT-5 via Codex on 2026-08-29; based on repository contracts, the exact feature diff, local source qualification, and the protected pull request; promoted installed-product, cross-platform artifact, native Warrant, and public release qualification are not claimed
 ---
 
 # KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
@@ -137,6 +137,13 @@ service host, native WASM host, and Rewind Node/Python adapters. Those hosts
 adopt, heartbeat, fence, and settle only the exact Core receipt; they do not
 rescan authority, recover a live holder, or collapse capability, Warrant,
 Episode, and Settlement roots into a surface-private decision.
+
+PR #3523 binds the existing versioned CLI surface authority to executable
+installed Project discovery contracts. The canonical registry now declares
+the default JSON mode and exact schemas for `kungfu project list` and
+`kungfu project works`; both advertised `--json` invocations are exercised
+against the exact installed Agent Map binary. This stage does not redefine
+Project or Work authority, and promoted-product qualification remains pending.
 
 ## Decision
 

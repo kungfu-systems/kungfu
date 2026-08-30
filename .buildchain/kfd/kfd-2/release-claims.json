@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.4",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.4",
-    "sourceSha": "acbaa44fc039fe86667ac0da060c2c4e54b3ce35"
+    "sourceSha": "f5b70004b42e8e28fb533f80e7338e30b1181ab3"
   },
   "claims": [
     {
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "23cee1b355c80d48862f0c796e2db7d83c866f0ea29fbed0959d776e593369e1"
+            "sha256": "742b8aaefb474bf067a504d026245bb47f14483639bbac85a2f59109509c4f3d"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
