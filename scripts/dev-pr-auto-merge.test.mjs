@@ -258,6 +258,10 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
+    /warrant_candidates=\([\s\S]*"\$evidence\/warrant\.json"[\s\S]*"\$evidence\/dev-delivery\/warrant\.json"[\s\S]*qualified Warrant evidence resolved more than once[\s\S]*qualified Warrant evidence was not found/u,
+  );
+  assert.match(
+    bridge,
     /\.after\.stateRoot == \.observation\.stateRoot[\s\S]*\.warrant == \.observation\.activeWarrant[\s\S]*\.warrant\.sourceWorkflowRunId == \$sourceRun[\s\S]*\.warrant\.phase == "qualified"[\s\S]*\.warrant\.nativeProofRoot/u,
   );
   assert.match(

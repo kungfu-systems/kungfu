@@ -765,8 +765,24 @@ jobs:
         run: |
           set -euo pipefail
           evidence=.buildchain/native-check-bridge/warrant
-          warrant="$evidence/warrant.json"
-          test -f "$warrant"
+          warrant_candidates=(
+            "$evidence/warrant.json"
+            "$evidence/dev-delivery/warrant.json"
+          )
+          warrant=""
+          for candidate in "${warrant_candidates[@]}"; do
+            if [ -f "$candidate" ]; then
+              if [ -n "$warrant" ]; then
+                echo "qualified Warrant evidence resolved more than once" >&2
+                exit 1
+              fi
+              warrant="$candidate"
+            fi
+          done
+          if [ -z "$warrant" ]; then
+            echo "qualified Warrant evidence was not found" >&2
+            exit 1
+          fi
 
           live_pr="$evidence/live-pr.json"
           gh api "repos/$GITHUB_REPOSITORY/pulls/$EXPECTED_PR" > "$live_pr"
