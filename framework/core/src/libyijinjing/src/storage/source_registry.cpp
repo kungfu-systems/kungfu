@@ -258,7 +258,7 @@ void source_registry_store::for_each_typed_record(const source_registry_record_v
   if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
     return;
   }
-  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
+  auto reader = std::make_shared<journal::reader>(journal::reader_policy::peer(), false, std::make_shared<bus>(false));
   reader->join(location, location::PUBLIC, 0);
   while (reader->data_available()) {
     const auto frame = reader->current_frame();

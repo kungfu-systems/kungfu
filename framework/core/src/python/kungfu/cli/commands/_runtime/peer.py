@@ -206,3 +206,19 @@ def peer_host(runtime_dir, peer_id, host_generation, expected_plan_id):
     sys.exit(
         peer_lifecycle.run_host(runtime_dir, peer_id, host_generation, expected_plan_id)
     )
+
+
+for _symbol in (
+    "runtime_peer",
+    "peer_contract",
+    "peer_plan",
+    "peer_start",
+    "peer_ensure",
+    "peer_status",
+    "peer_health",
+    "peer_stop",
+    "peer_restart",
+    "peer_host",
+):
+    globals()[_symbol].callback.__module__ = "kungfu.cli.commands.runtime"
+    globals()[_symbol].callback.__qualname__ = _symbol

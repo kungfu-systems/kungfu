@@ -154,3 +154,14 @@ def runtime_surface_verify(receipt_path, as_json):
     _json(payload) if as_json else click.echo(
         f"verified {payload['runtimeSurface']} {payload['receiptRoot']}"
     )
+
+
+for _symbol in (
+    "runtime",
+    "runtime_surface_group",
+    "runtime_surface_contract",
+    "runtime_surface_resolve",
+    "runtime_surface_verify",
+):
+    globals()[_symbol].callback.__module__ = "kungfu.cli.commands.runtime"
+    globals()[_symbol].callback.__qualname__ = _symbol

@@ -750,14 +750,17 @@ function auditDeprecationFixture(selected, options = {}) {
 test('checked-in deprecation authority distinguishes live debt from settled history', () => {
   const report = auditDeprecations({
     root: REPO_ROOT,
-    releaseDate: '2026-07-29',
+    release: '4.0.0-alpha.4',
+    releaseDate: '2026-08-28',
+    channel: 'alpha',
+    strictDue: true,
   });
   assert.equal(report.ok, true);
   assert.equal(report.readOnly, true);
   assert.equal(report.summary.entries, 3);
-  assert.equal(report.summary.dispositions['not-due'], 3);
-  assert.equal(report.inventory.live.length, 9);
-  assert.equal(report.inventory.settled.length, 0);
+  assert.equal(report.summary.dispositions.removed, 3);
+  assert.equal(report.inventory.live.length, 0);
+  assert.equal(report.inventory.settled.length, 3);
   assert.equal(report.inventory.classifications.historicalEvidence.length, 1);
 });
 
