@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8433,
+  "generation": 8434,
   "fencingCounter": 802,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:562af7d87b0d8c63a2f72235e00d3f94ac1fd19cc3098c53deb7fe8fdb2098f4",
@@ -52,8 +52,13 @@
     "issuedAt": "2026-08-30T20:24:12.355Z",
     "expiresAt": "2026-08-30T21:59:35.551Z",
     "fencingToken": "sha256:39acea734e94d33b39ae0e7908cdc8de4c70ccca7d9126ca6f8a1f4ce797f035",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-30T20:29:35.551Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-30T20:29:35.551Z",
+    "nativeProofRoot": "sha256:348d3328d4e07044bccb9e56a545309cc8e08da21081cca8cd18033eae37be85",
+    "nativeExecutionReceiptRoot": "sha256:f9c8f0eb92036a3da425939b2ba85f088a1306d31d9336d81305a1a1742262e6",
+    "nativeProofReuseRoot": "sha256:5c93b0339239f7d802c92a83e2ac1eeb0de91aced54e117a8203800722da2ffd",
+    "qualificationReceiptRoot": "sha256:da9b5f33b1bcf74c23fa4c66dcc6830653f7d1751e5730b3cf6dfb46dd0fc3e7",
+    "qualifiedAt": "2026-08-30T20:29:58.151Z"
   },
   "candidates": [
     {
@@ -57529,10 +57534,10 @@
       "sourceWorkflowRunId": 33333149524,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T20:24:07.962Z",
-      "updatedAt": "2026-08-30T20:29:35.551Z",
+      "updatedAt": "2026-08-30T20:29:58.151Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/agent/intent-map.json",
@@ -57545,6 +57550,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T20:29:35.551Z",
-  "stateRoot": "sha256:7edd4b81dd157cc12382be30c7950df6802b2f3b08484bb3ce502d618f490e77"
+  "updatedAt": "2026-08-30T20:29:58.151Z",
+  "stateRoot": "sha256:91cbbd3e58cc07fc3ef47451fe61fd0dae122d09e322614119d80eb7de9aa557"
 }
