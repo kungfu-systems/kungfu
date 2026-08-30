@@ -666,6 +666,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
+    # Keep admission, native-check landing, and runtime checkout on one exact
+    # Buildchain SHA. A bootstrap upgrade must use a fresh source-run retry
+    # budget; it must not reuse an already-consumed CheckRun attempt.
     uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e9df589c67f7caab43abb1a288d45734d33a72f9
     with:
       buildchain-ref: e9df589c67f7caab43abb1a288d45734d33a72f9
