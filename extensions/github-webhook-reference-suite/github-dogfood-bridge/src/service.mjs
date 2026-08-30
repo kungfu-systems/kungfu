@@ -8,7 +8,7 @@ import {
 
 export const packageIdentity = Object.freeze({
   key: 'github-dogfood-bridge',
-  version: '0.1.0',
+  version: '4.0.0-alpha.4',
   productVersion: '4.0.0-alpha.4',
   kitRoot:
     'sha256:819ae3f7ebd4934cadb28ee5b37f346e1feeb8d4fb1de35d290d75c35ed8c62f',
