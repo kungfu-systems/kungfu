@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8312,
+  "generation": 8313,
   "fencingCounter": 788,
   "policy": {
     "agingSeconds": 900,
@@ -56109,11 +56109,20 @@
       "sourceWorkflowRunId": 33307105140,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T10:51:53.415Z",
-      "updatedAt": "2026-08-30T10:51:53.415Z",
+      "updatedAt": "2026-08-30T11:21:24.061Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:4f3deae10e5d46dc138e8fa75259264d6ff734137ea60c78fd3924f13caae716",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "2906ed90d1ffaddcd56c6f993bacde15f95de49b",
+        "observedSourceHead": "2906ed90d1ffaddcd56c6f993bacde15f95de49b",
+        "eventAction": "closed",
+        "closedAt": "2026-08-30T11:21:24.061Z"
+      },
       "affectedPaths": [
         ".github/workflows/dev-pr-auto-merge.yml",
         ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/atlas.json",
@@ -56215,6 +56224,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T11:17:15.383Z",
-  "stateRoot": "sha256:7f6cbf9025f4892f72c6c1733014521b89b9cb73f9a0cb25d6404949c7d4b83c"
+  "updatedAt": "2026-08-30T11:21:24.061Z",
+  "stateRoot": "sha256:086a6eaf2ab10df871fa46e9f443c410b580ffacc1650967b8220dc55100df79"
 }
