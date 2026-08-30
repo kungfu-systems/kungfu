@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8394,
+  "generation": 8395,
   "fencingCounter": 797,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:714388951ba076fbe49e5370e88f6c84b4834a3425404671000704475bf2f394",
@@ -51,8 +51,13 @@
     "issuedAt": "2026-08-30T16:03:37.570Z",
     "expiresAt": "2026-08-30T17:39:01.938Z",
     "fencingToken": "sha256:9f619f83cd2de3bd4b72ea0c347756c4431885b9a92bcec631ec529b7b4f146e",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-30T16:09:01.938Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-30T16:09:01.938Z",
+    "nativeProofRoot": "sha256:26784d09ea1f162a05904710f68c430843bca5cf99af2d4f53c973e615fd183c",
+    "nativeExecutionReceiptRoot": "sha256:c479c483f776436d8c4b754f116298b1b568edb41e7fefb4c230bfae516eab20",
+    "nativeProofReuseRoot": "sha256:1e5238bf62655787523bbabbf3c62ab37ac7072065c68b57129d95dca8d6058e",
+    "qualificationReceiptRoot": "sha256:2f9f4c91c3278746788904d3b4374dbc461bed34647499157ce1a499892d51ce",
+    "qualifiedAt": "2026-08-30T16:09:38.707Z"
   },
   "candidates": [
     {
@@ -57145,10 +57150,10 @@
       "sourceWorkflowRunId": 33300814752,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T15:00:59.434Z",
-      "updatedAt": "2026-08-30T16:09:01.938Z",
+      "updatedAt": "2026-08-30T16:09:38.707Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "scripts/source-acceptance-git.test.mjs",
@@ -57216,6 +57221,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T16:09:01.938Z",
-  "stateRoot": "sha256:a077118fc156e13240ad79a6c8b6e897e41bea2e8d242fad6fdeea528dbba0b5"
+  "updatedAt": "2026-08-30T16:09:38.707Z",
+  "stateRoot": "sha256:b85853202d25c2cc1b9ccd159eceaaf2ff06b9761ef2edcdb1a64ab8777020c9"
 }
