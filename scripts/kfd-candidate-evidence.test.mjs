@@ -12,6 +12,7 @@ import {
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
   prepareKfdArtifactWitness,
+  resolveKfdSourcePlatform,
   runVerifiedQualification,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
@@ -19,6 +20,70 @@ import {
 
 const SOURCE_SHA = 'a'.repeat(40);
 const SOURCE_TREE = 'b'.repeat(40);
+
+test('resolves KFD source platforms from explicit Buildchain identities', () => {
+  assert.equal(
+    resolveKfdSourcePlatform('macos-arm64', {
+      BUILDCHAIN_PLATFORM_ID: 'linux-x64',
+      RUNNER_OS: 'Linux',
+      RUNNER_ARCH: 'X64',
+    }),
+    'macos-arm64',
+  );
+  assert.equal(
+    resolveKfdSourcePlatform('', {
+      BUILDCHAIN_PLATFORM_ID: 'linux-arm64',
+      RUNNER_OS: 'Linux',
+      RUNNER_ARCH: 'X64',
+    }),
+    'linux-arm64',
+  );
+  assert.equal(
+    resolveKfdSourcePlatform('', {
+      'INPUT_PLATFORM-ID': 'windows-x64',
+      RUNNER_OS: 'Linux',
+      RUNNER_ARCH: 'X64',
+    }),
+    'windows-x64',
+  );
+});
+
+test('infers every supported KFD source platform from GitHub runner identity', () => {
+  const cases = [
+    ['Linux', 'X64', 'linux-x64'],
+    ['Linux', 'ARM64', 'linux-arm64'],
+    ['macOS', 'ARM64', 'macos-arm64'],
+    ['Windows', 'X64', 'windows-x64'],
+  ];
+  for (const [runnerOs, runnerArch, expected] of cases) {
+    assert.equal(
+      resolveKfdSourcePlatform('', {
+        RUNNER_OS: runnerOs,
+        RUNNER_ARCH: runnerArch,
+      }),
+      expected,
+    );
+  }
+});
+
+test('keeps non-runner source sealing platform-neutral', () => {
+  assert.equal(resolveKfdSourcePlatform('', {}), '');
+});
+
+test('rejects incomplete or unsupported GitHub runner platform identity', () => {
+  assert.throws(
+    () => resolveKfdSourcePlatform('', { RUNNER_OS: 'Linux' }),
+    /incomplete GitHub runner platform identity/u,
+  );
+  assert.throws(
+    () =>
+      resolveKfdSourcePlatform('', {
+        RUNNER_OS: 'macOS',
+        RUNNER_ARCH: 'X64',
+      }),
+    /unsupported GitHub runner platform identity/u,
+  );
+});
 
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

@@ -23,6 +23,13 @@ export const KFD_ARTIFACT_WITNESS_JSONS = SUPPORTED_KFD_PLATFORMS.map(
   (platform) => `product/release/qualification/kfd/artifacts/${platform}.json`,
 );
 
+const GITHUB_RUNNER_PLATFORM_IDS = new Map([
+  ['Linux:X64', 'linux-x64'],
+  ['Linux:ARM64', 'linux-arm64'],
+  ['macOS:ARM64', 'macos-arm64'],
+  ['Windows:X64', 'windows-x64'],
+]);
+
 const SOURCE_GATE_INPUTS = [
   '.buildchain/kfd/kfd-1/contract-world.witness.json',
   '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
@@ -109,6 +116,36 @@ function sha256File(filePath) {
 
 function rooted(value) {
   return `sha256:${sha256(canonicalJson(value))}`;
+}
+
+export function resolveKfdSourcePlatform(
+  explicitPlatform = '',
+  env = process.env,
+) {
+  const platform =
+    explicitPlatform ||
+    env.BUILDCHAIN_PLATFORM_ID ||
+    env['INPUT_PLATFORM-ID'] ||
+    '';
+  if (platform) {
+    assertPlatform(platform);
+    return platform;
+  }
+  const runnerOs = env.RUNNER_OS || '';
+  const runnerArch = env.RUNNER_ARCH || '';
+  if (!runnerOs && !runnerArch) return '';
+  if (!runnerOs || !runnerArch) {
+    throw new Error(
+      `incomplete GitHub runner platform identity: RUNNER_OS=${runnerOs || '<empty>'}, RUNNER_ARCH=${runnerArch || '<empty>'}`,
+    );
+  }
+  const inferred = GITHUB_RUNNER_PLATFORM_IDS.get(`${runnerOs}:${runnerArch}`);
+  if (!inferred) {
+    throw new Error(
+      `unsupported GitHub runner platform identity: RUNNER_OS=${runnerOs}, RUNNER_ARCH=${runnerArch}`,
+    );
+  }
+  return inferred;
 }
 
 export function kfdEvidenceRoot(value) {
@@ -239,11 +276,9 @@ export function sealKfdSourceEvidence({
   expectedInputRoot = '',
   sourceSha = '',
   sourceTree = '',
-  platform = process.env.BUILDCHAIN_PLATFORM_ID ||
-    process.env['INPUT_PLATFORM-ID'] ||
-    '',
+  platform = '',
 } = {}) {
-  if (platform) assertPlatform(platform);
+  platform = resolveKfdSourcePlatform(platform);
   const prebuild = createKfdPrebuildGate({ root, sourceSha, sourceTree });
   if (expectedInputRoot && prebuild.inputRoot !== expectedInputRoot) {
     throw new Error(
