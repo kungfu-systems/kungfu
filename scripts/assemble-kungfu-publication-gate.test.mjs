@@ -229,6 +229,15 @@ test('real Buildchain validation starts with empty GitHub command files', () => 
   assert.ok(summary < validator);
 });
 
+test('publication Gate hydrates ADR history before the release-promotion profile', () => {
+  const prepare = SCRIPT.indexOf('prepareGateMeasurementHistory(root);');
+  const execute = SCRIPT.indexOf('const gateReceipt = await executeGateRun');
+
+  assert.notEqual(prepare, -1);
+  assert.notEqual(execute, -1);
+  assert.ok(prepare < execute);
+});
+
 test(
   'real Buildchain validator qualifies the current config with empty command files',
   {

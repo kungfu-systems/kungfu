@@ -1,13 +1,9 @@
 {
-  "schema": "kungfu.runtime.surface-parity-fixture/v2",
+  "schema": "kungfu.runtime.surface-parity-fixture/v1",
   "productStatusSchema": "kungfu.runtime.product-status/v1",
   "surfaces": {
     "python": "framework/core/src/python/kungfu/runtime_broker.py",
-    "cli": {
-      "implementation": "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
-      "facade": "framework/core/src/python/kungfu/cli/commands/runtime.py",
-      "bindingPattern": "from kungfu\\.cli\\.commands\\._runtime\\.base import \\([\\s\\S]*?_plain_status as _plain_status,[\\s\\S]*?\\)"
-    },
+    "cli": "framework/core/src/python/kungfu/cli/commands/runtime.py",
     "node": "framework/api/src/capability/runtime.ts",
     "libkungfuTypes": "framework/core/lib/kungfu.d.ts",
     "gui": "framework/gui/src/runtime-status.ts",

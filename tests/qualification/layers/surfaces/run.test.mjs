@@ -101,7 +101,8 @@ test('Windows installer qualification stays below the legacy path budget', () =>
   };
   for (const source of packageSources)
     visit(source.root, source.installedPrefix);
-  const runnerTemp = 'C:\\actions-runner\\kungfu-systems\\_work\\_temp';
+  const runnerTemp =
+    'C:\\actions-runner\\kungfu-systems\\_work\\kungfu\\kungfu\\_temp';
   const workspace = `${surfaceQualificationTempPrefix(runnerTemp)}xxxxxx`;
   const legacyWorkspace = path.win32.join(
     runnerTemp,
