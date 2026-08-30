@@ -294,7 +294,8 @@ jobs:
               gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number" > "$RUNNER_TEMP/family-pr.json"
               pr_head="$(jq -r '.head.sha' "$RUNNER_TEMP/family-pr.json")"
               jq -r '.body // ""' "$RUNNER_TEMP/family-pr.json" > "$RUNNER_TEMP/family-pr-body.txt"
-              gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/status" > "$RUNNER_TEMP/family-status.json"
+              gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/statuses?per_page=100" |
+                jq '{statuses: .}' > "$RUNNER_TEMP/family-status.json"
               base_branch="$(jq -r '.base.ref' "$RUNNER_TEMP/family-pr.json")"
               ;;
             *)
