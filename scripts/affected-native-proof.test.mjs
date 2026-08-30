@@ -186,6 +186,7 @@ function deliveryFixture(overrides = {}) {
       combinedStatus: {
         statuses: [
           { context: lease.statusContext, state: 'pending' },
+          { context: 'project-cut / queue-admission', state: 'pending' },
           { context: 'project-cut / queue-admission', state: 'success' },
         ],
       },
@@ -547,7 +548,6 @@ test('effective rules normalize the exact required-check set', () => {
     ['affected-native / linux', 'project-cut / queue-admission'],
   );
 });
-
 test('hosted image rollout preserves proof compatibility and receipt facts', () => {
   const value = fixture();
   const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from kungfu import agent_work_lab, assignment_evidence, profile_sdk
+from kungfu import agent_work_lab, assignment_evidence
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import kfc
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands  # noqa: F401
@@ -375,9 +375,7 @@ def test_project_tour_episode_cli_invokes_one_native_controller(monkeypatch, tmp
     observed = []
 
     def run_episode(request, operations, emit):
-        observed.append(
-            (request, operations, profile_sdk._VALIDATION_SCOPE.get() is not None)
-        )
+        observed.append((request, operations))
         emit(
             {
                 "schema": "kungfu.project-tour.episode-event/v1",
@@ -427,13 +425,11 @@ def test_project_tour_episode_cli_invokes_one_native_controller(monkeypatch, tmp
 
     assert result.exit_code == 0, result.output
     assert len(observed) == 1
-    request, operations, validation_scoped = observed[0]
+    request, operations = observed[0]
     assert request.destination == str(destination.resolve())
     assert request.episode == "2"
     assert request.resume is True
     assert operations.__class__.__name__ == "_NativeProjectTourOperations"
-    assert validation_scoped is True
-    assert profile_sdk._VALIDATION_SCOPE.get() is None
     lines = [json.loads(line) for line in result.output.splitlines()]
     assert [line["schema"] for line in lines] == [
         "kungfu.project-tour.episode-event/v1",

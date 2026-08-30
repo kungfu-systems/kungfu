@@ -109,10 +109,11 @@ user-facing.
 
 ## mmap source compatibility
 
-The typed `mapped_region::map(path, size, policy)` API is canonical. Deprecated
-`map_existing`, `map_writable`, and raw-address boolean overloads remain only as
-temporary source adapters for existing embedders; they translate directly to a
-typed policy and do not preserve the former best-effort locking interpretation
-of `lazy`. New integrations must not use those adapters. See
+The typed `mapped_region::map(path, size, policy)` API is canonical. The
+temporary Alpha boolean adapters were removed in `4.0.0-alpha.4` after their
+bounded migration window and Alpha.3 Warrant ended. Embedders must now select
+an explicit `mapping_policy`, `mapping_durability`, `journal_open_policy`,
+`reader_policy`, or `page_open_policy`; this prevents the former `lazy` and
+write/create booleans from hiding unsupported operating intent. See
 [KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f](../../../../docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md) for
 the qualification table and removal conditions.

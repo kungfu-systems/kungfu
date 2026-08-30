@@ -1,0 +1,269 @@
+{
+  "schema": "kungfu.work-authority-topology/v1",
+  "status": "migration-baseline",
+  "authority": "qualification-only-non-authoritative",
+  "decision": "KF-ADR-01a048fc-2ba5-77b5-b276-e6c965400100",
+  "classes": [
+    "authority",
+    "historical-identity",
+    "observation",
+    "projection",
+    "discovery",
+    "verification",
+    "mutation",
+    "compatibility",
+    "cache"
+  ],
+  "sourceRoles": [
+    {
+      "id": "retained-assignment-authority",
+      "class": "authority",
+      "owner": "assignment-runtime",
+      "schema": "kungfu.work.retained-assignment-authority/v1",
+      "rule": "Contains only admitted Assignment identity and lifecycle facts; reader proofs, Work semantics, Console, process, and lease observations are not members."
+    },
+    {
+      "id": "planned-profile-source",
+      "class": "historical-identity",
+      "owner": "fresh-recovery-plan",
+      "schema": "kungfu.work.planned-profile-source/v1",
+      "rule": "Names the exact Profile source role, suite root, source-contract root, and locator selected while planning. Apply may verify these coordinates but may not select another source."
+    },
+    {
+      "id": "planned-work-target",
+      "class": "historical-identity",
+      "owner": "fresh-recovery-plan",
+      "schema": "kungfu.work.planned-target/v1",
+      "rule": "Names one stable WorkRef and qualified workspace identity. Current query proofs are observations and cannot replace its Work identity."
+    },
+    {
+      "id": "planned-console-binding",
+      "class": "historical-identity",
+      "owner": "fresh-recovery-plan",
+      "schema": "kungfu.work.planned-console-binding/v1",
+      "rule": "Names the retained WorkConsole and the new SessionAttempt selected while planning. Apply verifies current liveness and equality only."
+    },
+    {
+      "id": "current-recovery-observations",
+      "class": "observation",
+      "owner": "fresh-recovery-apply",
+      "schema": "kungfu.work.current-recovery-observations/v1",
+      "rule": "Carries fresh workspace, Profile availability, Console liveness, SessionAttempt, lease, generation, revision, and query-proof observations used only as fail-closed preconditions."
+    },
+    {
+      "id": "canonical-continuation-decision",
+      "class": "projection",
+      "owner": "assignment-orchestration",
+      "schema": "kungfu.work.continuation-decision/v1",
+      "rule": "Projects one semantic next action from retained authority, current Work semantics, and explicit intent. CLI, GUI, Agent, recovery, and Profile surfaces consume this decision and may add execution vetoes only."
+    }
+  ],
+  "semanticOwners": [
+    {
+      "id": "assignment-lifecycle-authority",
+      "kind": "writer",
+      "owner": "assignment-runtime",
+      "site": "framework/core/src/python/kungfu/assignment_runtime/__init__.py#LocalAssignmentRuntimeApplication"
+    },
+    {
+      "id": "assignment-phase-fold",
+      "kind": "deriver",
+      "owner": "work-control-runtime",
+      "site": "extensions/work-control/work-control-actions/domain/work_control_runtime.py#assignment_orchestration_status"
+    },
+    {
+      "id": "stable-work-ref",
+      "kind": "deriver",
+      "owner": "work-control",
+      "site": "framework/core/src/python/kungfu/assignment_lifecycle/__init__.py#work_ref"
+    },
+    {
+      "id": "work-console-identity",
+      "kind": "deriver",
+      "owner": "agent-session",
+      "site": "framework/agent-session/src/work-console-model.mjs#primaryWorkConsoleId"
+    },
+    {
+      "id": "session-attempt-identity",
+      "kind": "writer",
+      "owner": "agent-session",
+      "site": "framework/agent-session/src/work-console-registry.mjs#recordPlan"
+    },
+    {
+      "id": "work-keyed-agent-lease",
+      "kind": "writer",
+      "owner": "agent-session",
+      "site": "framework/agent-session/src/active-work-lease.mjs#ActiveWorkLeaseService"
+    },
+    {
+      "id": "canonical-continuation-decision",
+      "kind": "deriver",
+      "owner": "assignment-orchestration",
+      "site": "framework/core/src/python/kungfu/assignment_orchestration.py#next_actions"
+    }
+  ],
+  "callSites": [
+    {
+      "id": "runtime-command-writer",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/__init__.py",
+      "anchor": "class LocalAssignmentRuntimeApplication",
+      "class": "mutation",
+      "data": ["Assignment", "Attempt", "lease", "Receipt"],
+      "disposition": "canonical"
+    },
+    {
+      "id": "work-control-phase-fold",
+      "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+      "anchor": "def assignment_orchestration_status(",
+      "class": "authority",
+      "data": ["Assignment lifecycle", "lease"],
+      "disposition": "canonical"
+    },
+    {
+      "id": "orchestration-next-actions",
+      "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+      "anchor": "def next_actions(",
+      "class": "projection",
+      "data": ["Assignment lifecycle", "work_semantics", "continuation"],
+      "disposition": "canonicalize"
+    },
+    {
+      "id": "fresh-recovery-authority-discovery",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
+      "anchor": "def _recovery_plan_authority(",
+      "class": "discovery",
+      "data": ["Assignment", "Profile source"],
+      "disposition": "plan-only"
+    },
+    {
+      "id": "fresh-recovery-console-discovery",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
+      "anchor": "def _current_binding_context(",
+      "class": "discovery",
+      "data": ["WorkConsole", "SessionAttempt"],
+      "disposition": "plan-only-after-migration"
+    },
+    {
+      "id": "fresh-recovery-profile-rediscovery",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
+      "anchor": "def _verify_recovery_profile_source(",
+      "class": "discovery",
+      "data": ["Profile source"],
+      "disposition": "replace-with-plan-input-verification"
+    },
+    {
+      "id": "fresh-recovery-status-rediscovery",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
+      "anchor": "status_reader=lambda: _retained_status(",
+      "class": "discovery",
+      "data": ["Assignment", "query proof", "work_semantics"],
+      "disposition": "replace-with-typed-authority-and-observation-verification"
+    },
+    {
+      "id": "fresh-recovery-workref-reconstruction",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
+      "anchor": "\"schema\": \"kungfu.work-ref/v1\"",
+      "class": "discovery",
+      "data": ["WorkRef"],
+      "disposition": "plan-only-then-preserve"
+    },
+    {
+      "id": "fresh-recovery-continuation-marker",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/recovery_continuation.py",
+      "anchor": "def resolve(",
+      "class": "projection",
+      "data": ["continuation", "WorkRef", "Receipt"],
+      "disposition": "consume-canonical-decision-with-no-write-authority"
+    },
+    {
+      "id": "agent-bind-workref-builder",
+      "path": "framework/core/src/python/kungfu/agent/run_agent.py",
+      "anchor": "def bind_current_native_work(",
+      "class": "discovery",
+      "data": ["WorkRef", "Profile source", "workspace"],
+      "disposition": "retain-interactive-discovery-but-add-exact-planned-input-port"
+    },
+    {
+      "id": "agent-console-reader",
+      "path": "framework/core/src/python/kungfu/agent/session_surface.py",
+      "anchor": "def current_native_console(",
+      "class": "observation",
+      "data": ["WorkConsole", "SessionAttempt", "process"],
+      "disposition": "verification-only-after-plan"
+    },
+    {
+      "id": "work-console-projection",
+      "path": "framework/agent-session/src/work-console-model.mjs",
+      "anchor": "export function normalizeWorkConsoleRegistry(",
+      "class": "projection",
+      "data": ["WorkConsole", "SessionAttempt", "WorkRef"],
+      "disposition": "runtime-carrier-only"
+    },
+    {
+      "id": "active-work-lease-writer",
+      "path": "framework/agent-session/src/active-work-lease.mjs",
+      "anchor": "export class ActiveWorkLeaseService",
+      "class": "mutation",
+      "data": ["WorkRef", "WorkConsole", "SessionAttempt", "lease"],
+      "disposition": "runtime-fence-only"
+    },
+    {
+      "id": "dashboard-work-control-reader",
+      "path": "extensions/work-dashboard/src/view/work-control-profile.ts",
+      "anchor": "export type AssignmentWorkRef",
+      "class": "compatibility",
+      "data": ["Assignment", "WorkRef", "Profile source"],
+      "disposition": "read-only-projection"
+    }
+  ],
+  "knownDebt": [
+    {
+      "id": "open-ended-retained-state-exclusion",
+      "site": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py#preserved_state",
+      "class": "authority",
+      "risk": "New reader fields enter lifecycle equality unless added to an exclusion list.",
+      "target": "Replace the dictionary difference with kungfu.work.retained-assignment-authority/v1."
+    },
+    {
+      "id": "apply-profile-source-rediscovery",
+      "site": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py#_verify_recovery_profile_source",
+      "class": "discovery",
+      "risk": "Apply reopens Profile selection from an ambient caller path after the plan cut.",
+      "target": "Verify the planned typed source and its fresh availability without selecting another source."
+    },
+    {
+      "id": "apply-console-rediscovery",
+      "site": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py#_current_binding_context",
+      "class": "discovery",
+      "risk": "Apply reselects a Console source and envelope after the plan cut.",
+      "target": "Read current Console state only through a verification port bound to the planned Console and new SessionAttempt."
+    },
+    {
+      "id": "apply-assignment-status-rediscovery",
+      "site": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py#_retained_status",
+      "class": "discovery",
+      "risk": "Apply rereads a reader-shaped status whose proof and projection fields are not typed separately from retained authority.",
+      "target": "Verify a typed retained authority root and separately typed fresh observations without rebuilding the planned authority."
+    },
+    {
+      "id": "apply-workref-rediscovery",
+      "site": "framework/core/src/python/kungfu/agent/run_agent.py#bind_current_native_work",
+      "class": "discovery",
+      "risk": "The binder reconstructs WorkRef and Profile/workspace authority even when recovery supplies an exact plan.",
+      "target": "Add an exact planned binding port that performs no WorkRef, Profile, or workspace discovery."
+    },
+    {
+      "id": "competing-continuation-derivers",
+      "site": "framework/core/src/python/kungfu/assignment_runtime/recovery_continuation.py#_body",
+      "class": "projection",
+      "risk": "Orchestration, Work semantics, and recovery each hard-code semantic next actions.",
+      "target": "Make recovery and every surface consume the canonical continuation decision."
+    }
+  ],
+  "budgets": {
+    "semanticWriterOrDeriverPerIdentity": 1,
+    "postPlanAuthorityRediscoveryTarget": 0,
+    "postPlanAuthorityRediscoveryBaseline": 4,
+    "knownDebtCount": 6
+  }
+}

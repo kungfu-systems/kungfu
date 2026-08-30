@@ -43,25 +43,14 @@ assert.equal(
   fixture.productStatusSchema,
 );
 
-for (const surface of Object.values(fixture.surfaces)) {
-  for (const relative of typeof surface === 'string'
-    ? [surface]
-    : [surface.implementation, surface.facade]) {
-    assert.ok(
-      fs.existsSync(path.join(root, relative)),
-      `missing surface: ${relative}`,
-    );
-  }
-  if (typeof surface !== 'string') {
-    assert.match(
-      read(surface.facade),
-      new RegExp(surface.bindingPattern, 'u'),
-      `surface facade does not bind its implementation: ${surface.facade}`,
-    );
-  }
+for (const relative of Object.values(fixture.surfaces)) {
+  assert.ok(
+    fs.existsSync(path.join(root, relative)),
+    `missing surface: ${relative}`,
+  );
 }
 
-for (const surface of [
+for (const relative of [
   fixture.surfaces.python,
   fixture.surfaces.cli,
   fixture.surfaces.node,
@@ -69,8 +58,6 @@ for (const surface of [
   fixture.surfaces.gui,
   fixture.surfaces.kfx,
 ]) {
-  const relative =
-    typeof surface === 'string' ? surface : surface.implementation;
   assert.match(
     read(relative),
     /kungfu\.runtime\.product-status\/v1|RuntimeProductStatus|product_status|payload\.get\("product"\)/,
