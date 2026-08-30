@@ -122,6 +122,35 @@ test('an expired recovery lease is released only after its evidence deadline', (
   );
 });
 
+test('only stale unbound ambient attempts lose their single-writer claim', () => {
+  let now = 2000;
+  const unbound = nativeSnapshot({ observedAt: 1000, staleAfterMs: 2000 });
+  const unboundAttempt = unbound.consoles[0].attempts[0];
+  unboundAttempt.sessionAttemptId = 'native:codex:ambient:first';
+  Reflect.deleteProperty(unboundAttempt, 'workBinding');
+  const service = new ActiveWorkLeaseService({
+    state: unbound,
+    now: () => now,
+  });
+  assert.deepEqual(service.reapExpiredAmbientAttempts(), []);
+  now = 4000;
+  assert.equal(service.reapExpiredAmbientAttempts().length, 1);
+  assert.equal(unboundAttempt.status, 'orphaned');
+  assert.equal(
+    unboundAttempt.receipts.at(-1).reason,
+    'ambient-native-process-evidence-expired',
+  );
+
+  const bound = nativeSnapshot({ observedAt: 1000, staleAfterMs: 2000 });
+  bound.consoles[0].attempts[0].sessionAttemptId = 'native:codex:ambient:bound';
+  const boundService = new ActiveWorkLeaseService({
+    state: bound,
+    now: () => now,
+  });
+  assert.deepEqual(boundService.reapExpiredAmbientAttempts(), []);
+  assert.equal(bound.consoles[0].attempts[0].status, 'running');
+});
+
 test('one live session replaces its Work observation without owning Work lifecycle', () => {
   let now = 2000;
   const snapshot = nativeSnapshot({ observedAt: 1500, staleAfterMs: 2000 });

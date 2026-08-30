@@ -698,6 +698,7 @@ export class AgentSessionProductSurface {
   }
 
   planNativeStart(input) {
+    this.registry.reapExpiredAmbientAttempts();
     const binding = input.binding ?? {
       kind: 'workspace-assistant',
       workRef: null,
