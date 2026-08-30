@@ -141,7 +141,7 @@ test('pins the current Assignment authority and client-path audit', () => {
   }
 });
 
-test('freezes the Work authority topology and migration debt', () => {
+test('freezes the converged Work authority topology and resolved migration debt', () => {
   assert.equal(
     workAuthorityTopology.schema,
     'kungfu.work-authority-topology/v1',
@@ -180,8 +180,13 @@ test('freezes the Work authority topology and migration debt', () => {
     workAuthorityTopology.budgets.knownDebtCount,
   );
   assert.equal(
-    workAuthorityTopology.knownDebt.filter((row) => row.class === 'discovery')
-      .length,
+    workAuthorityTopology.budgets.postPlanAuthorityRediscoveryCurrent,
+    0,
+  );
+  assert.equal(
+    workAuthorityTopology.resolvedDebt.filter(
+      (row) => row.class === 'discovery',
+    ).length,
     workAuthorityTopology.budgets.postPlanAuthorityRediscoveryBaseline,
   );
 
@@ -213,6 +218,46 @@ test('freezes the Work authority topology and migration debt', () => {
     assert.ok(debt.risk);
     assert.ok(debt.target);
   }
+  for (const debt of workAuthorityTopology.resolvedDebt) {
+    assert.ok(workAuthorityTopology.classes.includes(debt.class));
+    assert.match(debt.site, /^[^#]+#[^#]+$/u);
+  }
+});
+
+test('fresh recovery apply has zero post-plan authority rediscovery sites', () => {
+  const recovery = readRepo(
+    'framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py',
+  );
+  const apply = recovery.slice(
+    recovery.indexOf('def _apply_from_ports('),
+    recovery.indexOf('def _create_plan_command('),
+  );
+  for (const forbidden of [
+    'runtime(',
+    '_retained_status(',
+    '_current_binding_context(',
+    'bind_current_native_work(',
+    'resolve_workspace_target(',
+  ])
+    assert.equal(
+      apply.includes(forbidden),
+      false,
+      `fresh recovery apply must not contain ${forbidden}`,
+    );
+
+  const exact = readRepo(
+    'framework/core/src/python/kungfu/agent/planned_work_binding.py',
+  );
+  for (const forbidden of [
+    'resolve_workspace_target(',
+    '_status(',
+    'resolve_qualified_work_profile(',
+  ])
+    assert.equal(
+      exact.includes(forbidden),
+      false,
+      `planned binder must not contain ${forbidden}`,
+    );
 });
 
 test('zero-residue blockers fail closed across runtime, tests, and CLI registry', () => {

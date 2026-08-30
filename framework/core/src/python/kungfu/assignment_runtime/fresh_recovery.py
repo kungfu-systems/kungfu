@@ -13,9 +13,22 @@ from typing import Any
 import click
 
 from kungfu import initiative_family, profile_sdk
-from kungfu.agent import run_agent, session_contract, session_surface
+from kungfu import work_authority
+from kungfu.agent import planned_work_binding, session_contract
 from kungfu.assignment_runtime import LocalAssignmentRuntimeApplication
 from kungfu.assignment_runtime import fresh_recovery_lease as lease_recovery
+from kungfu.assignment_runtime.fresh_recovery_authority import (
+    current_binding_context as _current_binding_context,
+    observe_planned_console as _observe_planned_console,
+    planned_roles as _planned_roles,
+    recovery_observation_input as _recovery_observation_input,
+    recovery_receipt_semantics as _recovery_receipt_semantics,
+    status_from_planned_source as _status_from_planned_source,
+    validated_recovery_profile as _validated_recovery_profile,
+    verify_planned_roles as _verify_planned_roles,
+    verify_planned_workspace as _verify_planned_workspace,
+    verify_recovery_profile_source as _verify_recovery_profile_source,
+)
 from kungfu.assignment_runtime import profile_lifecycle
 from kungfu.assignment_runtime.recovery_continuation import (
     register as register_continuation,
@@ -23,8 +36,8 @@ from kungfu.assignment_runtime.recovery_continuation import (
 from kungfu.storage import service as storage_service
 
 JsonObject = dict[str, Any]
-PLAN_SCHEMA = "kungfu.work.fresh-recovery-plan/v2"
-RECEIPT_SCHEMA = "kungfu.work.fresh-recovery-receipt/v2"
+PLAN_SCHEMA = "kungfu.work.fresh-recovery-plan/v3"
+RECEIPT_SCHEMA = "kungfu.work.fresh-recovery-receipt/v3"
 CONTINUATION_MODE = "resume/new-attempt"
 
 
@@ -46,27 +59,10 @@ def _root(value: Any) -> str:
     return initiative_family.semantic_root(value)
 
 
-def _current_session(runtime_dir: str) -> JsonObject:
-    current = session_surface.current_native_console(
-        runtime_dir, adopt=True, project_work_binding=False
-    )
-    if current is None:
-        raise ValueError("fresh recovery requires a current native Agent Console")
-    envelope = dict(current["envelope"])
-    return {
-        "workConsoleId": str(envelope["consoleId"]),
-        "sessionAttemptId": str(envelope["attemptId"]),
-    }
-
-
 def preserved_state(status: Mapping[str, Any]) -> JsonObject:
-    """Retain native lifecycle authority, not reader-specific projections."""
+    """Retain the explicit Assignment authority role, never reader fields."""
 
-    return {
-        str(key): value
-        for key, value in status.items()
-        if key not in {"query_proof_root", "work_semantics"}
-    }
+    return work_authority.retained_assignment_authority(status)
 
 
 def _attempt_coordinates(
@@ -166,11 +162,12 @@ def _work_coordinates(
 
 def _plan_body(
     *,
-    workspace: Mapping[str, Any],
     status: Mapping[str, Any],
     assignment: Mapping[str, Any],
     work_ref: JsonObject,
-    recovery_profile: Mapping[str, Any],
+    planned_profile: Mapping[str, Any],
+    planned_target: Mapping[str, Any],
+    planned_console: Mapping[str, Any],
     previous_attempt_id: str,
     current_attempt: str,
     work_console_id: str,
@@ -189,7 +186,11 @@ def _plan_body(
         "expiresAt": (generated_at + timedelta(minutes=10))
         .isoformat()
         .replace("+00:00", "Z"),
-        "workspace": dict(workspace),
+        "retainedAssignmentAuthority": preserved_state(status),
+        "plannedProfileSource": dict(planned_profile),
+        "plannedTarget": dict(planned_target),
+        "plannedConsoleBinding": dict(planned_console),
+        "workspace": dict(planned_target["workspace"]),
         "work": _work_coordinates(
             status,
             assignment,
@@ -202,7 +203,7 @@ def _plan_body(
             "workConsoleId": work_console_id,
         },
         "workRef": work_ref,
-        "recoveryProfile": dict(recovery_profile),
+        "recoveryProfile": dict(planned_profile),
         "effects": _recovery_effects_with_lease(
             work_ref,
             current_attempt,
@@ -247,12 +248,16 @@ def build_plan(
         expected_work_definition_root,
         expected_profile_root,
     )
+    planned_profile, planned_target, planned_console = _planned_roles(
+        workspace, work_ref, recovery_profile, binding
+    )
     body = _plan_body(
-        workspace=workspace,
         status=status,
         assignment=assignment,
         work_ref=work_ref,
-        recovery_profile=recovery_profile,
+        planned_profile=planned_profile,
+        planned_target=planned_target,
+        planned_console=planned_console,
         previous_attempt_id=previous_attempt_id,
         current_attempt=current_attempt,
         work_console_id=work_console_id,
@@ -275,7 +280,7 @@ def _verify_plan_envelope(
         raise ValueError("fresh recovery plan root does not verify")
     if plan.get("continuationMode") != CONTINUATION_MODE:
         raise ValueError("fresh recovery refuses a first-attempt plan")
-    _verify_recovery_profile_identity(plan)
+    _verify_planned_roles(plan)
     effects = [dict(effect) for effect in plan.get("effects") or []]
     stages = [str(effect.get("stage") or "") for effect in effects]
     allowed_stages = {
@@ -293,19 +298,6 @@ def _verify_plan_envelope(
     if _now(now) > _now(str(plan.get("expiresAt") or "")):
         raise ValueError("fresh recovery plan expired; create a new plan")
     return actual_root, effects
-
-
-def _verify_recovery_profile_identity(plan: Mapping[str, Any]) -> None:
-    recovery_profile = dict(plan.get("recoveryProfile") or {})
-    if (
-        recovery_profile.get("profileId") != "kungfu.work-control"
-        or recovery_profile.get("profileRoot")
-        != (plan.get("workRef") or {}).get("profileRoot")
-        or not str(recovery_profile.get("sourceContractRoot") or "").startswith(
-            "sha256:"
-        )
-    ):
-        raise ValueError("fresh recovery Profile source identity does not verify")
 
 
 def _binding_coordinates(
@@ -462,6 +454,7 @@ def _recovery_receipt_body(
         recovery.get("claim_receipt"), recovery.get("recovered_claim")
     )
     after = recovery["after"]
+    observations, continuation, next_actions = _recovery_receipt_semantics(recovery)
     return {
         "schema": RECEIPT_SCHEMA,
         "ok": True,
@@ -474,6 +467,8 @@ def _recovery_receipt_body(
         "profile": profile_receipt,
         "binding": binding,
         "executionLease": execution_lease,
+        "currentRecoveryObservations": observations,
+        "continuationDecision": continuation,
         "preservation": _preservation_projection(
             recovery["assignment_root"],
             recovery["state_root"],
@@ -482,7 +477,7 @@ def _recovery_receipt_body(
         ),
         "writeOccurred": True,
         "assignmentWrites": assignment_writes,
-        "nextActions": list(after.get("next_actions") or []),
+        "nextActions": next_actions,
     }
 
 
@@ -530,6 +525,7 @@ def apply_plan(
     prepare_profile: Callable[[str], JsonObject],
     bind_work: Callable[[Mapping[str, Any]], JsonObject],
     claim_execution: Callable[[Mapping[str, Any], str], JsonObject] | None = None,
+    current_observations: Mapping[str, Any] | None = None,
     now: str | None = None,
 ) -> JsonObject:
     context = _apply_context(
@@ -574,6 +570,8 @@ def apply_plan(
             "after": after,
             "claim_receipt": claim_receipt,
             "recovered_claim": recovered_claim,
+            "session": context["expected_session"],
+            "observations": _recovery_observation_input(current_observations),
         },
     )
 
@@ -620,18 +618,6 @@ def _retained_status(runtime_dir, initiative_id, assignment_id) -> JsonObject:
         kind="cli",
         source=_retained_profile_source(runtime_dir),
     ).status(initiative_id, assignment_id)
-
-
-def _validated_recovery_profile(source: Path, runtime_dir) -> JsonObject:
-    inspection = profile_sdk.validate_source(source, runtime_dir)["inspection"]
-    source_contract = dict(
-        (inspection.get("closure") or {}).get("source_contract") or {}
-    )
-    return {
-        "profileId": str(inspection["profile"]["id"]),
-        "profileRoot": str(inspection["profile_suite_root"]),
-        "sourceContractRoot": str(source_contract.get("root") or ""),
-    }
 
 
 def _profile_recovery_actions(source: Path) -> list[JsonObject]:
@@ -708,38 +694,6 @@ def _recovery_plan_authority(
     return current_status, recovery_profile
 
 
-def _verify_recovery_profile_source(
-    plan: Mapping[str, Any], recovery_profile_source: Path, runtime_dir
-) -> None:
-    recovery_profile = _validated_recovery_profile(recovery_profile_source, runtime_dir)
-    if recovery_profile != dict(plan.get("recoveryProfile") or {}):
-        raise ValueError("fresh recovery Profile source differs from the plan")
-
-
-def _current_binding_context(runtime_dir: str) -> tuple[JsonObject, JsonObject]:
-    current = session_surface.current_native_console(
-        runtime_dir, adopt=True, project_work_binding=False
-    )
-    if current is None:
-        raise ValueError("fresh recovery requires a current native Agent Console")
-    source = str(current["source"])
-    envelope = dict(current["envelope"])
-    session = {
-        "workConsoleId": str(envelope["consoleId"]),
-        "sessionAttemptId": str(envelope["attemptId"]),
-    }
-    if source not in {"injected-native-console", "ambient-provider-session"}:
-        raise ValueError("fresh recovery requires an exact native Console source")
-    options = {
-        "injected-native-console": {},
-        "ambient-provider-session": {
-            "envelope_override": envelope,
-            "console_workspace_root": str(current["workspaceRoot"]),
-        },
-    }
-    return session, options[source]
-
-
 def _plan_from_ports(
     *,
     ctx,
@@ -784,11 +738,12 @@ def _plan_from_ports(
             "id": identity.workspace_id,
             "root": identity.workspace_root,
             "identityRoot": identity.identity_root,
+            "runtimeRoot": str(Path(runtime_dir).expanduser().resolve()),
         },
         status=current_status,
         binding={
             "workRef": work_ref,
-            "session": _current_session(str(ctx.runtime_dir)),
+            **_current_binding_context(str(ctx.runtime_dir), identity.workspace_id),
         },
         previous_attempt_id=previous_attempt_id,
         expected_request_root=expected_request_root,
@@ -811,48 +766,59 @@ def _apply_from_ports(
     status,
     prepare_resume_profile,
 ) -> JsonObject:
+    del ctx, runtime, status
     plan = json.loads(plan_file.read_text(encoding="utf-8"))
-    workspace = dict(plan.get("workspace") or {})
-    work = dict(plan.get("work") or {})
-    workspace_root = str(workspace.get("root") or "")
-    initiative_id = str(work.get("initiativeId") or "")
-    assignment_id = str(work.get("assignmentId") or "")
-    identity, runtime_dir, _ = runtime(workspace_root, False, "semantic-write")
-    if identity.workspace_id != workspace.get(
-        "id"
-    ) or identity.identity_root != workspace.get("identityRoot"):
-        raise ValueError("fresh recovery workspace identity changed")
+    _verify_plan_envelope(plan, expected_plan_root, None)
+    work = dict(plan["work"])
+    initiative_id = str(work["initiativeId"])
+    assignment_id = str(work["assignmentId"])
+    runtime_dir, workspace_observation = _verify_planned_workspace(plan)
     _verify_recovery_profile_source(plan, recovery_profile_source, runtime_dir)
-    current_session, bind_options = _current_binding_context(str(ctx.runtime_dir))
+    planned_source = Path(str(plan["plannedProfileSource"]["sourceLocator"]))
+    current_session, console_observation = _observe_planned_console(plan)
+    before_observation = _status_from_planned_source(
+        runtime_dir, planned_source, initiative_id, assignment_id
+    )
+    observation_body = {
+        "schema": work_authority.CURRENT_RECOVERY_OBSERVATIONS_SCHEMA,
+        "workspace": workspace_observation,
+        "profile": {
+            "sourceRoot": plan["plannedProfileSource"]["sourceRoot"],
+            "available": planned_source.is_dir(),
+        },
+        "console": console_observation,
+        "assignment": {
+            "queryProofRoot": before_observation.get("query_proof_root"),
+            "activeLease": before_observation.get("active_lease"),
+        },
+    }
+    observations = work_authority.rooted(observation_body, "observationRoot")
+    planned_console = dict(plan["plannedConsoleBinding"])
     receipt = apply_plan(
         plan,
         expected_plan_root=expected_plan_root,
         authorized_by=authorized_by,
-        status_reader=lambda: _retained_status(
-            runtime_dir, initiative_id, assignment_id
+        status_reader=lambda: _status_from_planned_source(
+            runtime_dir, planned_source, initiative_id, assignment_id
         ),
         session_reader=lambda: dict(current_session),
         prepare_profile=lambda actor: prepare_resume_profile(
-            runtime_dir, actor, recovery_profile_source
+            runtime_dir, actor, planned_source
         ),
-        bind_work=lambda expected: (
-            run_agent.bind_current_native_work(
-                str(ctx.runtime_dir),
-                initiative_id,
-                assignment_id,
-                work_workspace_root=workspace_root,
-                work_profile_source=recovery_profile_source,
-                expected_binding=expected,
-                **bind_options,
-            )
-            or {}
+        bind_work=lambda expected: planned_work_binding.bind_planned_native_work(
+            planned_console["consoleRuntimeRoot"],
+            work_ref=expected["workRef"],
+            session=expected["session"],
+            binding_scope=planned_console["bindingScope"],
+            source_workspace_id=planned_console["sourceWorkspaceId"],
         ),
         claim_execution=lambda values, actor: LocalAssignmentRuntimeApplication(
             runtime_dir,
             client_id="kungfu.work.fresh-recovery",
             kind="cli",
-            source=recovery_profile_source,
+            source=planned_source,
         ).authorize("claim-assignment", values, actor),
+        current_observations=observations,
     )
     register_continuation(runtime_dir, plan, receipt)
     return receipt
