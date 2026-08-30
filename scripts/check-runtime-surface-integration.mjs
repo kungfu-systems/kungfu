@@ -52,7 +52,7 @@ for (const relative of Object.values(fixture.surfaces)) {
 
 for (const relative of [
   fixture.surfaces.python,
-  fixture.surfaces.cli,
+  fixture.surfaces.cliOwner,
   fixture.surfaces.node,
   fixture.surfaces.libkungfuTypes,
   fixture.surfaces.gui,
@@ -64,6 +64,18 @@ for (const relative of [
     `surface does not expose the shared product status: ${relative}`,
   );
 }
+
+const cliFacade = read(fixture.surfaces.cliFacade);
+assert.match(
+  cliFacade,
+  /from kungfu\.cli\.commands\._runtime\.base import \(/,
+  'stable CLI facade does not re-export the runtime command owner',
+);
+assert.match(
+  cliFacade,
+  /_plain_status as _plain_status/,
+  'stable CLI facade does not preserve the shared product-status renderer',
+);
 
 const guiMain = read('framework/gui/src/main/index.ts');
 for (const command of fixture.ordinaryLifecycleCommands) {
