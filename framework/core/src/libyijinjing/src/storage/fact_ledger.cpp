@@ -97,7 +97,7 @@ fact_ledger_view fact_ledger_store::replay() const {
   if (target->locator->list_page_id(target, location::PUBLIC).empty())
     return view;
 
-  auto input = std::make_shared<reader>(true, false, std::make_shared<bus>(false));
+  auto input = std::make_shared<reader>(reader_policy::peer(), false, std::make_shared<bus>(false));
   input->join(target, location::PUBLIC, 0);
   std::optional<fact_authority_record> pending;
   while (input->data_available()) {

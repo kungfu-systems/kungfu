@@ -1392,7 +1392,7 @@ function humanReport(report) {
   ];
   for (const entry of report.entries) {
     lines.push(
-      `[deprecation-audit] ${entry.id} disposition=${entry.disposition} eligible=${entry.eligibleRelease?.version || entry.nextEligibleRelease.versionFloor || 'support-policy'} next=${entry.nextAction}`,
+      `[deprecation-audit] ${entry.id} disposition=${entry.disposition} eligible=${entry.eligibleRelease?.version || entry.nextEligibleRelease?.versionFloor || 'support-policy'} next=${entry.nextAction}`,
     );
   }
   for (const finding of report.findings) {

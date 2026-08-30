@@ -5,7 +5,7 @@
   "physicalBoundary": "linked-rust-component",
   "productEntrypoint": "kungfu-trunk xinfa",
   "extractedDevelopmentBinaryParity": true,
-  "version": "xinfa 4.0.0-alpha.3",
+  "version": "xinfa 4.0.0-alpha.4",
   "extractedFiles": [
     "ARCHITECTURE.md",
     "Cargo.lock",

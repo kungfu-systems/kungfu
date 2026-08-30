@@ -1190,7 +1190,8 @@ void episode_manifest_store::for_each_typed_record(const episode_manifest_record
   if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
     return;
   }
-  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
+  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(kungfu::yijinjing::journal::reader_policy::peer(),
+                                                                     false, std::make_shared<bus>(false));
   reader->join(location, location::PUBLIC, 0);
   while (reader->data_available()) {
     const auto frame = reader->current_frame();

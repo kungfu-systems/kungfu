@@ -318,15 +318,11 @@ test('Project Session discovery follows the current runtime host after Project r
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
   const invokeCurrent = source.slice(
     source.indexOf('async function invokeTuiAgentSession'),
-    source.indexOf('function runtimePaths'),
+    source.indexOf('function cliEnvironment'),
   );
   const openProjects = source.slice(
     source.indexOf('function openTuiProjects'),
     source.indexOf('function ProjectFileTreeNavigation'),
-  );
-  const bindMockEnvironment = source.slice(
-    source.indexOf('function bindMockAgentEnvironment'),
-    source.indexOf('function streamCliEvents'),
   );
 
   assert.match(invokeCurrent, /const ready = tuiAgentSessionReady/);
@@ -344,12 +340,11 @@ test('Project Session discovery follows the current runtime host after Project r
     openProjects,
     /ensureTuiAgentSession\(paths\.runtimeDir\)/,
   );
-  assert.match(bindMockEnvironment, /bindTuiMockAgentEnvironment\(\{/);
-  assert.match(openProjects, /bindMockAgentEnvironment\(cli, paths\)/);
+  assert.match(openProjects, /bindTuiMockAgentEnvironment\(\{/);
   assert.ok(
-    openProjects.indexOf('bindMockAgentEnvironment') <
+    openProjects.indexOf('bindTuiMockAgentEnvironment') <
       openProjects.indexOf('if (!useAgentSession)'),
     'installed Mock Agent paths must be bound for normal Project Agent Session use',
   );
-  assert.match(source, /return resolveTuiCliInvocation\(paths, process\.env\)/);
+  assert.match(source, /return tuiChildCliEnvironment\(process\.env\)/);
 });

@@ -43,7 +43,7 @@ assemble::assemble(const data::locator_ptr &locator, const std::string &mode, co
                    const std::string &namespace_, const std::string &name)
     : mode_(mode), role_(role), namespace_(namespace_), name_(name), publisher_(std::make_shared<noop_publisher>()) {
   locators_.push_back(locator);
-  readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
+  readers_.push_back(std::make_shared<reader>(reader_policy::peer(), false, std::make_shared<bus>(false)));
   auto reader = readers_.back();
   for (auto &location : locator->list_locations(role, namespace_, name, mode)) {
     for (auto dest_id : locator->list_location_dest(location)) {
@@ -58,7 +58,7 @@ assemble::assemble(const std::vector<data::locator_ptr> &locators, const std::st
     : mode_(mode), role_(role), namespace_(namespace_), name_(name), publisher_(std::make_shared<noop_publisher>()) {
   for (auto &locator : locators) {
     locators_.push_back(locator);
-    readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
+    readers_.push_back(std::make_shared<reader>(reader_policy::peer(), false, std::make_shared<bus>(false)));
     auto reader = readers_.back();
     for (auto &location : locator->list_locations(role, namespace_, name, mode)) {
       for (auto dest_id : locator->list_location_dest(location)) {
@@ -77,7 +77,7 @@ assemble::assemble(const data::location_ptr &source_location, uint32_t dest_id, 
   readers_.clear();
   data::locator_ptr l = source_location->locator;
   locators_.push_back(source_location->locator);
-  readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
+  readers_.push_back(std::make_shared<reader>(reader_policy::peer(), false, std::make_shared<bus>(false)));
   auto reader = readers_.front();
 
   // join channel
@@ -155,7 +155,7 @@ assemble &assemble::operator+=(const assemble &other) {
     const auto &other_locator = other.locators_.at(other_locator_index);
     const auto &other_reader = other.readers_.at(other_locator_index);
     locators_.push_back(other_locator);
-    readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
+    readers_.push_back(std::make_shared<reader>(reader_policy::peer(), false, std::make_shared<bus>(false)));
     auto &this_reader = readers_.back();
     for (const auto &other_pair : other_reader->get_journals()) {
       const auto &other_journal = other_pair.second;

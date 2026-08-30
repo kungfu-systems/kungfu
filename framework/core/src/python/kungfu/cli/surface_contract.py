@@ -82,6 +82,66 @@ def surface(**metadata: Any):
     return decorate
 
 
+def _valid_output_declaration(output: Any, supported_modes: list[str]) -> bool:
+    if not isinstance(output, dict):
+        return False
+    default_mode = output.get("defaultMode")
+    modes = output.get("modes")
+    schema_refs = output.get("schemaRefs")
+    if not isinstance(modes, list) or not isinstance(schema_refs, list):
+        return False
+    if any(mode not in supported_modes for mode in modes):
+        return False
+    if any(not isinstance(reference, str) for reference in schema_refs):
+        return False
+    if default_mode not in supported_modes:
+        return False
+    if default_mode == "unspecified":
+        return not modes and not schema_refs
+    return default_mode in modes
+
+
+def _dangling_output_schema_refs(
+    output: Any, metadata_registry: dict[str, Any], known_api_ids: set[Any]
+) -> list[str]:
+    if not isinstance(output, dict) or not isinstance(output.get("schemaRefs"), list):
+        return []
+    return [
+        reference
+        for reference in output["schemaRefs"]
+        if isinstance(reference, str)
+        and not _known_schema_ref(reference, metadata_registry, known_api_ids)
+    ]
+
+
+def _validate_output_contract(
+    row: dict[str, Any],
+    *,
+    label: str,
+    errors: list[dict[str, str]],
+    metadata_registry: dict[str, Any],
+    schema: dict[str, Any],
+    known_api_ids: set[Any],
+) -> None:
+    output = row.get("output", {})
+    if not _valid_output_declaration(output, schema.get("outputModes", [])):
+        _error(
+            errors,
+            "invalid-output-contract",
+            label,
+            f"unsupported output contract {output!r}",
+        )
+    for reference in _dangling_output_schema_refs(
+        output, metadata_registry, known_api_ids
+    ):
+        _error(
+            errors,
+            "dangling-output-schema-ref",
+            label,
+            f"unknown output schema reference {reference}",
+        )
+
+
 def fold(
     root_command: click.Command,
     *,
@@ -247,6 +307,14 @@ def validate(
                 label,
                 "degraded or unavailable contributions require a typed reason",
             )
+        _validate_output_contract(
+            row,
+            label=label,
+            errors=errors,
+            metadata_registry=metadata_registry,
+            schema=schema,
+            known_api_ids=known_api_ids,
+        )
 
         row_id = row.get("id")
         if not isinstance(row_id, str) or not row_id:
@@ -541,6 +609,10 @@ def _click_surface(record, stable_id, metadata_registry, api_map, api_paths):
         "mutation_class": metadata.get("mutation_class", mutation_class),
         "approval_policy": metadata.get("approval_policy", approval),
         "schema_refs": metadata.get("schema_refs", []),
+        "output": metadata.get(
+            "output",
+            {"defaultMode": "unspecified", "modes": [], "schemaRefs": []},
+        ),
         "availability": availability,
         "kind": kind,
         "path_depth": len(tokens),
@@ -579,6 +651,10 @@ def _contribution_surface(row, metadata_registry):
             "approval_policy", {"mode": "none", "preconditions": []}
         ),
         "schema_refs": metadata.get("schema_refs", []),
+        "output": metadata.get(
+            "output",
+            {"defaultMode": "unspecified", "modes": [], "schemaRefs": []},
+        ),
         "availability": metadata.get("availability", {"state": "unavailable"}),
         "kind": metadata.get("kind", "command"),
         "path_depth": len(str(metadata.get("canonical_path", "")).split()),

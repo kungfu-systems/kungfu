@@ -66,6 +66,32 @@ function catalog(changes = {}) {
         availability: { state: 'available' },
       },
       {
+        canonical_path: 'kungfu project list',
+        aliases: [],
+        owner: 'core',
+        maturity: 'preview',
+        availability: { state: 'available' },
+        output: {
+          defaultMode: 'json',
+          modes: ['json'],
+          schemaRefs: ['kungfu.projects.catalog/v1'],
+        },
+        parameters: [{ name: 'as_json', flags: ['--json'] }],
+      },
+      {
+        canonical_path: 'kungfu project works',
+        aliases: [],
+        owner: 'core',
+        maturity: 'preview',
+        availability: { state: 'available' },
+        output: {
+          defaultMode: 'json',
+          modes: ['json'],
+          schemaRefs: ['kungfu.project-work.inventory/v1'],
+        },
+        parameters: [{ name: 'as_json', flags: ['--json'] }],
+      },
+      {
         canonical_path: 'kungfu profile mission-control',
         aliases: [],
         owner: 'profile-kfx',
@@ -133,6 +159,37 @@ function runner(observed = catalog()) {
         schema: 'kungfu.agent-capabilities/v1',
         commands: { schema: 'kungfu.agent-commands/v1' },
         cliSurface: observed,
+      });
+    }
+    if (joined.includes('agent map --json')) {
+      return json({
+        schema: 'kungfu.agent-intent-map/v1',
+        intents: [
+          {
+            id: 'global-observer',
+            discoveryCommands: [
+              'kungfu workspace work --home --scope all --json',
+              'kungfu project list --json',
+            ],
+          },
+        ],
+      });
+    }
+    if (joined.includes('project list')) {
+      return json({ schema: 'kungfu.projects.catalog/v1', projects: [] });
+    }
+    if (joined.includes('workspace work --home --scope all --json')) {
+      return json({
+        schema: 'kungfu.workspace-federation.query/v1',
+        scope: 'all',
+        writes: [],
+      });
+    }
+    if (joined.includes('project works')) {
+      return json({
+        schema: 'kungfu.project-work.inventory/v1',
+        projectPath: '/fixture/workspace',
+        works: [],
       });
     }
     if (joined.includes('profile capabilities --json')) {
@@ -231,6 +288,24 @@ test('qualification accepts presentation-only alignment drift in bare help', () 
     },
   });
   assert.equal(report.qualified, true);
+});
+
+test('qualification rejects project discovery without an executable JSON option', () => {
+  const missingJsonOption = catalog();
+  missingJsonOption.surfaces = missingJsonOption.surfaces.map((row) =>
+    row.canonical_path === 'kungfu project works'
+      ? { ...row, parameters: [] }
+      : row,
+  );
+  assert.throws(
+    () =>
+      qualifyCliSurface({
+        cli: '/fixture/kungfu',
+        expectedCatalog: missingJsonOption,
+        runCommand: runner(missingJsonOption),
+      }),
+    /kungfu project works advertises JSON without an executable --json option/u,
+  );
 });
 
 test('qualification accepts complete removal of the v3 compatibility reader', () => {

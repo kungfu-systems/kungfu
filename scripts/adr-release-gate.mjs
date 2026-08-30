@@ -212,12 +212,6 @@ export function changedFilesBetween(ref, head, root) {
       env: isolatedGitEnvironment(),
       encoding: 'utf8',
     });
-  const runTree = (commit) =>
-    childProcess.spawnSync('git', ['rev-parse', `${commit}^{tree}`], {
-      cwd: root,
-      env: isolatedGitEnvironment(),
-      encoding: 'utf8',
-    });
 
   let result = runDiff();
   if (
@@ -244,38 +238,6 @@ export function changedFilesBetween(ref, head, root) {
       );
     }
     result = runDiff();
-    if (
-      result.status !== 0 &&
-      /no merge base/u.test(String(result.stderr || ''))
-    ) {
-      // A rebase-merged promotion can leave the exact PR base and head as
-      // disconnected shallow boundaries even after both objects are fetched.
-      // The event already binds those immutable commits. Only accept a direct
-      // tree comparison when the checked-out publication candidate is exactly
-      // the event head tree; every missing object or tree mismatch still fails
-      // closed instead of inventing an ancestry relationship.
-      const candidateTree = runTree('HEAD');
-      const headTree = runTree(head);
-      if (
-        candidateTree.status !== 0 ||
-        headTree.status !== 0 ||
-        String(candidateTree.stdout || '').trim() !==
-          String(headTree.stdout || '').trim()
-      ) {
-        throw new Error(
-          `git diff ${ref}...${head} failed: shallow promotion candidate tree does not match the exact event head`,
-        );
-      }
-      result = childProcess.spawnSync(
-        'git',
-        ['diff', '--name-only', ref, head],
-        {
-          cwd: root,
-          env: isolatedGitEnvironment(),
-          encoding: 'utf8',
-        },
-      );
-    }
   }
   if (result.status !== 0) {
     throw new Error(

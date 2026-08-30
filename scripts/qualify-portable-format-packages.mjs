@@ -198,7 +198,7 @@ export function qualifyPortableFormatPackages({ output = '' } = {}) {
       );
       if (
         pkg.name !== name ||
-        pkg.version !== '4.0.0-alpha.3' ||
+        pkg.version !== '4.0.0-alpha.4' ||
         pkg.publishConfig?.registry !== 'https://registry.npmjs.org/' ||
         pkg.publishConfig?.access !== 'public'
       )
