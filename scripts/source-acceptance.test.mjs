@@ -16,6 +16,7 @@ import {
 } from './readonly-source-toolchain.mjs';
 import {
   assertKfdEvidenceSourceBinding,
+  assertTrackedXinfaBaselinesAreWitnessOnly,
   findGitTreeEquivalentAncestor,
   githubMergeGroupCoordinates,
   isLocalQualificationRuntime,
@@ -30,6 +31,26 @@ import {
 } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('tracked Xinfa baselines contain witnesses only', () => {
+  assert.doesNotThrow(() =>
+    assertTrackedXinfaBaselinesAreWitnessOnly([
+      '.xinfa/baselines/sha256/example/manifest.json',
+      '.xinfa/baselines/sha256/example/receipt.json',
+      '.xinfa/baselines/sha256/example/compatibility/context-pack-v1/manifest.json',
+      '.xinfa/baselines/sha256/example/compatibility/context-pack-v1/receipt.json',
+      '.xinfa/material-bundles/sha256/example/atlas.json.gz',
+    ]),
+  );
+  assert.throws(
+    () =>
+      assertTrackedXinfaBaselinesAreWitnessOnly([
+        '.xinfa/baselines/sha256/example/atlas.json',
+        '.xinfa/baselines/sha256/example/views/agent.json',
+      ]),
+    /Xinfa baseline material must remain outside Git[\s\S]*atlas\.json[\s\S]*views\/agent\.json/u,
+  );
+});
 
 test('source acceptance owns one external runtime for every writable tool surface', (t) => {
   const runtime = prepareSourceAcceptanceRuntime(ROOT);
