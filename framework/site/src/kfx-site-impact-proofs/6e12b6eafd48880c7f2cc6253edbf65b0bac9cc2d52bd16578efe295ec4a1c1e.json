@@ -1,0 +1,37 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "b3c3d7737c160cc2216ee9783044b135b000f02d",
+  "changeRoot": "sha256:80747b8e6e8d0cf4bb4abb123c2f7aea9075ce71fcd3715875ab0f424dec5072",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:016c67c42618df951be534502108fdbde6b6ee35538094287d7dc10d754bb638",
+      "contentRoot": "sha256:43594189454b9b6ccb5942cc77a9628bd950d20ff6da8d3b8ec9b18d19f79df4",
+      "path": "extensions/system/kfx-manager/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a0fa463f1b4c9f303f22407446a0537616f9a5c63c815e892bedcdd3a70f8784",
+      "contentRoot": "sha256:5ed49cb2abd811f02181e2bd525087d515f3cd748ddf2789b8d35d11b1aa4e7b",
+      "path": "extensions/system/settings/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c46e24bb31a915f29676bfa588e8adf04085104bc7ae0fbb47367e3817cf2c87",
+      "contentRoot": "sha256:129a5adf4870a0d04e2b9d36f3991cf9ceacd5ade7d29a64f33dc087228165cf",
+      "path": "extensions/system/skill-manager/src/view/index.tsx",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "The merge incorporates the protected base verbatim for generated KFD evidence while the product UI decomposition preserves public contracts, observable behavior, and documented reader journeys.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:6e12b6eafd48880c7f2cc6253edbf65b0bac9cc2d52bd16578efe295ec4a1c1e"
+}
