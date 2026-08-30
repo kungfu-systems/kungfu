@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-github-webhook-ingress",
-  "version": "4.0.0-alpha.3",
+  "version": "4.0.0-alpha.4",
   "description": "Provider-specific GitHub webhook ingress over the public KFX service host",
   "license": "Apache-2.0",
   "type": "module",
