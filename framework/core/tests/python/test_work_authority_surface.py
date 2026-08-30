@@ -3,23 +3,25 @@
 from datetime import UTC, datetime
 import importlib
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 from click.testing import CliRunner
-import pytest
 
 from kungfu import (
     assignment_close,
     assignment_evidence,
     assignment_review_lifecycle,
+    work_authority,
 )
 from kungfu.assignment_runtime import fresh_recovery as assignment_fresh_recovery
+from kungfu.assignment_runtime import fresh_recovery_authority
 from kungfu.assignment_runtime import profile_lifecycle
 from kungfu.assignment_runtime.authority import LocalRuntimeError, WorkControlAuthority
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import assignment_review
 from kungfu.cli.commands import kfc
-from kungfu.agent import run_agent, session_contract
+from kungfu.agent import planned_work_binding, run_agent, session_contract
 
 assignment_command = importlib.import_module("kungfu.cli.commands.assignment")
 
@@ -844,11 +846,163 @@ def _fresh_recovery_fixture():
             "profileId": "kungfu.work-control",
             "profileRoot": root("3"),
             "sourceContractRoot": root("6"),
+            "sourceLocator": "/profile/work-control",
         },
         profile_active=False,
         now="2026-08-25T09:00:00Z",
     )
     return status, binding, plan
+
+
+def test_retained_assignment_authority_ignores_arbitrary_reader_fields():
+    status, _binding, _plan = _fresh_recovery_fixture()
+    retained_root = work_authority.semantic_root(
+        work_authority.retained_assignment_authority(status)
+    )
+    projected = json.loads(json.dumps(status))
+    projected.update(
+        query_proof_root=f"sha256:{'a' * 64}",
+        active_lease={"lease_id": "reader-only"},
+        work_semantics={"next_actions": [{"action": "authorize-effect"}]},
+        next_actions=[{"action": "reader-projection"}],
+        arbitrary_future_reader_field={"revision": 99},
+    )
+
+    assert (
+        work_authority.semantic_root(
+            work_authority.retained_assignment_authority(projected)
+        )
+        == retained_root
+    )
+    projected["completion_claim_count"] = 2
+    assert (
+        work_authority.semantic_root(
+            work_authority.retained_assignment_authority(projected)
+        )
+        != retained_root
+    )
+
+
+def test_planned_native_binder_never_rediscovers_work_authority(monkeypatch):
+    _status, binding, _plan = _fresh_recovery_fixture()
+    requests = []
+    endpoint = "/tmp/exact-agent-session.sock"
+    monkeypatch.setattr(
+        planned_work_binding.session_surface,
+        "endpoint_for_runtime",
+        lambda _runtime: endpoint,
+    )
+
+    def invoke(request, **options):
+        requests.append((request, options))
+        if request["operation"] == "plan-native-bind-work":
+            return {"root": f"sha256:{'9' * 64}"}
+        return {"status": "bound", "receiptRoot": f"sha256:{'8' * 64}"}
+
+    monkeypatch.setattr(planned_work_binding.session_surface, "invoke", invoke)
+
+    result = planned_work_binding.bind_planned_native_work(
+        "/exact/console/runtime",
+        work_ref=binding["workRef"],
+        session=binding["session"],
+        binding_scope="same-project",
+        source_workspace_id=binding["workRef"]["workspaceId"],
+        actor_id="agent:test",
+    )
+
+    assert result["workRef"] == binding["workRef"]
+    assert [request[0]["operation"] for request in requests] == [
+        "plan-native-bind-work",
+        "bind-native-work",
+    ]
+    assert [options["endpoint"] for _request, options in requests] == [
+        endpoint,
+        endpoint,
+    ]
+
+
+def test_planned_console_observation_rejects_attempt_and_lifecycle_drift(
+    monkeypatch,
+):
+    _status, binding, plan = _fresh_recovery_fixture()
+    exact = binding["session"]
+    observations = [
+        {
+            "workConsoleId": exact["workConsoleId"],
+            "sessionAttemptId": "native:different",
+            "lifecycleState": "running",
+            "live": True,
+        },
+        {
+            **exact,
+            "lifecycleState": "ended",
+            "live": False,
+        },
+    ]
+
+    for observation in observations:
+        monkeypatch.setattr(
+            fresh_recovery_authority.session_surface,
+            "invoke",
+            lambda *_args, _observation=observation, **_kwargs: _observation,
+        )
+        with __import__("pytest").raises(
+            ValueError, match="Console or SessionAttempt is not live"
+        ):
+            fresh_recovery_authority.observe_planned_console(plan)
+
+
+def test_planned_workspace_verification_rejects_identity_drift(tmp_path):
+    workspace_root = tmp_path / "project"
+    runtime_dir = workspace_root / ".kungfu" / "runtime"
+    runtime_dir.mkdir(parents=True)
+    semantic = {
+        "schema": "kungfu.workspace.identity-material/v1",
+        "workspaceKind": "project",
+        "workspaceKey": "workspace:test",
+    }
+    identity_root = assignment_fresh_recovery._root(semantic)
+    identity_path = runtime_dir.parent / "workspace-identity.json"
+    identity_path.write_text(
+        json.dumps({**semantic, "identityRoot": identity_root}), encoding="utf-8"
+    )
+    plan = {
+        "plannedTarget": {
+            "workspace": {
+                "id": f"project:{identity_root.removeprefix('sha256:')[:16]}",
+                "root": str(workspace_root),
+                "runtimeRoot": str(runtime_dir),
+                "identityRoot": identity_root,
+            }
+        }
+    }
+
+    _runtime, observation = fresh_recovery_authority.verify_planned_workspace(plan)
+    assert observation["identityRoot"] == identity_root
+    identity_path.write_text(
+        json.dumps({**semantic, "identityRoot": f"sha256:{'f' * 64}"}),
+        encoding="utf-8",
+    )
+    with __import__("pytest").raises(ValueError, match="workspace identity changed"):
+        fresh_recovery_authority.verify_planned_workspace(plan)
+
+
+def test_planned_profile_verification_never_accepts_a_caller_selected_source(
+    tmp_path, monkeypatch
+):
+    _status, _binding, plan = _fresh_recovery_fixture()
+    monkeypatch.setattr(
+        fresh_recovery_authority,
+        "validated_recovery_profile",
+        lambda *_args: (_ for _ in ()).throw(
+            AssertionError("must reject before validating another source")
+        ),
+    )
+
+    with __import__("pytest").raises(ValueError, match="locator differs"):
+        fresh_recovery_authority.verify_recovery_profile_source(
+            plan, tmp_path / "different-profile", tmp_path / "runtime"
+        )
 
 
 def _expired_execution_recovery_fixture(*, profile_active=True):
@@ -898,6 +1052,7 @@ def _expired_execution_recovery_fixture(*, profile_active=True):
             "profileId": "kungfu.work-control",
             "profileRoot": f"sha256:{'3' * 64}",
             "sourceContractRoot": f"sha256:{'6' * 64}",
+            "sourceLocator": "/profile/work-control",
         },
         profile_active=profile_active,
         now="2026-08-25T09:00:00Z",
@@ -915,11 +1070,12 @@ def test_fresh_recovery_plan_is_resume_new_attempt_without_lifecycle_replay():
         "workConsoleId": "assistant:project:test",
     }
     assert plan["workRef"] == binding["workRef"]
-    assert plan["recoveryProfile"] == {
-        "profileId": "kungfu.work-control",
-        "profileRoot": binding["workRef"]["profileRoot"],
-        "sourceContractRoot": f"sha256:{'6' * 64}",
-    }
+    assert plan["recoveryProfile"] == plan["plannedProfileSource"]
+    assert (
+        plan["plannedProfileSource"]["profileRoot"]
+        == (binding["workRef"]["profileRoot"])
+    )
+    assert plan["plannedProfileSource"]["sourceLocator"] == ("/profile/work-control")
     assert [effect["stage"] for effect in plan["effects"]] == [
         "activate-profile",
         "bind-new-attempt",
@@ -971,19 +1127,25 @@ def test_fresh_recovery_plan_adopts_current_native_console(monkeypatch, tmp_path
             "envelope": {
                 "consoleId": "assistant:project:test",
                 "attemptId": "native:codex:ambient:current",
+                "workspaceId": "project:test",
             },
         }
 
     monkeypatch.setattr(
-        assignment_fresh_recovery.session_surface,
+        fresh_recovery_authority.session_surface,
         "current_native_console",
         current_native_console,
     )
 
-    assert assignment_fresh_recovery._current_session(str(tmp_path)) == {
+    binding = assignment_fresh_recovery._current_binding_context(
+        str(tmp_path), "project:test"
+    )
+    assert binding["session"] == {
         "workConsoleId": "assistant:project:test",
         "sessionAttemptId": "native:codex:ambient:current",
     }
+    assert binding["console"]["sourceWorkspaceId"] == "project:test"
+    assert binding["console"]["bindingScope"] == "same-project"
     assert observed == {
         "runtime_dir": str(tmp_path),
         "options": {"adopt": True, "project_work_binding": False},
@@ -1059,7 +1221,8 @@ def test_fresh_recovery_appends_one_exact_current_attempt_lease():
         "claimRoot": assignment_fresh_recovery._root(recovered_claim),
     }
     assert receipt["assignmentWrites"][0]["kind"] == "execution-claim"
-    assert receipt["nextActions"] == [{"action": "stage"}]
+    assert receipt["nextActions"][0]["action"] == "stage"
+    assert receipt["continuationDecision"]["nextAction"] == (receipt["nextActions"][0])
 
 
 def test_fresh_recovery_execution_lease_fails_closed_before_writes():
@@ -1167,11 +1330,15 @@ def test_fresh_recovery_separates_retained_authority_from_target_profile(
     )
 
     assert assignment_fresh_recovery._retained_profile_source(tmp_path) == retained
-    assert assignment_fresh_recovery._validated_recovery_profile(target, tmp_path) == {
-        "profileId": "kungfu.work-control",
-        "profileRoot": target_root,
-        "sourceContractRoot": source_contract_root,
-    }
+    validated = assignment_fresh_recovery._validated_recovery_profile(target, tmp_path)
+    assert validated["schema"] == "kungfu.work.planned-profile-source/v1"
+    assert validated["profileId"] == "kungfu.work-control"
+    assert validated["profileRoot"] == target_root
+    assert validated["sourceContractRoot"] == source_contract_root
+    assert validated["sourceLocator"] == str(target.resolve())
+    assert validated["sourceRoot"] == assignment_fresh_recovery._root(
+        {key: value for key, value in validated.items() if key != "sourceRoot"}
+    )
 
 
 def test_resume_prepare_reconciles_the_explicit_recovery_source(tmp_path, monkeypatch):
@@ -1290,22 +1457,8 @@ def test_fresh_recovery_prepare_does_not_require_newer_profile_work_hooks(
     assert receipt["profileContractMutation"] == "not-permitted"
 
 
-@pytest.mark.parametrize(
-    ("console_source", "expects_override"),
-    [
-        ("ambient-provider-session", True),
-        ("injected-native-console", False),
-    ],
-)
-def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
-    tmp_path, monkeypatch, console_source, expects_override
-):
+def test_fresh_recovery_apply_uses_only_planned_authority_ports(tmp_path, monkeypatch):
     status, binding, plan = _fresh_recovery_fixture()
-    workspace_root = tmp_path / "project"
-    workspace_root.mkdir()
-    profile_source = tmp_path / "retained-work-control"
-    profile_source.mkdir()
-    plan["workspace"]["root"] = str(workspace_root)
     plan["generatedAt"] = "2099-01-01T00:00:00Z"
     plan["expiresAt"] = "2099-01-01T00:10:00Z"
     plan["planRoot"] = assignment_fresh_recovery._root(
@@ -1314,7 +1467,22 @@ def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
     plan_file = tmp_path / "plan.json"
     plan_file.write_text(json.dumps(plan), encoding="utf-8")
     observed = {}
+    profile_source = Path(plan["plannedProfileSource"]["sourceLocator"])
+    runtime_dir = tmp_path / "project" / ".kungfu" / "runtime"
 
+    monkeypatch.setattr(
+        assignment_fresh_recovery,
+        "_verify_planned_workspace",
+        lambda *_args: (
+            runtime_dir,
+            {
+                "workspaceId": plan["workspace"]["id"],
+                "identityRoot": plan["workspace"]["identityRoot"],
+                "runtimeRoot": str(runtime_dir),
+                "available": True,
+            },
+        ),
+    )
     monkeypatch.setattr(
         assignment_fresh_recovery,
         "_verify_recovery_profile_source",
@@ -1322,52 +1490,48 @@ def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
     )
     monkeypatch.setattr(
         assignment_fresh_recovery,
-        "_retained_status",
+        "_observe_planned_console",
+        lambda *_args: (
+            dict(binding["session"]),
+            {
+                **binding["session"],
+                "lifecycleState": "running",
+                "live": True,
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        assignment_fresh_recovery,
+        "_status_from_planned_source",
         lambda *_args: json.loads(json.dumps(status)),
     )
-    console_envelope = {
-        "consoleId": binding["session"]["workConsoleId"],
-        "attemptId": binding["session"]["sessionAttemptId"],
-    }
 
-    def current_native_console(_runtime_dir, **options):
-        observed["console_options"] = options
-        return {
-            "source": console_source,
-            "envelope": console_envelope,
-            "workspaceRoot": str(workspace_root),
-        }
-
-    monkeypatch.setattr(
-        assignment_fresh_recovery.session_surface,
-        "current_native_console",
-        current_native_console,
-    )
-
-    def bind_current_native_work(*_args, **kwargs):
+    def bind_planned_native_work(*args, **kwargs):
+        observed["args"] = args
         observed.update(kwargs)
         return {
             "workRef": dict(plan["workRef"]),
+            "session": dict(binding["session"]),
             "receipt": {"receiptRoot": f"sha256:{'8' * 64}"},
         }
 
     monkeypatch.setattr(
-        assignment_fresh_recovery.run_agent,
-        "bind_current_native_work",
-        bind_current_native_work,
+        assignment_fresh_recovery.planned_work_binding,
+        "bind_planned_native_work",
+        bind_planned_native_work,
     )
-    identity = SimpleNamespace(
-        workspace_id=plan["workspace"]["id"],
-        identity_root=plan["workspace"]["identityRoot"],
-    )
+
+    def poison(*_args, **_kwargs):
+        raise AssertionError("post-plan authority rediscovery")
+
     receipt = assignment_fresh_recovery._apply_from_ports(
         ctx=SimpleNamespace(runtime_dir=tmp_path / "console-runtime"),
         plan_file=plan_file,
         expected_plan_root=plan["planRoot"],
         authorized_by="maintainer:test",
         recovery_profile_source=profile_source,
-        runtime=lambda *_args: (identity, workspace_root / ".kungfu/runtime", {}),
-        status=lambda *_args: status,
+        runtime=poison,
+        status=poison,
         prepare_resume_profile=lambda *_args: {
             "status": "ready",
             "profileSuiteRoot": plan["workRef"]["profileRoot"],
@@ -1375,21 +1539,11 @@ def test_fresh_recovery_apply_passes_exact_console_context_to_binder(
     )
 
     assert receipt["ok"] is True
-    assert observed["console_options"] == {
-        "adopt": True,
-        "project_work_binding": False,
-    }
-    assert observed["work_profile_source"] == profile_source
-    if expects_override:
-        assert observed["envelope_override"] == console_envelope
-        assert observed["console_workspace_root"] == str(workspace_root)
-    else:
-        assert "envelope_override" not in observed
-        assert "console_workspace_root" not in observed
-    assert observed["expected_binding"] == {
-        "workRef": plan["workRef"],
-        "session": binding["session"],
-    }
+    assert observed["args"] == (plan["plannedConsoleBinding"]["consoleRuntimeRoot"],)
+    assert observed["work_ref"] == plan["workRef"]
+    assert observed["session"] == binding["session"]
+    assert observed["binding_scope"] == "same-project"
+    assert observed["source_workspace_id"] == plan["workspace"]["id"]
 
 
 def test_fresh_recovery_failure_keeps_public_executable_next_actions(

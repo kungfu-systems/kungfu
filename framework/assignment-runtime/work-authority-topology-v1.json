@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.work-authority-topology/v1",
-  "status": "migration-baseline",
+  "status": "behavior-converged",
   "authority": "qualification-only-non-authoritative",
   "decision": "KF-ADR-01a048fc-2ba5-77b5-b276-e6c965400100",
   "classes": [
@@ -125,7 +125,7 @@
       "anchor": "def next_actions(",
       "class": "projection",
       "data": ["Assignment lifecycle", "work_semantics", "continuation"],
-      "disposition": "canonicalize"
+      "disposition": "canonical"
     },
     {
       "id": "fresh-recovery-authority-discovery",
@@ -133,31 +133,31 @@
       "anchor": "def _recovery_plan_authority(",
       "class": "discovery",
       "data": ["Assignment", "Profile source"],
-      "disposition": "plan-only"
+      "disposition": "canonical-plan-only"
     },
     {
       "id": "fresh-recovery-console-discovery",
-      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
-      "anchor": "def _current_binding_context(",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery_authority.py",
+      "anchor": "def current_binding_context(",
       "class": "discovery",
       "data": ["WorkConsole", "SessionAttempt"],
-      "disposition": "plan-only-after-migration"
+      "disposition": "canonical-plan-only"
     },
     {
       "id": "fresh-recovery-profile-rediscovery",
-      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
-      "anchor": "def _verify_recovery_profile_source(",
-      "class": "discovery",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery_authority.py",
+      "anchor": "def verify_recovery_profile_source(",
+      "class": "verification",
       "data": ["Profile source"],
-      "disposition": "replace-with-plan-input-verification"
+      "disposition": "exact-plan-input-verification"
     },
     {
       "id": "fresh-recovery-status-rediscovery",
       "path": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py",
-      "anchor": "status_reader=lambda: _retained_status(",
-      "class": "discovery",
+      "anchor": "status_reader=lambda: _status_from_planned_source(",
+      "class": "verification",
       "data": ["Assignment", "query proof", "work_semantics"],
-      "disposition": "replace-with-typed-authority-and-observation-verification"
+      "disposition": "typed-authority-and-observation-verification"
     },
     {
       "id": "fresh-recovery-workref-reconstruction",
@@ -165,7 +165,7 @@
       "anchor": "\"schema\": \"kungfu.work-ref/v1\"",
       "class": "discovery",
       "data": ["WorkRef"],
-      "disposition": "plan-only-then-preserve"
+      "disposition": "canonical-plan-only-then-preserve"
     },
     {
       "id": "fresh-recovery-continuation-marker",
@@ -173,7 +173,7 @@
       "anchor": "def resolve(",
       "class": "projection",
       "data": ["continuation", "WorkRef", "Receipt"],
-      "disposition": "consume-canonical-decision-with-no-write-authority"
+      "disposition": "canonical-decision-consumer-with-no-write-authority"
     },
     {
       "id": "agent-bind-workref-builder",
@@ -181,7 +181,7 @@
       "anchor": "def bind_current_native_work(",
       "class": "discovery",
       "data": ["WorkRef", "Profile source", "workspace"],
-      "disposition": "retain-interactive-discovery-but-add-exact-planned-input-port"
+      "disposition": "interactive-discovery-only; recovery-uses-bind_planned_native_work"
     },
     {
       "id": "agent-console-reader",
@@ -216,7 +216,8 @@
       "disposition": "read-only-projection"
     }
   ],
-  "knownDebt": [
+  "knownDebt": [],
+  "resolvedDebt": [
     {
       "id": "open-ended-retained-state-exclusion",
       "site": "framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py#preserved_state",
@@ -264,6 +265,7 @@
     "semanticWriterOrDeriverPerIdentity": 1,
     "postPlanAuthorityRediscoveryTarget": 0,
     "postPlanAuthorityRediscoveryBaseline": 4,
-    "knownDebtCount": 6
+    "postPlanAuthorityRediscoveryCurrent": 0,
+    "knownDebtCount": 0
   }
 }
