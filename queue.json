@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8212,
+  "generation": 8213,
   "fencingCounter": 778,
   "policy": {
     "agingSeconds": 900,
@@ -54845,8 +54845,40 @@
         "framework/assignment-runtime/assignment-runtime.test.mjs",
         "framework/assignment-runtime/work-authority-topology-v1.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3558,
+      "assignmentRoot": "sha256:971cfda63a6f38691e27192de187daa2270794628c8d5287172c7b88afe49915",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:de712f3851aa5c4765cc81f9334a92739314e549525a1c800081952fa691e0b7",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:8e2a1009d5504f4fcca603624eb0349a694635947fe405673ae8a50a842ec507",
+      "sourceHead": "effc1d0efdfd01b802d961cca4cba9ea068dcde8",
+      "sourcePatchRoot": "sha256:e60839851e0b146fc2a06ce52a28923a9c3ade8a04db8389954f0ee0f9620f8e",
+      "sourceProofRoot": "sha256:f71a22d035d35721c4b0d395bf175d1752a209a527acc2cbdb99e8f75133af39",
+      "planRoot": "sha256:4506caf09dd97d9fbcc809c4229be7450b34cf0d8b377eaa8f9ddbfaedd16abc",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:1016047efd696df7569b642ff141f5590f2fba203e9c17ab4b07655e9114e666",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 33293807443,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-30T05:10:33.097Z",
+      "updatedAt": "2026-08-30T05:10:33.097Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/dev-pr-auto-merge.yml",
+        "docs/qualification/gates/workflow-authority.json",
+        "framework/release/publication-surfaces.json",
+        "scripts/dev-pr-auto-merge.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-30T05:04:09.856Z",
-  "stateRoot": "sha256:561908046ca3b4c79b7d0429f770b0d6f5e4f810ff463ab0d62e1858d50c9e8e"
+  "updatedAt": "2026-08-30T05:10:33.097Z",
+  "stateRoot": "sha256:3692fad5d39c011bc7fc41897baa32ac5f77ba35e8cadf03f50f71a844b1f76b"
 }
