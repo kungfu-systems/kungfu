@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:9e7ac22a1c6cf4c5c766ca5daddf564b93c36a5c4abfbfbbe2c1eec057948404"
+            "sha256": "sha256:4a362c43c9de69ac4a400421daf4bcbf795d788b0b2a7159b907bf4f3a7f83ee"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -401,7 +401,7 @@
           },
           {
             "path": "framework/core/architecture/kfd7-release-passport.json",
-            "sha256": "sha256:ab751c0914a11e258899cd8a514af021c366bd1ee84e4aa11ded4ec3f7bd5a22"
+            "sha256": "sha256:2642a1ba47a204b2565060b6ce5233b1bb161d47bfb767d55586758d799ff896"
           }
         ]
       },

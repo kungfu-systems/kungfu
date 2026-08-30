@@ -259,7 +259,7 @@
     "adr:release:gate": "node scripts/require-shifu.mjs adr:release:gate && node scripts/adr-release-gate.mjs",
     "adr:audit": "node scripts/require-shifu.mjs adr:audit && node scripts/adr-audit.mjs",
     "deprecation:audit": "node scripts/require-shifu.mjs deprecation:audit && node framework/deprecation/deprecation-lifecycle.mjs",
-    "check:deprecation-lifecycle": "node scripts/require-shifu.mjs check:deprecation-lifecycle && node framework/deprecation/deprecation-lifecycle.mjs --as-of 2026-07-29 && node --test framework/deprecation/deprecation-surface-discovery.test.mjs scripts/adr-release-gate.test.mjs",
+    "check:deprecation-lifecycle": "node scripts/require-shifu.mjs check:deprecation-lifecycle && node framework/deprecation/deprecation-lifecycle.mjs --as-of 2026-08-28 && node --test framework/deprecation/deprecation-surface-discovery.test.mjs scripts/adr-release-gate.test.mjs",
     "adr:map": "node scripts/require-shifu.mjs adr:map && node scripts/adr-navigation.mjs --write",
     "adr:map:check": "node scripts/require-shifu.mjs adr:map:check && node scripts/adr-navigation.mjs --check",
     "adr:identity:test": "node scripts/require-shifu.mjs adr:identity:test && node --test scripts/adr-identity.test.mjs scripts/adr-new.test.mjs scripts/document-metadata-contract.test.mjs",

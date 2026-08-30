@@ -128,6 +128,88 @@ export declare function authorizeKfxHostLaunch(
 ): KfxHostContribution['authorization'] & {
   host: KfxRuntimeHost;
 };
+export type KfxRuntimeWarrantAuthorization =
+  KfxExperienceFlowDescriptor['runtimeAuthorizations'][number];
+export type KfxRuntimeWarrantAdoption = {
+  schema: 'kungfu.kfx.runtime-warrant-adoption/v1';
+  executionAllowed: true;
+  runtimeWarrant: {
+    schema: 'kungfu.kfx.runtime-warrant/v1';
+    warrantRoot: string;
+    packageKey: string;
+    host: KfxRuntimeHost;
+    holder: string;
+    capabilityGrantRoot: string;
+    hostAuthorizationRoot: string;
+    mutationWarrantRoot: string;
+    expiresAt: number;
+    heartbeatTtl: number;
+  };
+  leaseState: {
+    schema: 'kungfu.kfx.runtime-lease-state-fact/v1';
+    warrantRoot: string;
+    packageKey: string;
+    host: KfxRuntimeHost;
+    holder: string;
+    generation: number;
+    fencingToken: string;
+    state: 'active';
+    heartbeatAt: number;
+    heartbeatDeadline: number;
+    expiresAt: number;
+  };
+  recovery: null | {
+    schema: 'kungfu.kfx.runtime-warrant-transition/v1';
+    event: 'lease-expired' | 'heartbeat-expired';
+    leaseState: {
+      state: 'recovered';
+    } & Record<string, unknown>;
+    receipt: Record<string, unknown>;
+  };
+  receipt: Record<string, unknown>;
+};
+export type KfxRuntimeWarrantTransition = {
+  schema: 'kungfu.kfx.runtime-warrant-transition/v1';
+  event: string;
+  leaseState: Record<string, unknown> & {
+    state: string;
+  };
+  receipt: Record<string, unknown>;
+};
+export type KfxRuntimeWarrant = {
+  adopt: (
+    authorization: KfxRuntimeWarrantAuthorization,
+    request: {
+      holder: string;
+      purpose: string;
+      leaseNonce: string;
+      issuedAt: number;
+      expiresAt: number;
+      heartbeatTtl: number;
+      residualResponsibility: string;
+      requestedCapabilities: string[];
+    },
+  ) => KfxRuntimeWarrantAdoption;
+  heartbeat: (
+    adoption: KfxRuntimeWarrantAdoption,
+    recordedAt: number,
+  ) => KfxRuntimeWarrantTransition;
+  settle: (
+    adoption: KfxRuntimeWarrantAdoption,
+    request: {
+      recordedAt: number;
+      outcome: string;
+      residualResponsibilityDisposition: string;
+    },
+  ) => KfxRuntimeWarrantTransition;
+};
+export type OpenKfxRuntimeWarrantOptions = {
+  binding: KfNativeBinding;
+  locator: KfLocator;
+};
+export declare function openKfxRuntimeWarrant(
+  options: OpenKfxRuntimeWarrantOptions,
+): KfxRuntimeWarrant;
 export type KfxControlRoot = {
   kind: 'product';
   path: string;

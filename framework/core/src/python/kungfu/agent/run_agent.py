@@ -10,6 +10,7 @@ successful process exit or provider self-report never settles Work.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 import json
 import os
 from pathlib import Path
@@ -172,12 +173,12 @@ def bind_current_native_work(
     session_contract.require_expected_binding(expected_binding, work_ref, session)
     actor_id = os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
 
-    def invoke_session(request):
-        return session_surface.invoke_for_project(
-            request,
-            fallback_runtime_dir=project_runtime_dir,
-            cwd=workspace_root,
-        )
+    invoke_session = partial(
+        session_surface.invoke_for_project,
+        fallback_runtime_dir=project_runtime_dir,
+        cwd=workspace_root,
+        environ={"KUNGFU_AGENT_SESSION_ENDPOINT": None},
+    )
 
     plan = invoke_session(
         {
