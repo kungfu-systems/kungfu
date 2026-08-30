@@ -240,20 +240,18 @@ def _active_work_profiles(work_ref):
     return [{"id": work_ref["profileId"], "root": work_ref["profileRoot"]}]
 
 
-def _qualified_active_work_profiles(runtime_dir, work_ref):
+def _project_active_work_profiles(runtime_dir, work_ref):
+    """Project the bound Work authority or this Console's unbound discovery."""
+
+    if work_ref is not None:
+        validated = session_contract.validate_work_ref(work_ref)
+        return _active_work_profiles(validated)
+
     from kungfu.assignment_runtime import profile_lifecycle
 
     profile = profile_lifecycle.resolve_qualified_work_profile(
         runtime_dir, required=False
     )
-    if work_ref is not None and (
-        profile is None
-        or work_ref.get("profileId") != profile["id"]
-        or work_ref.get("profileRoot") != profile["root"]
-    ):
-        raise ValueError(
-            "native Agent WorkRef does not match the exact qualified Work Control Profile root"
-        )
     return (
         [{"id": profile["id"], "root": profile["root"]}] if profile is not None else []
     )
@@ -275,7 +273,7 @@ def _console_envelope_work_projection(envelope, *, enabled):
 def _console_work_projection(runtime_dir, work_ref, *, enabled):
     if not enabled:
         return [], None
-    return _qualified_active_work_profiles(runtime_dir, work_ref), work_ref
+    return _project_active_work_profiles(runtime_dir, work_ref), work_ref
 
 
 class ReturnCodeResult(Protocol):
