@@ -3,15 +3,60 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8469,
-  "fencingCounter": 806,
+  "generation": 8470,
+  "fencingCounter": 807,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:911b51885c336f1df04d70e64b9df8846c1e21712d74af45353683b81ac5baea",
+    "pullRequestNumber": 3582,
+    "sourceHead": "d6e8f711512d861e61efcd0210b978f8780a19d8",
+    "assignmentRoot": "sha256:df5907352d81f4907f733cf935a74a612435f8ca0cfb62dab4d558ce3c3824fc",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:9aefab0256f6414d3b8c9ef1ca5936cb73be84c0cb736125489939874152237a",
+    "sourcePatchRoot": "sha256:e4bcd30045102f718e9069b54fcac15fa2e32547f220190b69bdcfc0362fea55",
+    "sourceProofRoot": "sha256:bd2e8ad5f2699b2b08a14faa16b4e8c9596d58f2740e61a8e911958a5c72c302",
+    "planRoot": "sha256:a960392d1624273398051f08225813f150a2aaf97f3df003d814eb1f499ce2d2",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:c397ab7e916b40bd89bea1c279c1671f11dde1a88748b64b7740abed52db3621",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3582 --expected-head d6e8f711512d861e61efcd0210b978f8780a19d8 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:8e7fb55941f47b61da008fdf5b3110e044c5878d335ba16aebd2af04d751f3d6"
+    },
+    "affectedPaths": [
+      "framework/agent-session/src/capsule-transport-runtime.mjs",
+      "framework/agent-session/tests/capsule-transport-runtime.test.mjs",
+      "framework/core/src/python/kungfu/agent/session_surface.py",
+      "framework/core/tests/python/test_agent_console_ambient_adoption.py",
+      "scripts/check-runtime-surface-integration.mjs",
+      "tests/fixtures/runtime-surface-integration/cases.json"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:2a4f8ac57e6bfa2a5bd00b6fedbfdb974afd265d97e68e789bba300a67bb04f6",
+      "sha256:da0ea025c0423f337f784687ac6180e278fbf1c8744ec658bba41152446d28ab"
+    ],
+    "sourceWorkflowRunId": 33338718943,
+    "deliveryClass": "native-proof-required",
+    "priority": "ordinary",
+    "generation": 807,
+    "expectedOldStateRoot": "sha256:215f23fd278ba90331273c2acc4e9763e876e6b303f496ec106fdbc076ad183d",
+    "issuedAt": "2026-08-30T22:24:49.738Z",
+    "expiresAt": "2026-08-30T23:54:49.738Z",
+    "fencingToken": "sha256:952d23c20ef9633505742d42ebb472fd5e5d58e22263fb5b7f19396fdff67635",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -57900,10 +57945,10 @@
       "sourceWorkflowRunId": 33338718943,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T22:24:45.310Z",
-      "updatedAt": "2026-08-30T22:24:45.310Z",
+      "updatedAt": "2026-08-30T22:24:49.738Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         "framework/agent-session/src/capsule-transport-runtime.mjs",
@@ -57919,6 +57964,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T22:24:45.310Z",
-  "stateRoot": "sha256:215f23fd278ba90331273c2acc4e9763e876e6b303f496ec106fdbc076ad183d"
+  "updatedAt": "2026-08-30T22:24:49.738Z",
+  "stateRoot": "sha256:0009f8cc9bccaa254086099afbeee6a29ca9f098cf32cf0bae8a45c73d0fc3f5"
 }
