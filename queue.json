@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8279,
+  "generation": 8280,
   "fencingCounter": 784,
   "policy": {
     "agingSeconds": 900,
@@ -55634,11 +55634,20 @@
       "sourceWorkflowRunId": 33297871208,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T09:04:21.763Z",
-      "updatedAt": "2026-08-30T09:04:21.763Z",
+      "updatedAt": "2026-08-30T09:55:40.675Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "dequeued",
+      "terminal": {
+        "outcome": "dequeued",
+        "reason": "Dependency ordering: bootstrap runtime fix PR #3567 must land before old-base transfer candidates can be retried.",
+        "evidenceRoot": "sha256:5cfcdbaa2c9d6e2ab1bc8b13c4a7bbd4dbec0a69efdd6f8831f9fb199b6abf55",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "f40b08147634ee9316d054557b51c78bbd4d4f71",
+        "observedSourceHead": "f40b08147634ee9316d054557b51c78bbd4d4f71",
+        "eventAction": "dequeued",
+        "closedAt": "2026-08-30T09:55:40.675Z"
+      },
       "affectedPaths": [
         ".github/workflows/dev-pr-auto-merge.yml",
         ".xinfa/portable-atlas-classification.json.gz",
@@ -55769,6 +55778,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T09:53:20.188Z",
-  "stateRoot": "sha256:fdec241ad82ec3ba9ee11989ff06acf5f9e0526bd84abc35fe2bd93c1c68a5b3"
+  "updatedAt": "2026-08-30T09:55:40.675Z",
+  "stateRoot": "sha256:723cc9b15f66fe28be8bdcdc3a94f060d85dd66f86d4b55a3c7eba11c115cb7b"
 }
