@@ -23,6 +23,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
 const GENERATED_EVIDENCE_ROOTS = ['.kungfu/', '.xinfa/'];
+const XINFA_BASELINE_PREFIX = '.xinfa/baselines/sha256/';
+const XINFA_BASELINE_WITNESS_FILES = new Set(['manifest.json', 'receipt.json']);
 const RUFF_CONFIG = 'framework/core/pyproject.toml';
 // Repo-relative roots of the mypy-checked surface. Mirrors `files` under
 // [tool.mypy] in framework/core/pyproject.toml, which stays the single source of
@@ -262,6 +264,19 @@ export function isLocalQualificationRuntime(relativePath) {
     relativePath === '.kungfu/qualification' ||
     relativePath.startsWith('.kungfu/qualification/')
   );
+}
+
+/** @param {string[]} trackedFiles */
+export function assertTrackedXinfaBaselinesAreWitnessOnly(trackedFiles) {
+  const material = trackedFiles.filter((relative) => {
+    if (!relative.startsWith(XINFA_BASELINE_PREFIX)) return false;
+    return !XINFA_BASELINE_WITNESS_FILES.has(path.posix.basename(relative));
+  });
+  if (material.length) {
+    throw new Error(
+      `Xinfa baseline material must remain outside Git; only manifest.json and receipt.json may be tracked:\n${material.join('\n')}`,
+    );
+  }
 }
 
 function assertYijinjingWriterInterface() {
@@ -1259,6 +1274,10 @@ function main() {
   try {
     const files = sourceChangedFiles();
     console.log(`[source-acceptance] changed files: ${files.length}`);
+    assertTrackedXinfaBaselinesAreWitnessOnly(
+      git(['ls-files', '--cached', `${XINFA_BASELINE_PREFIX}**`]).split('\n'),
+    );
+    console.log('[source-acceptance] Xinfa baselines are witness-only');
     if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1') {
       assertYijinjingWriterInterface();
       console.log('[source-acceptance] yijinjing writer interface passed');
