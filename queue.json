@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8460,
+  "generation": 8461,
   "fencingCounter": 805,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:2b9d5f68828e55a91a454f65e5c8b87198ea92f8ff0c7051b608bb7edf9c8b21",
@@ -51,8 +51,13 @@
     "issuedAt": "2026-08-30T21:35:56.250Z",
     "expiresAt": "2026-08-30T23:11:21.611Z",
     "fencingToken": "sha256:1fb3f626fb0d207f4d3dfb623c6248edb8c6b50d5d73312e5236059521a9173b",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-30T21:41:21.611Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-30T21:41:21.611Z",
+    "nativeProofRoot": "sha256:b0abb5d90b9c772ca7c4fee998339886c73f6704ece800dee6f1580ec70ece88",
+    "nativeExecutionReceiptRoot": "sha256:468abcd5cacd97e8b4c77b37f23ae1d6cba6a8494246674a2525087d60862e66",
+    "nativeProofReuseRoot": "sha256:a4736cc80f0801257ad703f535697c8bcbb87d932fc136799662b7b307602b57",
+    "qualificationReceiptRoot": "sha256:3a9c26334ba404a38d3ea22af118af204711d205c45fafb2777b25f9de513bc6",
+    "qualifiedAt": "2026-08-30T21:41:49.392Z"
   },
   "candidates": [
     {
@@ -57805,10 +57810,10 @@
       "sourceWorkflowRunId": 33336488239,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T21:35:50.128Z",
-      "updatedAt": "2026-08-30T21:41:21.611Z",
+      "updatedAt": "2026-08-30T21:41:49.392Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/agent-session/src/capsule-transport-runtime.mjs",
@@ -57862,6 +57867,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T21:41:21.611Z",
-  "stateRoot": "sha256:d690609cbfc57bfc3654cea399e86b75c6607e3a2d17489fe1736cdf5c331e6d"
+  "updatedAt": "2026-08-30T21:41:49.392Z",
+  "stateRoot": "sha256:ed2e84d9f545578faf60a5ff9f4f6b8a585f5745d76be226c76c5d28a8ca5eca"
 }
