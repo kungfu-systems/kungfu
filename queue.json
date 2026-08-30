@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8446,
+  "generation": 8447,
   "fencingCounter": 803,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:c00d9b76a8a015c7a6a2000fe88fd9273ce6fa626e01137965f24fb03aae3a7f",
@@ -51,8 +51,13 @@
     "issuedAt": "2026-08-30T20:37:10.655Z",
     "expiresAt": "2026-08-30T22:33:01.372Z",
     "fencingToken": "sha256:cb643d05fc0ef39df19053a8f1ca1114ba46a434c0a4bc7d2403496a88298cfe",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-30T21:03:01.372Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-30T21:03:01.372Z",
+    "nativeProofRoot": "sha256:2a1b49018280c90ffb7363859846581f881fdbf06d2e82aab5a299752adddbae",
+    "nativeExecutionReceiptRoot": "sha256:b054e9a9a9db0d7acd6b45d1fa0cc037e516a557ab256b17d3932171232fbdf4",
+    "nativeProofReuseRoot": "sha256:0ed7a8c4a10a1f95805fe19009ec3932437c4996c8b30a02545fc4c746d23277",
+    "qualificationReceiptRoot": "sha256:35a9dff3267c709f618e1ff9ac93afd7856b0bf3cf2b5da346a1dab362cc1781",
+    "qualifiedAt": "2026-08-30T21:03:31.707Z"
   },
   "candidates": [
     {
@@ -57642,10 +57647,10 @@
       "sourceWorkflowRunId": 33333447184,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T20:32:44.072Z",
-      "updatedAt": "2026-08-30T21:03:01.372Z",
+      "updatedAt": "2026-08-30T21:03:31.707Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/agent/session_surface.py",
@@ -57697,6 +57702,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T21:03:01.372Z",
-  "stateRoot": "sha256:66e59674901cf05879cd787932a1db4afa7d419b92ee318b09e27a09c27067ea"
+  "updatedAt": "2026-08-30T21:03:31.707Z",
+  "stateRoot": "sha256:4f28fe88ef05af8418129f691fd98e269d2e3de58188ce4d79de5127bc396291"
 }
