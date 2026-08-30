@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-view-github-events",
-  "version": "4.0.0-alpha.4",
+  "version": "4.0.0-alpha.3",
   "description": "Inspectable normalized GitHub webhook observation and processing evidence",
   "license": "Apache-2.0",
   "type": "module",
