@@ -119,7 +119,31 @@
     },
     {
       "path": "framework/core/tests/python/test_runtime_service.py",
-      "sha256": "0b16b3b8ee06e0ea90cd8964cbf43ad1b066ad314132036c92f51936ff13db58"
+      "sha256": "9636ba17c797b31843539670d5e1e905b4745635758e616dba6f31761ca38e11"
+    },
+    {
+      "path": "framework/core/tests/python/_runtime_service_support.py",
+      "sha256": "e8e719ea14b227d31155a697f83f853ea4c8455ed04e22bf8e54cd1ac837cb8d"
+    },
+    {
+      "path": "framework/core/tests/python/_runtime_service_process_cases.py",
+      "sha256": "cf168377b8a3f2c66c47bc15c0603d460af7137ba9bfae6ded7f5999f28f668e"
+    },
+    {
+      "path": "framework/core/tests/python/_runtime_service_route_cases.py",
+      "sha256": "302f25cab1c87ec512cb14b3a6d57c33feed7e6588b57ecf3d4ee0caf059b2e2"
+    },
+    {
+      "path": "framework/core/tests/python/_runtime_service_supervisor_cases.py",
+      "sha256": "1ed4bc149b164a2755f2a009a1fbb07fcba6618dac2a824e71f47719dd1abaeb"
+    },
+    {
+      "path": "framework/core/tests/python/_runtime_service_engine_cases.py",
+      "sha256": "3a98871265a59f0bde5649b4fecb286a7a908ff40dcce182b5da9185f7bdd0c6"
+    },
+    {
+      "path": "framework/core/tests/python/_runtime_service_assessment_cases.py",
+      "sha256": "d06942462cf4641718faeb1bf35e4551d1e11dfcedc42b9e0a0db1aa7840f560"
     }
   ],
   "baseline": {
