@@ -3,15 +3,56 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8391,
-  "fencingCounter": 796,
+  "generation": 8392,
+  "fencingCounter": 797,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:714388951ba076fbe49e5370e88f6c84b4834a3425404671000704475bf2f394",
+    "pullRequestNumber": 3566,
+    "sourceHead": "3a8840d7f5f4bf40eb24e9546b914434cb3d815d",
+    "assignmentRoot": "sha256:48e997ae44a380cebd20ef02e0a5e9896b8f0996a2feb6bf49bdec432688bf22",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:db16c078bc1f7a32ad9c08c20ba92e3284da5e857f02477f88e73ffeda6e2c7f",
+    "sourcePatchRoot": "sha256:4571057e3d7b806c046cd880a126c6dc6977192cfdf552f456528c5dc4157557",
+    "sourceProofRoot": "sha256:76500b136ac49abcefd8f30e5a405cb303c45e9f17dae54e75541fe7d271150b",
+    "planRoot": "sha256:a160772cc1f91f473b54143ca9dd72c8282e27d854208e3c971f635a683185f3",
+    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+    "dependencyRoot": "sha256:b1bec6e261608bcc65060630d2e3cbb6629967735528fee3d647b43621cc14f8",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3566 --expected-head 3a8840d7f5f4bf40eb24e9546b914434cb3d815d --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:cb22c24dd4c07c846e320a2e539f22218128e41448d05a8a306b3dfc55c02133"
+    },
+    "affectedPaths": [
+      "scripts/source-acceptance-git.test.mjs",
+      "scripts/source-acceptance.mjs"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:449f69f728b9395dcd5267b67a40a5ea43e367ef37d1b39646094180fbe4f719",
+      "sha256:5a647983c7eb833cc165838d9fa8513d02b6ad1f80effafd2e9426719971beef"
+    ],
+    "sourceWorkflowRunId": 33300814752,
+    "deliveryClass": "non-native-fast",
+    "priority": "ordinary",
+    "generation": 797,
+    "expectedOldStateRoot": "sha256:078b70aee253174c842b5c8fb753c1cbbfc193d49802aac8fb7858e9e103fefd",
+    "issuedAt": "2026-08-30T16:03:37.570Z",
+    "expiresAt": "2026-08-30T17:33:37.570Z",
+    "fencingToken": "sha256:9f619f83cd2de3bd4b72ea0c347756c4431885b9a92bcec631ec529b7b4f146e",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -57103,10 +57144,10 @@
       "sourceWorkflowRunId": 33300814752,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T15:00:59.434Z",
-      "updatedAt": "2026-08-30T16:03:32.477Z",
+      "updatedAt": "2026-08-30T16:03:37.570Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         "scripts/source-acceptance-git.test.mjs",
@@ -57174,6 +57215,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T16:03:32.477Z",
-  "stateRoot": "sha256:078b70aee253174c842b5c8fb753c1cbbfc193d49802aac8fb7858e9e103fefd"
+  "updatedAt": "2026-08-30T16:03:37.570Z",
+  "stateRoot": "sha256:b524a6a64b56c03398e750963b9a12e28a1b2fb2a6edcda0c56d7f99fab1e218"
 }
