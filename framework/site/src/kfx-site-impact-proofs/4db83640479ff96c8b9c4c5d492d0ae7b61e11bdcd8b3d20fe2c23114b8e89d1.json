@@ -1,0 +1,67 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "40457f605f0955ab264a22ff177109116afcdaa8",
+  "changeRoot": "sha256:aa06d6727cfaf1247ee6bae546d35e5a571f9d801805097645f2429e52b32ae7",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:ebda2d335a687409ce188d1f5f7162baee6f8ef2604cdacd551e65d10f02f771",
+      "contentRoot": "sha256:4a362c43c9de69ac4a400421daf4bcbf795d788b0b2a7159b907bf4f3a7f83ee",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:73a9ffa3092bef7d5d2fa0a878c03c427cf1f7739cd14bffd3e56253bc24211b",
+      "contentRoot": "sha256:6ef9f00a74bddb89f497c6b3f73e5f89c96c31b88d768a0f72f1a6fd34683aca",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8aac3a8dc2af64640023b2af968bb910c0b3b3d54c75417427e468c2936330bc",
+      "contentRoot": "sha256:234afef2bac8bc09ea40c816dfddf0684591363e8fced5c4ba7a5cea8db96b3a",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ebda2d335a687409ce188d1f5f7162baee6f8ef2604cdacd551e65d10f02f771",
+      "contentRoot": "sha256:4a362c43c9de69ac4a400421daf4bcbf795d788b0b2a7159b907bf4f3a7f83ee",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8aac3a8dc2af64640023b2af968bb910c0b3b3d54c75417427e468c2936330bc",
+      "contentRoot": "sha256:234afef2bac8bc09ea40c816dfddf0684591363e8fced5c4ba7a5cea8db96b3a",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:016c67c42618df951be534502108fdbde6b6ee35538094287d7dc10d754bb638",
+      "contentRoot": "sha256:43594189454b9b6ccb5942cc77a9628bd950d20ff6da8d3b8ec9b18d19f79df4",
+      "path": "extensions/system/kfx-manager/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a0fa463f1b4c9f303f22407446a0537616f9a5c63c815e892bedcdd3a70f8784",
+      "contentRoot": "sha256:5ed49cb2abd811f02181e2bd525087d515f3cd748ddf2789b8d35d11b1aa4e7b",
+      "path": "extensions/system/settings/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c46e24bb31a915f29676bfa588e8adf04085104bc7ae0fbb47367e3817cf2c87",
+      "contentRoot": "sha256:129a5adf4870a0d04e2b9d36f3991cf9ceacd5ade7d29a64f33dc087228165cf",
+      "path": "extensions/system/skill-manager/src/view/index.tsx",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Wave 5 decomposes internal product view composition and refreshes derived KFD evidence without changing public KFX Site Bundle declarations, routes, capabilities, profiles, or package facets.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:4db83640479ff96c8b9c4c5d492d0ae7b61e11bdcd8b3d20fe2c23114b8e89d1"
+}
