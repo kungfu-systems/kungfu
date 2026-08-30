@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8181,
+  "generation": 8182,
   "fencingCounter": 774,
   "policy": {
     "agingSeconds": 900,
@@ -54581,8 +54581,66 @@
         "sha256:3451f997e285397a10479e1c86e2c57164f856ad1c84d4ac3d37733d1daac28a",
         "sha256:aa595958b3c0e992e10aa83418ac79441768da10c032d1dddd509b8380029ff4"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3551,
+      "assignmentRoot": "sha256:dbe51174a55c829ded869147b5dc9d9024000c0f5873a4d814c38496ece909f3",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:acab2b4231d458a1848329b6c5ce5a04f2460a21750f6e8e90199f168b3a0e61",
+      "deliveryClass": "native-proof-required",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:e6d9bc482350cf1a2697882ac893cf81dfbc52c6e8626845392aadebe02fd995",
+      "candidateId": "sha256:8005a780220ec721e799cc2f8c23cf217fa75e60db07d3215c2fa8542eff46d1",
+      "sourceHead": "941d1c969d631384267b45fc26525eb7efb3465c",
+      "sourcePatchRoot": "sha256:4b50995dd1efc44f56c0a35f50385863938ab1a12dab86e84058e044c932c34a",
+      "sourceProofRoot": "sha256:f1303361e62d96d24b1f6ab87e6f10896ef500d671eab9bd6e8853955a38610b",
+      "planRoot": "sha256:40cba5e99ba468bfccf1f8bbe3dc13ca4a39d85efc64230f50ba5c9f77dd8942",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:dbcce46ceb4aeb2a9311a347654e61d54654c0e1aff32c04926c3a96056b18d5",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "nativeCommandContract": {
+        "schema": "kungfu.buildchain.native-command-contract/v1",
+        "runner": "bash-lc",
+        "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3551 --expected-head 941d1c969d631384267b45fc26525eb7efb3465c --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+        "commandRoot": "sha256:5f537195445af01a854b2f1592e9d9a00f4a32fadbd3647ed37405b8f2015656"
+      },
+      "sourceWorkflowRunId": 33289663687,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-30T03:41:13.431Z",
+      "updatedAt": "2026-08-30T03:41:13.431Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
+        ".buildchain/kfd/kfd-2/release-claims.json",
+        ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+        ".buildchain/kfd/support-matrix.json",
+        "developer/sdk/kfd/kfd-2/claims/agent-onboarding-pack.json",
+        "developer/sdk/kfd/kfd-2/release-claims.json",
+        "developer/sdk/kfd/support-matrix.json",
+        "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md",
+        "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+        "framework/core/src/python/kungfu/cli/commands/project/__init__.py",
+        "framework/core/src/python/kungfu/cli/surface_contract.py",
+        "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+        "framework/core/src/python/kungfu/cli/surface_contract.schema.json",
+        "framework/core/tests/python/test_cli_surface_contract.py",
+        "framework/core/tests/python/test_projects.py",
+        "package.json",
+        "product/scripts/cli-surface-qualification.mjs",
+        "product/scripts/cli-surface-qualification.test.mjs"
+      ],
+      "shardEvidenceRoots": [
+        "sha256:3451f997e285397a10479e1c86e2c57164f856ad1c84d4ac3d37733d1daac28a",
+        "sha256:aa595958b3c0e992e10aa83418ac79441768da10c032d1dddd509b8380029ff4"
+      ]
     }
   ],
-  "updatedAt": "2026-08-30T03:38:48.272Z",
-  "stateRoot": "sha256:3910ec364027b852c01fa306033d665a6ff9f5c2cc89514b366ac182310ff61c"
+  "updatedAt": "2026-08-30T03:41:13.431Z",
+  "stateRoot": "sha256:20798d05d2cb6b766cefa7526622b4eca6bf057630c567e14716d1a78bf20d3b"
 }
