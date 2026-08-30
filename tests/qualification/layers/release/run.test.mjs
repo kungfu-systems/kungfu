@@ -157,7 +157,7 @@ function fixture(root) {
     npmPackageInventory: {
       schema: 'kungfu.npm-release-package-inventory-evidence/v1',
       status: 'passing',
-      expectedPackageCount: 29,
+      expectedPackageCount: 33,
       packages: [
         '@kungfu-tech/core',
         '@kungfu-tech/core-darwin-arm64',
@@ -165,7 +165,7 @@ function fixture(root) {
         '@kungfu-tech/core-linux-x64',
         '@kungfu-tech/core-win32-x64',
         ...Array.from(
-          { length: 24 },
+          { length: 28 },
           (_, index) => `@kungfu-tech/fixture-${index}`,
         ),
       ].map((name) => ({ name })),

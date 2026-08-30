@@ -28,9 +28,13 @@ function completeFixture(root) {
     'api',
     'gui',
     'kfx',
+    'kfx-github-dogfood-bridge',
+    'kfx-github-webhook-ingress',
+    'kfx-suite-github-webhook-reference',
     'kfx-suite-system',
     'kfx-view-config-manager',
     'kfx-view-fact-manager',
+    'kfx-view-github-events',
     'kfx-view-journal-manager',
     'kfx-view-kfx-manager',
     'kfx-view-rewind-inspector',
@@ -60,7 +64,7 @@ function completeFixture(root) {
   write(root, 'win32', 'Kungfu Episodes Setup 4.0.0-alpha.1.exe');
 }
 
-test('collects the exact 39-file cross-platform publication set', () => {
+test('collects the exact 43-file cross-platform publication set', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-publish-test-'));
   try {
     const input = path.join(root, 'input');
@@ -75,7 +79,7 @@ test('collects the exact 39-file cross-platform publication set', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(output, 'manifest.json'), 'utf8'),
     );
-    assert.equal(manifest.artifacts.length, 39);
+    assert.equal(manifest.artifacts.length, 43);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
