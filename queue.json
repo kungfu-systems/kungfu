@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8466,
+  "generation": 8467,
   "fencingCounter": 806,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:e3e70500f652b8600dc7a6786e9f8218b832150f068d30544b305c5ed9228c76",
@@ -51,8 +51,13 @@
     "issuedAt": "2026-08-30T22:00:03.431Z",
     "expiresAt": "2026-08-30T23:35:30.526Z",
     "fencingToken": "sha256:5c7d0a6d3ab8f8253cae6628db4e3bd90aaf2d83c474115cc6f1a542f80d1565",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-30T22:05:30.526Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-30T22:05:30.526Z",
+    "nativeProofRoot": "sha256:6c134867598715346a0e43cb6751ad5d44ce40bb0b1ac357b5ab4136cdf79a57",
+    "nativeExecutionReceiptRoot": "sha256:6b1e6f6065ac896c6d7d87f68952112af6ca0bdcbdf0bf347fbc6b0d9f9e383c",
+    "nativeProofReuseRoot": "sha256:09c5ab0844138f8020fff4f7d98adf40d837ae0fa632df8cdb52976224da95c2",
+    "qualificationReceiptRoot": "sha256:e473b86643ed981f6302c270f6de294b032b1053d5b76c0b3e18ec8d1d6e3c5d",
+    "qualifiedAt": "2026-08-30T22:05:56.446Z"
   },
   "candidates": [
     {
@@ -57890,10 +57895,10 @@
       "sourceWorkflowRunId": 33334398228,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T21:39:01.937Z",
-      "updatedAt": "2026-08-30T22:05:30.526Z",
+      "updatedAt": "2026-08-30T22:05:56.446Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "scripts/check-runtime-surface-integration.mjs",
@@ -57905,6 +57910,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T22:05:30.526Z",
-  "stateRoot": "sha256:43f6b45dd480c8e91aeee9d2941c73d93a9b40f23adadc5b984db17261218dd5"
+  "updatedAt": "2026-08-30T22:05:56.446Z",
+  "stateRoot": "sha256:614b288294d20a611b10a56a51110d93c3d027524e2c433e32e60e01dcc5fc4b"
 }
