@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-github-dogfood-bridge",
-  "version": "4.0.0-alpha.3",
+  "version": "4.0.0-alpha.4",
   "description": "Optional authorized bridge from normalized GitHub observations to immutable Dogfood Findings",
   "license": "Apache-2.0",
   "type": "module",
