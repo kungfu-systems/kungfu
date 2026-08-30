@@ -168,7 +168,7 @@ function runner(observed = catalog()) {
           {
             id: 'global-observer',
             discoveryCommands: [
-              'kungfu project works --json',
+              'kungfu workspace work --home --scope all --json',
               'kungfu project list --json',
             ],
           },
@@ -177,6 +177,13 @@ function runner(observed = catalog()) {
     }
     if (joined.includes('project list')) {
       return json({ schema: 'kungfu.projects.catalog/v1', projects: [] });
+    }
+    if (joined.includes('workspace work --home --scope all --json')) {
+      return json({
+        schema: 'kungfu.workspace-federation.query/v1',
+        scope: 'all',
+        writes: [],
+      });
     }
     if (joined.includes('project works')) {
       return json({

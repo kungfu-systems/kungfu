@@ -372,10 +372,24 @@ export function qualifyCliSurface({
     assert(
       JSON.stringify(globalObserver.discoveryCommands) ===
         JSON.stringify([
-          'kungfu project works --json',
+          'kungfu workspace work --home --scope all --json',
           'kungfu project list --json',
         ]),
       'Agent Map global observer discovery commands drifted',
+    );
+    const globalProjectWork = parseJson(
+      run(
+        ['workspace', 'work', '--home', '--scope', 'all', '--json'],
+        'kungfu workspace work --home --scope all --json',
+      ).stdout,
+      'kungfu workspace work --home --scope all --json',
+    );
+    assert(
+      globalProjectWork.schema === 'kungfu.workspace-federation.query/v1' &&
+        globalProjectWork.scope === 'all' &&
+        Array.isArray(globalProjectWork.writes) &&
+        globalProjectWork.writes.length === 0,
+      'Agent Map global observer command is not an executable read-only all-scope query',
     );
     const projectSchemas = {
       'kungfu project list': 'kungfu.projects.catalog/v1',
