@@ -197,11 +197,26 @@ jobs:
           source_workflow_run_id=""
           if [ "$EVENT_NAME" = "workflow_run" ] && [ "$WORKFLOW_EVENT" = "pull_request" ]; then
             pr_count="$(jq -r 'if type == "array" then length else -1 end' <<<"$WORKFLOW_PULL_REQUESTS")"
-            if [ "$pr_count" != "1" ]; then
+            if [ "$pr_count" = "1" ]; then
+              expected_pr_number="$(jq -r '.[0].number' <<<"$WORKFLOW_PULL_REQUESTS")"
+            elif [ "$pr_count" = "0" ]; then
+              associated_prs="$(gh api \
+                -H 'Accept: application/vnd.github+json' \
+                "repos/$GITHUB_REPOSITORY/commits/$WORKFLOW_HEAD_SHA/pulls?per_page=100")"
+              matches="$(jq -c \
+                --arg branch "$DEFAULT_BRANCH" \
+                --arg head "$WORKFLOW_HEAD_SHA" \
+                '[.[] | select(.state == "open" and .base.ref == $branch and .head.sha == $head)]' \
+                <<<"$associated_prs")"
+              if [ "$(jq -r 'length' <<<"$matches")" != "1" ]; then
+                echo "workflow_run fork fallback must resolve to exactly one open pull request" >&2
+                exit 1
+              fi
+              expected_pr_number="$(jq -r '.[0].number' <<<"$matches")"
+            else
               echo "workflow_run must resolve to exactly one pull request; got: $pr_count" >&2
               exit 1
             fi
-            expected_pr_number="$(jq -r '.[0].number' <<<"$WORKFLOW_PULL_REQUESTS")"
             expected_head_sha="$WORKFLOW_HEAD_SHA"
             source_workflow_run_id="$WORKFLOW_RUN_ID"
           elif [ "$EVENT_NAME" = "pull_request_target" ] || [ "$EVENT_NAME" = "pull_request_review" ]; then
@@ -339,7 +354,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: cd8318d57b0506493114afcc63b9aacef741d3c4
+          ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -371,10 +386,12 @@ jobs:
           SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
           EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
           EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
+          TARGET_BRANCH: ${{ needs.resolve-target.outputs.target-branch }}
         run: |
           set -euo pipefail
           mkdir -p .buildchain/dev-delivery-input
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > .buildchain/dev-delivery-input/source-workflow-run.json
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$EXPECTED_PR" > .buildchain/dev-delivery-input/source-pull-request.json
           jq -e \
             --argjson run "$SOURCE_RUN_ID" \
             --argjson pullRequest "$EXPECTED_PR" \
@@ -385,9 +402,18 @@ jobs:
              and .event == "pull_request"
              and .status == "completed"
              and .head_sha == $head
-             and (.pull_requests | length) == 1
-             and .pull_requests[0].number == $pullRequest' \
+             and (((.pull_requests | length) == 1 and .pull_requests[0].number == $pullRequest)
+                  or (.pull_requests | length) == 0)' \
             .buildchain/dev-delivery-input/source-workflow-run.json >/dev/null
+          jq -e \
+            --argjson pullRequest "$EXPECTED_PR" \
+            --arg head "$EXPECTED_HEAD" \
+            --arg branch "$TARGET_BRANCH" \
+            '.number == $pullRequest
+             and .head.sha == $head
+             and .base.ref == $branch
+             and .state == "open"' \
+            .buildchain/dev-delivery-input/source-pull-request.json >/dev/null
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" \
             > .buildchain/dev-delivery-input/source-workflow-jobs.json
           jq -e \
@@ -640,9 +666,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cd8318d57b0506493114afcc63b9aacef741d3c4
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
     with:
-      buildchain-ref: cd8318d57b0506493114afcc63b9aacef741d3c4
+      buildchain-ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -686,7 +712,7 @@ jobs:
       block-labels: state/blocked,blocked,do-not-merge,work-in-progress
       allowed-head-prefixes: feature/,fix/,chore/,docs/,ci/,refactor/
       require-approval: true
-      same-repository-only: true
+      same-repository-only: false
       max-merges: 1
       merge-method: rebase
       landing-mode: queue
@@ -979,9 +1005,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cd8318d57b0506493114afcc63b9aacef741d3c4
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
     with:
-      buildchain-ref: cd8318d57b0506493114afcc63b9aacef741d3c4
+      buildchain-ref: fcad6198e03ab5c52ecd6b7485a18c7a6a6380c1
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -1025,7 +1051,7 @@ jobs:
       block-labels: state/blocked,blocked,do-not-merge,work-in-progress
       allowed-head-prefixes: feature/,fix/,chore/,docs/,ci/,refactor/
       require-approval: true
-      same-repository-only: true
+      same-repository-only: false
       max-merges: 1
       merge-method: rebase
       landing-mode: queue
