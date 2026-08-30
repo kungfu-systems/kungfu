@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8287,
+  "generation": 8288,
   "fencingCounter": 784,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:3996e78e6f5494777888c43c3475e69bb42e256fae836b17c254c0bc6f699229",
@@ -69,8 +69,13 @@
     "issuedAt": "2026-08-30T09:51:33.714Z",
     "expiresAt": "2026-08-30T11:46:27.028Z",
     "fencingToken": "sha256:cf35e9a5efddd636651e1815759cfcf74a82a7905c8b60b762971282b56404b4",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-30T10:16:27.028Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-30T10:16:27.028Z",
+    "nativeProofRoot": "sha256:80f078eda3e2870de043863b220276aaac27d3990e0b400141a2f38076b7f3e8",
+    "nativeExecutionReceiptRoot": "sha256:b974042473411cb7a8ca239891c2ae614a123918aa40b029d8e8232a7bcb53a7",
+    "nativeProofReuseRoot": "sha256:22d01cc6c2064a83dac61886ba633ae865f3a48fd954eae9ab874db9ad0f3da6",
+    "qualificationReceiptRoot": "sha256:078ac3797efceaf11b8960a138bd9e1205cde0a959900c4e2804a4b274c99be7",
+    "qualifiedAt": "2026-08-30T10:17:00.180Z"
   },
   "candidates": [
     {
@@ -55574,10 +55579,10 @@
       "sourceWorkflowRunId": 33301849846,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-30T08:41:41.340Z",
-      "updatedAt": "2026-08-30T10:16:27.028Z",
+      "updatedAt": "2026-08-30T10:17:00.180Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/atlas.json",
@@ -55796,6 +55801,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-30T10:16:27.028Z",
-  "stateRoot": "sha256:71bb949105a48fed758aeb29a990902ee83620442df5a6795a72461d8674af38"
+  "updatedAt": "2026-08-30T10:17:00.180Z",
+  "stateRoot": "sha256:af1df5f26ed18eeacadc306a6ee23dcc2c5baaf287f6a5292b023518c495876f"
 }
