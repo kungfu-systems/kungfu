@@ -414,10 +414,13 @@ export function retirementIssues(entries, { enforceContracts = false } = {}) {
     'framework/core/src/python/kungfu/_runtime_service/supervisor.py',
     ['CREATE_BREAKAWAY_FROM_JOB', 'getattr(error, "winerror", None) != 5'],
   );
-  requireText('framework/core/tests/python/test_runtime_service.py', [
-    'test_windows_supervisor_breaks_away_from_parent_job',
-    'test_windows_supervisor_falls_back_when_job_forbids_breakaway',
-  ]);
+  requireText(
+    'framework/core/tests/python/_runtime_service_supervisor_cases.py',
+    [
+      'test_windows_supervisor_breaks_away_from_parent_job',
+      'test_windows_supervisor_falls_back_when_job_forbids_breakaway',
+    ],
+  );
   return issues;
 }
 
