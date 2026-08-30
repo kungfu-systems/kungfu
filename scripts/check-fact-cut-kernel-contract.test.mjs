@@ -32,6 +32,14 @@ const writerAuthority = readJson(
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const OBJECT_PATTERN = /^fact:[0-9a-f]{32}$/;
 const REF_PATTERN = /^[a-z][a-z0-9._/-]{0,127}$/;
+const FACT_KERNEL_CHARACTERIZATION_FACADE =
+  'framework/core/tests/python/test_fact_kernel_characterization.py';
+const FACT_KERNEL_CHARACTERIZATION_OWNERS = [
+  'framework/core/tests/python/_fact_kernel_durability_cases.py',
+  'framework/core/tests/python/_fact_kernel_format_cases.py',
+  'framework/core/tests/python/_fact_kernel_recovery_cases.py',
+  'framework/core/tests/python/_fact_kernel_validation_cases.py',
+];
 
 const canonicalJson = (value) => {
   if (Array.isArray(value))
@@ -204,8 +212,16 @@ test('keeps Fact lifecycle claims aligned with current implementation evidence',
   for (const evidence of contract.qualification.completedEvidence) {
     const [relative, testName] = evidence.test.split('::');
     assert.equal(fs.existsSync(path.join(ROOT, relative)), true, evidence.id);
-    if (testName)
-      assert.match(read(relative), new RegExp(`def ${testName}\\b`, 'u'));
+    if (!testName) continue;
+    const definition = new RegExp(`def ${testName}\\b`, 'u');
+    if (relative !== FACT_KERNEL_CHARACTERIZATION_FACADE) {
+      assert.match(read(relative), definition);
+      continue;
+    }
+    const owners = FACT_KERNEL_CHARACTERIZATION_OWNERS.filter((candidate) =>
+      definition.test(read(candidate)),
+    );
+    assert.deepEqual(owners.length, 1, `${evidence.id}: ${owners.join(', ')}`);
   }
 });
 

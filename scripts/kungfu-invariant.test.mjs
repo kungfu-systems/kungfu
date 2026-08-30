@@ -236,7 +236,7 @@ test('Fact characterization fixtures use an explicit cross-platform encoding', (
   const source = fs.readFileSync(
     path.join(
       ROOT,
-      'framework/core/tests/python/test_fact_kernel_characterization.py',
+      'framework/core/tests/python/_fact_kernel_characterization_support.py',
     ),
     'utf8',
   );
