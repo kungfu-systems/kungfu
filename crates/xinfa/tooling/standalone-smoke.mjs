@@ -436,6 +436,144 @@ function qualifyStateDiagnostics(binary, targetRoot, canonicalTargetRoot, env) {
     throw new Error('read-only diagnostics created state or cache directories');
 }
 
+function assertAtlasContract(evidence) {
+  const {
+    atlasReceipt,
+    packReceipt,
+    atlasVerification,
+    atlasInspection,
+    atlasDiff,
+    atlasImpact,
+    importedReceipt,
+    legacyPackBytes,
+    importedPackBytes,
+    humanView,
+    agentView,
+  } = evidence;
+  if (
+    atlasReceipt.verdict !== 'pass' ||
+    atlasReceipt.context_pack_root !== packReceipt.packRoot ||
+    atlasReceipt.atlas_root === packReceipt.packRoot ||
+    atlasVerification.valid !== true ||
+    atlasInspection.kind !== 'xinfa.atlas/v1' ||
+    atlasDiff.unchanged !== true ||
+    JSON.stringify(atlasImpact.impact.changedSources) !==
+      JSON.stringify(['src/runtime.rs']) ||
+    importedReceipt.atlas_root !== atlasReceipt.atlas_root ||
+    !legacyPackBytes.equals(importedPackBytes) ||
+    humanView.atlas_root !== agentView.atlas_root ||
+    JSON.stringify(humanView.shared) !== JSON.stringify(agentView.shared)
+  ) {
+    throw new Error(
+      'Xinfa Atlas compile/verify/diff/impact/import contract failed',
+    );
+  }
+}
+
+function assertEpisodeContract({
+  episodeReceipt,
+  atlasReceipt,
+  episodeVerification,
+}) {
+  if (
+    episodeReceipt.verdict !== 'pass' ||
+    episodeReceipt.beforeAtlasRoot !== atlasReceipt.atlas_root ||
+    episodeReceipt.resultAtlasRoot === atlasReceipt.atlas_root ||
+    episodeReceipt.reviewChart?.schema !== 'xinfa.review-chart/v1' ||
+    episodeReceipt.reviewChart?.episodeRoots?.length !== 1 ||
+    episodeReceipt.fullIncrementalEquivalent !== true ||
+    episodeReceipt.cacheUsed !== false ||
+    episodeVerification.valid !== true
+  ) {
+    throw new Error('Episode evidence successor Atlas contract failed');
+  }
+}
+
+function assertProjectionParity({ humanProjection, chart, guiProjection }) {
+  for (const field of [
+    'atlas_root',
+    'cut_root',
+    'evidence',
+    'atlas_omissions',
+  ]) {
+    const humanValue =
+      field === 'atlas_root' || field === 'cut_root'
+        ? humanProjection[field]
+        : humanProjection.parity[field];
+    const chartValue =
+      field === 'atlas_root' || field === 'cut_root'
+        ? chart[field]
+        : chart.parity[field];
+    const guiValue =
+      field === 'atlas_root' || field === 'cut_root'
+        ? guiProjection[field]
+        : guiProjection.parity[field];
+    if (
+      JSON.stringify(humanValue) !== JSON.stringify(chartValue) ||
+      JSON.stringify(humanValue) !== JSON.stringify(guiValue)
+    ) {
+      throw new Error(`projection parity diverged at ${field}`);
+    }
+  }
+}
+
+function assertProjectionContract(evidence) {
+  const {
+    humanProjection,
+    guiProjection,
+    chart,
+    chartInspection,
+    chartVerification,
+    degraded,
+    expansion,
+    repositoryFixture,
+  } = evidence;
+  if (
+    humanProjection.schema !== 'xinfa.human-view/v1' ||
+    guiProjection.schema !== 'xinfa.gui-view/v1' ||
+    chart.schema !== 'xinfa.task-chart/v1' ||
+    chart.status !== 'complete' ||
+    chartInspection.valid_structure !== true ||
+    chartVerification.valid !== true ||
+    degraded.status !== 'degraded' ||
+    degraded.omissions.length === 0 ||
+    expansion.atlas_root !== degraded.atlas_root ||
+    expansion.cut_root !== degraded.cut_root ||
+    expansion.predecessor_root !== degraded.projection_root ||
+    chart.materialization.provider_input !== 'excluded' ||
+    chart.materialization.promotion.same_cut_allowed !== false ||
+    fs.existsSync(path.join(repositoryFixture, '.xinfa', 'generated'))
+  ) {
+    throw new Error(
+      'bounded projection, expansion, or ownership contract failed',
+    );
+  }
+}
+
+function assertRejectedProjectionInput({ compile, receipt, code, output }) {
+  if (
+    compile.status !== 1 ||
+    !receipt.diagnostics?.some((item) => item.code === code) ||
+    (output && fs.existsSync(output))
+  ) {
+    throw new Error(
+      code === 'generated-projection-input'
+        ? 'generated projection feedback was not rejected'
+        : 'malicious repository did not fail closed without output',
+    );
+  }
+}
+
+function assertStandaloneContract(stage, evidence) {
+  if (stage === 'atlas') return assertAtlasContract(evidence);
+  if (stage === 'episode') return assertEpisodeContract(evidence);
+  if (stage === 'parity') return assertProjectionParity(evidence);
+  if (stage === 'projection') return assertProjectionContract(evidence);
+  if (stage === 'rejected-input')
+    return assertRejectedProjectionInput(evidence);
+  throw new Error(`unknown standalone contract stage: ${stage}`);
+}
+
 function main() {
   const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), PREFIX));
   try {
@@ -555,24 +693,19 @@ function main() {
     const agentView = JSON.parse(
       fs.readFileSync(path.join(atlasOutput, 'views', 'agent.json'), 'utf8'),
     );
-    if (
-      atlasReceipt.verdict !== 'pass' ||
-      atlasReceipt.context_pack_root !== packReceipt.packRoot ||
-      atlasReceipt.atlas_root === packReceipt.packRoot ||
-      atlasVerification.valid !== true ||
-      atlasInspection.kind !== 'xinfa.atlas/v1' ||
-      atlasDiff.unchanged !== true ||
-      JSON.stringify(atlasImpact.impact.changedSources) !==
-        JSON.stringify(['src/runtime.rs']) ||
-      importedReceipt.atlas_root !== atlasReceipt.atlas_root ||
-      !legacyPackBytes.equals(importedPackBytes) ||
-      humanView.atlas_root !== agentView.atlas_root ||
-      JSON.stringify(humanView.shared) !== JSON.stringify(agentView.shared)
-    ) {
-      throw new Error(
-        'Xinfa Atlas compile/verify/diff/impact/import contract failed',
-      );
-    }
+    assertStandaloneContract('atlas', {
+      atlasReceipt,
+      packReceipt,
+      atlasVerification,
+      atlasInspection,
+      atlasDiff,
+      atlasImpact,
+      importedReceipt,
+      legacyPackBytes,
+      importedPackBytes,
+      humanView,
+      agentView,
+    });
 
     const episodeAtlas = path.join(targetRoot, 'episode-atlas');
     const episodeReceipt = JSON.parse(
@@ -600,18 +733,11 @@ function main() {
         env,
       }),
     );
-    if (
-      episodeReceipt.verdict !== 'pass' ||
-      episodeReceipt.beforeAtlasRoot !== atlasReceipt.atlas_root ||
-      episodeReceipt.resultAtlasRoot === atlasReceipt.atlas_root ||
-      episodeReceipt.reviewChart?.schema !== 'xinfa.review-chart/v1' ||
-      episodeReceipt.reviewChart?.episodeRoots?.length !== 1 ||
-      episodeReceipt.fullIncrementalEquivalent !== true ||
-      episodeReceipt.cacheUsed !== false ||
-      episodeVerification.valid !== true
-    ) {
-      throw new Error('Episode evidence successor Atlas contract failed');
-    }
+    assertStandaloneContract('episode', {
+      episodeReceipt,
+      atlasReceipt,
+      episodeVerification,
+    });
 
     const humanProjection = JSON.parse(
       run(
@@ -757,52 +883,21 @@ function main() {
         { cwd: targetRoot, env },
       ),
     );
-    const parityFields = [
-      'atlas_root',
-      'cut_root',
-      'evidence',
-      'atlas_omissions',
-    ];
-    for (const field of parityFields) {
-      const humanValue =
-        field === 'atlas_root' || field === 'cut_root'
-          ? humanProjection[field]
-          : humanProjection.parity[field];
-      const chartValue =
-        field === 'atlas_root' || field === 'cut_root'
-          ? chart[field]
-          : chart.parity[field];
-      const guiValue =
-        field === 'atlas_root' || field === 'cut_root'
-          ? guiProjection[field]
-          : guiProjection.parity[field];
-      if (
-        JSON.stringify(humanValue) !== JSON.stringify(chartValue) ||
-        JSON.stringify(humanValue) !== JSON.stringify(guiValue)
-      ) {
-        throw new Error(`projection parity diverged at ${field}`);
-      }
-    }
-    if (
-      humanProjection.schema !== 'xinfa.human-view/v1' ||
-      guiProjection.schema !== 'xinfa.gui-view/v1' ||
-      chart.schema !== 'xinfa.task-chart/v1' ||
-      chart.status !== 'complete' ||
-      chartInspection.valid_structure !== true ||
-      chartVerification.valid !== true ||
-      degraded.status !== 'degraded' ||
-      degraded.omissions.length === 0 ||
-      expansion.atlas_root !== degraded.atlas_root ||
-      expansion.cut_root !== degraded.cut_root ||
-      expansion.predecessor_root !== degraded.projection_root ||
-      chart.materialization.provider_input !== 'excluded' ||
-      chart.materialization.promotion.same_cut_allowed !== false ||
-      fs.existsSync(path.join(repositoryFixture, '.xinfa', 'generated'))
-    ) {
-      throw new Error(
-        'bounded projection, expansion, or ownership contract failed',
-      );
-    }
+    assertStandaloneContract('parity', {
+      humanProjection,
+      chart,
+      guiProjection,
+    });
+    assertStandaloneContract('projection', {
+      humanProjection,
+      guiProjection,
+      chart,
+      chartInspection,
+      chartVerification,
+      degraded,
+      expansion,
+      repositoryFixture,
+    });
 
     const feedbackProject = JSON.parse(
       fs.readFileSync(path.join(repositoryFixture, 'project.json'), 'utf8'),
@@ -844,14 +939,12 @@ function main() {
       },
     );
     const feedbackReceipt = JSON.parse(feedbackCompile.stdout || '{}');
-    if (
-      feedbackCompile.status !== 1 ||
-      !feedbackReceipt.diagnostics?.some(
-        (item) => item.code === 'generated-projection-input',
-      )
-    ) {
-      throw new Error('generated projection feedback was not rejected');
-    }
+    assertStandaloneContract('rejected-input', {
+      compile: feedbackCompile,
+      receipt: feedbackReceipt,
+      code: 'generated-projection-input',
+      output: null,
+    });
     const maliciousOutput = path.join(targetRoot, 'malicious-output');
     const maliciousProject = path.join(
       targetRoot,
@@ -877,17 +970,12 @@ function main() {
       },
     );
     const maliciousReceipt = JSON.parse(maliciousCompile.stdout || '{}');
-    if (
-      maliciousCompile.status !== 1 ||
-      !maliciousReceipt.diagnostics?.some(
-        (item) => item.code === 'sensitive-path',
-      ) ||
-      fs.existsSync(maliciousOutput)
-    ) {
-      throw new Error(
-        'malicious repository did not fail closed without output',
-      );
-    }
+    assertStandaloneContract('rejected-input', {
+      compile: maliciousCompile,
+      receipt: maliciousReceipt,
+      code: 'sensitive-path',
+      output: maliciousOutput,
+    });
 
     qualifyStateDiagnostics(binary, targetRoot, canonicalTargetRoot, env);
 
