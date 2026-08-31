@@ -127,6 +127,7 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     workflow.indexOf('source-workflow-jobs.json'),
   );
   assert.doesNotMatch(sourceRunVerification, /\.conclusion/u);
+  assert.doesNotMatch(sourceRunVerification, /\.status == "completed"/u);
   assert.match(
     workflow,
     /expected-pr-number: \$\{\{ fromJSON\(needs\.resolve-target\.outputs\.expected-pr-number \|\| '0'\) \}\}/u,

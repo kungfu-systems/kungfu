@@ -398,7 +398,6 @@ jobs:
              and .name == "Core affected native"
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
-             and .status == "completed"
              and .head_sha == $head
              and (((.pull_requests | length) == 1 and .pull_requests[0].number == $pullRequest)
                   or (.pull_requests | length) == 0)' \
