@@ -157,7 +157,7 @@ test('Core source qualification emits one exact Warrant bootstrap wake', () => {
   );
   assert.match(
     sourceWorkflow,
-    /wake_warrant_bootstrap:[\s\S]*needs:[\s\S]*- dco[\s\S]*- source_acceptance[\s\S]*needs\.source_acceptance\.result == 'success'/u,
+    /wake_warrant_bootstrap:[\s\S]*needs:[\s\S]*- dco[\s\S]*- source_acceptance[\s\S]*github\.run_attempt == 1[\s\S]*needs\.source_acceptance\.result == 'success'/u,
   );
   assert.match(sourceWorkflow, /name: Wake exact Delivery Warrant bootstrap/u);
   assert.match(

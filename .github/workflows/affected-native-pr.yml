@@ -114,6 +114,7 @@ jobs:
     if: >-
       ${{
         github.event_name == 'pull_request' &&
+        github.run_attempt == 1 &&
         needs.dco.result == 'success' &&
         needs.source_acceptance.result == 'success'
       }}

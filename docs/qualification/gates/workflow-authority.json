@@ -156,7 +156,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:bb6463b3224d0ebfab64ac60147edcd436eaad63ed7f96d7d34a394d226c68a6",
+          "definitionDigest": "sha256:3f91bea99fd977d35bc1d9292daa5226f1d2835e03c3e7dbc9c871e04ccd3ab0",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
           "steps": [{"index":1,"label":"name:Dispatch the exact source-qualified candidate","definitionDigest":"sha256:44252fdc664125e7020f6d1457f14f3c3ad0e5725ef0be9d98a1df89a81858cb"}]
