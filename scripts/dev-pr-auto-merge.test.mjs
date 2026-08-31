@@ -286,12 +286,16 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   const landing = workflow.slice(workflow.indexOf('  landing:\n'));
 
   assert.match(bridge, /needs\.admission\.result == 'success'/u);
+  assert.match(
+    bridge,
+    /needs\.admission\.outputs\.handoff-required != 'true'/u,
+  );
   assert.match(bridge, /actions: write/u);
   assert.match(bridge, /checks: read/u);
   assert.doesNotMatch(bridge, /checks: write/u);
   assert.match(
     bridge,
-    /pattern: buildchain-dev-delivery-warrant-\*-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
+    /name: buildchain-dev-delivery-control-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
   );
   assert.match(
     bridge,

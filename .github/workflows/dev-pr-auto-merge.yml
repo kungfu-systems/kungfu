@@ -731,6 +731,7 @@ jobs:
       - admission
     if: >-
       needs.admission.result == 'success' &&
+      needs.admission.outputs.handoff-required != 'true' &&
       needs.resolve-target.outputs.expected-pr-number != '' &&
       (github.event_name != 'workflow_dispatch' || inputs.dry-run == false)
     runs-on: ubuntu-24.04
@@ -751,9 +752,8 @@ jobs:
       - name: Download exact qualified Warrant evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          pattern: buildchain-dev-delivery-warrant-*-${{ needs.resolve-target.outputs.expected-pr-number }}
+          name: buildchain-dev-delivery-control-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.resolve-target.outputs.expected-pr-number }}
           path: .buildchain/native-check-bridge/warrant
-          merge-multiple: true
 
       - name: Re-run failed source jobs under the qualified Warrant
         id: publish
