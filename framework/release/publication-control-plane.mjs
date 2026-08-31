@@ -171,7 +171,8 @@ export function validateExternalWorkflowInventory(r, paths) {
     stale: e.filter((x) => !as.has(x)),
   };
 }
-export function validateRegistry(r, { root = ROOT } = {}) {
+
+function validatePublicationIdentity(r, root) {
   const authority = readAuthority(
     path.join(root, 'framework/version-line/version-line-authority.json'),
   );
@@ -183,146 +184,176 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     throw new Error('registry inactive');
   if (r.versionLineAuthorityRoot !== authority.authorityRoot)
     throw new Error('publication version-line authority drift');
-  const p = r.protocol;
+  const protocol = r.protocol;
   if (
-    p.schema !== 'kungfu.release-publication-protocol/v1' ||
-    p.authority !== 'adapter-only' ||
-    p.protocolRoot !== digest(omit(p, 'protocolRoot'))
+    protocol.schema !== 'kungfu.release-publication-protocol/v1' ||
+    protocol.authority !== 'adapter-only' ||
+    protocol.protocolRoot !== digest(omit(protocol, 'protocolRoot'))
   )
     throw new Error('protocol root mismatch');
-  const ids = uniq(
-    p.invariants.map((x) => need(x.id, 'invariant id')),
+  const invariantIds = uniq(
+    protocol.invariants.map((item) => need(item.id, 'invariant id')),
     'invariants',
   );
-  if (ids.length !== 9) throw new Error('protocol incomplete');
-  for (const invariant of p.invariants)
+  if (invariantIds.length !== 9) throw new Error('protocol incomplete');
+  for (const invariant of protocol.invariants)
     need(invariant.requirement, invariant.id);
+  return { activeLine, invariantIds };
+}
+
+function validateKungfuWorkflowInventory(r, root) {
   const declared = uniq(
-    r.repositories.kungfu.workflowInventory.map((x) => x.path),
+    r.repositories.kungfu.workflowInventory.map((item) => item.path),
     'workflow inventory',
   ).sort();
   const workflowInventory = new Map(
-    r.repositories.kungfu.workflowInventory.map((x) => [x.path, x]),
+    r.repositories.kungfu.workflowInventory.map((item) => [item.path, item]),
   );
   if (JSON.stringify(declared) !== JSON.stringify(workflows(root)))
     throw new Error('Kungfu workflow inventory drift');
-  const surfaceIds = new Set(r.surfaces.map((x) => x.id));
-  for (const w of r.repositories.kungfu.workflowInventory) {
-    need(w.owner, `${w.path}.owner`);
-    if (w.sourceRoot !== fd(path.join(root, w.path)))
-      throw new Error(`${w.path} source root drift`);
-    if (w.classification !== 'non-publication' && !w.surfaceIds.length)
-      throw new Error(`${w.path} eligible but unbound`);
-    for (const id of w.surfaceIds) {
-      if (!surfaceIds.has(id)) throw new Error(`${w.path} unknown surface`);
-    }
-  }
-  for (const s of r.surfaces) {
-    for (const field of [
-      'id',
-      'class',
-      'owner',
-      'artifactSource',
-      'credentialIsland',
-      'readback',
-      'rollback',
-      'telemetry',
-      'lifecycle',
-      'protocolMode',
-    ])
-      need(s[field], `${s.id}.${field}`);
-    for (const workflow of s.workflowBindings || []) {
-      if (!declared.includes(workflow))
-        throw new Error(`${s.id} unknown workflow`);
-      if (!workflowInventory.get(workflow)?.surfaceIds.includes(s.id))
-        throw new Error(`${s.id} workflow binding is not surface-bound`);
-    }
-    if (s.protocolMode === 'conformant') {
-      if (
-        JSON.stringify(Object.keys(s.bindings || {}).sort()) !==
-        JSON.stringify([...ids].sort())
-      )
-        throw new Error(`${s.id} does not bind every invariant`);
-    } else {
-      const i = s.isolation || {};
-      for (const field of [
-        'rationale',
-        'owner',
-        'risk',
-        'reviewDate',
-        'sunsetCondition',
-      ])
-        need(i[field], `${s.id}.isolation.${field}`);
-      if (
-        !i.missingInvariants?.length ||
-        JSON.stringify(
-          [...i.preservedInvariants, ...i.missingInvariants].sort(),
-        ) !== JSON.stringify([...ids].sort())
-      )
-        throw new Error(`${s.id} isolation must partition every invariant`);
-    }
-  }
-  const channels = new Set();
-  for (const c of r.rulesetContracts) {
-    channels.add(c.channel);
-    if (c.requiredBeforePublication !== true)
-      throw new Error(`${c.id} optional ruleset`);
-    if (c.adapterContractPath) {
-      const a = read(path.join(root, c.adapterContractPath));
-      validateAlphaRulesetContract(a);
-      if (`refs/heads/${a.targetRef}` !== c.target)
-        throw new Error(`${c.id} adapter drift`);
-    } else if (
-      c.contractRoot !== digest(omit(c, 'contractRoot')) ||
-      c.ruleset.bypass_actors.length
+  const surfaceIds = new Set(r.surfaces.map((item) => item.id));
+  for (const workflow of r.repositories.kungfu.workflowInventory) {
+    need(workflow.owner, `${workflow.path}.owner`);
+    if (workflow.sourceRoot !== fd(path.join(root, workflow.path)))
+      throw new Error(`${workflow.path} source root drift`);
+    if (
+      workflow.classification !== 'non-publication' &&
+      !workflow.surfaceIds.length
     )
-      throw new Error(`${c.id} ruleset drift`);
+      throw new Error(`${workflow.path} eligible but unbound`);
+    for (const id of workflow.surfaceIds)
+      if (!surfaceIds.has(id))
+        throw new Error(`${workflow.path} unknown surface`);
+  }
+  return { declared, workflowInventory };
+}
+
+function validatePublicationSurface(surface, invariantIds, inventory) {
+  for (const field of [
+    'id',
+    'class',
+    'owner',
+    'artifactSource',
+    'credentialIsland',
+    'readback',
+    'rollback',
+    'telemetry',
+    'lifecycle',
+    'protocolMode',
+  ])
+    need(surface[field], `${surface.id}.${field}`);
+  for (const workflow of surface.workflowBindings || []) {
+    if (!inventory.declared.includes(workflow))
+      throw new Error(`${surface.id} unknown workflow`);
+    if (
+      !inventory.workflowInventory
+        .get(workflow)
+        ?.surfaceIds.includes(surface.id)
+    )
+      throw new Error(`${surface.id} workflow binding is not surface-bound`);
+  }
+  if (surface.protocolMode === 'conformant') {
+    if (
+      JSON.stringify(Object.keys(surface.bindings || {}).sort()) !==
+      JSON.stringify([...invariantIds].sort())
+    )
+      throw new Error(`${surface.id} does not bind every invariant`);
+    return;
+  }
+  const isolation = surface.isolation || {};
+  for (const field of [
+    'rationale',
+    'owner',
+    'risk',
+    'reviewDate',
+    'sunsetCondition',
+  ])
+    need(isolation[field], `${surface.id}.isolation.${field}`);
+  if (
+    !isolation.missingInvariants?.length ||
+    JSON.stringify(
+      [...isolation.preservedInvariants, ...isolation.missingInvariants].sort(),
+    ) !== JSON.stringify([...invariantIds].sort())
+  )
+    throw new Error(`${surface.id} isolation must partition every invariant`);
+}
+
+function validateRulesetContracts(r, root, activeLine) {
+  const channels = new Set();
+  for (const contract of r.rulesetContracts) {
+    channels.add(contract.channel);
+    if (contract.requiredBeforePublication !== true)
+      throw new Error(`${contract.id} optional ruleset`);
+    if (contract.adapterContractPath) {
+      const adapter = read(path.join(root, contract.adapterContractPath));
+      validateAlphaRulesetContract(adapter);
+      if (`refs/heads/${adapter.targetRef}` !== contract.target)
+        throw new Error(`${contract.id} adapter drift`);
+    } else if (
+      contract.contractRoot !== digest(omit(contract, 'contractRoot')) ||
+      contract.ruleset.bypass_actors.length
+    )
+      throw new Error(`${contract.id} ruleset drift`);
   }
   const expectedTargets = {
     alpha: `refs/heads/${activeLine.branches.alpha}`,
     stable: `refs/heads/${activeLine.branches.stable}`,
     major: `refs/heads/${activeLine.branches.majorPublicationGate}`,
   };
-  for (const contract of r.rulesetContracts) {
+  for (const contract of r.rulesetContracts)
     if (
       contract.id !== `${contract.channel}-current` ||
       contract.target !== expectedTargets[contract.channel]
     )
       throw new Error(`${contract.channel} ruleset version-line drift`);
-  }
-  for (const channel of ['alpha', 'stable', 'major']) {
+  for (const channel of ['alpha', 'stable', 'major'])
     if (!channels.has(channel)) throw new Error(`missing ${channel} ruleset`);
-  }
+}
+
+function validateStableLedgerBindings(r, activeLine) {
   const stableSurface = r.surfaces.find(({ id }) => id === 'product-stable');
   for (const value of [
     stableSurface?.bindings?.['exact-source-admission'],
     stableSurface?.bindings?.['durable-history'],
-  ]) {
+  ])
     if (!String(value || '').includes(activeLine.candidateLedger))
       throw new Error('stable candidate ledger version-line drift');
-  }
-  const bc = r.repositories.buildchain;
+}
+
+function validateBuildchainInventory(r, root) {
+  const buildchain = r.repositories.buildchain;
   if (
-    !/^[0-9a-f]{40}$/.test(bc.sourceRevision) ||
-    bc.workflowInventoryRoot !== digest([...bc.workflowInventory].sort())
+    !/^[0-9a-f]{40}$/.test(buildchain.sourceRevision) ||
+    buildchain.workflowInventoryRoot !==
+      digest([...buildchain.workflowInventory].sort())
   )
     throw new Error('Buildchain inventory drift');
-  const stable = read(path.join(root, bc.stableContractLock)).buildchain;
-  const runtime = read(path.join(root, bc.runtimeContractLock)).buildchain;
+  const stable = read(
+    path.join(root, buildchain.stableContractLock),
+  ).buildchain;
+  const runtime = read(
+    path.join(root, buildchain.runtimeContractLock),
+  ).buildchain;
   if (
     stable.ref !== 'v3' ||
     stable.compatibilityPolicy !== 'major-compatible' ||
     runtime.ref !== 'v3-alpha' ||
-    runtime.resolvedSha !== bc.sourceRevision
+    runtime.resolvedSha !== buildchain.sourceRevision
   )
     throw new Error('Buildchain contract drift');
-  const ss = new Set(stable.surfaces.map((x) => x.id));
-  const rs = new Set(runtime.surfaces.map((x) => x.id));
-  for (const cap of r.buildchainCapabilities.required) {
-    const b = r.buildchainCapabilities.bindings[cap] || [];
-    if (!b.some((x) => ss.has(x)) || !b.some((x) => rs.has(x)))
-      throw new Error(`Buildchain capability ${cap} unbound`);
+  const stableSurfaceIds = new Set(stable.surfaces.map((item) => item.id));
+  const runtimeSurfaceIds = new Set(runtime.surfaces.map((item) => item.id));
+  for (const capability of r.buildchainCapabilities.required) {
+    const bindings = r.buildchainCapabilities.bindings[capability] || [];
+    if (
+      !bindings.some((item) => stableSurfaceIds.has(item)) ||
+      !bindings.some((item) => runtimeSurfaceIds.has(item))
+    )
+      throw new Error(`Buildchain capability ${capability} unbound`);
   }
+}
+
+function validatePublicationWorkflows(r, root) {
   const buildWorkflow = fs.readFileSync(
     path.join(root, '.github/workflows/build.yml'),
     'utf8',
@@ -342,6 +373,17 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     promotionWorkflow,
     releaseAdmission.buildchain.runtimes.alpha.publicationRuntimeSha,
   );
+}
+
+export function validateRegistry(r, { root = ROOT } = {}) {
+  const { activeLine, invariantIds } = validatePublicationIdentity(r, root);
+  const inventory = validateKungfuWorkflowInventory(r, root);
+  for (const surface of r.surfaces)
+    validatePublicationSurface(surface, invariantIds, inventory);
+  validateRulesetContracts(r, root, activeLine);
+  validateStableLedgerBindings(r, activeLine);
+  validateBuildchainInventory(r, root);
+  validatePublicationWorkflows(r, root);
   if (r.registryRoot !== digest(omit(r, 'registryRoot')))
     throw new Error('registry root mismatch');
   return r;
