@@ -888,6 +888,11 @@ export function sourceAcceptancePlan(
       'scripts/kfd-candidate-evidence.test.mjs',
     ],
     [
+      'SDK package platform fixtures',
+      '--test',
+      'framework/storage/package-platforms.test.mjs',
+    ],
+    [
       'KFD-4 perspective qualification negative fixtures',
       '--test',
       'scripts/kfd4-perspective-qualification.test.mjs',
