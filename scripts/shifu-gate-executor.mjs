@@ -379,6 +379,153 @@ function actionFailureOutputTail(result) {
   return output.slice(-700).trim();
 }
 
+async function executeHandlerAction(gate, context, actionId) {
+  const handler = context.handlers[gate.action.handler];
+  if (!handler) {
+    return {
+      rawStatus: 'error',
+      exitCode: null,
+      signal: null,
+      reason: `unregistered gate handler: ${gate.action.handler}`,
+      evidence: null,
+    };
+  }
+  try {
+    const outcome = await handler({
+      gateId: gate.id,
+      actionId,
+      parameters: gate.action.parameters || {},
+      root: context.root,
+      source: context.source,
+    });
+    const rawStatus = outcome?.status || 'pass';
+    if (!RESULT_STATUSES.has(rawStatus))
+      throw new Error(`handler returned invalid status: ${rawStatus}`);
+    return {
+      rawStatus,
+      exitCode: outcome?.exitCode ?? (rawStatus === 'pass' ? 0 : null),
+      signal: null,
+      reason: outcome?.reason || null,
+      evidence: outcome?.evidence ? safeEvidence(outcome.evidence) : null,
+    };
+  } catch (error) {
+    return {
+      rawStatus: 'error',
+      exitCode: null,
+      signal: null,
+      reason: error instanceof Error ? error.message : String(error),
+      evidence: null,
+    };
+  }
+}
+
+function executeSpawnedAction(gate, context, actionId, evidenceFile) {
+  const invocation = buildGateActionInvocation(
+    gate.action,
+    context.root,
+    context.platform,
+  );
+  try {
+    if (!invocation)
+      throw new Error(`unsupported gate action: ${gate.action.kind}`);
+    const result = spawnSync(invocation.command, invocation.args, {
+      cwd: context.root,
+      env: {
+        ...process.env,
+        SHIFU_GATE_ID: gate.id,
+        SHIFU_GATE_ACTION_ID: actionId,
+        SHIFU_GATE_SOURCE_SHA: context.source.sha || '',
+        SHIFU_GATE_EVIDENCE_FILE: evidenceFile,
+      },
+      encoding: 'utf8',
+      timeout: gate.cost.timeoutSeconds * 1000,
+      maxBuffer: GATE_ACTION_MAX_BUFFER_BYTES,
+      windowsHide: true,
+      windowsVerbatimArguments: invocation.windowsVerbatimArguments === true,
+    });
+    if (result.stdout)
+      context.writer.write(`[gate ${gate.id}] stdout\n${result.stdout}`);
+    if (result.stderr)
+      context.writer.write(`[gate ${gate.id}] stderr\n${result.stderr}`);
+    let rawStatus = 'pass';
+    let reason = null;
+    if (result.error) {
+      rawStatus = 'error';
+      reason =
+        /** @type {any} */ (result.error).code === 'ETIMEDOUT'
+          ? `action timed out after ${gate.cost.timeoutSeconds}s`
+          : result.error.message;
+    } else if (result.signal) {
+      rawStatus = 'error';
+      reason = `action terminated by signal ${result.signal}`;
+    } else if (result.status !== 0) {
+      rawStatus = 'fail';
+      const outputTail = actionFailureOutputTail(result);
+      reason = `action exited with code ${result.status}${outputTail ? `; output tail: ${outputTail}` : ''}`;
+    }
+    return {
+      rawStatus,
+      exitCode: result.status,
+      signal: result.signal,
+      reason,
+      evidence: null,
+    };
+  } catch (error) {
+    return {
+      rawStatus: 'error',
+      exitCode: null,
+      signal: null,
+      reason: error instanceof Error ? error.message : String(error),
+      evidence: null,
+    };
+  }
+}
+
+function loadActionEvidence(evidenceFile, state) {
+  if (state.evidence || !fs.existsSync(evidenceFile)) return state;
+  try {
+    return {
+      ...state,
+      evidence: safeEvidence(JSON.parse(fs.readFileSync(evidenceFile, 'utf8'))),
+    };
+  } catch (error) {
+    return {
+      ...state,
+      rawStatus: 'error',
+      reason: `invalid gate evidence: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+function validateActionEvidence(gate, state) {
+  const next = { ...state };
+  if (
+    next.evidence &&
+    gate.receipt.schema &&
+    next.evidence.schema !== gate.receipt.schema
+  ) {
+    next.rawStatus = 'fail';
+    next.reason = `evidence schema ${next.evidence.schema} does not match ${gate.receipt.schema}`;
+  }
+  if (
+    next.rawStatus === 'pass' &&
+    gate.receipt.expectation === 'required' &&
+    next.evidence?.pointers.length === 0
+  ) {
+    next.rawStatus = 'fail';
+    next.reason = 'required gate evidence did not declare any safe pointers';
+  }
+  if (
+    next.rawStatus === 'pass' &&
+    gate.receipt.expectation === 'required' &&
+    !next.evidence
+  ) {
+    next.rawStatus = 'fail';
+    next.reason = 'required gate evidence was not produced';
+  }
+  return next;
+}
+
 /**
  * @param {any} gate
  * @param {{root:string, platform:string, source:any, tempRoot:string, writer:Writer, handlers:Record<string,Function>}} context
@@ -387,140 +534,36 @@ async function executeAction(gate, context) {
   const actionId = gateActionId(gate);
   const evidenceFile = path.join(context.tempRoot, `${gate.id}.evidence.json`);
   const started = Date.now();
-  let rawStatus = 'pass';
-  let exitCode = null;
-  let signal = null;
-  let reason = null;
-  let evidence = null;
-  if (gate.action.kind === 'handler') {
-    const handler = context.handlers[gate.action.handler];
-    if (!handler) {
-      rawStatus = 'error';
-      reason = `unregistered gate handler: ${gate.action.handler}`;
-    } else {
-      try {
-        const outcome = await handler({
-          gateId: gate.id,
-          actionId,
-          parameters: gate.action.parameters || {},
-          root: context.root,
-          source: context.source,
-        });
-        rawStatus = outcome?.status || 'pass';
-        if (!RESULT_STATUSES.has(rawStatus))
-          throw new Error(`handler returned invalid status: ${rawStatus}`);
-        exitCode = outcome?.exitCode ?? (rawStatus === 'pass' ? 0 : null);
-        reason = outcome?.reason || null;
-        if (outcome?.evidence) evidence = safeEvidence(outcome.evidence);
-      } catch (error) {
-        rawStatus = 'error';
-        reason = error instanceof Error ? error.message : String(error);
-      }
-    }
-  } else {
-    const invocation = buildGateActionInvocation(
-      gate.action,
-      context.root,
-      context.platform,
-    );
-    try {
-      if (!invocation)
-        throw new Error(`unsupported gate action: ${gate.action.kind}`);
-      const result = spawnSync(invocation.command, invocation.args, {
-        cwd: context.root,
-        env: {
-          ...process.env,
-          SHIFU_GATE_ID: gate.id,
-          SHIFU_GATE_ACTION_ID: actionId,
-          SHIFU_GATE_SOURCE_SHA: context.source.sha || '',
-          SHIFU_GATE_EVIDENCE_FILE: evidenceFile,
-        },
-        encoding: 'utf8',
-        timeout: gate.cost.timeoutSeconds * 1000,
-        maxBuffer: GATE_ACTION_MAX_BUFFER_BYTES,
-        windowsHide: true,
-        windowsVerbatimArguments: invocation.windowsVerbatimArguments === true,
-      });
-      if (result.stdout)
-        context.writer.write(`[gate ${gate.id}] stdout\n${result.stdout}`);
-      if (result.stderr)
-        context.writer.write(`[gate ${gate.id}] stderr\n${result.stderr}`);
-      exitCode = result.status;
-      signal = result.signal;
-      if (result.error) {
-        rawStatus = 'error';
-        reason =
-          /** @type {any} */ (result.error).code === 'ETIMEDOUT'
-            ? `action timed out after ${gate.cost.timeoutSeconds}s`
-            : result.error.message;
-      } else if (result.signal) {
-        rawStatus = 'error';
-        reason = `action terminated by signal ${result.signal}`;
-      } else if (result.status !== 0) {
-        rawStatus = 'fail';
-        const outputTail = actionFailureOutputTail(result);
-        reason = `action exited with code ${result.status}${outputTail ? `; output tail: ${outputTail}` : ''}`;
-      }
-    } catch (error) {
-      rawStatus = 'error';
-      reason = error instanceof Error ? error.message : String(error);
-    }
-  }
-  if (!evidence && fs.existsSync(evidenceFile)) {
-    try {
-      evidence = safeEvidence(
-        JSON.parse(fs.readFileSync(evidenceFile, 'utf8')),
-      );
-    } catch (error) {
-      rawStatus = 'error';
-      reason = `invalid gate evidence: ${error instanceof Error ? error.message : String(error)}`;
-    }
-  }
-  if (
-    evidence &&
-    gate.receipt.schema &&
-    evidence.schema !== gate.receipt.schema
-  ) {
-    rawStatus = 'fail';
-    reason = `evidence schema ${evidence.schema} does not match ${gate.receipt.schema}`;
-  }
-  if (
-    rawStatus === 'pass' &&
-    gate.receipt.expectation === 'required' &&
-    evidence &&
-    evidence.pointers.length === 0
-  ) {
-    rawStatus = 'fail';
-    reason = 'required gate evidence did not declare any safe pointers';
-  }
-  if (
-    rawStatus === 'pass' &&
-    gate.receipt.expectation === 'required' &&
-    !evidence
-  ) {
-    rawStatus = 'fail';
-    reason = 'required gate evidence was not produced';
-  }
+  const executed =
+    gate.action.kind === 'handler'
+      ? await executeHandlerAction(gate, context, actionId)
+      : executeSpawnedAction(gate, context, actionId, evidenceFile);
+  const state = validateActionEvidence(
+    gate,
+    loadActionEvidence(evidenceFile, executed),
+  );
   const artifacts = inspectArtifacts(gate, context.root);
   const missing = artifacts.filter(
     (/** @type {any} */ artifact) => artifact.required && !artifact.present,
   );
-  if (rawStatus === 'pass' && missing.length) {
-    rawStatus = 'fail';
-    reason = `required artifact missing: ${missing.map((/** @type {any} */ item) => item.id).join(', ')}`;
+  if (state.rawStatus === 'pass' && missing.length) {
+    state.rawStatus = 'fail';
+    state.reason = `required artifact missing: ${missing.map((/** @type {any} */ item) => item.id).join(', ')}`;
   }
   return {
-    rawStatus,
-    exitCode,
-    signal,
-    reason: redactReceiptText(reason, context.root),
+    rawStatus: state.rawStatus,
+    exitCode: state.exitCode,
+    signal: state.signal,
+    reason: redactReceiptText(state.reason, context.root),
     durationMs: Date.now() - started,
     artifacts,
     evidence: {
       expectation: gate.receipt.expectation,
       schema: gate.receipt.schema || null,
-      present: Boolean(evidence),
-      pointers: /** @type {EvidencePointer[]} */ (evidence?.pointers || []),
+      present: Boolean(state.evidence),
+      pointers: /** @type {EvidencePointer[]} */ (
+        state.evidence?.pointers || []
+      ),
     },
   };
 }
@@ -545,6 +588,195 @@ function requiredCoverage(results) {
   return results
     .filter((item) => item.policyMode === 'required')
     .every((item) => item.attempted && item.status === 'pass');
+}
+
+function validateGateReceiptHeader(receipt, add) {
+  if (receipt.$schema !== GATE_RECEIPT_SCHEMA)
+    add('schema-id', '/$schema', `must be ${GATE_RECEIPT_SCHEMA}`);
+  if (receipt.schema !== 'shifu.gate-receipt/v1')
+    add('schema-version', '/schema', 'must be shifu.gate-receipt/v1');
+  if (!RESULT_STATUSES.has(receipt.status))
+    add('status', '/status', 'has an invalid status');
+  if (!Array.isArray(receipt.results))
+    add('type', '/results', 'must be an array');
+  const unsigned = { ...receipt };
+  Reflect.deleteProperty(unsigned, 'integrity');
+  if (receipt.integrity?.digest !== gateDigest(unsigned))
+    add(
+      'receipt-digest',
+      '/integrity/digest',
+      'does not match the receipt content',
+    );
+}
+
+function validateGateReceiptIdentity(receipt, options, source, add) {
+  let current = true;
+  if (receipt.registry?.digest !== options.registryDigest) {
+    add(
+      'stale-registry',
+      '/registry/digest',
+      'does not match the current registry',
+    );
+    current = false;
+  }
+  if (receipt.registry?.ref !== options.registryRef) {
+    add(
+      'registry-ref',
+      '/registry/ref',
+      'does not match the selected registry ref',
+    );
+    current = false;
+  }
+  if (
+    receipt.source?.sha !== source.sha ||
+    receipt.source?.dirty !== source.dirty
+  ) {
+    add(
+      'stale-source',
+      '/source',
+      'does not match the current source SHA and dirty state',
+    );
+    current = false;
+  }
+  return current;
+}
+
+function validateGateReceiptPlan(receipt, registry, options, add) {
+  let current = true;
+  try {
+    const plan = buildGateRunPlan(registry, {
+      registryRef: options.registryRef,
+      registryDigest: options.registryDigest,
+      profile: receipt.selection?.profile || '',
+      explicitGates: receipt.selection?.explicitGates || [],
+      omittedDependencies: receipt.selection?.omittedDependencies || [],
+      includeAdvisory: receipt.selection?.includeAdvisory || false,
+      platform: receipt.environment?.platform,
+    });
+    if (receipt.plan?.digest !== plan.digest) {
+      add(
+        'plan-digest',
+        '/plan/digest',
+        'does not match the current execution plan',
+      );
+      current = false;
+    }
+    if (receipt.plan?.qualifying !== plan.qualifying)
+      add(
+        'plan-qualification',
+        '/plan/qualifying',
+        'does not match the current plan',
+      );
+    if (gateDigest(receipt.skipped || []) !== gateDigest(plan.skipped))
+      add('plan-skipped', '/skipped', 'does not match the current plan');
+    if (gateDigest(receipt.unsupported || []) !== gateDigest(plan.unsupported))
+      add(
+        'plan-unsupported',
+        '/unsupported',
+        'does not match the current plan',
+      );
+    return { plan, current };
+  } catch (error) {
+    add(
+      'plan',
+      '/selection',
+      error instanceof Error ? error.message : String(error),
+    );
+    return { plan: null, current };
+  }
+}
+
+function validateGateResult(result, index, expected, seen, add) {
+  const at = `/results/${index}`;
+  if (!result || typeof result !== 'object') {
+    add('type', at, 'must be an object');
+    return true;
+  }
+  if (seen.has(result.gateId))
+    add('duplicate-result', `${at}/gateId`, 'is duplicated');
+  seen.add(result.gateId);
+  const planned = expected.get(result.gateId);
+  if (!planned) {
+    add('unexpected-result', `${at}/gateId`, 'is not in the current plan');
+    return true;
+  }
+  if (result.actionId !== planned.actionId)
+    add('action-id', `${at}/actionId`, 'does not match the current action');
+  if (result.policyMode !== planned.mode)
+    add('policy-mode', `${at}/policyMode`, 'does not match the current plan');
+  let current = true;
+  if (result.definitionDigest !== planned.definitionDigest) {
+    add(
+      'definition-digest',
+      `${at}/definitionDigest`,
+      'does not match the current gate definition',
+    );
+    current = false;
+  }
+  if (!RESULT_STATUSES.has(result.status))
+    add('status', `${at}/status`, 'has an invalid status');
+  return current;
+}
+
+function validateGateReceiptResults(receipt, plan, add) {
+  const expected = new Map();
+  for (const group of plan?.groups || [])
+    for (const gate of group.gates) expected.set(gate.id, gate);
+  const seen = new Set();
+  let current = true;
+  if (Array.isArray(receipt.results)) {
+    receipt.results.forEach((result, index) => {
+      if (!validateGateResult(result, index, expected, seen, add)) {
+        current = false;
+      }
+    });
+  }
+  for (const id of expected.keys())
+    if (!seen.has(id))
+      add('missing-result', '/results', `is missing gate ${id}`);
+  return { expected, current };
+}
+
+function validateGateActionCoverage(receipt, expected, add) {
+  const expectedActionIds = [...expected.values()].map((gate) => gate.actionId);
+  const attemptedActionIds = Array.isArray(receipt.results)
+    ? receipt.results
+        .filter((/** @type {any} */ result) => result?.attempted)
+        .map((/** @type {any} */ result) => result.actionId)
+    : [];
+  if (
+    gateDigest(receipt.plan?.expectedActionIds || []) !==
+    gateDigest(expectedActionIds)
+  )
+    add(
+      'expected-actions',
+      '/plan/expectedActionIds',
+      'does not match the current plan',
+    );
+  if (
+    gateDigest(receipt.plan?.attemptedActionIds || []) !==
+    gateDigest(attemptedActionIds)
+  )
+    add(
+      'attempted-actions',
+      '/plan/attemptedActionIds',
+      'does not match result coverage',
+    );
+}
+
+function validateGateReceiptOutcome(receipt, add) {
+  const derivedStatus = overallStatus(
+    Array.isArray(receipt.results) ? receipt.results : [],
+    Array.isArray(receipt.unsupported) ? receipt.unsupported : [],
+  );
+  if (receipt.status !== derivedStatus)
+    add(
+      'overall-status',
+      '/status',
+      `must be ${derivedStatus} for these results`,
+    );
+  if (receipt.ok !== ['pass', 'advisory-fail'].includes(derivedStatus))
+    add('overall-ok', '/ok', 'does not match the derived status');
 }
 
 /**
@@ -789,171 +1021,20 @@ export function validateGateReceipt(receipt, registry, options) {
     add('type', '/', 'receipt must be an object');
     return { valid: false, current: false, qualifying: false, issues };
   }
-  if (receipt.$schema !== GATE_RECEIPT_SCHEMA)
-    add('schema-id', '/$schema', `must be ${GATE_RECEIPT_SCHEMA}`);
-  if (receipt.schema !== 'shifu.gate-receipt/v1')
-    add('schema-version', '/schema', 'must be shifu.gate-receipt/v1');
-  if (!RESULT_STATUSES.has(receipt.status))
-    add('status', '/status', 'has an invalid status');
-  if (!Array.isArray(receipt.results))
-    add('type', '/results', 'must be an array');
-  const unsigned = { ...receipt };
-  Reflect.deleteProperty(unsigned, 'integrity');
-  if (receipt.integrity?.digest !== gateDigest(unsigned))
-    add(
-      'receipt-digest',
-      '/integrity/digest',
-      'does not match the receipt content',
-    );
+  validateGateReceiptHeader(receipt, add);
   const source = options.source || readGateSourceIdentity(options.root);
-  let current = true;
-  if (receipt.registry?.digest !== options.registryDigest) {
-    add(
-      'stale-registry',
-      '/registry/digest',
-      'does not match the current registry',
-    );
-    current = false;
-  }
-  if (receipt.registry?.ref !== options.registryRef) {
-    add(
-      'registry-ref',
-      '/registry/ref',
-      'does not match the selected registry ref',
-    );
-    current = false;
-  }
-  if (
-    receipt.source?.sha !== source.sha ||
-    receipt.source?.dirty !== source.dirty
-  ) {
-    add(
-      'stale-source',
-      '/source',
-      'does not match the current source SHA and dirty state',
-    );
-    current = false;
-  }
-  let plan = null;
-  try {
-    plan = buildGateRunPlan(registry, {
-      registryRef: options.registryRef,
-      registryDigest: options.registryDigest,
-      profile: receipt.selection?.profile || '',
-      explicitGates: receipt.selection?.explicitGates || [],
-      omittedDependencies: receipt.selection?.omittedDependencies || [],
-      includeAdvisory: receipt.selection?.includeAdvisory || false,
-      platform: receipt.environment?.platform,
-    });
-    if (receipt.plan?.digest !== plan.digest) {
-      add(
-        'plan-digest',
-        '/plan/digest',
-        'does not match the current execution plan',
-      );
-      current = false;
-    }
-    if (receipt.plan?.qualifying !== plan.qualifying)
-      add(
-        'plan-qualification',
-        '/plan/qualifying',
-        'does not match the current plan',
-      );
-    if (gateDigest(receipt.skipped || []) !== gateDigest(plan.skipped))
-      add('plan-skipped', '/skipped', 'does not match the current plan');
-    if (gateDigest(receipt.unsupported || []) !== gateDigest(plan.unsupported))
-      add(
-        'plan-unsupported',
-        '/unsupported',
-        'does not match the current plan',
-      );
-  } catch (error) {
-    add(
-      'plan',
-      '/selection',
-      error instanceof Error ? error.message : String(error),
-    );
-  }
-  /** @type {Map<string, any>} */
-  const expected = new Map();
-  for (const group of plan?.groups || [])
-    for (const gate of group.gates) expected.set(gate.id, gate);
-  const seen = new Set();
-  if (Array.isArray(receipt.results)) {
-    for (let index = 0; index < receipt.results.length; index += 1) {
-      const result = receipt.results[index];
-      const at = `/results/${index}`;
-      if (!result || typeof result !== 'object') {
-        add('type', at, 'must be an object');
-        continue;
-      }
-      if (seen.has(result.gateId))
-        add('duplicate-result', `${at}/gateId`, 'is duplicated');
-      seen.add(result.gateId);
-      const planned = expected.get(result.gateId);
-      if (!planned) {
-        add('unexpected-result', `${at}/gateId`, 'is not in the current plan');
-        continue;
-      }
-      if (result.actionId !== planned.actionId)
-        add('action-id', `${at}/actionId`, 'does not match the current action');
-      if (result.policyMode !== planned.mode)
-        add(
-          'policy-mode',
-          `${at}/policyMode`,
-          'does not match the current plan',
-        );
-      if (result.definitionDigest !== planned.definitionDigest) {
-        add(
-          'definition-digest',
-          `${at}/definitionDigest`,
-          'does not match the current gate definition',
-        );
-        current = false;
-      }
-      if (!RESULT_STATUSES.has(result.status))
-        add('status', `${at}/status`, 'has an invalid status');
-    }
-  }
-  for (const id of expected.keys())
-    if (!seen.has(id))
-      add('missing-result', '/results', `is missing gate ${id}`);
-  const expectedActionIds = [...expected.values()].map((gate) => gate.actionId);
-  const attemptedActionIds = Array.isArray(receipt.results)
-    ? receipt.results
-        .filter((/** @type {any} */ result) => result?.attempted)
-        .map((/** @type {any} */ result) => result.actionId)
-    : [];
-  if (
-    gateDigest(receipt.plan?.expectedActionIds || []) !==
-    gateDigest(expectedActionIds)
-  )
-    add(
-      'expected-actions',
-      '/plan/expectedActionIds',
-      'does not match the current plan',
-    );
-  if (
-    gateDigest(receipt.plan?.attemptedActionIds || []) !==
-    gateDigest(attemptedActionIds)
-  )
-    add(
-      'attempted-actions',
-      '/plan/attemptedActionIds',
-      'does not match result coverage',
-    );
-  const derivedStatus = overallStatus(
-    Array.isArray(receipt.results) ? receipt.results : [],
-    Array.isArray(receipt.unsupported) ? receipt.unsupported : [],
+  let current = validateGateReceiptIdentity(receipt, options, source, add);
+  const planned = validateGateReceiptPlan(receipt, registry, options, add);
+  current = current && planned.current;
+  const resultValidation = validateGateReceiptResults(
+    receipt,
+    planned.plan,
+    add,
   );
-  if (receipt.status !== derivedStatus)
-    add(
-      'overall-status',
-      '/status',
-      `must be ${derivedStatus} for these results`,
-    );
-  if (receipt.ok !== ['pass', 'advisory-fail'].includes(derivedStatus))
-    add('overall-ok', '/ok', 'does not match the derived status');
+  current = current && resultValidation.current;
+  validateGateActionCoverage(receipt, resultValidation.expected, add);
+  validateGateReceiptOutcome(receipt, add);
+  const plan = planned.plan;
   const valid = !issues.some((item) =>
     [
       'type',
