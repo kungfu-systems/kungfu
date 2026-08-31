@@ -13,7 +13,9 @@ import {
   kfdEvidenceRoot,
   prepareKfdArtifactWitness,
   resolveKfdSourcePlatform,
+  restoreKfdPrebuiltLayerArtifact,
   runVerifiedQualification,
+  sealKfdPrebuiltLayerArtifacts,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
 } from '../framework/release/kfd-candidate-evidence.mjs';
@@ -185,6 +187,20 @@ function artifactFixture(platform = 'linux-x64') {
   return { root, platform, sourceSha, sourceTree };
 }
 
+function writePrebuiltLayerArtifacts(root) {
+  const artifacts = {
+    'product/release/spec/kungfu-spec.tgz': 'spec artifact\n',
+    'framework/core/build/stage/sdk/python/kungfu.whl': 'wheel artifact\n',
+    'product/release/npm/kungfu-core.tgz': 'npm artifact\n',
+  };
+  for (const [relativePath, content] of Object.entries(artifacts)) {
+    const target = path.join(root, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content);
+  }
+  return artifacts;
+}
+
 test('accepts a complete sealed four-platform KFD payload set', () => {
   const root = fixture();
   assert.deepEqual(
@@ -234,6 +250,7 @@ test('seals the artifact witness before qualification and the capsule after it',
 
 test('the Verify wrapper restores pre-qualification evidence after qualification cleanup', () => {
   const fixture = artifactFixture();
+  let prepared = 0;
   const qualification = path.join(
     fixture.root,
     'product',
@@ -249,6 +266,11 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
     runVerifiedQualification({
       ...fixture,
       command,
+      prepareReleaseArtifacts() {
+        prepared += 1;
+        writePrebuiltLayerArtifacts(fixture.root);
+        return 0;
+      },
       buildArtifactWitness: () => ({
         id: 'kungfu-collaboration-interface',
         standard: 'kfd-3',
@@ -258,6 +280,7 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
     }),
     0,
   );
+  assert.equal(prepared, 1);
   assert.equal(
     fs.existsSync(path.join(qualification, 'qualification-passed.json')),
     true,
@@ -265,6 +288,59 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
   assert.equal(
     fs.existsSync(path.join(qualification, 'kfd', 'candidate-evidence.json')),
     true,
+  );
+});
+
+test('sealed prebuilt layer artifacts restore exact bytes and reject tampering', () => {
+  const fixture = artifactFixture();
+  const artifacts = writePrebuiltLayerArtifacts(fixture.root);
+  const manifest = sealKfdPrebuiltLayerArtifacts(fixture);
+  assert.equal(manifest.schema, 'kungfu.kfd-prebuilt-layer-artifacts/v1');
+  for (const layer of ['format', 'sdk', 'surfaces']) {
+    const relativePath = manifest.layers[layer].path;
+    fs.rmSync(path.join(fixture.root, relativePath), {
+      recursive: true,
+      force: true,
+    });
+    restoreKfdPrebuiltLayerArtifact({ ...fixture, layer });
+  }
+  for (const [relativePath, content] of Object.entries(artifacts)) {
+    assert.equal(
+      fs.readFileSync(path.join(fixture.root, relativePath), 'utf8'),
+      content,
+    );
+  }
+  const sealedWheel = path.join(
+    fixture.root,
+    '.buildchain/runtime/kfd-candidate-evidence/prebuilt-layer-artifacts',
+    'framework/core/build/stage/sdk/python/kungfu.whl',
+  );
+  fs.appendFileSync(sealedWheel, 'tampered\n');
+  assert.throws(
+    () => restoreKfdPrebuiltLayerArtifact({ ...fixture, layer: 'sdk' }),
+    /sealed KFD sdk layer artifact digest mismatch/u,
+  );
+});
+
+test('Verify stops before witnessing when release artifact materialization fails', () => {
+  const fixture = artifactFixture();
+  assert.equal(
+    runVerifiedQualification({
+      ...fixture,
+      command: [process.execPath, '-e', 'process.exit(0)'],
+      prepareReleaseArtifacts: () => 29,
+    }),
+    29,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        fixture.root,
+        'product/release/qualification/kfd/artifacts',
+        `${fixture.platform}.json`,
+      ),
+    ),
+    false,
   );
 });
 
