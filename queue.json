@@ -3,15 +3,59 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8638,
-  "fencingCounter": 822,
+  "generation": 8639,
+  "fencingCounter": 823,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:ac2ef7cc41ce3dd2ca54f999d7980aefb84f3af8fa5cc418621fe172cf30e88f",
+    "pullRequestNumber": 3605,
+    "sourceHead": "7b0e5af0eca2f02b5cfa6f28c8790c7bca57c4d8",
+    "assignmentRoot": "sha256:0abb3c208d5d6a96653a420ac56a321e89b7b659cb31330e353de9edade2efb1",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:7de95507bdcac15e99850bfd5579dd9faa9c948059cd1549f296ac8b70049167",
+    "sourcePatchRoot": "sha256:f5616595c586081422d312226caeaefe721f587c93fa38c15c8205213c8069be",
+    "sourceProofRoot": "sha256:3e30426cabb8eddf7591bc7d71e369e22072c241b10ee434f19581bfbd8feaf8",
+    "planRoot": "sha256:4af63ed8e1e24c5de167ef442a3b38446c639cbe463f9fa7d8ccfb600e62fb99",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:84760a7e9787ed3db67ead8b55aa4bcfb667edb88d6dd831a149b7cbd0c23944",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3605 --expected-head 7b0e5af0eca2f02b5cfa6f28c8790c7bca57c4d8 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:d25a8d565fee20bfd64ee4d28c5394815874abdb8435015a76b637244d5347f0"
+    },
+    "affectedPaths": [
+      "framework/core/tests/qualification/runtime-activation/run.mjs",
+      "framework/core/tests/qualification/runtime-activation/run.test.mjs",
+      "framework/release/kfd-candidate-evidence.mjs",
+      "scripts/kfd-candidate-evidence.mjs",
+      "scripts/kfd-candidate-evidence.test.mjs"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:4b7394d5170341967fd8b1b3f4e3b066429b5585f09a219f8d919fe0f43390f1",
+      "sha256:b4485802d309ec6837daa0eb5078bd75c8411a22b5fa6f4f73156743cc034d88"
+    ],
+    "sourceWorkflowRunId": 33398074051,
+    "deliveryClass": "native-proof-required",
+    "priority": "ordinary",
+    "generation": 823,
+    "expectedOldStateRoot": "sha256:e8f6a6c4f080638ab9142135b9209a26c815bd6d857a2d46e7238aaae7459db5",
+    "issuedAt": "2026-08-31T15:17:31.534Z",
+    "expiresAt": "2026-08-31T16:47:31.534Z",
+    "fencingToken": "sha256:4917e4bd89aaeb74e313882e46c043f0c348f3a5b23c69f33e64b6548d75dd9c",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -59769,10 +59813,10 @@
       "sourceWorkflowRunId": 33398074051,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T13:46:30.208Z",
-      "updatedAt": "2026-08-31T15:17:25.992Z",
+      "updatedAt": "2026-08-31T15:17:31.534Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         "framework/core/tests/qualification/runtime-activation/run.mjs",
@@ -59787,6 +59831,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T15:17:25.992Z",
-  "stateRoot": "sha256:e8f6a6c4f080638ab9142135b9209a26c815bd6d857a2d46e7238aaae7459db5"
+  "updatedAt": "2026-08-31T15:17:31.534Z",
+  "stateRoot": "sha256:7749e0acf833107df288740f553777dc1593c5d05166f9102b03e4daea31e1b6"
 }
