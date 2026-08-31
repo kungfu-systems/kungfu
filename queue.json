@@ -3,15 +3,62 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8665,
-  "fencingCounter": 825,
+  "generation": 8666,
+  "fencingCounter": 826,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:60cbb93dbe57c883f21f6ce4dde7a914c8146af53b21b5cef496513a6e18b283",
+    "pullRequestNumber": 3609,
+    "sourceHead": "db5370369d5f4b6126c37987cdd9eec02675560b",
+    "assignmentRoot": "sha256:0591afe7260fbc22e45931345967e594fa3e7a53acf466caff3d42c7f0d772ff",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:61e4ada3612fad5a5dab29b566cb059a28cc197afb0f4fa65eaf51b77d3fc8f9",
+    "sourcePatchRoot": "sha256:3f389d9b1a2b029acdafc60d4189030de58a29a45ac6a0c4be2f75912bf1b1d0",
+    "sourceProofRoot": "sha256:746d53ce783ce82be38d61bb4d73b9b870339b199dbdac24d5112dda0a60c473",
+    "planRoot": "sha256:06856e4eaaeaadb647aacb004c8544a43fff0b36952320e78adc071a3fa3268c",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:4be68108c83aad685c24a18d2eba3a92d2b98b2bb964daa08ecd7e5a34980c81",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3609 --expected-head db5370369d5f4b6126c37987cdd9eec02675560b --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:b6da8a8bb1a933195b7d4818cb3a7268d023f8c3b7f2dcfd58ed29ce3d11c4b9"
+    },
+    "affectedPaths": [
+      "docs/guides/native-agent-adapters.md",
+      "docs/guides/upgrading.md",
+      "framework/core/src/python/kungfu/agent/provider_bootstrap.py",
+      "framework/core/src/python/kungfu/agent/runtime_profiles.py",
+      "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+      "framework/core/tests/python/test_agent_console_ambient_adoption.py",
+      "framework/core/tests/python/test_runtime_upgrade.py",
+      "framework/maintainability/python-runtime-responsibility-map.json"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:05a174d8d5da676fb3c2c62de16e23519f027618eb1c25f041325327785b416d",
+      "sha256:5bc176d3f1778f32ea4b71123c9ca217449f51e52bd68655f6855061b55ef2f0"
+    ],
+    "sourceWorkflowRunId": 33417897803,
+    "deliveryClass": "native-proof-required",
+    "priority": "ordinary",
+    "generation": 826,
+    "expectedOldStateRoot": "sha256:80d7c6bd676e3d9331d1158aa36c6a73c9229488d5afd111095a8e91d136c4ef",
+    "issuedAt": "2026-08-31T18:30:17.677Z",
+    "expiresAt": "2026-08-31T20:00:17.677Z",
+    "fencingToken": "sha256:c0fad5a2f886e1d4633a730d4abfdbf18a2e9ac534148fa49be5f51fa037ae49",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -59996,10 +60043,10 @@
       "sourceWorkflowRunId": 33417897803,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T18:15:49.729Z",
-      "updatedAt": "2026-08-31T18:30:10.855Z",
+      "updatedAt": "2026-08-31T18:30:17.677Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         "docs/guides/native-agent-adapters.md",
@@ -60017,6 +60064,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T18:30:10.855Z",
-  "stateRoot": "sha256:80d7c6bd676e3d9331d1158aa36c6a73c9229488d5afd111095a8e91d136c4ef"
+  "updatedAt": "2026-08-31T18:30:17.677Z",
+  "stateRoot": "sha256:32d2f7ea9be19cb1caa65af16a12bf9c19dc35dc1a7b456133575a51cd3c257e"
 }
