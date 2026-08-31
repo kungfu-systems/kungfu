@@ -1147,90 +1147,103 @@ export function AgentWorkLabHost({
       active = false;
     };
   }, [autoplay]);
-  React.useEffect(() => {
-    const onData = (chunk: Buffer | string) => {
-      const input = String(chunk);
-      const mouseEvents = decodeTerminalMouseInput(input);
-      if (mouseEvents.length > 0) {
-        const topOffset = autoplay ? 0 : 1;
-        const viewportRows = workbenchViewportRows({
+  const handleAgentWorkLabMouse = React.useCallback(
+    (mouseEvents: ReturnType<typeof decodeTerminalMouseInput>) => {
+      const topOffset = autoplay ? 0 : 1;
+      const viewportRows = workbenchViewportRows({
+        dimensions: size,
+        showHelp: showHelp || Boolean(autoplay),
+        verdictDetail: autoplay
+          ? 'THE CHAT ENDED. THE WORK DID NOT.'
+          : undefined,
+      });
+      for (const event of mouseEvents) {
+        const session = workbenchSessionAtPoint({
           dimensions: size,
           showHelp: showHelp || Boolean(autoplay),
           verdictDetail: autoplay
             ? 'THE CHAT ENDED. THE WORK DID NOT.'
             : undefined,
+          column: event.column,
+          row: event.row,
+          topOffset,
         });
-        for (const event of mouseEvents) {
-          const session = workbenchSessionAtPoint({
-            dimensions: size,
-            showHelp: showHelp || Boolean(autoplay),
-            verdictDetail: autoplay
-              ? 'THE CHAT ENDED. THE WORK DID NOT.'
-              : undefined,
-            column: event.column,
-            row: event.row,
-            topOffset,
-          });
-          if (event.kind === 'wheel') {
-            if (!session) continue;
-            const delta = event.button === 'wheel-up' ? 3 : -3;
-            setSessionState((current) => ({
-              ...current,
-              scrollBack: {
-                ...current.scrollBack,
-                [session]: scrollWorkbenchSession({
-                  current: current.scrollBack[session],
-                  lineCount: current.buffers[session].length,
-                  viewportRows,
-                  delta,
-                }),
-              },
-            }));
-            setActiveFocus(`session-${session}`);
-            onWorkspacePointer?.();
-            continue;
-          }
-          if (event.kind !== 'press' || event.button !== 'left') continue;
+        if (event.kind === 'wheel') {
+          if (!session) continue;
+          const delta = event.button === 'wheel-up' ? 3 : -3;
+          setSessionState((current) => ({
+            ...current,
+            scrollBack: {
+              ...current.scrollBack,
+              [session]: scrollWorkbenchSession({
+                current: current.scrollBack[session],
+                lineCount: current.buffers[session].length,
+                viewportRows,
+                delta,
+              }),
+            },
+          }));
+          setActiveFocus(`session-${session}`);
           onWorkspacePointer?.();
-          if (reportDetail) {
-            if (
-              workbenchReportReturnAtPoint({
-                dimensions: size,
-                column: event.column,
-                row: event.row,
-                topOffset,
-              })
-            ) {
-              setReportDetail(undefined);
-            }
-            continue;
-          }
-          if (starterReceipt || starterPlan) continue;
-          const action = workbenchActionAtPoint({
-            actions: AGENT_WORK_LAB_POINTER_ACTIONS,
-            column: event.column,
-            row: event.row,
-            topOffset,
-          });
-          if (action) {
-            performSuiteActionRef.current(action);
-            continue;
-          }
-          const result = workbenchReportAtPoint({
-            dimensions: size,
-            column: event.column,
-            row: event.row,
-            topOffset,
-          });
-          if (result && report) {
-            setActiveFocus(result);
-            setReportDetail(result);
-            continue;
-          }
-          if (session) {
-            setActiveFocus(`session-${session}`);
-          }
+          continue;
         }
+        if (event.kind !== 'press' || event.button !== 'left') continue;
+        onWorkspacePointer?.();
+        if (reportDetail) {
+          if (
+            workbenchReportReturnAtPoint({
+              dimensions: size,
+              column: event.column,
+              row: event.row,
+              topOffset,
+            })
+          ) {
+            setReportDetail(undefined);
+          }
+          continue;
+        }
+        if (starterReceipt || starterPlan) continue;
+        const action = workbenchActionAtPoint({
+          actions: AGENT_WORK_LAB_POINTER_ACTIONS,
+          column: event.column,
+          row: event.row,
+          topOffset,
+        });
+        if (action) {
+          performSuiteActionRef.current(action);
+          continue;
+        }
+        const result = workbenchReportAtPoint({
+          dimensions: size,
+          column: event.column,
+          row: event.row,
+          topOffset,
+        });
+        if (result && report) {
+          setActiveFocus(result);
+          setReportDetail(result);
+          continue;
+        }
+        if (session) setActiveFocus(`session-${session}`);
+      }
+    },
+    [
+      autoplay,
+      onWorkspacePointer,
+      report,
+      reportDetail,
+      showHelp,
+      size,
+      starterPlan,
+      starterReceipt,
+    ],
+  );
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const input = String(chunk);
+      const mouseEvents = decodeTerminalMouseInput(input);
+      if (mouseEvents.length > 0) {
+        handleAgentWorkLabMouse(mouseEvents);
         return;
       }
       if (isInputCaptured()) return;
@@ -1341,14 +1354,13 @@ export function AgentWorkLabHost({
     };
   }, [
     activeFocus,
-    autoplay,
     busy,
     confirmStarterProject,
     exit,
+    handleAgentWorkLabMouse,
     isInputCaptured,
     onOpenWork,
     onOpenStarterProject,
-    onWorkspacePointer,
     openStarterProject,
     performSuiteAction,
     profiles,
