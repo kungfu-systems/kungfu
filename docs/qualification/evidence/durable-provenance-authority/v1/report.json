@@ -5,7 +5,7 @@
     "releases": [
       {
         "cutRoot": "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42",
-        "durabilityReceiptRoot": "sha256:6a774f81d2dce547c51d3f995bab33159a5f4432bef434cc2ef01f224ba48770",
+        "durabilityReceiptRoot": "sha256:c0d302b65a60319d3ca8f07c317f0570830d75166d8da05e3e29a40c551f8f86",
         "kernelReceiptRoot": "sha256:068ab99e448900b6452e2ee5948742c994e21d5768c078ce5d04792da02bca3d",
         "objectId": "fact:f4563095b1a14077edc7dab5ec6a7759",
         "refName": "release-provenance/v4.0.0-alpha.1",
@@ -17,7 +17,7 @@
       },
       {
         "cutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
-        "durabilityReceiptRoot": "sha256:c4d7ec828fa95bc753b96a8faf6fd9734d86a4c3cbb36b341a85ed54c35777d3",
+        "durabilityReceiptRoot": "sha256:5b08f86f57d11e82d634c02008d06c778fb632f85d99b19513c0fb5c17ab08d6",
         "kernelReceiptRoot": "sha256:ef710cf7f5ddedfc07086528195e67380b9f7dca188992e7146f48966872e5c5",
         "objectId": "fact:8c1705e96209b79344b1722dea6905b1",
         "refName": "release-provenance/v4.0.0-alpha.2",
@@ -33,7 +33,7 @@
   "defaultEnabled": true,
   "nativeArtifact": {
     "name": "pykungfu.cpython-313-darwin.so",
-    "root": "sha256:96da5c03fddd0575287c4c731a0b622a1f961604c32a1e94fcd620b0bd22e8a7"
+    "root": "sha256:9ab7505bc364955dc8930b6010bb7e39cdb0b8108a63448f90b34da523f8bd42"
   },
   "nonClaims": [
     "general mutable key-value production eligibility",
@@ -131,7 +131,7 @@
     "semanticReplayEqual": true,
     "sourceFsckRoot": "sha256:d004eb075a80e2b9a11f894453f6bd36aa9598f7a47d9cd9052e00f2120f148b"
   },
-  "qualificationRoot": "sha256:364f1461b4de4ef574c4534513d693a24cf99316fa1d3076b3b9ec9e74c4f8ae",
+  "qualificationRoot": "sha256:f2811af12069046ab787fab6b1908f69c0c8cadd5db83d1a99885daafabb3924",
   "retirement": {
     "activeModes": {
       "dualRead": "retired",
@@ -172,14 +172,14 @@
       },
       {
         "path": "framework/core/src/python/kungfu/storage/fact_kernel_integrity.py",
-        "root": "sha256:08f455cd432823945ce72c1b5914d191454227799748f0d54b4e4029c5f82b89"
+        "root": "sha256:b8171530f0f44687604a7fac144f6e7c834cded5cf0c719868dad7ec32dfc97f"
       },
       {
         "path": "scripts/qualify-durable-provenance-authority.py",
         "root": "sha256:476873105eb7ceae6a186888af78c8b52aa40e31a393d7bc1d29a350e95071f1"
       }
     ],
-    "sourceSetRoot": "sha256:47c7f9828a2412b861a4892548253c1ceb867d1685531c19027db3646da92a96"
+    "sourceSetRoot": "sha256:0306fdbcf0bd8fe758ad456466cf404dd07edc192ed8af1404eca821f49c79a5"
   },
   "status": "production-qualified"
 }

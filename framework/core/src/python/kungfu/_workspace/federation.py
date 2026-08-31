@@ -27,6 +27,15 @@ from kungfu.workspace import WorkspaceIdentity, semantic_root
 COMPONENT_CUT_SCHEMA = "kungfu.workspace-federation.component-cut/v1"
 COMPONENT_ENVELOPE_SCHEMA = "kungfu.workspace-federation.component-envelope/v1"
 
+_SEALED_FACT_FIELDS = {
+    "contract_world_id": "contract_world_id",
+    "fact_surface_id": "fact_surface_id",
+    "observation_id": "observation_id",
+    "payload_hash": "payload_hash",
+    "source_id": "source_id",
+    "subject_key": "subject_key",
+}
+
 
 def _empty_component(
     identity, sealed_index, sealed_states, outcome_index, outcome_bindings
@@ -78,14 +87,10 @@ def _material_record(fact, payloads):
         raise ValueError(f"Fact payload body is unavailable: {payload_hash}")
     record = dict(payload["record"])
     sealed = {
-        "contract_world_id": str(fact.get("contract_world_id") or ""),
-        "fact_surface_id": surface,
-        "observation_id": str(fact.get("observation_id") or ""),
-        "payload_hash": payload_hash,
-        "source_id": str(fact.get("source_id") or ""),
-        "subject_key": str(fact.get("subject_key") or ""),
-        "type_version": "1",
+        target: str(fact.get(source) or "")
+        for target, source in _SEALED_FACT_FIELDS.items()
     }
+    sealed.update(fact_surface_id=surface, payload_hash=payload_hash, type_version="1")
     record["sealed_identity"] = sealed
     record.setdefault("subject_key", sealed["subject_key"])
     return surface, payload, record

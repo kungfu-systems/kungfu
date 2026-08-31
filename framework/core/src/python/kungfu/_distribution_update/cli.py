@@ -410,6 +410,16 @@ def _read_retained_cli_receipt(path: Path, generation: int) -> dict[str, Any]:
     }
 
 
+def _cli_image_file(entry: Path, image, field: str) -> Path:
+    candidate = (entry / str(image.get(field) or "")).resolve()
+    if entry.resolve() not in candidate.parents or not candidate.is_file():
+        raise DistributionUpdateError(
+            "cli-image-invalid",
+            "CLI image executable or release manifest is missing or unsafe",
+        )
+    return candidate
+
+
 def _inspect_cli_image(entry: Path) -> dict[str, Any]:
     if entry.is_symlink() or not entry.is_dir():
         raise DistributionUpdateError(
@@ -428,18 +438,8 @@ def _inspect_cli_image(entry: Path) -> dict[str, Any]:
         raise DistributionUpdateError(
             "cli-image-invalid", "CLI image identity or product root is invalid"
         )
-    executable = (entry / str(image.get("executable") or "")).resolve()
-    bundled_manifest = (entry / str(image.get("upgradeManifest") or "")).resolve()
-    if (
-        entry.resolve() not in executable.parents
-        or not executable.is_file()
-        or entry.resolve() not in bundled_manifest.parents
-        or not bundled_manifest.is_file()
-    ):
-        raise DistributionUpdateError(
-            "cli-image-invalid",
-            "CLI image executable or release manifest is missing or unsafe",
-        )
+    _cli_image_file(entry, image, "executable")
+    _cli_image_file(entry, image, "upgradeManifest")
     return {
         "frontendBuildId": frontend_build_id,
         "runtimeBuildId": image["runtimeBuildId"],

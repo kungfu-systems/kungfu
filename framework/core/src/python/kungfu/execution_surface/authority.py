@@ -208,10 +208,9 @@ def _validate_provider(provider_id, provider, contract, surfaces, capabilities):
         )
 
 
-def _validate_operation(operation_id, operation, providers, capabilities):
+def _validate_operation_selection(operation_id, operation, capabilities):
     allowed = set(operation.get("allowedSurfaces") or [])
     required = set(operation.get("requiredCapabilities") or [])
-    preference = list(operation.get("providerPreference") or [])
     if not allowed <= CONCRETE_SURFACES or required - capabilities:
         _fail(
             "runtime-surface-operation-invalid",
@@ -231,6 +230,10 @@ def _validate_operation(operation_id, operation, providers, capabilities):
             f"negotiated operation {operation_id} needs multiple surfaces",
             "kungfu contract show runtime-surface --json",
         )
+    return allowed, required
+
+
+def _validate_operation_owners(operation_id, allowed, required, preference, providers):
     if len(preference) != len(set(preference)) or any(
         provider_id not in providers for provider_id in preference
     ):
@@ -252,6 +255,14 @@ def _validate_operation(operation_id, operation, providers, capabilities):
             f"operation {operation_id} does not have exactly one capable provider per surface: {ambiguous}",
             "kungfu contract show runtime-surface --json",
         )
+
+
+def _validate_operation(operation_id, operation, providers, capabilities):
+    allowed, required = _validate_operation_selection(
+        operation_id, operation, capabilities
+    )
+    preference = list(operation.get("providerPreference") or [])
+    _validate_operation_owners(operation_id, allowed, required, preference, providers)
     fallback = operation.get("fallback") or {}
     targets = set(fallback.get("targets") or [])
     if not targets <= allowed or (fallback.get("mode") == "forbidden" and targets):

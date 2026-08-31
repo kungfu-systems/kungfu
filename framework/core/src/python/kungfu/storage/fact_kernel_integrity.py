@@ -125,10 +125,7 @@ def _fsck_relations(objects, versions, relations, issue):
             issue("relation-admission-missing", relation_root)
 
 
-def _fsck_cut(current_root, cut, cuts, versions, relations, revoked, issue):
-    for parent in _root_list(cut.get("parentCutRoots")):
-        if parent not in cuts:
-            issue("missing-parent-cut", current_root, parent_root=parent)
+def _fsck_cut_members(current_root, cut, versions, issue):
     for member in cut.get("objectVersions", []):
         if not isinstance(member, list) or len(member) != 2:
             issue("invalid-cut-member", current_root, member=member)
@@ -141,27 +138,41 @@ def _fsck_cut(current_root, cut, cuts, versions, relations, revoked, issue):
             issue(
                 "cut-member-identity-mismatch", current_root, version_root=version_root
             )
+
+
+def _fsck_cut_relations(current_root, cut, relations, revoked, issue):
     for relation_root in _root_list(cut.get("activeRelationRoots")):
         if relation_root not in relations:
             issue("missing-active-relation", current_root, relation_root=relation_root)
         elif relation_root in revoked:
             issue("revoked-relation-active", current_root, relation_root=relation_root)
+
+
+def _valid_episode_frontier(frontier):
+    return (
+        isinstance(frontier, list)
+        and len(frontier) == 3
+        and isinstance(frontier[0], int)
+        and frontier[0] >= 0
+        and isinstance(frontier[1], str)
+        and bool(_ROOT.fullmatch(frontier[1]))
+        and isinstance(frontier[2], str)
+        and bool(frontier[2])
+    )
+
+
+def _fsck_cut(current_root, cut, cuts, versions, relations, revoked, issue):
+    for parent in _root_list(cut.get("parentCutRoots")):
+        if parent not in cuts:
+            issue("missing-parent-cut", current_root, parent_root=parent)
+    _fsck_cut_members(current_root, cut, versions, issue)
+    _fsck_cut_relations(current_root, cut, relations, revoked, issue)
     if not _root_list(cut.get("declarationRoots")):
         issue("cut-declaration-root-missing", current_root)
     if not _root_list(cut.get("admissionRoots")):
         issue("cut-admission-root-missing", current_root)
     for frontier in cut.get("episodeFrontier", []):
-        valid_frontier = (
-            isinstance(frontier, list)
-            and len(frontier) == 3
-            and isinstance(frontier[0], int)
-            and frontier[0] >= 0
-            and isinstance(frontier[1], str)
-            and bool(_ROOT.fullmatch(frontier[1]))
-            and isinstance(frontier[2], str)
-            and bool(frontier[2])
-        )
-        if not valid_frontier:
+        if not _valid_episode_frontier(frontier):
             issue("episode-frontier-invalid", current_root, frontier=frontier)
 
 
