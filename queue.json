@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8504,
+  "generation": 8505,
   "fencingCounter": 810,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:0215fddcd356b96ded5817a91f3f2d14881d704c6b70f318c5fb65597654cc8a",
@@ -58,8 +58,13 @@
     "issuedAt": "2026-08-31T01:08:28.756Z",
     "expiresAt": "2026-08-31T02:43:58.987Z",
     "fencingToken": "sha256:c04daa905a8b7626cbde683d77ce3fba870e408d934ac8061912c72f2ac964c4",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-31T01:13:58.987Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-31T01:13:58.987Z",
+    "nativeProofRoot": "sha256:35149f95f11e2294c9e72cb591cd9f188dc1296565d9c3f1e6950b50e86274ec",
+    "nativeExecutionReceiptRoot": "sha256:f66c7920f21945dfd89f5d02810711e9ec19a6fd9931fe022755f696d30c6056",
+    "nativeProofReuseRoot": "sha256:6897900fd97c21c0603eb78c9c1a1ed70dad58c4e20a7b5e3d78c30652e5b333",
+    "qualificationReceiptRoot": "sha256:e8e9e09ee1b8352882a3c7c1f17938d38f4777ac8d103ce481f30742908a8c3e",
+    "qualifiedAt": "2026-08-31T01:14:21.968Z"
   },
   "candidates": [
     {
@@ -58286,10 +58291,10 @@
       "sourceWorkflowRunId": 33345855195,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T01:00:43.674Z",
-      "updatedAt": "2026-08-31T01:13:58.987Z",
+      "updatedAt": "2026-08-31T01:14:21.968Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "extensions/system/kfx-manager/src/view/index.tsx",
@@ -58308,6 +58313,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T01:13:58.987Z",
-  "stateRoot": "sha256:70efbbdb3d84ea187377714f7530fb5825606dca8c14c177b88172ff3065192f"
+  "updatedAt": "2026-08-31T01:14:21.968Z",
+  "stateRoot": "sha256:545e74e7a8d3b59e50ff0ff87f1b81b14fcd25d14c9d4cd43dc604a3f9833ca1"
 }
