@@ -698,6 +698,7 @@ export class AgentSessionProductSurface {
   }
 
   planNativeStart(input) {
+    this.registry.reapExpiredAmbientAttempts();
     const binding = input.binding ?? {
       kind: 'workspace-assistant',
       workRef: null,
@@ -1163,7 +1164,7 @@ export class AgentSessionProductSurface {
           initializeParams: input.structured?.initializeParams ?? {
             clientInfo: {
               name: 'kungfu-agent-session',
-              version: '4.0.0-alpha.3',
+              version: '4.0.0-alpha.4',
             },
           },
           threadStartParams: input.structured?.threadStartParams ?? {

@@ -303,11 +303,15 @@ export class WorkConsoleRegistry {
     return lease ? this.#leaseConflictProjection(lease) : null;
   }
 
+  reapExpiredAmbientAttempts() {
+    const expired = this.workLeases.reapExpiredAmbientAttempts();
+    if (expired.length > 0) this.#save();
+    return expired;
+  }
   recordNativeEnded(ref, receipt, exit) {
     this.lifecycle.recordNativeEnded(ref, receipt, exit);
     this.#save();
   }
-
   observe(sessions) {
     const changed = this.lifecycle.observe(sessions);
     if (changed) this.#save();

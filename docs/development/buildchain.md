@@ -38,11 +38,12 @@ that immutable source head and the current dev base.
 The protected native command is
 `./shifu dev-delivery:native-under-warrant`. It executes the affected closure in
 both partitions plus the selected SDK, Shifu workspace, and KFD checks, writes a
-rooted receipt into the Buildchain evidence artifact, and updates the existing
-`affected-native / linux` required context only for the exact PR head. Native
-success does not itself admit a merge: Buildchain must atomically upgrade the
-fenced provisional generation to qualified, after which `Queue admission
-lease` and GitHub's merge queue remain the landing authorities.
+rooted receipt into the Buildchain evidence artifact, and has no provider
+credentials or GitHub mutation authority. The trusted Buildchain provider
+observes the exact PR and owns the existing `affected-native / linux` context.
+Native success does not itself admit a merge: Buildchain must atomically
+upgrade the fenced provisional generation to qualified, after which `Queue
+admission lease` and GitHub's merge queue remain the landing authorities.
 
 Buildchain classifies a moving dev base against the semantic source, closure,
 dependency, and toolchain roots. Non-overlapping base-only movement reuses the

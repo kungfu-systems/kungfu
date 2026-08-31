@@ -189,15 +189,6 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
   return loaded_page;
 }
 
-page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id,
-                    bool is_writing, bool lazy, bool pre_open, bool allow_create) {
-  (void)lazy;
-  const auto policy = allow_create && !is_writing ? page_open_policy::coordinator_precreate()
-                      : is_writing ? (pre_open ? page_open_policy::writer_preload() : page_open_policy::writer())
-                                   : (pre_open ? page_open_policy::reader_preload() : page_open_policy::reader());
-  return load(location, dest_id, page_size, page_id, policy);
-}
-
 page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
                                                 page_open_policy policy) {
   uint32_t page_header_size = sizeof(page_header);
@@ -219,13 +210,6 @@ page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &locati
   }
 
   return loaded_page;
-}
-
-page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
-                                                bool is_writing, bool lazy) {
-  (void)lazy;
-  return load_header_and_1st_frame_header(location, dest_id, page_id,
-                                          is_writing ? page_open_policy::writer() : page_open_policy::header_probe());
 }
 
 std::string page::get_page_path(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id) {

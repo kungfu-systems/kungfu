@@ -418,50 +418,6 @@ function gitTreeRevision() {
   }).stdout.trim();
 }
 
-function gitTreeForRevision(revision) {
-  const result = spawnSync(
-    'git',
-    ['rev-parse', '--verify', `${revision}^{tree}`],
-    {
-      cwd: ROOT,
-      encoding: 'utf8',
-    },
-  );
-  return result.status === 0 ? result.stdout.trim() : null;
-}
-
-export function resolveQualificationSourceIdentity({
-  env = process.env,
-  checkoutRevision = gitRevision(),
-  checkoutTree = gitTreeRevision(),
-  configuredRevisionTree = env.BUILDCHAIN_SOURCE_SHA
-    ? gitTreeForRevision(env.BUILDCHAIN_SOURCE_SHA)
-    : null,
-} = {}) {
-  const configuredRevision = env.BUILDCHAIN_SOURCE_SHA || '';
-  const configuredTree = env.BUILDCHAIN_SOURCE_TREE_SHA || '';
-  if (configuredRevision && !/^[0-9a-f]{40}$/u.test(configuredRevision))
-    throw new Error('BUILDCHAIN_SOURCE_SHA must be an exact commit SHA');
-  if (configuredTree && !/^[0-9a-f]{40}$/u.test(configuredTree))
-    throw new Error('BUILDCHAIN_SOURCE_TREE_SHA must be an exact tree SHA');
-  if (configuredTree && configuredTree !== checkoutTree)
-    throw new Error(
-      'Buildchain source tree does not match the checked-out tree',
-    );
-  if (configuredRevisionTree && configuredRevisionTree !== checkoutTree)
-    throw new Error(
-      'Buildchain source revision does not match the checked-out tree',
-    );
-  if (configuredRevision && !configuredTree && !configuredRevisionTree)
-    throw new Error(
-      'Buildchain source revision requires an exact tree-equivalence proof',
-    );
-  return {
-    revision: configuredRevision || checkoutRevision,
-    tree: checkoutTree,
-  };
-}
-
 export function verifySourceOnlyEvidence(
   evidence,
   { sourceTree = gitTreeRevision() } = {},
@@ -709,9 +665,8 @@ function writeSummary(
   const receipt = fs.existsSync(receiptPath)
     ? JSON.parse(fs.readFileSync(receiptPath, 'utf8'))
     : {};
-  const source = resolveQualificationSourceIdentity();
-  const sourceRevision = source.revision;
-  const sourceTree = source.tree;
+  const sourceRevision = gitRevision();
+  const sourceTree = gitTreeRevision();
   const artifactDigest = artifactManifestDigest();
   const toolchain = {
     node: process.version,

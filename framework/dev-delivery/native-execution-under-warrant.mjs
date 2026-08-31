@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -10,6 +12,7 @@ import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
 const ROOT = /^sha256:[0-9a-f]{64}$/u;
+const PUBLIC_WARRANT_QUEUE_MAX_BUFFER = 16 * 1024 * 1024;
 
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
@@ -38,12 +41,6 @@ function phases(value) {
     .filter(Boolean);
   if (parsed.length === 0) throw new Error('allowed phases are required');
   return new Set(parsed);
-}
-
-function concurrentStateWrite(error) {
-  return /Update is not a fast forward|expected-old state drift/u.test(
-    String(error?.message || error),
-  );
 }
 
 function assertLiveBinding(result, expected, observedAt) {
@@ -89,6 +86,97 @@ function assertLiveBinding(result, expected, observedAt) {
   return warrant;
 }
 
+function createObserverRoot() {
+  const observerRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-dev-warrant-observer-'),
+  );
+  execFileSync('git', ['init', '--bare', observerRoot], {
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  return observerRoot;
+}
+
+function publicRepositoryUrl(repository) {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(repository))
+    throw new Error('repository is not a public GitHub owner/repo identity');
+  return `https://github.com/${repository}.git`;
+}
+
+export function fetchPublicWarrantQueue({
+  observerRoot,
+  repository,
+  branch,
+  stateRef,
+  execGit = execFileSync,
+}) {
+  const localRef = 'refs/kungfu/dev-delivery-warrant';
+  execGit(
+    'git',
+    [
+      '-c',
+      'credential.helper=',
+      '--git-dir',
+      observerRoot,
+      'fetch',
+      '--quiet',
+      '--force',
+      '--depth=1',
+      publicRepositoryUrl(repository),
+      `+refs/heads/${stateRef}:${localRef}`,
+    ],
+    {
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      maxBuffer: PUBLIC_WARRANT_QUEUE_MAX_BUFFER,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    },
+  );
+  const stateCommit = execGit(
+    'git',
+    ['--git-dir', observerRoot, 'rev-parse', localRef],
+    {
+      encoding: 'utf8',
+      maxBuffer: PUBLIC_WARRANT_QUEUE_MAX_BUFFER,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  ).trim();
+  const queue = JSON.parse(
+    execGit(
+      'git',
+      ['--git-dir', observerRoot, 'show', `${localRef}:queue.json`],
+      {
+        encoding: 'utf8',
+        maxBuffer: PUBLIC_WARRANT_QUEUE_MAX_BUFFER,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    ),
+  );
+  return { branch, queue, stateCommit, stateRef };
+}
+
+function observePublicWarrant({
+  observerRoot,
+  repository,
+  branch,
+  commandModule,
+  contractModule,
+}) {
+  const fetched = fetchPublicWarrantQueue({
+    observerRoot,
+    repository,
+    branch,
+    stateRef: commandModule.defaultDevDeliveryStateRef(branch),
+  });
+  const normalized = contractModule.normalizeDevDeliveryQueue(fetched.queue, {
+    repository,
+    protectedBase: branch,
+  });
+  return {
+    stateRef: fetched.stateRef,
+    stateCommit: fetched.stateCommit,
+    observation: contractModule.observeDevDeliveryQueue(normalized),
+  };
+}
+
 async function runtimeDependencies(runtimeRoot) {
   const commandModule = await import(
     pathToFileURL(path.join(runtimeRoot, 'scripts/dev-delivery-warrant.mjs'))
@@ -98,24 +186,23 @@ async function runtimeDependencies(runtimeRoot) {
     pathToFileURL(path.join(runtimeRoot, 'scripts/dev-delivery-native-run.mjs'))
       .href
   );
+  const contractModule = await import(
+    pathToFileURL(
+      path.join(runtimeRoot, 'packages/core/dev-delivery-warrant.js'),
+    ).href
+  );
+  const observerRoot = createObserverRoot();
   return {
-    observe: (options) =>
-      commandModule.runDevDeliveryCommand({
-        command: 'observe',
-        repository: options.repository,
-        branch: options.branch,
-      }),
-    heartbeat: (options) =>
-      commandModule.runDevDeliveryCommand({
-        command: 'heartbeat',
-        repository: options.repository,
-        branch: options.branch,
-        fencingToken: options.fencingToken,
-        leaseGeneration: options.leaseGeneration,
-        leaseSeconds: options.leaseSeconds,
-        execute: true,
+    observe: ({ repository, branch }) =>
+      observePublicWarrant({
+        observerRoot,
+        repository,
+        branch,
+        commandModule,
+        contractModule,
       }),
     runNative: runnerModule.runNativeWithHeartbeat,
+    dispose: () => fs.rmSync(observerRoot, { recursive: true, force: true }),
   };
 }
 
@@ -158,92 +245,68 @@ export async function runNativeExecutionUnderWarrant(
     ? dependencies
     : await runtimeDependencies(path.resolve(options.runtimeRoot));
   const clock = dependencies.now || (() => new Date().toISOString());
-  const wait =
-    dependencies.wait ||
-    ((milliseconds) =>
-      new Promise((resolve) => setTimeout(resolve, milliseconds)));
-  const initial = await runtime.observe({ repository, branch });
-  const warrant = assertLiveBinding(
-    initial,
-    { pullRequestNumber, sourceHead, allowedPhases },
-    clock(),
-  );
-  const warrantBinding = {
-    repository,
-    branch,
-    pullRequestNumber,
-    sourceHead,
-    candidateId: warrant.candidateId,
-    fencingToken: warrant.fencingToken,
-    leaseGeneration: warrant.generation,
-  };
-
-  const heartbeat = async () => {
-    for (let attempt = 1; attempt <= 5; attempt += 1) {
-      try {
-        const result = await runtime.heartbeat({
-          repository,
-          branch,
-          fencingToken: warrantBinding.fencingToken,
-          leaseGeneration: warrantBinding.leaseGeneration,
-          leaseSeconds,
-        });
-        assertLiveBinding(
-          result,
-          { ...warrantBinding, allowedPhases },
-          clock(),
-        );
-        return;
-      } catch (error) {
-        if (!concurrentStateWrite(error) || attempt === 5) throw error;
-        const latest = await runtime.observe({ repository, branch });
-        assertLiveBinding(
-          latest,
-          { ...warrantBinding, allowedPhases },
-          clock(),
-        );
-        await wait(200 * 2 ** (attempt - 1));
-      }
-    }
-  };
-  const native = await runtime.runNative({
-    command: options.command,
-    cwd,
-    heartbeat,
-    executionBinding: {
+  try {
+    const initial = await runtime.observe({ repository, branch });
+    const warrant = assertLiveBinding(
+      initial,
+      { pullRequestNumber, sourceHead, allowedPhases },
+      clock(),
+    );
+    const warrantBinding = {
       repository,
-      protectedBase: branch,
+      branch,
+      pullRequestNumber,
       sourceHead,
+      candidateId: warrant.candidateId,
+      fencingToken: warrant.fencingToken,
+      leaseGeneration: warrant.generation,
+    };
+
+    const fenceObservation = async () => {
+      const latest = await runtime.observe({ repository, branch });
+      assertLiveBinding(latest, { ...warrantBinding, allowedPhases }, clock());
+    };
+    const native = await runtime.runNative({
+      command: options.command,
+      cwd,
+      heartbeat: fenceObservation,
+      executionBinding: {
+        repository,
+        protectedBase: branch,
+        sourceHead,
+        qualifiedBase,
+        toolchainRoot,
+        environmentRoot,
+      },
+      intervalMs,
+      terminationGraceMs: Number(options.terminationGraceMs || 10_000),
+      terminationKillMs: Number(options.terminationKillMs || 5_000),
+    });
+    // Repeat one anonymous exact observation so a final fence loss can never
+    // be hidden by a child that happened to exit at the same instant.
+    await fenceObservation();
+    const receiptBody = {
+      schema: 'kungfu.dev-delivery-native-execution-under-warrant/v1',
+      outcome: 'succeeded',
+      fenceMode: 'credentialless-observation',
+      ...warrantBinding,
       qualifiedBase,
       toolchainRoot,
       environmentRoot,
-    },
-    intervalMs,
-    terminationGraceMs: Number(options.terminationGraceMs || 10_000),
-    terminationKillMs: Number(options.terminationKillMs || 5_000),
-  });
-  // The protected runner heartbeats before spawn and during execution. Repeat
-  // one exact heartbeat here so a final-beat failure can never be hidden by a
-  // child that happened to exit at the same instant as fence loss.
-  await heartbeat();
-  const receiptBody = {
-    schema: 'kungfu.dev-delivery-native-execution-under-warrant/v1',
-    outcome: 'succeeded',
-    ...warrantBinding,
-    qualifiedBase,
-    toolchainRoot,
-    environmentRoot,
-    commandRoot: digest({ command: options.command }),
-    nativeRunReceiptRoot: native.receiptRoot,
-    nativeExecutionReceipt: native,
-  };
-  const receipt = { ...receiptBody, receiptRoot: digest(receiptBody) };
-  if (options.output) {
-    const output = path.resolve(cwd, options.output);
-    fs.mkdirSync(path.dirname(output), { recursive: true });
-    fs.writeFileSync(output, `${JSON.stringify(receipt, null, 2)}\n`);
+      commandRoot: digest({ command: options.command }),
+      nativeRunReceiptRoot: native.receiptRoot,
+      nativeExecutionReceipt: native,
+    };
+    const receipt = { ...receiptBody, receiptRoot: digest(receiptBody) };
+    if (options.output) {
+      const output = path.resolve(cwd, options.output);
+      fs.mkdirSync(path.dirname(output), { recursive: true });
+      fs.writeFileSync(output, `${JSON.stringify(receipt, null, 2)}\n`);
+    }
+    return receipt;
+  } finally {
+    runtime.dispose?.();
   }
-  return receipt;
 }
 
 async function main() {

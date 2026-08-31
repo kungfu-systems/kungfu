@@ -227,16 +227,6 @@ mapped_region mapped_region::map(const std::string &path, size_t size, mapping_p
   return mapped_region(native.address, size, policy, native.locked);
 }
 
-mapped_region mapped_region::map_existing(const std::string &path, size_t size, bool writable, bool lazy) {
-  (void)lazy;
-  return map(path, size, writable ? mapping_policy::write_existing() : mapping_policy::read_existing());
-}
-
-mapped_region mapped_region::map_writable(const std::string &path, size_t size, bool lazy) {
-  (void)lazy;
-  return map(path, size, mapping_policy::write_create_or_grow());
-}
-
 bool mapped_region::flush() const noexcept {
   if (address_ == 0 || !writable_) {
     return true;
@@ -319,22 +309,6 @@ bool release_mmap_buffer(uintptr_t address, size_t size) {
 #else
   return munmap(buffer, size) == 0;
 #endif // _WIN32
-}
-
-uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing, bool lazy) {
-  (void)lazy;
-  return load_mmap_buffer(path, size,
-                          is_writing ? mapping_policy::write_create_or_grow() : mapping_policy::read_existing());
-}
-
-bool flush_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
-  (void)lazy;
-  return flush_mmap_buffer(address, size, mapping_durability::visibility);
-}
-
-bool release_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
-  (void)lazy;
-  return release_mmap_buffer(address, size);
 }
 
 } // namespace kungfu::yijinjing::platform
