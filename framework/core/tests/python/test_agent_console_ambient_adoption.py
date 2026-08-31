@@ -5,7 +5,13 @@ from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from kungfu.agent import run_agent, session_contract, session_surface
+from kungfu.agent import (
+    provider_bootstrap,
+    run_agent,
+    runtime_profiles,
+    session_contract,
+    session_surface,
+)
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.workspace import resolve_workspace_target
@@ -14,6 +20,33 @@ from agent_bootstrap_fixtures import verified_bootstrap_receipt
 
 ROOT_HASH = "sha256:" + "a" * 64
 THREAD_ID = "019ff927-f9a4-7502-999a-6bc5a69bb702"
+
+
+def test_codex_defaults_to_bounded_diagnostic_logging():
+    assert runtime_profiles.builtin_adapters()["codex"]["skill"]["environment"] == {
+        "RUST_LOG": "warn"
+    }
+
+
+def test_provider_log_retention_prunes_only_finalized_attempts(tmp_path):
+    root = tmp_path / "runtime"
+    finalized = "00000000-0000-4000-8000-000000000001"
+    active = "00000000-0000-4000-8000-000000000002"
+    logs = [
+        root / "agent-sessions" / "native-attempts" / item / "provider-logs" / "log"
+        for item in (finalized, active)
+    ]
+    provider_bootstrap.write_runtime_file(logs[0], "old")
+    provider_bootstrap.write_runtime_file(logs[1], "live")
+    provider_bootstrap.write_runtime_file(
+        root / "skill-manager" / f"agent-console-native:{finalized}-final.json",
+        '{"schema":"kungfu.skill-runtime-audit/v2"}',
+    )
+    receipt = provider_bootstrap.prune_finalized_provider_logs(
+        root, now_ns=10_000_000_000, retention_seconds=100, max_bytes=0
+    )
+    assert not logs[0].exists() and logs[1].read_text(encoding="utf-8") == "live"
+    assert receipt["removedFiles"] == receipt["unfinalizedFilesPreserved"] == 1
 
 
 def process_identity():
