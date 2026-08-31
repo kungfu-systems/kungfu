@@ -509,6 +509,87 @@ def _verify_available_component(
         issues.append({"code": "component-runtime-incompatible", "index": index})
 
 
+def _verify_component(component: Mapping[str, Any], index, issues):
+    envelope = component.get("envelope")
+    if not isinstance(envelope, Mapping):
+        issues.append({"code": "component-envelope-missing", "index": index})
+        return
+    declared = str(envelope.get("envelope_root") or "")
+    body = dict(envelope)
+    body.pop("envelope_root", None)
+    if body.get("schema") != COMPONENT_ENVELOPE_SCHEMA:
+        issues.append({"code": "component-envelope-schema", "index": index})
+    elif not _ROOT.fullmatch(declared) or semantic_root(body) != declared:
+        issues.append({"code": "component-envelope-root", "index": index})
+    workspace = component.get("workspace") or {}
+    for code, actual, expected in (
+        (
+            "component-workspace-root-mismatch",
+            envelope.get("workspace_identity_root"),
+            workspace.get("identity_root"),
+        ),
+        (
+            "component-cut-root-mismatch",
+            envelope.get("cut_root"),
+            component.get("cut_root"),
+        ),
+        (
+            "component-query-proof-root-mismatch",
+            envelope.get("query_proof_root"),
+            component.get("query_proof_root"),
+        ),
+        (
+            "component-observation-mismatch",
+            envelope.get("observed_at"),
+            component.get("observed_at"),
+        ),
+    ):
+        if actual != expected:
+            issues.append({"code": code, "index": index})
+    if envelope.get("component_result_root") != semantic_root(
+        _component_result_material(component)
+    ):
+        issues.append({"code": "component-result-root-mismatch", "index": index})
+    if component.get("availability") == "available":
+        _verify_available_component(envelope, index, issues)
+    retained_states = component.get("retained_assignment_states") or []
+    retained_root = str(component.get("retained_state_index_root") or "")
+    if retained_root and (
+        not _ROOT.fullmatch(retained_root)
+        or _retained_state_projection_root(retained_states) != retained_root
+    ):
+        issues.append({"code": "component-retained-state-index-root", "index": index})
+    for kind in ("initiatives", "assignments"):
+        rows = component.get(kind)
+        if not isinstance(rows, list):
+            issues.append({"code": f"component-{kind}-invalid", "index": index})
+            continue
+        for row in rows:
+            try:
+                parse_work_ref((row or {}).get("work_ref") or {})
+            except (AttributeError, TypeError, ValueError):
+                issues.append({"code": "component-work-ref-invalid", "index": index})
+                break
+
+
+def _verify_global_work(value, issues):
+    projection = value.get("global_work")
+    if not isinstance(projection, Mapping):
+        issues.append({"code": "global-work-projection-missing"})
+        return
+    declared = str(projection.get("projection_root") or "")
+    body = dict(projection)
+    body.pop("projection_root", None)
+    if (
+        projection.get("schema") != GLOBAL_WORK_PROJECTION_SCHEMA
+        or not _ROOT.fullmatch(declared)
+        or semantic_root(body) != declared
+    ):
+        issues.append({"code": "global-work-projection-root"})
+    if (value.get("proof") or {}).get("global_work_projection_root") != declared:
+        issues.append({"code": "query-proof-global-work-mismatch"})
+
+
 def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
     """Verify root-bound component envelopes before global composition."""
 
@@ -523,72 +604,8 @@ def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
         if not isinstance(component, Mapping):
             issues.append({"code": "component-invalid", "index": index})
             continue
-        envelope = component.get("envelope")
-        if not isinstance(envelope, Mapping):
-            issues.append({"code": "component-envelope-missing", "index": index})
-            continue
-        declared = str(envelope.get("envelope_root") or "")
-        body = dict(envelope)
-        body.pop("envelope_root", None)
-        if body.get("schema") != COMPONENT_ENVELOPE_SCHEMA:
-            issues.append({"code": "component-envelope-schema", "index": index})
-        elif not _ROOT.fullmatch(declared) or semantic_root(body) != declared:
-            issues.append({"code": "component-envelope-root", "index": index})
-        workspace = component.get("workspace") or {}
-        if envelope.get("workspace_identity_root") != workspace.get("identity_root"):
-            issues.append({"code": "component-workspace-root-mismatch", "index": index})
-        if envelope.get("cut_root") != component.get("cut_root"):
-            issues.append({"code": "component-cut-root-mismatch", "index": index})
-        if envelope.get("query_proof_root") != component.get("query_proof_root"):
-            issues.append(
-                {"code": "component-query-proof-root-mismatch", "index": index}
-            )
-        result_body = _component_result_material(component)
-        if envelope.get("component_result_root") != semantic_root(result_body):
-            issues.append({"code": "component-result-root-mismatch", "index": index})
-        if envelope.get("observed_at") != component.get("observed_at"):
-            issues.append({"code": "component-observation-mismatch", "index": index})
-        if component.get("availability") == "available":
-            _verify_available_component(envelope, index, issues)
-        retained_states = component.get("retained_assignment_states") or []
-        retained_root = str(component.get("retained_state_index_root") or "")
-        if retained_root and (
-            not _ROOT.fullmatch(retained_root)
-            or _retained_state_projection_root(retained_states) != retained_root
-        ):
-            issues.append(
-                {"code": "component-retained-state-index-root", "index": index}
-            )
-        for kind in ("initiatives", "assignments"):
-            rows = component.get(kind)
-            if not isinstance(rows, list):
-                issues.append({"code": f"component-{kind}-invalid", "index": index})
-                continue
-            for row in rows:
-                try:
-                    parse_work_ref((row or {}).get("work_ref") or {})
-                except (AttributeError, TypeError, ValueError):
-                    issues.append(
-                        {"code": "component-work-ref-invalid", "index": index}
-                    )
-                    break
-    projection = value.get("global_work")
-    if not isinstance(projection, Mapping):
-        issues.append({"code": "global-work-projection-missing"})
-    else:
-        declared_projection_root = str(projection.get("projection_root") or "")
-        projection_body = dict(projection)
-        projection_body.pop("projection_root", None)
-        if (
-            projection.get("schema") != GLOBAL_WORK_PROJECTION_SCHEMA
-            or not _ROOT.fullmatch(declared_projection_root)
-            or semantic_root(projection_body) != declared_projection_root
-        ):
-            issues.append({"code": "global-work-projection-root"})
-        if (value.get("proof") or {}).get(
-            "global_work_projection_root"
-        ) != declared_projection_root:
-            issues.append({"code": "query-proof-global-work-mismatch"})
+        _verify_component(component, index, issues)
+    _verify_global_work(value, issues)
     proof_components = (value.get("proof") or {}).get("component_cuts")
     expected_proof_components = [
         {

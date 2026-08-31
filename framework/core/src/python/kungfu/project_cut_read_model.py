@@ -95,6 +95,72 @@ def _receipt_projection(
     return receipt_path, receipt, receipt_valid
 
 
+def _project_cut_candidate(manifest, cut, documents, publications):
+    cut_root = str(cut.get("cutRoot") or "")
+    receipt_path, receipt, receipt_valid = _receipt_projection(
+        manifest, cut_root, documents
+    )
+    publication = publications.get(manifest)
+    return {
+        "cutRoot": cut_root,
+        "parentCutRoots": list(cut.get("parentCutRoots") or []),
+        "sourceRoot": (cut.get("sourceProjection") or {}).get("root"),
+        "atlasRoot": (cut.get("atlas") or {}).get("root"),
+        "episodeRoots": [
+            row.get("root")
+            for row in (cut.get("episodeDelta") or {}).get("nativeRoots", [])
+            if isinstance(row, dict) and row.get("root")
+        ],
+        "omissions": list(cut.get("omissions") or []),
+        "conflicts": list(cut.get("conflicts") or []),
+        "unknowns": list(cut.get("unknowns") or []),
+        "manifest": manifest,
+        "receipt": receipt_path if receipt is not None else None,
+        "receiptValid": receipt_valid,
+        "publicationCommit": publication[0] if publication else None,
+        "publicationReachable": publication is not None,
+        "publicationDistance": publication[1] if publication else None,
+    }
+
+
+def _project_cut_rows(repo: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    rows: list[dict[str, Any]] = []
+    gaps: list[str] = []
+    publications = _publication_index(repo)
+    documents = _tracked_documents(repo)
+    manifests = sorted(name for name in documents if name.endswith("/manifest.json"))
+    for manifest in manifests:
+        cut = documents[manifest]
+        if cut is None or cut.get("schema") != "project.cut/v1":
+            gaps.append(f"invalid-manifest:{manifest}")
+            continue
+        rows.append(_project_cut_candidate(manifest, cut, documents, publications))
+    return rows, gaps
+
+
+def _project_cut_state(rows, contenders, current, dirty, gaps):
+    if not rows:
+        gaps.append("project-cut-missing")
+        return "missing", "none", ["begin"]
+    if len(contenders) > 1:
+        gaps.append("multiple-current-project-cuts")
+        return "conflicted", "low", ["reconcile-project-cut-history"]
+    if current is None:
+        gaps.append("no-reachable-current-project-cut")
+        return "stale", "low", ["recover"]
+    if dirty:
+        gaps.append("source-changed-after-current-project-cut")
+        confidence = "medium" if current["receiptValid"] else "low"
+        return "stale", confidence, ["checkpoint", "complete", "recover"]
+    if not current["receiptValid"]:
+        gaps.append("current-project-cut-receipt-missing-or-invalid")
+        return "thin", "medium", ["recover", "export"]
+    if current["conflicts"] or current["unknowns"]:
+        return "degraded", "medium", ["inspect-gaps", "recover"]
+    confidence = "high" if not current["omissions"] else "medium"
+    return "current", confidence, ["begin", "resume", "export"]
+
+
 def inspect_project_cut(repo_input: str | Path = ".") -> dict[str, Any]:
     """Return one semantic read model without creating runtime state."""
 
@@ -111,43 +177,7 @@ def inspect_project_cut(repo_input: str | Path = ".") -> dict[str, Any]:
             "authority": "git-tracked-project-cut",
         }
 
-    rows: list[dict[str, Any]] = []
-    gaps: list[str] = []
-    publications = _publication_index(repo)
-    documents = _tracked_documents(repo)
-    manifests = sorted(name for name in documents if name.endswith("/manifest.json"))
-    for manifest in manifests:
-        cut = documents[manifest]
-        if cut is None or cut.get("schema") != "project.cut/v1":
-            gaps.append(f"invalid-manifest:{manifest}")
-            continue
-        cut_root = str(cut.get("cutRoot") or "")
-        receipt_path, receipt, receipt_valid = _receipt_projection(
-            manifest, cut_root, documents
-        )
-        publication = publications.get(manifest)
-        rows.append(
-            {
-                "cutRoot": cut_root,
-                "parentCutRoots": list(cut.get("parentCutRoots") or []),
-                "sourceRoot": (cut.get("sourceProjection") or {}).get("root"),
-                "atlasRoot": (cut.get("atlas") or {}).get("root"),
-                "episodeRoots": [
-                    row.get("root")
-                    for row in (cut.get("episodeDelta") or {}).get("nativeRoots", [])
-                    if isinstance(row, dict) and row.get("root")
-                ],
-                "omissions": list(cut.get("omissions") or []),
-                "conflicts": list(cut.get("conflicts") or []),
-                "unknowns": list(cut.get("unknowns") or []),
-                "manifest": manifest,
-                "receipt": receipt_path if receipt is not None else None,
-                "receiptValid": receipt_valid,
-                "publicationCommit": publication[0] if publication else None,
-                "publicationReachable": publication is not None,
-                "publicationDistance": publication[1] if publication else None,
-            }
-        )
+    rows, gaps = _project_cut_rows(repo)
 
     reachable = [row for row in rows if row["publicationReachable"]]
     distances = [row["publicationDistance"] for row in reachable]
@@ -160,39 +190,9 @@ def inspect_project_cut(repo_input: str | Path = ".") -> dict[str, Any]:
     current = contenders[0] if len(contenders) == 1 else None
     dirty = _source_dirty(repo)
 
-    if not rows:
-        status = "missing"
-        gaps.append("project-cut-missing")
-        next_actions = ["begin"]
-        confidence = "none"
-    elif len(contenders) > 1:
-        status = "conflicted"
-        gaps.append("multiple-current-project-cuts")
-        next_actions = ["reconcile-project-cut-history"]
-        confidence = "low"
-    elif current is None:
-        status = "stale"
-        gaps.append("no-reachable-current-project-cut")
-        next_actions = ["recover"]
-        confidence = "low"
-    elif dirty:
-        status = "stale"
-        gaps.append("source-changed-after-current-project-cut")
-        next_actions = ["checkpoint", "complete", "recover"]
-        confidence = "medium" if current["receiptValid"] else "low"
-    elif not current["receiptValid"]:
-        status = "thin"
-        gaps.append("current-project-cut-receipt-missing-or-invalid")
-        next_actions = ["recover", "export"]
-        confidence = "medium"
-    elif current["conflicts"] or current["unknowns"]:
-        status = "degraded"
-        next_actions = ["inspect-gaps", "recover"]
-        confidence = "medium"
-    else:
-        status = "current"
-        next_actions = ["begin", "resume", "export"]
-        confidence = "high" if not current["omissions"] else "medium"
+    status, confidence, next_actions = _project_cut_state(
+        rows, contenders, current, dirty, gaps
+    )
 
     return {
         "schema": "kungfu.cut.read-model/v1",

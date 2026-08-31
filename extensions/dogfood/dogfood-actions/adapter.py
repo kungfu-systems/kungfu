@@ -55,59 +55,69 @@ def _record_consideration(domain, runtime_dir: str, values: Mapping[str, Any]):
     return result, [result["consideration"]["receipt_root"]]
 
 
+def _capture_finding(domain, runtime_dir, values):
+    result = domain.capture_finding(
+        runtime_dir,
+        finding_id=str(values.get("findingId") or ""),
+        title=str(values.get("title") or ""),
+        summary=str(values.get("summary") or ""),
+        episode_root=str(values.get("episodeRoot") or ""),
+        evidence_roots=values.get("evidenceRoots") or [],
+        dimensions=values.get("dimensions") or {},
+        privacy=str(values.get("privacy") or "internal"),
+        runtime_surface=str(values.get("runtimeSurface") or ""),
+        runtime_receipt_root=str(values.get("runtimeReceiptRoot") or ""),
+        actor=str(values.get("actor") or ""),
+        observed_at=str(values.get("observedAt") or ""),
+        impact=str(values.get("impact") or "medium"),
+        hard_class=str(values.get("hardClass") or ""),
+        recurrence=int(values.get("recurrence") or 1),
+    )
+    return result, [result["finding"]["finding_root"]]
+
+
+def _admit_issue(domain, runtime_dir, values):
+    result = domain.admit_issue(
+        runtime_dir,
+        issue_id=str(values.get("issueId") or ""),
+        title=str(values.get("title") or ""),
+        owner=str(values.get("owner") or ""),
+        finding_roots=values.get("findingRoots") or [],
+        impact=str(values.get("impact") or "medium"),
+        hard_class=str(values.get("hardClass") or ""),
+        verification_criteria=values.get("verificationCriteria") or [],
+        actor=str(values.get("actor") or ""),
+        admitted_at=str(values.get("admittedAt") or ""),
+    )
+    return result, [result["issue"]["issue_root"]]
+
+
+def _transition_issue(domain, runtime_dir, values):
+    result = domain.transition_issue(
+        runtime_dir,
+        issue_id=str(values.get("issueId") or ""),
+        expected_issue_root=str(values.get("expectedIssueRoot") or ""),
+        to_state=str(values.get("toState") or ""),
+        actor=str(values.get("actor") or ""),
+        reason=str(values.get("reason") or ""),
+        owner=str(values.get("owner") or ""),
+        independent_assessment_root=str(values.get("independentAssessmentRoot") or ""),
+        authorized_decision_root=str(values.get("authorizedDecisionRoot") or ""),
+        successor_fact_root=str(values.get("successorFactRoot") or ""),
+        product_root=str(values.get("productRoot") or ""),
+        verification_evidence_roots=values.get("verificationEvidenceRoots") or [],
+        transitioned_at=str(values.get("transitionedAt") or ""),
+    )
+    return result, [result["issue"]["issue_root"]]
+
+
 def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
     if operation == "capture-finding":
-        result = domain.capture_finding(
-            runtime_dir,
-            finding_id=str(values.get("findingId") or ""),
-            title=str(values.get("title") or ""),
-            summary=str(values.get("summary") or ""),
-            episode_root=str(values.get("episodeRoot") or ""),
-            evidence_roots=values.get("evidenceRoots") or [],
-            dimensions=values.get("dimensions") or {},
-            privacy=str(values.get("privacy") or "internal"),
-            runtime_surface=str(values.get("runtimeSurface") or ""),
-            runtime_receipt_root=str(values.get("runtimeReceiptRoot") or ""),
-            actor=str(values.get("actor") or ""),
-            observed_at=str(values.get("observedAt") or ""),
-            impact=str(values.get("impact") or "medium"),
-            hard_class=str(values.get("hardClass") or ""),
-            recurrence=int(values.get("recurrence") or 1),
-        )
-        affected = [result["finding"]["finding_root"]]
+        result, affected = _capture_finding(domain, runtime_dir, values)
     elif operation == "admit-issue":
-        result = domain.admit_issue(
-            runtime_dir,
-            issue_id=str(values.get("issueId") or ""),
-            title=str(values.get("title") or ""),
-            owner=str(values.get("owner") or ""),
-            finding_roots=values.get("findingRoots") or [],
-            impact=str(values.get("impact") or "medium"),
-            hard_class=str(values.get("hardClass") or ""),
-            verification_criteria=values.get("verificationCriteria") or [],
-            actor=str(values.get("actor") or ""),
-            admitted_at=str(values.get("admittedAt") or ""),
-        )
-        affected = [result["issue"]["issue_root"]]
+        result, affected = _admit_issue(domain, runtime_dir, values)
     elif operation == "transition-issue":
-        result = domain.transition_issue(
-            runtime_dir,
-            issue_id=str(values.get("issueId") or ""),
-            expected_issue_root=str(values.get("expectedIssueRoot") or ""),
-            to_state=str(values.get("toState") or ""),
-            actor=str(values.get("actor") or ""),
-            reason=str(values.get("reason") or ""),
-            owner=str(values.get("owner") or ""),
-            independent_assessment_root=str(
-                values.get("independentAssessmentRoot") or ""
-            ),
-            authorized_decision_root=str(values.get("authorizedDecisionRoot") or ""),
-            successor_fact_root=str(values.get("successorFactRoot") or ""),
-            product_root=str(values.get("productRoot") or ""),
-            verification_evidence_roots=values.get("verificationEvidenceRoots") or [],
-            transitioned_at=str(values.get("transitionedAt") or ""),
-        )
-        affected = [result["issue"]["issue_root"]]
+        result, affected = _transition_issue(domain, runtime_dir, values)
     elif operation == "record-consideration":
         result, affected = _record_consideration(domain, runtime_dir, values)
     else:

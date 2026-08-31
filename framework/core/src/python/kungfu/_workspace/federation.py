@@ -28,6 +28,98 @@ COMPONENT_CUT_SCHEMA = "kungfu.workspace-federation.component-cut/v1"
 COMPONENT_ENVELOPE_SCHEMA = "kungfu.workspace-federation.component-envelope/v1"
 
 
+def _empty_component(
+    identity, sealed_index, sealed_states, outcome_index, outcome_bindings
+):
+    body = {
+        "schema": COMPONENT_CUT_SCHEMA,
+        "workspace_identity_root": identity.identity_root,
+        "state": identity.as_dict()["state"],
+        "initiative_versions": [],
+        "assignment_versions": [],
+        "relation_roots": [],
+        "fact_versions": [],
+    }
+    root = semantic_root(body)
+    profile_binding = _empty_profile_binding()
+    return {
+        "availability": "available",
+        "stale": False,
+        "cut_root": root,
+        "query_proof_root": root,
+        "initiatives": [],
+        "assignments": [],
+        "relations": [],
+        "problems": [*sealed_index["issues"], *outcome_index["issues"]],
+        "retained_assignment_states": sealed_states,
+        "unqualified_retained_assignment_states": sealed_index["unqualified_states"],
+        "retained_state_index_root": _retained_state_projection_root(sealed_states),
+        "retained_outcome_bindings": outcome_bindings,
+        "outcome_binding_index_root": outcome_index["index_root"],
+        "reader_runtime": _reader_runtime_identity(),
+        "workspace_runtime": _workspace_runtime_identity(identity),
+        "profile_binding": profile_binding,
+        "profile_root": profile_binding["profile_root"],
+        "compatibility": {
+            "state": "compatible-empty",
+            "protocol": "kungfu.fact-material-read/v1",
+            "reason": "workspace runtime is uninitialized",
+        },
+    }
+
+
+def _material_record(fact, payloads):
+    surface = str(fact.get("fact_surface_id") or "")
+    payload_hash = _root(fact.get("payload_hash"), "Fact payload_hash")
+    payload = payloads.get(payload_hash)
+    if not isinstance(payload, Mapping) or not isinstance(
+        payload.get("record"), Mapping
+    ):
+        raise ValueError(f"Fact payload body is unavailable: {payload_hash}")
+    record = dict(payload["record"])
+    sealed = {
+        "contract_world_id": str(fact.get("contract_world_id") or ""),
+        "fact_surface_id": surface,
+        "observation_id": str(fact.get("observation_id") or ""),
+        "payload_hash": payload_hash,
+        "source_id": str(fact.get("source_id") or ""),
+        "subject_key": str(fact.get("subject_key") or ""),
+        "type_version": "1",
+    }
+    record["sealed_identity"] = sealed
+    record.setdefault("subject_key", sealed["subject_key"])
+    return surface, payload, record
+
+
+def _component_indexes(identity, assignment_orchestration):
+    sealed_empty = {
+        "schema": "kungfu.assignment-orchestration.sealed-work-index/v1",
+        "states": [],
+        "unqualified_states": [],
+        "issues": [],
+        "storage_kind": "none",
+        "writes": [],
+    }
+    sealed_index = (
+        assignment_orchestration.list_sealed_assignment_states(identity.workspace_root)
+        if identity.workspace_root
+        else {**sealed_empty, "index_root": semantic_root(sealed_empty)}
+    )
+    outcome_empty = {
+        "schema": assignment_orchestration.OUTCOME_INDEX_SCHEMA,
+        "bindings": [],
+        "issues": [],
+        "storage_kind": "none",
+        "writes": [],
+    }
+    outcome_index = (
+        assignment_orchestration.list_outcome_bindings(identity.workspace_root)
+        if identity.workspace_root
+        else {**outcome_empty, "index_root": semantic_root(outcome_empty)}
+    )
+    return sealed_index, outcome_index
+
+
 def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     """Read one component through the root-bound Fact material protocol.
 
@@ -41,88 +133,14 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
 
     from kungfu import assignment_orchestration
 
-    sealed_index = (
-        assignment_orchestration.list_sealed_assignment_states(identity.workspace_root)
-        if identity.workspace_root
-        else {
-            "schema": "kungfu.assignment-orchestration.sealed-work-index/v1",
-            "states": [],
-            "unqualified_states": [],
-            "issues": [],
-            "storage_kind": "none",
-            "writes": [],
-            "index_root": semantic_root(
-                {
-                    "schema": "kungfu.assignment-orchestration.sealed-work-index/v1",
-                    "states": [],
-                    "unqualified_states": [],
-                    "issues": [],
-                    "storage_kind": "none",
-                    "writes": [],
-                }
-            ),
-        }
-    )
+    sealed_index, outcome_index = _component_indexes(identity, assignment_orchestration)
     sealed_states = cast(list[dict[str, Any]], sealed_index["states"])
-    outcome_index = (
-        assignment_orchestration.list_outcome_bindings(identity.workspace_root)
-        if identity.workspace_root
-        else {
-            "schema": assignment_orchestration.OUTCOME_INDEX_SCHEMA,
-            "bindings": [],
-            "issues": [],
-            "storage_kind": "none",
-            "writes": [],
-            "index_root": semantic_root(
-                {
-                    "schema": assignment_orchestration.OUTCOME_INDEX_SCHEMA,
-                    "bindings": [],
-                    "issues": [],
-                    "storage_kind": "none",
-                    "writes": [],
-                }
-            ),
-        }
-    )
     outcome_bindings = cast(list[dict[str, Any]], outcome_index["bindings"])
     runtime_dir = os.path.join(identity.data_home, "runtime")
     if not os.path.isdir(runtime_dir):
-        body = {
-            "schema": COMPONENT_CUT_SCHEMA,
-            "workspace_identity_root": identity.identity_root,
-            "state": identity.as_dict()["state"],
-            "initiative_versions": [],
-            "assignment_versions": [],
-            "relation_roots": [],
-            "fact_versions": [],
-        }
-        root = semantic_root(body)
-        return {
-            "availability": "available",
-            "stale": False,
-            "cut_root": root,
-            "query_proof_root": root,
-            "initiatives": [],
-            "assignments": [],
-            "relations": [],
-            "problems": [*sealed_index["issues"], *outcome_index["issues"]],
-            "retained_assignment_states": sealed_states,
-            "unqualified_retained_assignment_states": sealed_index[
-                "unqualified_states"
-            ],
-            "retained_state_index_root": _retained_state_projection_root(sealed_states),
-            "retained_outcome_bindings": outcome_bindings,
-            "outcome_binding_index_root": outcome_index["index_root"],
-            "reader_runtime": _reader_runtime_identity(),
-            "workspace_runtime": _workspace_runtime_identity(identity),
-            "profile_binding": _empty_profile_binding(),
-            "profile_root": _empty_profile_binding()["profile_root"],
-            "compatibility": {
-                "state": "compatible-empty",
-                "protocol": "kungfu.fact-material-read/v1",
-                "reason": "workspace runtime is uninitialized",
-            },
-        }
+        return _empty_component(
+            identity, sealed_index, sealed_states, outcome_index, outcome_bindings
+        )
 
     from kungfu.storage import service as storage_service
 
@@ -138,25 +156,7 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     stored_relations: dict[str, dict[str, Any]] = {}
     phase_by_assignment: dict[str, tuple[int, str]] = {}
     for fact in canonical_facts:
-        surface = str(fact.get("fact_surface_id") or "")
-        payload_hash = _root(fact.get("payload_hash"), "Fact payload_hash")
-        payload = payloads.get(payload_hash)
-        if not isinstance(payload, Mapping) or not isinstance(
-            payload.get("record"), Mapping
-        ):
-            raise ValueError(f"Fact payload body is unavailable: {payload_hash}")
-        record = dict(payload["record"])
-        sealed = {
-            "contract_world_id": str(fact.get("contract_world_id") or ""),
-            "fact_surface_id": surface,
-            "observation_id": str(fact.get("observation_id") or ""),
-            "payload_hash": payload_hash,
-            "source_id": str(fact.get("source_id") or ""),
-            "subject_key": str(fact.get("subject_key") or ""),
-            "type_version": "1",
-        }
-        record["sealed_identity"] = sealed
-        record.setdefault("subject_key", sealed["subject_key"])
+        surface, payload, record = _material_record(fact, payloads)
         if surface == "kungfu.initiative-assignment.initiative":
             initiatives.append(record)
         elif surface == "kungfu.initiative-assignment.assignment":

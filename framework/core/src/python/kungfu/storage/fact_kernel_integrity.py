@@ -92,6 +92,79 @@ def _episode_frontier_requests(value: Any) -> list[dict[str, Any]]:
     return result
 
 
+def _fsck_versions(objects, versions, bodies, issue):
+    for version_root, version in versions.items():
+        object_id = version.get("objectId", "")
+        if object_id not in objects:
+            issue("orphan-version", version_root, object_id=object_id)
+        for parent in _root_list(version.get("parentVersionRoots")):
+            if parent not in versions:
+                issue("missing-parent-version", version_root, parent_root=parent)
+        if not _root_list(version.get("declarationRoots")):
+            issue("declaration-root-missing", version_root)
+        if not _root_list(version.get("admissionRoots")):
+            issue("admission-root-missing", version_root)
+        body = bodies.get(version_root, {})
+        if body.get("status") != "available" or not isinstance(body.get("body"), str):
+            issue("missing-body", version_root, body_root=version.get("bodyRoot"))
+        elif _content_root(body["body"]) != version.get("bodyRoot"):
+            issue("body-root-mismatch", version_root, body_root=version.get("bodyRoot"))
+
+
+def _fsck_relations(objects, versions, relations, issue):
+    for relation_root, relation in relations.items():
+        for side in ("source", "target"):
+            endpoint = relation.get(side, {})
+            kind = endpoint.get("kind")
+            identity = endpoint.get("id")
+            if kind == "logical-object" and identity not in objects:
+                issue("relation-endpoint-missing", relation_root, side=side)
+            if kind == "pinned-version" and identity not in versions:
+                issue("relation-endpoint-missing", relation_root, side=side)
+        if not _root_list(relation.get("admissionRoots")):
+            issue("relation-admission-missing", relation_root)
+
+
+def _fsck_cut(current_root, cut, cuts, versions, relations, revoked, issue):
+    for parent in _root_list(cut.get("parentCutRoots")):
+        if parent not in cuts:
+            issue("missing-parent-cut", current_root, parent_root=parent)
+    for member in cut.get("objectVersions", []):
+        if not isinstance(member, list) or len(member) != 2:
+            issue("invalid-cut-member", current_root, member=member)
+            continue
+        object_id, version_root = member
+        version = versions.get(version_root)
+        if not isinstance(version, Mapping):
+            issue("missing-cut-version", current_root, version_root=version_root)
+        elif version.get("objectId") != object_id:
+            issue(
+                "cut-member-identity-mismatch", current_root, version_root=version_root
+            )
+    for relation_root in _root_list(cut.get("activeRelationRoots")):
+        if relation_root not in relations:
+            issue("missing-active-relation", current_root, relation_root=relation_root)
+        elif relation_root in revoked:
+            issue("revoked-relation-active", current_root, relation_root=relation_root)
+    if not _root_list(cut.get("declarationRoots")):
+        issue("cut-declaration-root-missing", current_root)
+    if not _root_list(cut.get("admissionRoots")):
+        issue("cut-admission-root-missing", current_root)
+    for frontier in cut.get("episodeFrontier", []):
+        valid_frontier = (
+            isinstance(frontier, list)
+            and len(frontier) == 3
+            and isinstance(frontier[0], int)
+            and frontier[0] >= 0
+            and isinstance(frontier[1], str)
+            and bool(_ROOT.fullmatch(frontier[1]))
+            and isinstance(frontier[2], str)
+            and bool(frontier[2])
+        )
+        if not valid_frontier:
+            issue("episode-frontier-invalid", current_root, frontier=frontier)
+
+
 def fsck(runtime_dir: str | Path, *, cut_root: str = "") -> dict[str, Any]:
     """Verify the folded authority and every closed root reference, read-only."""
 
@@ -146,34 +219,8 @@ def fsck(runtime_dir: str | Path, *, cut_root: str = "") -> dict[str, Any]:
         if document.get("objectId") != object_id:
             issue("object-identity-mismatch", object_id)
 
-    for version_root, version in versions.items():
-        object_id = version.get("objectId", "")
-        if object_id not in objects:
-            issue("orphan-version", version_root, object_id=object_id)
-        for parent in _root_list(version.get("parentVersionRoots")):
-            if parent not in versions:
-                issue("missing-parent-version", version_root, parent_root=parent)
-        if not _root_list(version.get("declarationRoots")):
-            issue("declaration-root-missing", version_root)
-        if not _root_list(version.get("admissionRoots")):
-            issue("admission-root-missing", version_root)
-        body = bodies.get(version_root, {})
-        if body.get("status") != "available" or not isinstance(body.get("body"), str):
-            issue("missing-body", version_root, body_root=version.get("bodyRoot"))
-        elif _content_root(body["body"]) != version.get("bodyRoot"):
-            issue("body-root-mismatch", version_root, body_root=version.get("bodyRoot"))
-
-    for relation_root, relation in relations.items():
-        for side in ("source", "target"):
-            endpoint = relation.get(side, {})
-            kind = endpoint.get("kind")
-            identity = endpoint.get("id")
-            if kind == "logical-object" and identity not in objects:
-                issue("relation-endpoint-missing", relation_root, side=side)
-            if kind == "pinned-version" and identity not in versions:
-                issue("relation-endpoint-missing", relation_root, side=side)
-        if not _root_list(relation.get("admissionRoots")):
-            issue("relation-admission-missing", relation_root)
+    _fsck_versions(objects, versions, bodies, issue)
+    _fsck_relations(objects, versions, relations, issue)
 
     selected_cuts = {cut_root} if cut_root else set(cuts)
     for current_root in sorted(selected_cuts):
@@ -181,53 +228,7 @@ def fsck(runtime_dir: str | Path, *, cut_root: str = "") -> dict[str, Any]:
         if not isinstance(cut, Mapping):
             issue("missing-cut", current_root)
             continue
-        for parent in _root_list(cut.get("parentCutRoots")):
-            if parent not in cuts:
-                issue("missing-parent-cut", current_root, parent_root=parent)
-        for member in cut.get("objectVersions", []):
-            if not isinstance(member, list) or len(member) != 2:
-                issue("invalid-cut-member", current_root, member=member)
-                continue
-            object_id, version_root = member
-            version = versions.get(version_root)
-            if not isinstance(version, Mapping):
-                issue("missing-cut-version", current_root, version_root=version_root)
-            elif version.get("objectId") != object_id:
-                issue(
-                    "cut-member-identity-mismatch",
-                    current_root,
-                    version_root=version_root,
-                )
-        for relation_root in _root_list(cut.get("activeRelationRoots")):
-            if relation_root not in relations:
-                issue(
-                    "missing-active-relation", current_root, relation_root=relation_root
-                )
-            elif relation_root in revoked:
-                issue(
-                    "revoked-relation-active", current_root, relation_root=relation_root
-                )
-        if not _root_list(cut.get("declarationRoots")):
-            issue("cut-declaration-root-missing", current_root)
-        if not _root_list(cut.get("admissionRoots")):
-            issue("cut-admission-root-missing", current_root)
-        for frontier in cut.get("episodeFrontier", []):
-            valid_frontier = (
-                isinstance(frontier, list)
-                and len(frontier) == 3
-                and all(
-                    (
-                        isinstance(frontier[0], int),
-                        frontier[0] >= 0,
-                        isinstance(frontier[1], str),
-                        bool(_ROOT.fullmatch(frontier[1])),
-                        isinstance(frontier[2], str),
-                        bool(frontier[2]),
-                    )
-                )
-            )
-            if not valid_frontier:
-                issue("episode-frontier-invalid", current_root, frontier=frontier)
+        _fsck_cut(current_root, cut, cuts, versions, relations, revoked, issue)
 
     for ref_name, ref in refs.items():
         if ref.get("cut_root") not in cuts:
