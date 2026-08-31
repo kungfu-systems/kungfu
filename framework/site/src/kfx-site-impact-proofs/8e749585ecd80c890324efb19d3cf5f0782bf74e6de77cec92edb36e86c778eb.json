@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
-  "baseRevision": "2841c31b0b87ed35177ca4dc3dd2f2c1bbd8d67a",
-  "changeRoot": "sha256:766c0edd70a8a5e4033a281342edf48b658bfe1ae57442aa677e7c4db97e0be4",
+  "baseRevision": "8b5c5bffb86ec902b7878cfcbf2991053dca6e32",
+  "changeRoot": "sha256:f6727284abcf8a22910020952b78323702e4cc8cce6c48a069bba50d18cdd697",
   "changes": [
     {
       "baseContentRoot": "sha256:9283a652c14d9bc993ded4036a9070251edb1082eb7dfd6e03a327ee5d5b2d84",
@@ -17,20 +17,32 @@
     },
     {
       "baseContentRoot": "sha256:fa62576c64d6e3bafad245e9c5fc1fda678818b5ac8e41efe25a9d990627ac5f",
-      "contentRoot": "sha256:bf34585a4a340dd4994d0ee03c778985fb19e8bc08b334b6db5cbc4e86027411",
+      "contentRoot": "sha256:6f1dcfa4cf7e8834d65d4dc8590e4f31516582ef4e8f9b94373bda8c58f8eb07",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:d653616d98fb5b65685e2f1d707db90830f90d7d6bf399c90f75089912a3bcea",
-      "contentRoot": "sha256:c0b9b5f32503cca60cbfc236165d68224a2d080e6fc9ef11e7f68078bb9135fc",
+      "contentRoot": "sha256:c9ab341181745d7df1aa4c383c57265d938a8b0beae8b38caf13ac4b01c7485d",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:483a8133a23d950ec4012ae5e09faa0d9aa2e7731c30baeb60bf372e1620557d",
-      "contentRoot": "sha256:7cf2941b87ac02849bb8071e38d77ecd30ef15e791fe14881721be7dd3bae689",
+      "contentRoot": "sha256:c3df07023519fc30055f359369b947a78b9ad2704a0ed436cd317193bb53bfae",
       "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6453da7c9634107976474409d908a8b3e6dfbb9d88dd3a952c5bb53c35d06a88",
+      "contentRoot": "sha256:d557fe97c5848b15102e8935b1c43be60ba1248a0d229a23cf7a219a18fb2d60",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2947d516c3b465b62e40b7e4baaff3ca8f6175aca121860341c1675fb89f6c74",
+      "contentRoot": "sha256:97c0cbf517ec95d8cdc4b397b95d79677bd6622151d9ff31668f547de3abffa4",
+      "path": ".xinfa/product-atlas-bundle.json",
       "status": "modified"
     },
     {
@@ -70,6 +82,12 @@
       "status": "modified"
     },
     {
+      "baseContentRoot": "sha256:7cb8073b72949a82ed6590b39680d491d35202dd00cf6165850290d2eea52845",
+      "contentRoot": "sha256:d2a81fd649f10e289c6e6fe9daf5607e8c6f032396bcf3a7a3d557bbd91a8200",
+      "path": "crates/xinfa/tooling/standalone-smoke.mjs",
+      "status": "modified"
+    },
+    {
       "baseContentRoot": "sha256:9283a652c14d9bc993ded4036a9070251edb1082eb7dfd6e03a327ee5d5b2d84",
       "contentRoot": "sha256:dd288e81ce19bd1a87895835a62cab7aee451b3bc125cae42fd7fdd053d6096a",
       "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
@@ -83,13 +101,13 @@
     },
     {
       "baseContentRoot": "sha256:fa62576c64d6e3bafad245e9c5fc1fda678818b5ac8e41efe25a9d990627ac5f",
-      "contentRoot": "sha256:bf34585a4a340dd4994d0ee03c778985fb19e8bc08b334b6db5cbc4e86027411",
+      "contentRoot": "sha256:6f1dcfa4cf7e8834d65d4dc8590e4f31516582ef4e8f9b94373bda8c58f8eb07",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:483a8133a23d950ec4012ae5e09faa0d9aa2e7731c30baeb60bf372e1620557d",
-      "contentRoot": "sha256:7cf2941b87ac02849bb8071e38d77ecd30ef15e791fe14881721be7dd3bae689",
+      "contentRoot": "sha256:c3df07023519fc30055f359369b947a78b9ad2704a0ed436cd317193bb53bfae",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -103,6 +121,36 @@
       "baseContentRoot": "sha256:057f1b1c7bc2fadba6c8232625beeaf9926eb1bc39eadd70982eef9ab657ed64",
       "contentRoot": "sha256:3b72d15200f82ab0f74958ac3a21584a2c7daa25dffe6f3570eb95ea3b73148e",
       "path": "extensions/dogfood/dogfood-actions/adapter.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b6c80a7cdc671617f4108133306637b60606b966633bbd1ed2d67d32faf6444b",
+      "contentRoot": "sha256:af71bc305eeacbebd4dc4689dd4b8c132a04b99785743279cc2b08cd7ec319f9",
+      "path": "extensions/system/status/src/view/query-reference.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e3dae0037468abce4d966a81f44c38d593cef4ce6ecf41ffb58193c4251418f8",
+      "contentRoot": "sha256:82b3e00269303df79e387087b48460353da36cbf2f4d7ec0b3e2665b2bc95608",
+      "path": "framework/agent-session/src/product-surface.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:79fbb9df2076ea2d31f41c7b1f9db68c96238b90a89623368807856c30f5e779",
+      "contentRoot": "sha256:ce3c542a09f3fa9279f89d572e0caa38a39b3046c063232f2ba2f84e18448277",
+      "path": "framework/agent-session/src/provider-adapters.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:59cd0bb232639cb548b06ae801ce855e0c505942b1443f6fa40ed394932f0fbf",
+      "contentRoot": "sha256:2e332226af0007e1d16accde87e0627c67b285733d48b3b488df57d3f8de1b72",
+      "path": "framework/agent-session/src/work-console-model.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:96bc6ec5bd2ca8cab6dc53d7a24d078b06ca0c574f33888d9323dc335bc7e83b",
+      "contentRoot": "sha256:4d4f40c72d47d4cc33b3de9bccdc31e1886f1b4534db1ee8c5513ef2fc9641da",
+      "path": "framework/agent-work/validate-profile.mjs",
       "status": "modified"
     },
     {
@@ -232,6 +280,18 @@
       "status": "modified"
     },
     {
+      "baseContentRoot": "sha256:6eed9df2bd1d3e771b1fef153f93c1e19b8234f949fc2a2676f324fedbec9736",
+      "contentRoot": "sha256:c5efbcc5960aa8d1bfe888ef41990c4fa41352be68c68e2d866d33c5249f9969",
+      "path": "framework/deprecation/deprecation-surface-discovery.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:415bfca45a1e9f3cb7ee901a13fa8d3080484d784475b61fe1441ca394e294a9",
+      "contentRoot": "sha256:17cb5e78405dc4f69001b9b8b4e593106378bd558a635157909c5c311b04d755",
+      "path": "framework/gui/src/main/runtime-recovery.ts",
+      "status": "modified"
+    },
+    {
       "baseContentRoot": "sha256:09a456d02e45ed43c38bdc6023063febe3413047d287abfa2385f80e24682f7a",
       "contentRoot": "sha256:3b6174bb37578785f632fc7a10f4ea035b3d393164946e689799c48e1304331d",
       "path": "framework/incubation/fixtures/work-control-l3-admission.json",
@@ -242,6 +302,125 @@
       "contentRoot": "sha256:bf21a69efe053bb0a5ec2e2458f22ef9f14fc44ba94dc617cd8c22fe5d4c02fe",
       "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
       "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c21c44bf9dc4a3bbaac5fbcbeb3afd91adbba923d80c6bc4e86f75a584badbdf",
+      "contentRoot": "sha256:0ab95fe7640d662656ee2f52e2b69b4b3b1c8e045ae8201cbce9835a1cd2530a",
+      "path": "framework/project-cut/src/composition.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f1e2a570d23f29b70968a96e4621acb9bd74daadfc94d5604301f4cf23fcbeb0",
+      "contentRoot": "sha256:8d2cb5b3930d49af1e3618ca0a970dd7485558c796c86fc06ef9b0421d82f800",
+      "path": "framework/project-cut/src/project-cut.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:37c5dfbe9429fbafdeb2304cc725d91a70839c35f9d83234a36b70a9b2947d43",
+      "contentRoot": "sha256:10e2c80cab3c3b524189227fa868be597b89050ad8d1a9786dde570256ca653c",
+      "path": "framework/release/buildchain-kfd-runtime.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9c907feba40397d97d504ac455264eb87d4de9c508cbae9dc259bea90980dc1d",
+      "contentRoot": "sha256:1e2de2aa1512e7c19acc6a16f270c0d7ffab4fd63261079001b682aedc85b03e",
+      "path": "framework/release/publication-control-plane.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2212778a3aff12630b12f4da431b7dae53a6add5abed0e4aaf08093c05c534e1",
+      "contentRoot": "sha256:aaad5a26b6ab42f00142e8011eb186376e584a8203e27831cf10c015f31195d9",
+      "path": "framework/site/experience.js",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9141c856e8705c2d5af53f1cf8a4bd3cb419b6340fe56ce8fa7135985347724d",
+      "contentRoot": "sha256:a95bc01a4baa4d1d4e24eb8355144294cfd238fcad8fc7f189303c6e8003f8aa",
+      "path": "framework/site/scripts/verify.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5b68845daf316717d0c8fa927ffcfdc0669ee1682a79ddf54763adb06881d1a3",
+      "contentRoot": "sha256:fec4f30e5d9b9f1544fcf1c7670445063b3d20bde2c0f589091054ecb678cc79",
+      "path": "framework/spec/scripts/verify.js",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:36dff697ab8475ab08c46cda5765a29b29d55946efa6e44506aefaf21fec941a",
+      "contentRoot": "sha256:b89dec597d4672e4624c5270ffbffa192a853c7bcda1c6da7d48df377064ef6a",
+      "path": "framework/tui/src/agent-work-lab-view.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:67f2ec6938570d4882cd2bcad11a85ac6f1b2ba2446e14ffb1f964e87c14b5aa",
+      "contentRoot": "sha256:451d6b44eeaa25ca95313ef0d6de67ab18a9412b54f9ee491882f5eeb109fdc8",
+      "path": "framework/tui/src/main.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:222f870d74606ff7978f683ec7f547e5bea7c46e5685657031239c2ac6923b5a",
+      "contentRoot": "sha256:6a1435b0e2fdbcebaee602793fa1ed0defad79f1a560f307a69eaaa124aee7ef",
+      "path": "framework/tui/src/project-files-view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e1fde18f778b16b0f5425d699d7a18199947e9dc6cf76028d4b7bfed3a0c6c61",
+      "contentRoot": "sha256:61592a0bb04fcb81f4f46687d345e8f3b6d2dd01a959e6a208e4374ecdfef9d7",
+      "path": "framework/tui/src/projects-view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2a3464d7f0de6d87b08d34920a7343fa47000f1596915d53a98172ae686f500b",
+      "contentRoot": "sha256:317d1e9d37df24d3e7ba8805287a39af4906b1d415e81ef82a2504b6b5d78b2f",
+      "path": "scripts/adr-reference-links.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:498315019b8ce6ccfa8e53e0c9ff8f6df516fc4d8be18a20107385fa86d2bb2a",
+      "contentRoot": "sha256:f3ef6ca5d7f4fc03eeaf01bdb9cea8b4dcacc254e7c156facea31a3dd9cb054d",
+      "path": "scripts/alpha-release-timeline.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:22dc3eb66a77355e1059860f86ee9749829a8bf68d276137c35fe41fe91a6fe8",
+      "contentRoot": "sha256:5ca96e0b0cb9d27c936c448d62cc6cf75ef2483fde9bf5639e75a9dd3073266f",
+      "path": "scripts/check-required-reader-contract.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e5971a92e6bfdb4c0ccfe98fccde33899de8b8ff65a143e971f6e69df8a462c5",
+      "contentRoot": "sha256:9dfd01c240493f90f5cce4e24e61b18d2f89cb3318fdaeeac08823b3d419e355",
+      "path": "scripts/kungfu-workflow-authority.mjs",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:a79b086053d3b5467f9e67f6ffa3d70b646c7ba676219a959651135c5409d6de",
+      "path": "scripts/measure-dev-required-latency-evidence.mjs",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:39a5404faaaa7a10f80f19972e1f71e5b3b89777b51f108e438e82cfb4cb4895",
+      "contentRoot": "sha256:3c282ed4b52588f8ace8694e921d88490d795c851a13f4830f7d594d3c698937",
+      "path": "scripts/measure-dev-required-latency.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a02783ad0358727c8c85ff7e98633eae5a6c06fdba0975516732cd5d3d7cc5a0",
+      "contentRoot": "sha256:1ccc4b47dca45e4e2c70e993ab18dfe4a5c03858f02046f298d59b172f0eee3d",
+      "path": "scripts/shifu-gate-cli.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:725d585795b99d89ad5ef71b2da23cdb6ff28cab9456e109af9d17999ed90c80",
+      "contentRoot": "sha256:92e6bd92e0528eb382a129b756f0595ebc0a9fe61637ebb787a91402cad201bb",
+      "path": "scripts/shifu-gate-executor.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1d7e14b22caaa682d23d76dfc72e34054a1a25678b3065d26a0db06e6cc25859",
+      "contentRoot": "sha256:ec3c47036384edbf688df2d74ec1b5ac11e7195785f942a8ac5cd84794590069",
+      "path": "scripts/upgrade-qualification.mjs",
+      "status": "modified"
     }
   ],
   "affectedFacets": [
@@ -251,11 +430,11 @@
     "profiles-suites",
     "registry-admission-lifecycle"
   ],
-  "rationale": "Wave 6 refactors internal Python, Rust, and C++ function structure without changing KFX Site Bundle sources, public site facets, or publication behavior.",
+  "rationale": "Wave 6 remains an internal-only responsibility extraction after rebasing onto the protected hidden-state delivery; public site facets, schemas, and navigation contracts are unchanged.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:fed901d98a53bf2cc263304155c8e2d70a65aca7b5a8c0148233c939f03ecf88"
+  "proofRoot": "sha256:8e749585ecd80c890324efb19d3cf5f0782bf74e6de77cec92edb36e86c778eb"
 }
