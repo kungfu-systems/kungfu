@@ -580,6 +580,55 @@ fn validate_graphs(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnos
     }
 }
 
+fn validate_route_resolution(
+    route: &Map<String, Value>,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(resolution_value) = route.get("resolution") else {
+        return;
+    };
+    let resolution_path = format!("{path}/resolution");
+    let Some(resolution) = object(resolution_value, diagnostics, &resolution_path) else {
+        return;
+    };
+    let keys = [
+        "subjects",
+        "capabilities",
+        "owners",
+        "roles",
+        "mission_tracks",
+        "terms",
+    ];
+    exact_keys(resolution, &keys, &[], &resolution_path, diagnostics);
+    for key in keys {
+        match resolution.get(key).and_then(Value::as_array) {
+            Some(items) if !items.is_empty() => {
+                let mut seen = BTreeSet::new();
+                for (item_index, item) in items.iter().enumerate() {
+                    let item_path = format!("{resolution_path}/{key}/{item_index}");
+                    if let Some(value) = text(Some(item), diagnostics, &item_path) {
+                        if !seen.insert(value.to_ascii_lowercase()) {
+                            push(
+                                diagnostics,
+                                "duplicate-route-intent",
+                                item_path,
+                                "duplicates a route resolution value",
+                            );
+                        }
+                    }
+                }
+            }
+            _ => push(
+                diagnostics,
+                "type",
+                format!("{resolution_path}/{key}"),
+                "must be a non-empty array",
+            ),
+        }
+    }
+}
+
 fn validate_routes(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnostic>) {
     let mut route_ids = BTreeSet::new();
     let mut parity: BTreeMap<String, Vec<(String, BTreeSet<String>, String)>> = BTreeMap::new();
@@ -690,61 +739,7 @@ fn validate_routes(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnos
                 "must be a non-empty array",
             ),
         }
-        if let Some(resolution_value) = route.get("resolution") {
-            if let Some(resolution) =
-                object(resolution_value, diagnostics, &format!("{path}/resolution"))
-            {
-                exact_keys(
-                    resolution,
-                    &[
-                        "subjects",
-                        "capabilities",
-                        "owners",
-                        "roles",
-                        "mission_tracks",
-                        "terms",
-                    ],
-                    &[],
-                    &format!("{path}/resolution"),
-                    diagnostics,
-                );
-                for key in [
-                    "subjects",
-                    "capabilities",
-                    "owners",
-                    "roles",
-                    "mission_tracks",
-                    "terms",
-                ] {
-                    match resolution.get(key).and_then(Value::as_array) {
-                        Some(items) if !items.is_empty() => {
-                            let mut seen = BTreeSet::new();
-                            for (item_index, item) in items.iter().enumerate() {
-                                let item_path = format!("{path}/resolution/{key}/{item_index}");
-                                let value = text(Some(item), diagnostics, &item_path);
-                                if let Some(value) = value {
-                                    let normalized = value.to_ascii_lowercase();
-                                    if !seen.insert(normalized) {
-                                        push(
-                                            diagnostics,
-                                            "duplicate-route-intent",
-                                            item_path,
-                                            "duplicates a route resolution value",
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        _ => push(
-                            diagnostics,
-                            "type",
-                            format!("{path}/resolution/{key}"),
-                            "must be a non-empty array",
-                        ),
-                    }
-                }
-            }
-        }
+        validate_route_resolution(route, &path, diagnostics);
         if let (Some(group), Some(audience)) = (group, audience) {
             let resolution = stable_json(route.get("resolution").unwrap_or(&Value::Null));
             parity

@@ -23,73 +23,9 @@ import {
   releaseQualificationEnvironment,
   releaseQualificationExecutionGroups,
   releaseQualificationStages,
-  resolveQualificationSourceIdentity,
   verifyCorePlatformRelease,
   verifySourceOnlyEvidence,
 } from './run-release-qualification.mjs';
-
-test('qualification source identity preserves a tree-equivalent Buildchain revision', () => {
-  const checkoutRevision = 'a'.repeat(40);
-  const configuredRevision = 'b'.repeat(40);
-  const checkoutTree = 'c'.repeat(40);
-  assert.deepEqual(
-    resolveQualificationSourceIdentity({
-      env: {
-        BUILDCHAIN_SOURCE_SHA: configuredRevision,
-        BUILDCHAIN_SOURCE_TREE_SHA: checkoutTree,
-      },
-      checkoutRevision,
-      checkoutTree,
-      configuredRevisionTree: null,
-    }),
-    { revision: configuredRevision, tree: checkoutTree },
-  );
-});
-
-test('qualification source identity rejects a configured tree mismatch', () => {
-  assert.throws(
-    () =>
-      resolveQualificationSourceIdentity({
-        env: {
-          BUILDCHAIN_SOURCE_SHA: 'b'.repeat(40),
-          BUILDCHAIN_SOURCE_TREE_SHA: 'd'.repeat(40),
-        },
-        checkoutRevision: 'a'.repeat(40),
-        checkoutTree: 'c'.repeat(40),
-        configuredRevisionTree: null,
-      }),
-    /source tree does not match/u,
-  );
-});
-
-test('qualification source identity rejects an available revision with another tree', () => {
-  assert.throws(
-    () =>
-      resolveQualificationSourceIdentity({
-        env: {
-          BUILDCHAIN_SOURCE_SHA: 'b'.repeat(40),
-          BUILDCHAIN_SOURCE_TREE_SHA: 'c'.repeat(40),
-        },
-        checkoutRevision: 'a'.repeat(40),
-        checkoutTree: 'c'.repeat(40),
-        configuredRevisionTree: 'd'.repeat(40),
-      }),
-    /source revision does not match/u,
-  );
-});
-
-test('qualification source identity rejects an unavailable revision without a tree proof', () => {
-  assert.throws(
-    () =>
-      resolveQualificationSourceIdentity({
-        env: { BUILDCHAIN_SOURCE_SHA: 'b'.repeat(40) },
-        checkoutRevision: 'a'.repeat(40),
-        checkoutTree: 'c'.repeat(40),
-        configuredRevisionTree: null,
-      }),
-    /requires an exact tree-equivalence proof/u,
-  );
-});
 
 function corePlatformReleaseFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-core-release-'));

@@ -3,12 +3,12 @@
   "schema": "kungfu.deprecation-registry/v1",
   "contract": "framework/deprecation/deprecation-lifecycle.contract.json",
   "discoveryContract": "framework/deprecation/deprecation-discovery.contract.json",
-  "productVersion": "4.0.0-alpha.3",
+  "productVersion": "4.0.0-alpha.4",
   "releaseHistory": [],
   "entries": [
     {
       "id": "core.yijinjing.boolean-mmap-adapters",
-      "lifecycle": "deprecated",
+      "lifecycle": "removed",
       "surfaceClass": "public-alpha-preview",
       "classification": {
         "authority": "framework/core/architecture/layers.json",
@@ -99,16 +99,21 @@
           }
         ]
       },
-      "removalEvidence": null,
-      "extensionWarrant": {
-        "authority": "kungfu.warrant",
-        "warrantRoot": "sha256:0a8087ca02cce8145198c4142258638e5299abfdc1f6fad994927a72f7bc009c",
-        "entryId": "core.yijinjing.boolean-mmap-adapters",
-        "authorizedBy": "kungfu-release",
-        "issuedAt": "2026-08-16",
-        "expiresOn": "2026-09-15",
-        "expiresAfterRelease": "4.0.0-alpha.3",
-        "evidenceRef": "docs/qualification/deprecation-alpha3-extension-warrants.json"
+      "removalEvidence": {
+        "removedAt": {
+          "date": "2026-08-28",
+          "productVersion": "4.0.0-alpha.4"
+        },
+        "gitCommit": "2e1083fed39fe2e077c3e0f1d42d10a1fff13c96",
+        "migrationQualification": [
+          "framework/core/src/libyijinjing/tests/mmap_tests.cpp",
+          "framework/core/src/libyijinjing/tests/mmap_qualification.cpp"
+        ],
+        "releaseNote": "docs/development/versioning.md",
+        "retainedEvidence": [
+          "docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md",
+          "docs/qualification/deprecation-alpha3-extension-warrants.json"
+        ]
       },
       "contributedFrom": {
         "authority": "framework/core/architecture/layers.json",
@@ -117,7 +122,7 @@
     },
     {
       "id": "core.yijinjing.journal-open-policy-adapters",
-      "lifecycle": "deprecated",
+      "lifecycle": "removed",
       "surfaceClass": "public-alpha-preview",
       "classification": {
         "authority": "framework/core/architecture/layers.json",
@@ -188,16 +193,21 @@
           }
         ]
       },
-      "removalEvidence": null,
-      "extensionWarrant": {
-        "authority": "kungfu.warrant",
-        "warrantRoot": "sha256:64933d1b0d309e7d175d26446c255c0050b553d96441708195dfce1c462b4fe1",
-        "entryId": "core.yijinjing.journal-open-policy-adapters",
-        "authorizedBy": "kungfu-release",
-        "issuedAt": "2026-08-16",
-        "expiresOn": "2026-09-15",
-        "expiresAfterRelease": "4.0.0-alpha.3",
-        "evidenceRef": "docs/qualification/deprecation-alpha3-extension-warrants.json"
+      "removalEvidence": {
+        "removedAt": {
+          "date": "2026-08-28",
+          "productVersion": "4.0.0-alpha.4"
+        },
+        "gitCommit": "2e1083fed39fe2e077c3e0f1d42d10a1fff13c96",
+        "migrationQualification": [
+          "framework/core/src/libyijinjing/tests/mmap_tests.cpp",
+          "framework/core/src/libyijinjing/tests/mmap_qualification.cpp"
+        ],
+        "releaseNote": "docs/development/versioning.md",
+        "retainedEvidence": [
+          "docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md",
+          "docs/qualification/deprecation-alpha3-extension-warrants.json"
+        ]
       },
       "contributedFrom": {
         "authority": "git-history",
@@ -206,7 +216,7 @@
     },
     {
       "id": "core.yijinjing.page-open-policy-adapters",
-      "lifecycle": "deprecated",
+      "lifecycle": "removed",
       "surfaceClass": "public-alpha-preview",
       "classification": {
         "authority": "framework/core/architecture/layers.json",
@@ -277,16 +287,21 @@
           }
         ]
       },
-      "removalEvidence": null,
-      "extensionWarrant": {
-        "authority": "kungfu.warrant",
-        "warrantRoot": "sha256:744bb1e4417cb2960546100f6768e49d7ca2320f47ae43107d05ea2953c3a1ac",
-        "entryId": "core.yijinjing.page-open-policy-adapters",
-        "authorizedBy": "kungfu-release",
-        "issuedAt": "2026-08-16",
-        "expiresOn": "2026-09-15",
-        "expiresAfterRelease": "4.0.0-alpha.3",
-        "evidenceRef": "docs/qualification/deprecation-alpha3-extension-warrants.json"
+      "removalEvidence": {
+        "removedAt": {
+          "date": "2026-08-28",
+          "productVersion": "4.0.0-alpha.4"
+        },
+        "gitCommit": "2e1083fed39fe2e077c3e0f1d42d10a1fff13c96",
+        "migrationQualification": [
+          "framework/core/src/libyijinjing/tests/mmap_tests.cpp",
+          "framework/core/src/libyijinjing/tests/mmap_qualification.cpp"
+        ],
+        "releaseNote": "docs/development/versioning.md",
+        "retainedEvidence": [
+          "docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md",
+          "docs/qualification/deprecation-alpha3-extension-warrants.json"
+        ]
       },
       "contributedFrom": {
         "authority": "git-history",

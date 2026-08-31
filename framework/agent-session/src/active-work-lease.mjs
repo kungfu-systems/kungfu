@@ -123,6 +123,57 @@ export class ActiveWorkLeaseService {
     return lease ? structuredClone(lease) : null;
   }
 
+  reapExpiredAmbientAttempts() {
+    const now = this.now();
+    const expired = [];
+    for (const console of this.state.consoles) {
+      for (const attempt of console.attempts) {
+        const binding = attempt.workBinding ?? console.binding;
+        const observer = attempt.observer;
+        const expiresAt =
+          typeof observer?.observedAt === 'number' &&
+          typeof observer?.staleAfterMs === 'number'
+            ? observer.observedAt + observer.staleAfterMs
+            : null;
+        if (
+          !['planned', 'running', 'detached'].includes(attempt.status) ||
+          attempt.backend !== 'native-interactive' ||
+          !attempt.sessionAttemptId.startsWith('native:codex:ambient:') ||
+          binding.kind === 'work' ||
+          expiresAt === null ||
+          expiresAt > now
+        )
+          continue;
+        const ref = {
+          workConsoleId: console.consoleId,
+          sessionAttemptId: attempt.sessionAttemptId,
+        };
+        attempt.status = 'orphaned';
+        attempt.endedAt = now;
+        attempt.observer = {
+          ...observer,
+          state: 'disconnected',
+          observedAt: now,
+          diagnostic: 'ambient-native-process-evidence-expired',
+        };
+        attempt.receipts.push({
+          operation: 'recover',
+          status: 'orphaned',
+          reason: 'ambient-native-process-evidence-expired',
+          recordedAt: now,
+          receiptRoot: null,
+          semanticOutcome: null,
+          workState: null,
+          proof: null,
+        });
+        this.release(ref);
+        console.updatedAt = now;
+        expired.push(ref);
+      }
+    }
+    return structuredClone(expired);
+  }
+
   acquire({ workRef, console, attempt }) {
     return this.switch({ workRef, console, attempt });
   }

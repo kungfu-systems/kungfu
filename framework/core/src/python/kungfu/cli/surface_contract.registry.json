@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.cli-surface-registry/v1",
   "contractId": "kungfu-cli-surface",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "identityPolicy": {
     "primary": "kfd3-api-id-or-python-symbol",
     "renameRule": "Pre-release renames replace the path and migrate every authored consumer; aliases are forbidden.",
@@ -14,6 +14,7 @@
     "visibility": "advanced",
     "section": "advanced",
     "schema_refs": [],
+    "output": {"defaultMode": "unspecified", "modes": [], "schemaRefs": []},
     "aliases": []
   },
   "helpProjection": {
@@ -103,7 +104,10 @@
     {"pair": "developer-top-level/dev", "decision": "split-canonical", "canonical": {"engage": "kungfu dev engage", "env": "kungfu env", "schema": "kungfu dev schema", "sdk": "kungfu sdk"}, "evidence": ["each developer capability has exactly one live path", "env is dispatched by the native installed runtime", "sdk is the public application assembly and KFD/build entrypoint"]}
   ],
   "contributions": [],
-  "schemaCatalog": [],
+  "schemaCatalog": [
+    "kungfu.project-work.inventory/v1",
+    "kungfu.projects.catalog/v1"
+  ],
   "linkedAuthorities": {
     "click": "kungfu.cli.commands.kfc",
     "actionTopology": "framework/action/cli-topology.contract.json",
@@ -113,7 +117,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:9549422ff7311071ec3ded01403a08d7f32f2f3e681850c2a9caae1200c44422",
+    "expectedSurfaceRoot": "sha256:68ccf7864ff4c34ca2933b4fa0064b89f77ba43275bac97c36dcd47a52d6e71e",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

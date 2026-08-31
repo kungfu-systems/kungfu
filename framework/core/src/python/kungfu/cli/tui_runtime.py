@@ -10,7 +10,6 @@
 # command, alias, or compatibility shim.
 
 import os
-import subprocess
 import sys
 
 import click
@@ -58,17 +57,6 @@ def _configure_tui_skill_runtime_audit(home, runtime_dir):
     return output
 
 
-def _run_tui_entry(entry, commands=()):
-    controller = os.environ.get("KUNGFU_CONTROLLER_ENTRYPOINT")
-    if controller and os.path.isfile(controller):
-        # The installed controller loads Node with native-addon symbols globally.
-        environment = os.environ.copy()
-        environment["KUNGFU_AS_VARIANT"] = "node"
-        environment["KUNGFU_NODE_VARIANT_ENTRY"] = entry
-        return subprocess.call([controller, entry, *commands], env=environment)
-    return kungfu.__binding__.libnode.run(sys.argv[0], entry, *commands)
-
-
 def run_tui(ctx, commands=()):
     """Launch the shipped TUI without creating a second command authority."""
 
@@ -80,4 +68,5 @@ def run_tui(ctx, commands=()):
             "kungfu TUI bundle not found; the packaged app ships it under "
             "Resources/tui, or set KUNGFU_TUI_ENTRY to a built tui.mjs"
         )
-    return _run_tui_entry(entry, commands)
+    argv = [sys.argv[0], entry, *commands]
+    return kungfu.__binding__.libnode.run(*argv)

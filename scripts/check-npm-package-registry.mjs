@@ -45,11 +45,18 @@ export function collectNpmRegistryIssues({
   const generatedEntries = packages.filter(
     (entry) => entry.kind === 'generated-platform',
   );
-  if (workspaceEntries.length !== 22 || generatedEntries.length !== 7)
+  const expectedWorkspaceCount =
+    registry.releaseInventory?.expectedWorkspacePackageCount;
+  const expectedGeneratedPlatformCount =
+    registry.releaseInventory?.expectedGeneratedPlatformPackageCount;
+  if (
+    workspaceEntries.length !== expectedWorkspaceCount ||
+    generatedEntries.length !== expectedGeneratedPlatformCount
+  )
     issues.push(
       issue(
         'composition',
-        `expected 22 workspace and 7 generated packages, found ${workspaceEntries.length} and ${generatedEntries.length}`,
+        `expected ${expectedWorkspaceCount} workspace and ${expectedGeneratedPlatformCount} generated packages, found ${workspaceEntries.length} and ${generatedEntries.length}`,
       ),
     );
   for (const entry of workspaceEntries) {
@@ -77,6 +84,50 @@ export function collectNpmRegistryIssues({
           `${entry.name} must target the public npm registry`,
         ),
       );
+    if (entry.source.startsWith('extensions/')) {
+      const manifestPath = path.join(
+        path.dirname(packagePath),
+        'kungfu.kfx.json',
+      );
+      if (!fs.existsSync(manifestPath)) {
+        issues.push(
+          issue(
+            'kfx-manifest-missing',
+            `${entry.name} KFX manifest is missing`,
+          ),
+        );
+        continue;
+      }
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      if (manifest.name !== source.name || manifest.version !== source.version)
+        issues.push(
+          issue(
+            'kfx-identity-drift',
+            `${entry.name} package and KFX manifest identities must match`,
+          ),
+        );
+      const profile = manifest.kungfuConfig?.suite?.profile;
+      if (profile) {
+        const profilePath = path.join(path.dirname(manifestPath), profile);
+        if (!fs.existsSync(profilePath))
+          issues.push(
+            issue(
+              'kfx-profile-missing',
+              `${entry.name} Suite profile is missing`,
+            ),
+          );
+        else if (
+          JSON.parse(fs.readFileSync(profilePath, 'utf8')).version !==
+          source.version
+        )
+          issues.push(
+            issue(
+              'kfx-profile-version-drift',
+              `${entry.name} Suite profile version must match its package`,
+            ),
+          );
+      }
+    }
   }
 
   const coreContract = JSON.parse(
@@ -100,14 +151,14 @@ export function collectNpmRegistryIssues({
   const exactArtifacts =
     registry.trustedPublishing?.exactArtifactPackages || [];
   if (
-    exactArtifacts.length !== 29 ||
+    exactArtifacts.length !== names.length ||
     JSON.stringify([...exactArtifacts].sort()) !==
       JSON.stringify([...names].sort())
   )
     issues.push(
       issue(
         'exact-artifacts',
-        'trusted exact-artifact set must contain all 29 registered packages',
+        `trusted exact-artifact set must contain all ${names.length} registered packages`,
       ),
     );
   const dedicatedPackages = registry.workspacePacking?.dedicatedPackages || [];
@@ -116,13 +167,12 @@ export function collectNpmRegistryIssues({
   ).length;
   if (
     registry.workspacePacking?.portableOwner !== 'linux' ||
-    bulkWorkspaceCount !== registry.workspacePacking?.bulkPackageCount ||
-    bulkWorkspaceCount !== 19
+    bulkWorkspaceCount !== registry.workspacePacking?.bulkPackageCount
   )
     issues.push(
       issue(
         'workspace-packing',
-        'portable workspace packing must bind exactly 19 packages to linux',
+        `portable workspace packing must bind exactly ${registry.workspacePacking?.bulkPackageCount} packages to linux`,
       ),
     );
   const workflowPath = path.join(
@@ -196,8 +246,11 @@ export function validateComponentDistribution(inputs) {
     issues.push('unexpected component distribution schema');
   if (contract.productBoundary?.npmExecutable !== 'kungfu')
     issues.push('Kungfu must remain the only npm executable');
-  if (contract.productBoundary?.npmPackageInventory !== 29)
-    issues.push('component contract must retain the 29-package npm inventory');
+  if (
+    contract.productBoundary?.npmPackageInventory !==
+    inputs.npmRegistry.releaseInventory?.expectedPackageCount
+  )
+    issues.push('component contract must match the npm Release inventory');
   if (contract.productBoundary?.coreCarriesStandalonePayloads !== false)
     issues.push('Core must not carry standalone Shifu or Xinfa payloads');
 
@@ -206,10 +259,12 @@ export function validateComponentDistribution(inputs) {
     issues.push('@kungfu-tech/core must expose exactly the kungfu bin');
   const packages = inputs.npmRegistry.packages || [];
   if (
-    inputs.npmRegistry.releaseInventory?.expectedPackageCount !== 29 ||
-    packages.length !== 29
+    packages.length !==
+    inputs.npmRegistry.releaseInventory?.expectedPackageCount
   )
-    issues.push('npm Release registry must contain exactly 29 packages');
+    issues.push(
+      `npm Release registry must contain exactly ${inputs.npmRegistry.releaseInventory?.expectedPackageCount} packages`,
+    );
   if (packages.some((row) => /(?:shifu|xinfa)/iu.test(row.name || '')))
     issues.push('Shifu and Xinfa must not enter the npm Release registry');
 
@@ -302,7 +357,9 @@ function main() {
       console.error(`[npm-registry] ${entry.code}: ${entry.message}`);
     process.exit(1);
   }
-  console.log('[npm-registry] 29-package Release inventory is coherent');
+  console.log(
+    `[npm-registry] ${JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8')).releaseInventory?.expectedPackageCount}-package Release inventory is coherent`,
+  );
 }
 
 if (

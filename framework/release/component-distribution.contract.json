@@ -2,7 +2,7 @@
   "schema": "kungfu.component-distribution-contract/v1",
   "productBoundary": {
     "npmExecutable": "kungfu",
-    "npmPackageInventory": 29,
+    "npmPackageInventory": 33,
     "embeddedCommands": ["kungfu shifu", "kungfu xinfa"],
     "standaloneChannel": "protected-github-release",
     "coreCarriesStandalonePayloads": false

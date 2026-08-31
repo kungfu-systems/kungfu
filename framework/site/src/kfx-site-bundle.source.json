@@ -3,7 +3,7 @@
   "maturity": "pre-release",
   "value": {
     "title": "KFX developer platform",
-    "summary": "The 4.0.0-alpha.3 development line lets developers add inspectable KFX views, adapters, services, Profiles, and Suites without turning package identity into runtime authority.",
+    "summary": "The 4.0.0-alpha.4 development line lets developers add inspectable KFX views, adapters, services, Profiles, and Suites without turning package identity into runtime authority.",
     "firstValue": "Use the installed Agent-first authoring kit to scaffold, validate, build, and qualify an inert extension before native admission.",
     "authorityBoundary": "This bundle is a documentation projection. Core KFX, KFD, Work, Warrant, capability, lifecycle, and Release Passport sources retain authority."
   },
@@ -159,6 +159,14 @@
       "maturity": "pre-release",
       "status": "qualified",
       "nonClaim": "Local content and runtime checks do not prove a real GitHub canary."
+    },
+    {
+      "id": "npm-release-package-registry",
+      "path": "framework/release/npm-package-registry.json",
+      "role": "npm-release-inventory",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "A staged public npm inventory does not publish, install, activate, or authorize a package."
     }
   ],
   "facets": [
@@ -174,7 +182,7 @@
     {
       "id": "architecture",
       "title": "Architecture and hosts",
-      "summary": "The 4.0.0-alpha.3 development line keeps views, adapters, and services in distinct physical hosts; each executable product host adopts and heartbeats an exact Core-owned leased Runtime Warrant before execution.",
+      "summary": "The 4.0.0-alpha.4 development line keeps views, adapters, and services in distinct physical hosts; each executable product host adopts and heartbeats an exact Core-owned leased Runtime Warrant before execution.",
       "maturity": "pre-release",
       "status": "implemented",
       "sourceIds": ["kfx-topology", "surface-neutral-contributions", "runtime-warrant-adopter-evidence"],
@@ -183,16 +191,16 @@
     {
       "id": "package-facets",
       "title": "Packages and facets",
-      "summary": "The 4.0.0-alpha.3 KFX manifest declares package identity, facets, requested capabilities, and host inputs; after separate native admission, executable product hosts consume a distinct Core-issued Runtime Warrant lease.",
+      "summary": "The 4.0.0-alpha.4 KFX manifest and staged public npm inventory declare package identity, composable Suite/member closure, facets, requested capabilities, and host inputs; after separate native admission, executable product hosts consume a distinct Core-issued Runtime Warrant lease.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "extensions-guide", "installed-authoring-contract", "github-webhook-qualification", "runtime-warrant-adopter-evidence"],
+      "sourceIds": ["kfx-contract", "extensions-guide", "installed-authoring-contract", "github-webhook-qualification", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
       "nonClaim": "A conforming manifest remains inert and is neither a capability grant nor a Runtime Warrant."
     },
     {
       "id": "registry-admission-lifecycle",
       "title": "Registry, admission, and lifecycle",
-      "summary": "On the 4.0.0-alpha.3 development line, a pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted package, install, activation, upgrade, rollback, and removal mutation.",
+      "summary": "On the 4.0.0-alpha.4 development line, a pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted package, install, activation, upgrade, rollback, and removal mutation.",
       "maturity": "pre-release",
       "status": "staged",
       "sourceIds": ["kfx-domain-profile", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification"],
@@ -201,34 +209,34 @@
     {
       "id": "capabilities",
       "title": "Capabilities and confinement",
-      "summary": "On the 4.0.0-alpha.3 development line, Core keeps the exact capability grant separate from the leased Runtime Warrant that binds one holder, generation, fencing token, heartbeat, expiry, revocation, recovery, and terminal settlement.",
+      "summary": "On the 4.0.0-alpha.4 development line, Core keeps the exact capability grant separate from the leased Runtime Warrant that binds one holder, generation, fencing token, heartbeat, expiry, revocation, recovery, and terminal settlement; a public npm package remains only a requested-capability input.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification", "runtime-warrant-adopter-evidence"],
+      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
       "nonClaim": "Declaration, KFD evidence, package origin, an Episode, or Settlement does not become a capability grant or Runtime Warrant."
     },
     {
       "id": "trust",
       "title": "KFD and Release Passport trust",
-      "summary": "KFD, the exact Release Passport, and installed-product lifecycle receipts provide bounded conformance evidence before Core admission.",
+      "summary": "KFD, the exact Release Passport, the staged public npm inventory, and installed-product lifecycle receipts provide bounded conformance evidence before Core admission.",
       "maturity": "pre-release",
       "status": "qualified",
-      "sourceIds": ["kfd7-release-passport", "kfx-topology", "kfx-terminal-qualification", "github-webhook-qualification"],
+      "sourceIds": ["kfd7-release-passport", "kfx-topology", "kfx-terminal-qualification", "github-webhook-qualification", "npm-release-package-registry"],
       "nonClaim": "Qualification and release evidence are eligibility inputs, not execution permission or proof that the optional real GitHub canary ran."
     },
     {
       "id": "agent-first-authoring",
       "title": "Installed Agent-first authoring",
-      "summary": "The installed 4.0.0-alpha.3-matched kit supports inert authoring and lifecycle steps; separately admitted product hosts then adopt Core-owned Runtime Warrant leases without deriving authority from authoring output.",
+      "summary": "The installed 4.0.0-alpha.4-matched kit supports inert authoring and lifecycle steps from source or a staged public npm package; separately admitted product hosts then adopt Core-owned Runtime Warrant leases without deriving authority from authoring output.",
       "maturity": "pre-release",
       "status": "experimental",
-      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence"],
+      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
       "nonClaim": "Authoring output and draft adopter evidence remain inert; neither can issue a Runtime Warrant or expose a public listener."
     },
     {
       "id": "sdk-cli",
       "title": "SDK and CLI surfaces",
-      "summary": "The 4.0.0-alpha.3 runtime SDK projection exposes typed Runtime Warrant adoption, heartbeat, revocation, and settlement edges while Core alone owns issuance, recovery fencing, and authoritative lease state.",
+      "summary": "The 4.0.0-alpha.4 runtime SDK projection exposes typed Runtime Warrant adoption, heartbeat, revocation, and settlement edges while Core alone owns issuance, recovery fencing, and authoritative lease state.",
       "maturity": "pre-release",
       "status": "implemented",
       "sourceIds": ["installed-authoring-brief", "installed-authoring-contract", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence"],
@@ -237,28 +245,28 @@
     {
       "id": "profiles-suites",
       "title": "Profiles and Suites",
-      "summary": "The 4.0.0-alpha.3 development line keeps Profiles compositional and Suites explicit about required and optional member closure, including the maintained webhook ingress, view, and dormant bridge.",
+      "summary": "The 4.0.0-alpha.4 development line keeps Profiles compositional and Suites explicit about required and optional member activation; the staged public npm inventory carries the maintained webhook ingress, view, and dormant bridge as one installable Suite closure.",
       "maturity": "pre-release",
       "status": "staged",
-      "sourceIds": ["profile-suite-decision", "github-webhook-profile", "github-webhook-suite-manifest", "github-webhook-suite-readme"],
+      "sourceIds": ["profile-suite-decision", "github-webhook-profile", "github-webhook-suite-manifest", "github-webhook-suite-readme", "npm-release-package-registry"],
       "nonClaim": "Dependency closure does not install, activate, or widen a member."
     },
     {
       "id": "github-webhook-reference",
       "title": "GitHub Webhook reference suite",
-      "summary": "The 4.0.0-alpha.3 development line retains a service/view/optional-bridge suite demonstrating authenticated intake, inspectable evidence, and dormant optional integration.",
+      "summary": "The 4.0.0-alpha.4 development line stages a public npm-composable service/view/optional-bridge Suite demonstrating authenticated intake, inspectable evidence, and dormant optional integration.",
       "maturity": "pre-release",
       "status": "qualified",
-      "sourceIds": ["service-webhook-host", "github-webhook-suite-readme", "github-webhook-suite-manifest", "github-webhook-profile", "github-webhook-qualification"],
+      "sourceIds": ["service-webhook-host", "github-webhook-suite-readme", "github-webhook-suite-manifest", "github-webhook-profile", "github-webhook-qualification", "npm-release-package-registry"],
       "nonClaim": "The retained local qualification is not a deployed public webhook or real-secret canary."
     },
     {
       "id": "qualification-status",
       "title": "Current qualification status",
-      "summary": "For the 4.0.0-alpha.3 development line, retained qualification covers existing installed-product and reference-suite boundaries; the product-host Runtime Warrant witness is additional draft KFD-10 adopter evidence only.",
+      "summary": "For the 4.0.0-alpha.4 development line, retained qualification covers existing installed-product and reference-suite boundaries; the staged public npm inventory records intended package closure but is not publication proof, and the product-host Runtime Warrant witness is additional draft KFD-10 adopter evidence only.",
       "maturity": "pre-release",
       "status": "qualified",
-      "sourceIds": ["kfx-terminal-qualification", "installed-authoring-contract", "github-webhook-qualification", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence"],
+      "sourceIds": ["kfx-terminal-qualification", "installed-authoring-contract", "github-webhook-qualification", "github-webhook-suite-readme", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
       "nonClaim": "The draft Runtime Warrant witness does not establish KFD-10 conformance, activation, shipped support, stable compatibility, or downstream Site adoption."
     }
   ],

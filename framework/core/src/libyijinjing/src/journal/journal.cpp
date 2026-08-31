@@ -39,13 +39,6 @@ journal::journal(data::location_ptr location, uint32_t dest_id, journal_open_pol
                max_pre_create_size_mb());
 }
 
-journal::journal(data::location_ptr location, uint32_t dest_id, bool is_writing, bool lazy, bool low_latency,
-                 bus_ptr bus, uint64_t page_size, yijinjing::enums::Priority priority)
-    : journal(std::move(location), dest_id,
-              is_writing ? journal_open_policy::writer()
-                         : (lazy ? journal_open_policy::reader() : journal_open_policy::coordinator_reader()),
-              low_latency, std::move(bus), page_size, priority) {}
-
 journal::journal(const journal &other)
     : location_(other.location_), dest_id_(other.dest_id_), page_size_(other.page_size_), policy_(other.policy_),
       low_latency_(other.low_latency_), bus_(other.bus_), page_frame_nb_(other.page_frame_nb_),

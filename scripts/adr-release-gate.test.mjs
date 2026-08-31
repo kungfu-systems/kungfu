@@ -167,7 +167,7 @@ test('parses exactly one JSON manifest from the PR body', () => {
   assert.throws(() => parsePrManifest('no manifest', contract.manifestMarker));
 });
 
-test('compares exact trees when hydrated promotion boundaries remain shallow and disconnected', () => {
+test('hydrates exact promotion boundaries in a shallow build checkout', () => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-adr-release-shallow-'),
   );
@@ -187,24 +187,23 @@ test('compares exact trees when hydrated promotion boundaries remain shallow and
   git(source, ['commit', '-m', 'alpha']);
   const alpha = git(source, ['rev-parse', 'HEAD']);
 
-  for (let index = 1; index <= 5; index += 1) {
-    fs.writeFileSync(
-      path.join(source, 'adr/decision.md'),
-      `development-${index}\n`,
-    );
-    git(source, ['commit', '-am', `development ${index}`]);
-  }
-  const promotion = git(source, ['rev-parse', 'HEAD']);
+  fs.writeFileSync(path.join(source, 'adr/decision.md'), 'development\n');
+  git(source, ['commit', '-am', 'development']);
+  const development = git(source, ['rev-parse', 'HEAD']);
   const tree = git(source, ['rev-parse', 'HEAD^{tree}']);
+  const promotion = git(
+    source,
+    ['commit-tree', tree, '-p', alpha, '-p', development],
+    'promote\n',
+  );
   const merge = git(
     source,
-    ['commit-tree', tree, '-p', alpha],
-    'rebase merge\n',
+    ['commit-tree', tree, '-p', alpha, '-p', promotion],
+    'pull request merge\n',
   );
   git(source, ['update-ref', 'refs/heads/merge', merge]);
-  git(source, ['update-ref', 'refs/heads/promotion', promotion]);
   git(source, ['remote', 'add', 'origin', remote]);
-  git(source, ['push', 'origin', 'refs/heads/merge', 'refs/heads/promotion']);
+  git(source, ['push', 'origin', 'refs/heads/merge']);
   git(root, [
     'clone',
     '--depth=1',
@@ -228,67 +227,7 @@ test('compares exact trees when hydrated promotion boundaries remain shallow and
   assert.deepEqual(changedFilesBetween(alpha, promotion, checkout), [
     'adr/decision.md',
   ]);
-  const disconnected = childProcess.spawnSync(
-    'git',
-    ['merge-base', alpha, promotion],
-    {
-      cwd: checkout,
-      env: Object.fromEntries(
-        Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
-      ),
-      encoding: 'utf8',
-    },
-  );
-  assert.notEqual(disconnected.status, 0);
   assert.equal(git(checkout, ['rev-parse', '--is-shallow-repository']), 'true');
-});
-
-test('rejects a shallow exact-tree fallback when the candidate tree differs from the event head', () => {
-  const root = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-adr-release-shallow-mismatch-'),
-  );
-  roots.push(root);
-  const remote = path.join(root, 'remote.git');
-  const source = path.join(root, 'source');
-  const checkout = path.join(root, 'checkout');
-
-  git(root, ['init', '--bare', remote]);
-  fs.mkdirSync(source);
-  git(source, ['init', '--initial-branch=main']);
-  git(source, ['config', 'user.name', 'ADR Test']);
-  git(source, ['config', 'user.email', 'adr-test@example.invalid']);
-  fs.writeFileSync(path.join(source, 'base.txt'), 'base\n');
-  git(source, ['add', 'base.txt']);
-  git(source, ['commit', '-m', 'base']);
-  const base = git(source, ['rev-parse', 'HEAD']);
-  for (let index = 1; index <= 5; index += 1) {
-    fs.writeFileSync(path.join(source, 'head.txt'), `head-${index}\n`);
-    git(source, ['add', 'head.txt']);
-    git(source, ['commit', '-m', `head ${index}`]);
-  }
-  const head = git(source, ['rev-parse', 'HEAD']);
-  const baseTree = git(source, ['rev-parse', `${base}^{tree}`]);
-  const merge = git(
-    source,
-    ['commit-tree', baseTree, '-p', base],
-    'mismatched rebase merge\n',
-  );
-  git(source, ['update-ref', 'refs/heads/merge', merge]);
-  git(source, ['update-ref', 'refs/heads/promotion', head]);
-  git(source, ['remote', 'add', 'origin', remote]);
-  git(source, ['push', 'origin', 'refs/heads/merge', 'refs/heads/promotion']);
-  git(root, [
-    'clone',
-    '--depth=1',
-    '--branch=merge',
-    `file://${remote}`,
-    checkout,
-  ]);
-
-  assert.throws(
-    () => changedFilesBetween(base, head, checkout),
-    /candidate tree does not match the exact event head/u,
-  );
 });
 
 test('feature dev PR requires a stage-ready or implemented delivery', () => {
@@ -750,14 +689,17 @@ function auditDeprecationFixture(selected, options = {}) {
 test('checked-in deprecation authority distinguishes live debt from settled history', () => {
   const report = auditDeprecations({
     root: REPO_ROOT,
-    releaseDate: '2026-07-29',
+    release: '4.0.0-alpha.4',
+    releaseDate: '2026-08-28',
+    channel: 'alpha',
+    strictDue: true,
   });
   assert.equal(report.ok, true);
   assert.equal(report.readOnly, true);
   assert.equal(report.summary.entries, 3);
-  assert.equal(report.summary.dispositions['not-due'], 3);
-  assert.equal(report.inventory.live.length, 9);
-  assert.equal(report.inventory.settled.length, 0);
+  assert.equal(report.summary.dispositions.removed, 3);
+  assert.equal(report.inventory.live.length, 0);
+  assert.equal(report.inventory.settled.length, 3);
   assert.equal(report.inventory.classifications.historicalEvidence.length, 1);
 });
 

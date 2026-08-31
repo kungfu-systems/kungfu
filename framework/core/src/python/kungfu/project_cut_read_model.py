@@ -81,6 +81,20 @@ def _source_dirty(repo: Path) -> bool:
     )
 
 
+def _receipt_projection(
+    manifest: str, cut_root: str, documents: dict[str, dict[str, Any] | None]
+) -> tuple[str, dict[str, Any] | None, bool]:
+    receipt_path = str(Path(manifest).with_name("receipt.json")).replace("\\", "/")
+    receipt = documents.get(receipt_path)
+    receipt_valid = bool(
+        receipt
+        and receipt.get("schema") == "project.cut.receipt/v1"
+        and receipt.get("cutRoot") == cut_root
+        and receipt.get("verdict") == "valid"
+    )
+    return receipt_path, receipt, receipt_valid
+
+
 def inspect_project_cut(repo_input: str | Path = ".") -> dict[str, Any]:
     """Return one semantic read model without creating runtime state."""
 
@@ -108,13 +122,8 @@ def inspect_project_cut(repo_input: str | Path = ".") -> dict[str, Any]:
             gaps.append(f"invalid-manifest:{manifest}")
             continue
         cut_root = str(cut.get("cutRoot") or "")
-        receipt_path = str(Path(manifest).with_name("receipt.json")).replace("\\", "/")
-        receipt = documents.get(receipt_path)
-        receipt_valid = bool(
-            receipt
-            and receipt.get("schema") == "project.cut.receipt/v1"
-            and receipt.get("cutRoot") == cut_root
-            and receipt.get("verdict") == "valid"
+        receipt_path, receipt, receipt_valid = _receipt_projection(
+            manifest, cut_root, documents
         )
         publication = publications.get(manifest)
         rows.append(

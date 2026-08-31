@@ -339,34 +339,17 @@ function emptyReceipt(base, target, diagnostics, evidencePaths = []) {
   return { ...preimage, compositionRoot: semanticRoot(preimage) };
 }
 
-export function observeComposition(rootInput, baseInput, commitInput) {
-  const root = resolve(rootInput);
-  const base = commitFacts(root, baseInput);
-  const target = commitFacts(root, commitInput);
-  const diagnostics = [];
-  if (!isAncestor(root, base.commitOid, target.commitOid))
-    diagnostics.push(
-      diagnostic(
-        'scope-not-ancestor',
-        '$.scope',
-        'composition base must be an ancestor of the candidate',
-      ),
-    );
-  const allPaths = manifestPaths(root, target.commitOid);
-  const cuts = allPaths.map((path) => cutAt(root, target.commitOid, path));
-  const availableRoots = sortedUnique(cuts.map((cut) => cut.cutRoot));
-  const admittedEpisodeRoots = episodeProviderRoots(root, target.commitOid);
-  const scope = scopedManifestPaths(
-    root,
-    base.commitOid,
-    target.commitOid,
-    allPaths,
-    cuts,
-  );
-  const scopedPaths = scope.manifestPaths;
-  if (scopedPaths.length === 0)
-    return emptyReceipt(base, target, diagnostics, scope.evidencePaths);
-
+function collectCompositionCandidates({
+  root,
+  target,
+  scopedPaths,
+  allPaths,
+  cuts,
+  availableRoots,
+  admittedEpisodeRoots,
+  diagnostics,
+  base,
+}) {
   const candidates = [];
   for (const path of scopedPaths) {
     let cut;
@@ -403,7 +386,7 @@ export function observeComposition(rootInput, baseInput, commitInput) {
         diagnostic('missing-cut-receipt', receipt, String(error.message)),
       );
     }
-    for (const parentRoot of cut.parentCutRoots) {
+    for (const parentRoot of cut.parentCutRoots)
       if (!availableRoots.includes(parentRoot))
         diagnostics.push(
           diagnostic(
@@ -412,7 +395,6 @@ export function observeComposition(rootInput, baseInput, commitInput) {
             `parent ${parentRoot} is absent`,
           ),
         );
-    }
     const published = publicationCommit(root, target.commitOid, path);
     if (!published) {
       diagnostics.push(
@@ -424,7 +406,7 @@ export function observeComposition(rootInput, baseInput, commitInput) {
     const parentPublications = [];
     for (const episodeRoot of cut.episodeDelta.nativeRoots.map(
       (entry) => entry.root,
-    )) {
+    ))
       if (!admittedEpisodeRoots.has(episodeRoot))
         diagnostics.push(
           diagnostic(
@@ -433,7 +415,6 @@ export function observeComposition(rootInput, baseInput, commitInput) {
             `Episode provider ${episodeRoot} is absent`,
           ),
         );
-    }
     for (const parentRoot of cut.parentCutRoots) {
       const parentPath = findCutPath(allPaths, cuts, parentRoot);
       const parentCommit = parentPath
@@ -443,11 +424,52 @@ export function observeComposition(rootInput, baseInput, commitInput) {
     }
     candidates.push({ cut, path, publication, parentPublications });
   }
-  candidates.sort((left, right) => {
+  return candidates.sort((left, right) => {
     const distance =
       ancestryDistance(root, base.commitOid, left.publication.commitOid) -
       ancestryDistance(root, base.commitOid, right.publication.commitOid);
     return distance || compareText(left.cut.cutRoot, right.cut.cutRoot);
+  });
+}
+
+export function observeComposition(rootInput, baseInput, commitInput) {
+  const root = resolve(rootInput);
+  const base = commitFacts(root, baseInput);
+  const target = commitFacts(root, commitInput);
+  const diagnostics = [];
+  if (!isAncestor(root, base.commitOid, target.commitOid))
+    diagnostics.push(
+      diagnostic(
+        'scope-not-ancestor',
+        '$.scope',
+        'composition base must be an ancestor of the candidate',
+      ),
+    );
+  const allPaths = manifestPaths(root, target.commitOid);
+  const cuts = allPaths.map((path) => cutAt(root, target.commitOid, path));
+  const availableRoots = sortedUnique(cuts.map((cut) => cut.cutRoot));
+  const admittedEpisodeRoots = episodeProviderRoots(root, target.commitOid);
+  const scope = scopedManifestPaths(
+    root,
+    base.commitOid,
+    target.commitOid,
+    allPaths,
+    cuts,
+  );
+  const scopedPaths = scope.manifestPaths;
+  if (scopedPaths.length === 0)
+    return emptyReceipt(base, target, diagnostics, scope.evidencePaths);
+
+  const candidates = collectCompositionCandidates({
+    root,
+    target,
+    scopedPaths,
+    allPaths,
+    cuts,
+    availableRoots,
+    admittedEpisodeRoots,
+    diagnostics,
+    base,
   });
   const processed = new Map();
   const chronologicalInputs = [];
