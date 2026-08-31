@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8693,
+  "generation": 8694,
   "fencingCounter": 828,
   "policy": {
     "agingSeconds": 900,
@@ -60436,8 +60436,57 @@
         "sha256:332c8298870b7456e53f4020381621a8a967eda5fb82493235fad9b2d49489c2",
         "sha256:57c776c786ac66003d21cae37494314d5e41252549b5f9705fef8d8dd6d8964e"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3615,
+      "assignmentRoot": "sha256:c0e4ea719effde78cc28f56b38ac444a4c3dc60eca119daabfebc6913bf2cf1d",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:45d18b926409bf60c5dce50e56cd7347ee13c9822489962f511ff22838240a4a",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:65d3cb8ef93c77af1d39b58b8ee0f819846acf44ec58388728ff368a7917fdb7",
+      "sourceHead": "071fd196b6e83b00326a438c0459c86f4431144b",
+      "sourcePatchRoot": "sha256:a129e1109c6ad3fb5d83a29ee9160eee632802d5893b3324317eba728631838d",
+      "sourceProofRoot": "sha256:06b58a3eaa3f7b3ee9fe2d9f7328cf5bfdcf167b8752569d86cadd57af61432d",
+      "planRoot": "sha256:e15c3deeb07e7109c65fd399f57e714982f72d0efa872bbb66699e6f8302ed01",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:0236610ad14d4f1ccc88adff06ca4f4a37cf29f3f58e7d63877459d8547503af",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "nativeCommandContract": {
+        "schema": "kungfu.buildchain.native-command-contract/v1",
+        "runner": "bash-lc",
+        "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3615 --expected-head 071fd196b6e83b00326a438c0459c86f4431144b --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+        "commandRoot": "sha256:301a796e2c88dd3b403502f5f67656c12d445fb9ec6e556567167bf1ea6affc1"
+      },
+      "sourceWorkflowRunId": 33434027890,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-31T20:13:44.067Z",
+      "updatedAt": "2026-08-31T20:13:44.067Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/guides/native-agent-adapters.md",
+        "docs/guides/upgrading.md",
+        "framework/core/src/python/kungfu/agent/provider_bootstrap.py",
+        "framework/core/src/python/kungfu/agent/runtime_profiles.py",
+        "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+        "framework/core/tests/python/test_agent_console_ambient_adoption.py",
+        "framework/core/tests/python/test_runtime_upgrade.py",
+        "framework/maintainability/python-runtime-responsibility-map.json",
+        "framework/maintainability/waivers/2026-08-31-npm-product-assembly-lock-growth-codex.v3.json"
+      ],
+      "shardEvidenceRoots": [
+        "sha256:bf601ef6654b2f7d1a18c6974f1e3d1f2533dfa229b6212e4f37c24383da0c39",
+        "sha256:ffd084a4360e7b20f03d0f7fe17cfb9e5e661ab8f3d9fe62ce442f44c2bf6b93"
+      ]
     }
   ],
-  "updatedAt": "2026-08-31T20:09:46.743Z",
-  "stateRoot": "sha256:d2bbd7ec3c1ad72173eabdf170e2605079e2eec7ae8c35a7dd05f06747b2f314"
+  "updatedAt": "2026-08-31T20:13:44.067Z",
+  "stateRoot": "sha256:f3692ea53a70f57ce317bc902950a1bfcbe119dfa0d871bdfe7a7cfed06aa281"
 }
