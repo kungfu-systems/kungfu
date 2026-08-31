@@ -4,6 +4,7 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { restoreKfdPrebuiltLayerArtifact } from '../framework/release/kfd-candidate-evidence.mjs';
 import { runShifuWithCache } from './run-shifu-lifecycle.mjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 
@@ -57,10 +58,15 @@ function reportFile(layer) {
 
 export function runLayerArtifactGate(
   layer,
-  { run = runShifuWithCache, env = process.env } = {},
+  {
+    run = runShifuWithCache,
+    env = process.env,
+    restore = restoreKfdPrebuiltLayerArtifact,
+  } = {},
 ) {
   const usePrebuiltArtifacts =
     env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS === '1';
+  if (usePrebuiltArtifacts) restore({ root: ROOT, layer });
   for (const args of layerArtifactStages(layer, { usePrebuiltArtifacts })) {
     const status = run(args, { env });
     if (status !== 0) return status;

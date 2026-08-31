@@ -23,6 +23,15 @@ export const KFD_ARTIFACT_WITNESS_JSONS = SUPPORTED_KFD_PLATFORMS.map(
   (platform) => `product/release/qualification/kfd/artifacts/${platform}.json`,
 );
 
+export const KFD_PREBUILT_LAYER_ARTIFACTS = {
+  format: 'product/release/spec',
+  sdk: 'framework/core/build/stage/sdk',
+  surfaces: 'product/release/npm',
+};
+
+const KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT =
+  'kungfu.kfd-prebuilt-layer-artifacts/v1';
+
 const GITHUB_RUNNER_PLATFORM_IDS = new Map([
   ['Linux:X64', 'linux-x64'],
   ['Linux:ARM64', 'linux-arm64'],
@@ -367,6 +376,94 @@ function listFiles(directory, relativeRoot) {
   return rows.sort((left, right) => left.path.localeCompare(right.path));
 }
 
+function prebuiltLayerArtifactRoot(root) {
+  return path.join(
+    root,
+    '.buildchain',
+    'runtime',
+    'kfd-candidate-evidence',
+    'prebuilt-layer-artifacts',
+  );
+}
+
+function prebuiltLayerArtifactManifest(root) {
+  return path.join(prebuiltLayerArtifactRoot(root), 'manifest.json');
+}
+
+function validatePrebuiltLayerEntry(root, layer, entry, sourceRoot) {
+  const expectedPath = KFD_PREBUILT_LAYER_ARTIFACTS[layer];
+  if (!expectedPath || entry?.path !== expectedPath) {
+    throw new Error(`invalid sealed KFD ${layer} layer artifact path`);
+  }
+  const artifactRoot = path.join(sourceRoot, expectedPath);
+  const files = listFiles(artifactRoot, artifactRoot);
+  if (files.length === 0) {
+    throw new Error(`missing sealed KFD ${layer} layer artifact files`);
+  }
+  if (entry.root !== rooted(files)) {
+    throw new Error(`sealed KFD ${layer} layer artifact digest mismatch`);
+  }
+  return { artifactRoot, files };
+}
+
+export function sealKfdPrebuiltLayerArtifacts({ root = process.cwd() } = {}) {
+  const output = prebuiltLayerArtifactRoot(root);
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  const layers = {};
+  for (const [layer, relativePath] of Object.entries(
+    KFD_PREBUILT_LAYER_ARTIFACTS,
+  )) {
+    const source = path.join(root, relativePath);
+    const files = listFiles(source, source);
+    if (files.length === 0) {
+      throw new Error(`missing prebuilt KFD ${layer} layer artifacts`);
+    }
+    const target = path.join(output, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(source, target, { recursive: true });
+    layers[layer] = { path: relativePath, root: rooted(files) };
+  }
+  const body = {
+    schema: KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT,
+    layers,
+  };
+  const manifest = { ...body, manifestRoot: rooted(body) };
+  writeJson(prebuiltLayerArtifactManifest(root), manifest);
+  return manifest;
+}
+
+export function restoreKfdPrebuiltLayerArtifact({
+  root = process.cwd(),
+  layer,
+} = {}) {
+  const manifestPath = prebuiltLayerArtifactManifest(root);
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error('missing sealed KFD prebuilt layer artifact manifest');
+  }
+  const manifest = readJson(manifestPath);
+  const { manifestRoot, ...body } = manifest;
+  if (
+    manifest.schema !== KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT ||
+    manifestRoot !== rooted(body)
+  ) {
+    throw new Error('invalid sealed KFD prebuilt layer artifact manifest');
+  }
+  const entry = manifest.layers?.[layer];
+  const sealed = validatePrebuiltLayerEntry(
+    root,
+    layer,
+    entry,
+    prebuiltLayerArtifactRoot(root),
+  );
+  const target = path.join(root, entry.path);
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(sealed.artifactRoot, target, { recursive: true });
+  validatePrebuiltLayerEntry(root, layer, entry, root);
+  return entry;
+}
+
 export function releaseArtifactRoot(root = process.cwd()) {
   const releaseDir = path.join(root, 'product', 'release');
   const rows = listFiles(releaseDir, releaseDir).filter(
@@ -631,7 +728,13 @@ export function runVerifiedQualification({
   sourceSha,
   sourceTree,
   buildArtifactWitness,
+  prepareReleaseArtifacts,
 }) {
+  const prepareStatus = prepareReleaseArtifacts?.();
+  if (prepareStatus !== undefined && prepareStatus !== 0) {
+    return prepareStatus || 1;
+  }
+  sealKfdPrebuiltLayerArtifacts({ root });
   prepareKfdArtifactWitness({
     root,
     platform,
