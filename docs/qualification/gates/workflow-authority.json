@@ -661,7 +661,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:484eb79b00d3eed6ea7cc04c7225eb94e74dc96a423f2e54ff6b86a580311057",
+          "definitionDigest": "sha256:45a34b1202525d7532fa29c77c22bc8147df15a95a01914d3903650ff1b68fe5",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@e9df589c67f7caab43abb1a288d45734d33a72f9"],
           "steps": []
@@ -671,7 +671,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:13d045952dfed5b804f0be0611edef823b98818bbb11505f52c4b62421a9925b",
+          "definitionDigest": "sha256:252fcb7fc9c2707dca015efa8d10471c08789d0b08cc2922c40c5f4646108b06",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [{"index":1,"label":"name:Download exact qualified Warrant evidence","authority":"evidence-publication","definitionDigest":"sha256:6f64d2b75f97c3db57fd605a6e4615dbba96ae8dc715c676cb42534e18f2e719"},{"index":2,"label":"id:publish","authority":"evidence-publication","definitionDigest":"sha256:2134b4b8c40cb21295524c5d27e0de267513178872a697b329760d24c8529c78"},{"index":3,"label":"name:Upload exact native CheckRun bridge receipt","authority":"evidence-publication","definitionDigest":"sha256:0738c87b720b7aca17c51a18e36864e6329e7fb64d75cd89549be39e5fa4c0e4"}]

@@ -288,7 +288,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.match(bridge, /needs\.admission\.result == 'success'/u);
   assert.match(
     bridge,
-    /needs\.admission\.outputs\.handoff-required != 'true'/u,
+    /needs\.admission\.outputs\.qualified-warrant-receipt-root != ''/u,
   );
   assert.match(bridge, /actions: write/u);
   assert.match(bridge, /checks: read/u);
@@ -361,6 +361,10 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.match(
     landing,
     /- native-check-bridge[\s\S]*needs\.native-check-bridge\.result == 'success'/u,
+  );
+  assert.match(
+    landing,
+    /needs\.admission\.outputs\.qualified-warrant-receipt-root != ''/u,
   );
   assert.match(
     landing,

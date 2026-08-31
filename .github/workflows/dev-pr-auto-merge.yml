@@ -731,7 +731,7 @@ jobs:
       - admission
     if: >-
       needs.admission.result == 'success' &&
-      needs.admission.outputs.handoff-required != 'true' &&
+      needs.admission.outputs.qualified-warrant-receipt-root != '' &&
       needs.resolve-target.outputs.expected-pr-number != '' &&
       (github.event_name != 'workflow_dispatch' || inputs.dry-run == false)
     runs-on: ubuntu-24.04
@@ -1017,6 +1017,7 @@ jobs:
       - native-check-bridge
     if: >-
       needs.admission.result == 'success' &&
+      needs.admission.outputs.qualified-warrant-receipt-root != '' &&
       needs.native-check-bridge.result == 'success'
     permissions:
       actions: write
