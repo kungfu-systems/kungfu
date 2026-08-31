@@ -205,7 +205,7 @@ std::string backup_identity(const recovery_backup_bundle &bundle) {
   return digest(identity.str());
 }
 
-void validate_backup_bundle(const recovery_backup_bundle &bundle) {
+void validate_backup_contract(const recovery_backup_bundle &bundle) {
   const std::vector<recovery_phase> completed_phases = {recovery_phase::Discover, recovery_phase::Verify,
                                                         recovery_phase::Select, recovery_phase::Classify,
                                                         recovery_phase::Report};
@@ -232,7 +232,9 @@ void validate_backup_bundle(const recovery_backup_bundle &bundle) {
       !bundle.projection_rebuild_required) {
     throw std::runtime_error("recovery_backup_bundle_identity_invalid");
   }
+}
 
+void validate_backup_files(const recovery_backup_bundle &bundle) {
   std::string previous_path;
   for (const auto &file : bundle.files) {
     const fs::path relative(file.relative_path);
@@ -242,7 +244,9 @@ void validate_backup_bundle(const recovery_backup_bundle &bundle) {
     }
     previous_path = file.relative_path;
   }
+}
 
+void validate_backup_episodes(const recovery_backup_bundle &bundle) {
   uint64_t previous_episode = 0;
   bool first_episode = true;
   for (const auto &episode : bundle.episodes) {
@@ -272,6 +276,12 @@ void validate_backup_bundle(const recovery_backup_bundle &bundle) {
     first_episode = false;
     previous_episode = episode.episode_id;
   }
+}
+
+void validate_backup_bundle(const recovery_backup_bundle &bundle) {
+  validate_backup_contract(bundle);
+  validate_backup_files(bundle);
+  validate_backup_episodes(bundle);
 }
 
 using json = nlohmann::json;
@@ -1021,6 +1031,38 @@ backup_export_result recovery_engine::export_consistent_backup() const {
   }
 }
 
+bool restore_backup_files(const fs::path &root, const recovery_backup_bundle &bundle) {
+  bool mutated = false;
+  for (const auto &file : bundle.files) {
+    const auto destination = root / fs::path(file.relative_path);
+    const auto temporary = fs::path(destination.string() + ".pending");
+    if (fs::is_regular_file(destination)) {
+      if (fs::exists(temporary))
+        throw std::runtime_error("recovery_restore_stale_pending_file");
+      if (fs::file_size(destination) != file.size || digest(read_bytes(destination)) != file.sha256)
+        throw std::runtime_error("recovery_restore_existing_file_mismatch");
+      continue;
+    }
+    if (fs::exists(destination))
+      throw std::runtime_error("recovery_restore_destination_path_conflict");
+    mutated = fs::create_directories(destination.parent_path()) || mutated;
+    if (fs::exists(temporary) && (!fs::is_regular_file(temporary) || fs::is_symlink(temporary)))
+      throw std::runtime_error("recovery_restore_pending_path_conflict");
+    mutated = true;
+    {
+      std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+      output.write(file.bytes.data(), static_cast<std::streamsize>(file.bytes.size()));
+      output.flush();
+      if (!output)
+        throw std::runtime_error("recovery_restore_file_write_failed");
+    }
+    if (fs::file_size(temporary) != file.size || digest(read_bytes(temporary)) != file.sha256)
+      throw std::runtime_error("recovery_restore_file_verification_failed");
+    fs::rename(temporary, destination);
+  }
+  return mutated;
+}
+
 restore_receipt recovery_engine::restore_backup(const recovery_backup_bundle &bundle) const {
   restore_receipt receipt;
   bool mutated = false;
@@ -1064,40 +1106,7 @@ restore_receipt recovery_engine::restore_backup(const recovery_backup_bundle &bu
     }
 
     validate_restore_destination(root, bundle);
-    for (const auto &file : bundle.files) {
-      const auto destination = root / fs::path(file.relative_path);
-      const auto temporary = fs::path(destination.string() + ".pending");
-      if (fs::is_regular_file(destination)) {
-        if (fs::exists(temporary)) {
-          throw std::runtime_error("recovery_restore_stale_pending_file");
-        }
-        if (fs::file_size(destination) != file.size || digest(read_bytes(destination)) != file.sha256) {
-          throw std::runtime_error("recovery_restore_existing_file_mismatch");
-        }
-        continue;
-      }
-      if (fs::exists(destination)) {
-        throw std::runtime_error("recovery_restore_destination_path_conflict");
-      }
-      mutated = fs::create_directories(destination.parent_path()) || mutated;
-      if (fs::exists(temporary) && (!fs::is_regular_file(temporary) || fs::is_symlink(temporary))) {
-        throw std::runtime_error("recovery_restore_pending_path_conflict");
-      }
-      mutated = true;
-      {
-        std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
-        output.write(file.bytes.data(), static_cast<std::streamsize>(file.bytes.size()));
-        output.flush();
-        if (!output) {
-          throw std::runtime_error("recovery_restore_file_write_failed");
-        }
-      }
-      if (fs::file_size(temporary) != file.size || digest(read_bytes(temporary)) != file.sha256) {
-        throw std::runtime_error("recovery_restore_file_verification_failed");
-      }
-      fs::rename(temporary, destination);
-      mutated = true;
-    }
+    mutated = restore_backup_files(root, bundle) || mutated;
 
     if (!restored_files_match(root, bundle)) {
       throw std::runtime_error("recovery_restore_file_set_mismatch");

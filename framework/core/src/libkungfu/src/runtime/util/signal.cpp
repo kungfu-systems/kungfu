@@ -55,9 +55,9 @@ void exit_reactor(int signum) {
   exit(signum);
 }
 
-void kf_os_signal_handler(int signum) {
-  switch (signum) {
 #ifdef _WIN32
+void handle_windows_signal(int signum) {
+  switch (signum) {
   case SIGINT:   // interrupt
   case SIGBREAK: // Ctrl-Break sequence
     KF_LOG_INFO("kungfu app interrupted");
@@ -80,7 +80,17 @@ void kf_os_signal_handler(int signum) {
     print_stack_trace(nullptr);
     exit_reactor(signum);
     break;
+  default:
+    KF_LOG_INFO("kungfu app caught unknown signal {}, signal ignored", signum);
+  }
+}
+#endif
+
+void kf_os_signal_handler(int signum) {
+#ifdef _WIN32
+  handle_windows_signal(signum);
 #else
+  switch (signum) {
   case SIGURG:   // discard signal       urgent condition present on socket
   case SIGCONT:  // discard signal       continue after stop
   case SIGCHLD:  // discard signal       child status has changed
@@ -137,7 +147,6 @@ void kf_os_signal_handler(int signum) {
   case SIGSYS: // create core image    non-existent system call invoked
     print_stack_trace(stderr, signum);
     exit_reactor(signum);
-#endif // _WIN32
 #ifdef __APPLE__
   case SIGINFO: // discard signal       status request from keyboard
     KF_LOG_INFO("kungfu app discard signal {}", signum);
@@ -149,6 +158,7 @@ void kf_os_signal_handler(int signum) {
   default:
     KF_LOG_INFO("kungfu app caught unknown signal {}, signal ignored", signum);
   }
+#endif // _WIN32
 }
 
 void disable_os_signals_handler() { signals_handler_enabled = false; }

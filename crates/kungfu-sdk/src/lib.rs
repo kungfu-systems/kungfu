@@ -218,8 +218,8 @@ enum OperationRoute {
     Maintenance(u32),
 }
 
-fn operation_route(operation: &str) -> Option<OperationRoute> {
-    let ledger = match operation {
+fn ledger_operation_id(operation: &str) -> Option<u32> {
+    match operation {
         "fact_kernel" => 1,
         "fact_query" => 2,
         "fact_contract" => 3,
@@ -254,12 +254,13 @@ fn operation_route(operation: &str) -> Option<OperationRoute> {
         "trust_require" => 44,
         "assessment_list" => 45,
         "assessment_invalidate" => 46,
-        _ => 0,
-    };
-    if ledger != 0 {
-        return Some(OperationRoute::Ledger(ledger));
+        _ => return None,
     }
-    let maintenance = match operation {
+    .into()
+}
+
+fn maintenance_operation_id(operation: &str) -> Option<u32> {
+    match operation {
         "status" => 1,
         "fsck" => 2,
         "repair_plan" => 3,
@@ -274,8 +275,14 @@ fn operation_route(operation: &str) -> Option<OperationRoute> {
         "backend_rollback" => 12,
         "episode_projection_rebuild" => 13,
         _ => return None,
-    };
-    Some(OperationRoute::Maintenance(maintenance))
+    }
+    .into()
+}
+
+fn operation_route(operation: &str) -> Option<OperationRoute> {
+    ledger_operation_id(operation)
+        .map(OperationRoute::Ledger)
+        .or_else(|| maintenance_operation_id(operation).map(OperationRoute::Maintenance))
 }
 
 impl NativeStorage {

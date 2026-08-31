@@ -263,6 +263,77 @@ nlohmann::json projection_status_json(const storage_projection_status_view &stat
   return rendered;
 }
 
+struct episode_frame_claim_context {
+  uint64_t episode_id = 0;
+  bool sealed = false;
+  yijinjing::types::EpisodeFrameAttached claim = {};
+};
+
+void report_episode_frame_presence_issue(episode_frame_verification &result, bool sealed,
+                                         episode_frame_verification_issue issue) {
+  if (sealed) {
+    result.errors.push_back(std::move(issue));
+  } else {
+    result.warnings.push_back(std::move(issue));
+    result.degraded = true;
+  }
+}
+
+void verify_episode_frame_claim(episode_frame_verification &result, const episode_frame_claim_context &context,
+                                const yijinjing::types::frame_header &header, const uint8_t *payload,
+                                size_t data_length) {
+  const auto &claim = context.claim;
+  std::vector<episode_frame_field_mismatch> fields;
+  if (header.carrier_type != claim.carrier_type)
+    fields.push_back({"carrier_type", int64_t{claim.carrier_type}, int64_t{header.carrier_type}});
+  if (header.gen_time != claim.gen_time)
+    fields.push_back({"gen_time", claim.gen_time, header.gen_time});
+  if (header.trigger_frame_uid != claim.trigger_frame_uid)
+    fields.push_back({"trigger_frame_uid", claim.trigger_frame_uid, header.trigger_frame_uid});
+  if (data_length < claim.data_length)
+    fields.push_back({"data_length", uint64_t{claim.data_length}, uint64_t{data_length}});
+  if (!fields.empty()) {
+    episode_frame_verification_issue issue{};
+    issue.code = "episode_attached_frame_mismatch";
+    issue.episode_id = context.episode_id;
+    issue.frame_uid = claim.frame_uid;
+    issue.fields = std::move(fields);
+    result.errors.push_back(std::move(issue));
+    return;
+  }
+  if (claim.integrity_version == 0) {
+    ++result.verified;
+    return;
+  }
+  std::string algorithm;
+  try {
+    algorithm = action::frame_checksum_algorithm_for_integrity_version(claim.integrity_version);
+  } catch (const std::exception &) {
+    episode_frame_verification_issue issue{};
+    issue.code = "episode_frame_integrity_version_unknown";
+    issue.episode_id = context.episode_id;
+    issue.frame_uid = claim.frame_uid;
+    issue.integrity_version = claim.integrity_version;
+    report_episode_frame_presence_issue(result, context.sealed, std::move(issue));
+    return;
+  }
+  const auto payload_checksum = action::checksum_payload(payload, claim.data_length, algorithm);
+  const auto frame_checksum = action::checksum_frame(header, payload, claim.data_length, algorithm);
+  if (payload_checksum != claim.payload_checksum || frame_checksum != claim.frame_checksum) {
+    episode_frame_verification_issue issue{};
+    issue.code = "episode_attached_frame_checksum_mismatch";
+    issue.episode_id = context.episode_id;
+    issue.frame_uid = claim.frame_uid;
+    issue.claimed_payload_checksum = claim.payload_checksum;
+    issue.actual_payload_checksum = payload_checksum;
+    issue.claimed_frame_checksum = claim.frame_checksum;
+    issue.actual_frame_checksum = frame_checksum;
+    result.errors.push_back(std::move(issue));
+    return;
+  }
+  ++result.verified;
+}
+
 episode_frame_verification verify_episode_frame_claims(const storage_fsck_request &request) {
   namespace yjj = kungfu::yijinjing;
   episode_frame_verification result;
@@ -274,12 +345,7 @@ episode_frame_verification verify_episode_frame_claims(const storage_fsck_reques
     locations_by_uid.emplace(location->uid, location);
   }
 
-  struct claim_context {
-    uint64_t episode_id = 0;
-    bool sealed = false;
-    yjj::types::EpisodeFrameAttached claim = {};
-  };
-  std::map<std::pair<uint32_t, uint32_t>, std::vector<claim_context>> journals;
+  std::map<std::pair<uint32_t, uint32_t>, std::vector<episode_frame_claim_context>> journals;
   for (const auto &[episode_id, view] : fold.episodes) {
     if (request.episode_id != 0 && episode_id != request.episode_id) {
       continue;
@@ -294,15 +360,6 @@ episode_frame_verification verify_episode_frame_claims(const storage_fsck_reques
     }
   }
 
-  auto report_presence_issue = [&result](bool sealed, episode_frame_verification_issue issue) {
-    if (sealed) {
-      result.errors.push_back(std::move(issue));
-    } else {
-      result.warnings.push_back(std::move(issue));
-      result.degraded = true;
-    }
-  };
-
   for (auto &[journal_key, claims] : journals) {
     const auto source_uid = journal_key.first;
     const auto dest_uid = journal_key.second;
@@ -314,13 +371,13 @@ episode_frame_verification verify_episode_frame_claims(const storage_fsck_reques
         issue.episode_id = context.episode_id;
         issue.frame_uid = context.claim.frame_uid;
         issue.location_uid = source_uid;
-        report_presence_issue(context.sealed, std::move(issue));
+        report_episode_frame_presence_issue(result, context.sealed, std::move(issue));
       }
       continue;
     }
     const auto &location = location_iter->second;
 
-    std::unordered_map<uint64_t, std::vector<const claim_context *>> wanted;
+    std::unordered_map<uint64_t, std::vector<const episode_frame_claim_context *>> wanted;
     for (const auto &context : claims) {
       wanted[context.claim.frame_uid].push_back(&context);
     }
@@ -337,62 +394,8 @@ episode_frame_verification verify_episode_frame_claims(const storage_fsck_reques
           yjj::types::frame_header header{};
           std::memcpy(&header, reinterpret_cast<const void *>(frame->address()), sizeof(header));
           const auto *payload = static_cast<const uint8_t *>(frame->data_address());
-          for (const auto *context : wanted_iter->second) {
-            const auto &claim = context->claim;
-            std::vector<episode_frame_field_mismatch> fields;
-            if (header.carrier_type != claim.carrier_type) {
-              fields.push_back({"carrier_type", int64_t{claim.carrier_type}, int64_t{header.carrier_type}});
-            }
-            if (header.gen_time != claim.gen_time) {
-              fields.push_back({"gen_time", claim.gen_time, header.gen_time});
-            }
-            if (header.trigger_frame_uid != claim.trigger_frame_uid) {
-              fields.push_back({"trigger_frame_uid", claim.trigger_frame_uid, header.trigger_frame_uid});
-            }
-            if (frame->data_length() < claim.data_length) {
-              fields.push_back({"data_length", uint64_t{claim.data_length}, uint64_t{frame->data_length()}});
-            }
-            if (!fields.empty()) {
-              episode_frame_verification_issue issue{};
-              issue.code = "episode_attached_frame_mismatch";
-              issue.episode_id = context->episode_id;
-              issue.frame_uid = claim.frame_uid;
-              issue.fields = std::move(fields);
-              result.errors.push_back(std::move(issue));
-              continue;
-            }
-            if (claim.integrity_version == 0) {
-              ++result.verified;
-              continue;
-            }
-            std::string algorithm;
-            try {
-              algorithm = action::frame_checksum_algorithm_for_integrity_version(claim.integrity_version);
-            } catch (const std::exception &) {
-              episode_frame_verification_issue issue{};
-              issue.code = "episode_frame_integrity_version_unknown";
-              issue.episode_id = context->episode_id;
-              issue.frame_uid = claim.frame_uid;
-              issue.integrity_version = claim.integrity_version;
-              report_presence_issue(context->sealed, std::move(issue));
-              continue;
-            }
-            const auto payload_checksum = action::checksum_payload(payload, claim.data_length, algorithm);
-            const auto frame_checksum = action::checksum_frame(header, payload, claim.data_length, algorithm);
-            if (payload_checksum != claim.payload_checksum || frame_checksum != claim.frame_checksum) {
-              episode_frame_verification_issue issue{};
-              issue.code = "episode_attached_frame_checksum_mismatch";
-              issue.episode_id = context->episode_id;
-              issue.frame_uid = claim.frame_uid;
-              issue.claimed_payload_checksum = claim.payload_checksum;
-              issue.actual_payload_checksum = payload_checksum;
-              issue.claimed_frame_checksum = claim.frame_checksum;
-              issue.actual_frame_checksum = frame_checksum;
-              result.errors.push_back(std::move(issue));
-              continue;
-            }
-            ++result.verified;
-          }
+          for (const auto *context : wanted_iter->second)
+            verify_episode_frame_claim(result, *context, header, payload, frame->data_length());
         }
         reader->next();
       }
@@ -405,7 +408,7 @@ episode_frame_verification verify_episode_frame_claims(const storage_fsck_reques
         issue.frame_uid = context.claim.frame_uid;
         issue.location_uid = context.claim.source;
         issue.dest = context.claim.dest;
-        report_presence_issue(context.sealed, std::move(issue));
+        report_episode_frame_presence_issue(result, context.sealed, std::move(issue));
       }
     }
   }

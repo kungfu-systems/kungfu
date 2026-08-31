@@ -629,9 +629,122 @@ fn validate_route_resolution(
     }
 }
 
+type RouteParity = BTreeMap<String, Vec<(String, BTreeSet<String>, String)>>;
+
+fn validate_route_nodes(
+    route: &Map<String, Value>,
+    nodes: &Nodes,
+    route_visibility: Option<&String>,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> BTreeSet<String> {
+    let mut selected = BTreeSet::new();
+    match route.get("nodes").and_then(Value::as_array) {
+        Some(items) if !items.is_empty() => {
+            for (item_index, item) in items.iter().enumerate() {
+                if let Some(node_id) = identifier(
+                    Some(item),
+                    diagnostics,
+                    &format!("{path}/nodes/{item_index}"),
+                ) {
+                    if !selected.insert(node_id.clone()) {
+                        push(
+                            diagnostics,
+                            "duplicate-route-node",
+                            format!("{path}/nodes/{item_index}"),
+                            format!("duplicates {node_id}"),
+                        );
+                    }
+                    match nodes.get(&node_id) {
+                        None => push(
+                            diagnostics,
+                            "unknown-node",
+                            format!("{path}/nodes/{item_index}"),
+                            format!("unknown node: {node_id}"),
+                        ),
+                        Some(node)
+                            if route_visibility
+                                .zip(node.get("visibility").and_then(Value::as_str))
+                                .is_some_and(|(route_visibility, node_visibility)| {
+                                    visibility_rank(route_visibility)
+                                        < visibility_rank(node_visibility)
+                                }) =>
+                        {
+                            push(
+                                diagnostics,
+                                "visibility-broadening",
+                                format!("{path}/nodes/{item_index}"),
+                                "route is broader than selected node",
+                            )
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        _ => push(
+            diagnostics,
+            "type",
+            format!("{path}/nodes"),
+            "must be a non-empty array",
+        ),
+    }
+    selected
+}
+
+fn validate_route_entrypoints(
+    route: &Map<String, Value>,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    match route.get("entrypoints").and_then(Value::as_array) {
+        Some(items) if !items.is_empty() => {
+            for (item_index, item) in items.iter().enumerate() {
+                repository_path(
+                    Some(item),
+                    diagnostics,
+                    &format!("{path}/entrypoints/{item_index}"),
+                    false,
+                );
+            }
+        }
+        _ => push(
+            diagnostics,
+            "type",
+            format!("{path}/entrypoints"),
+            "must be a non-empty array",
+        ),
+    }
+}
+
+fn validate_route_parity(parity: RouteParity, diagnostics: &mut Vec<Diagnostic>) {
+    for (group, routes) in parity {
+        let humans: Vec<_> = routes.iter().filter(|route| route.0 == "human").collect();
+        let agents: Vec<_> = routes.iter().filter(|route| route.0 == "agent").collect();
+        let message = if humans.len() != 1 || agents.len() != 1 {
+            Some(format!(
+                "parity group {group} requires exactly one human and one agent route"
+            ))
+        } else if humans[0].1 != agents[0].1 {
+            Some(format!(
+                "parity group {group} must expose the same authority node set"
+            ))
+        } else if humans[0].2 != agents[0].2 {
+            Some(format!(
+                "parity group {group} must declare the same route resolution intent"
+            ))
+        } else {
+            None
+        };
+        if let Some(message) = message {
+            push(diagnostics, "route-parity", "/routes", message);
+        }
+    }
+}
+
 fn validate_routes(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnostic>) {
     let mut route_ids = BTreeSet::new();
-    let mut parity: BTreeMap<String, Vec<(String, BTreeSet<String>, String)>> = BTreeMap::new();
+    let mut parity = RouteParity::new();
     for (index, value) in arrays(project, "routes", diagnostics).iter().enumerate() {
         let path = format!("/routes/{index}");
         let Some(route) = object(value, diagnostics, &path) else {
@@ -669,76 +782,9 @@ fn validate_routes(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnos
             diagnostics,
             &format!("{path}/visibility"),
         );
-        let mut selected = BTreeSet::new();
-        match route.get("nodes").and_then(Value::as_array) {
-            Some(items) if !items.is_empty() => {
-                for (item_index, item) in items.iter().enumerate() {
-                    if let Some(node_id) = identifier(
-                        Some(item),
-                        diagnostics,
-                        &format!("{path}/nodes/{item_index}"),
-                    ) {
-                        if !selected.insert(node_id.clone()) {
-                            push(
-                                diagnostics,
-                                "duplicate-route-node",
-                                format!("{path}/nodes/{item_index}"),
-                                format!("duplicates {node_id}"),
-                            );
-                        }
-                        match nodes.get(&node_id) {
-                            None => push(
-                                diagnostics,
-                                "unknown-node",
-                                format!("{path}/nodes/{item_index}"),
-                                format!("unknown node: {node_id}"),
-                            ),
-                            Some(node)
-                                if route_visibility
-                                    .as_ref()
-                                    .zip(node.get("visibility").and_then(Value::as_str))
-                                    .is_some_and(|(route_visibility, node_visibility)| {
-                                        visibility_rank(route_visibility)
-                                            < visibility_rank(node_visibility)
-                                    }) =>
-                            {
-                                push(
-                                    diagnostics,
-                                    "visibility-broadening",
-                                    format!("{path}/nodes/{item_index}"),
-                                    "route is broader than selected node",
-                                )
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            _ => push(
-                diagnostics,
-                "type",
-                format!("{path}/nodes"),
-                "must be a non-empty array",
-            ),
-        }
-        match route.get("entrypoints").and_then(Value::as_array) {
-            Some(items) if !items.is_empty() => {
-                for (item_index, item) in items.iter().enumerate() {
-                    repository_path(
-                        Some(item),
-                        diagnostics,
-                        &format!("{path}/entrypoints/{item_index}"),
-                        false,
-                    );
-                }
-            }
-            _ => push(
-                diagnostics,
-                "type",
-                format!("{path}/entrypoints"),
-                "must be a non-empty array",
-            ),
-        }
+        let selected =
+            validate_route_nodes(route, nodes, route_visibility.as_ref(), &path, diagnostics);
+        validate_route_entrypoints(route, &path, diagnostics);
         validate_route_resolution(route, &path, diagnostics);
         if let (Some(group), Some(audience)) = (group, audience) {
             let resolution = stable_json(route.get("resolution").unwrap_or(&Value::Null));
@@ -748,32 +794,7 @@ fn validate_routes(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnos
                 .push((audience, selected, resolution));
         }
     }
-    for (group, routes) in parity {
-        let humans: Vec<_> = routes.iter().filter(|route| route.0 == "human").collect();
-        let agents: Vec<_> = routes.iter().filter(|route| route.0 == "agent").collect();
-        if humans.len() != 1 || agents.len() != 1 {
-            push(
-                diagnostics,
-                "route-parity",
-                "/routes",
-                format!("parity group {group} requires exactly one human and one agent route"),
-            );
-        } else if humans[0].1 != agents[0].1 {
-            push(
-                diagnostics,
-                "route-parity",
-                "/routes",
-                format!("parity group {group} must expose the same authority node set"),
-            );
-        } else if humans[0].2 != agents[0].2 {
-            push(
-                diagnostics,
-                "route-parity",
-                "/routes",
-                format!("parity group {group} must declare the same route resolution intent"),
-            );
-        }
-    }
+    validate_route_parity(parity, diagnostics);
 }
 
 fn validate_policies(top: &Map<String, Value>, diagnostics: &mut Vec<Diagnostic>) {
