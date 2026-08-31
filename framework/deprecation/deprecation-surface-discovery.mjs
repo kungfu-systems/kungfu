@@ -160,6 +160,99 @@ function textMarkers(dialect, text) {
   }));
 }
 
+function validateDialects(contract, add) {
+  const dialectIds = new Set();
+  for (const dialect of objects(contract.dialects)) {
+    if (!SUPPORTED_DIALECTS.has(dialect.id)) {
+      add(`unknown detector dialect: ${String(dialect.id || '<missing>')}`);
+      continue;
+    }
+    if (dialectIds.has(dialect.id))
+      add(`duplicate detector dialect: ${dialect.id}`);
+    dialectIds.add(dialect.id);
+    if (SUPPORTED_DIALECTS.get(dialect.id) !== dialect.kind)
+      add(
+        `${dialect.id}: detector kind must be ${SUPPORTED_DIALECTS.get(dialect.id)}`,
+      );
+    if (dialect.kind === 'structured') continue;
+    if (strings(dialect.roots).length === 0)
+      add(`${dialect.id}: roots must not be empty`);
+    if (strings(dialect.extensions).length === 0)
+      add(`${dialect.id}: extensions must not be empty`);
+  }
+  for (const id of SUPPORTED_DIALECTS.keys()) {
+    if (!dialectIds.has(id)) add(`required detector dialect is absent: ${id}`);
+  }
+  return dialectIds;
+}
+
+function validateStructuredSources(contract, dialectIds, add) {
+  for (const source of objects(contract.structuredSources)) {
+    if (
+      !dialectIds.has(source.dialect) ||
+      SUPPORTED_DIALECTS.get(source.dialect) !== 'structured'
+    )
+      add(
+        `structured source uses unknown structured dialect: ${String(source.dialect || '<missing>')}`,
+      );
+    if (!['exact', 'basename', 'suffix'].includes(source.match))
+      add(`${source.dialect}: structured source match is unsupported`);
+    if (!['array-records', 'optional-record'].includes(source.mode))
+      add(`${source.dialect}: structured source mode is unsupported`);
+    if (source.match === 'exact' && !source.path)
+      add(`${source.dialect}: exact structured source needs a path`);
+    if (source.match !== 'exact' && strings(source.roots).length === 0)
+      add(`${source.dialect}: structured source roots must not be empty`);
+  }
+}
+
+function validateExclusionPath(exclusion, exclusionPath, add) {
+  if (!['exact', 'prefix'].includes(exclusion.match))
+    add(`${exclusion.path || '<missing>'}: exclusion match is unsupported`);
+  if (
+    !exclusionPath ||
+    path.isAbsolute(exclusionPath) ||
+    exclusionPath.includes('..')
+  )
+    add(
+      `${exclusionPath || '<missing>'}: exclusion path must be repository-relative`,
+    );
+  if (
+    exclusion.match === 'prefix' &&
+    (!exclusionPath.endsWith('/') ||
+      !exclusionPath.split('/').includes('generated') ||
+      exclusionPath.split('/').filter(Boolean).length < 4)
+  )
+    add(
+      `${exclusionPath}: prefix exclusion must target one narrow generated subtree`,
+    );
+  if (exclusion.match === 'exact' && exclusionPath.endsWith('/'))
+    add(`${exclusionPath}: exact exclusion must target one file`);
+}
+
+function validateExclusions(contract, dialectIds, add) {
+  for (const exclusion of objects(contract.exclusions)) {
+    if (!CLASSIFICATIONS.has(exclusion.classification))
+      add(
+        `exclusion has unknown classification: ${String(exclusion.classification || '<missing>')}`,
+      );
+    const exclusionPath = String(exclusion.path || '');
+    validateExclusionPath(exclusion, exclusionPath, add);
+    if (!String(exclusion.reason || '').trim())
+      add(
+        `${exclusionPath || '<missing>'}: exclusion needs a reviewable reason`,
+      );
+    for (const dialect of strings(exclusion.dialects)) {
+      if (!dialectIds.has(dialect))
+        add(`${exclusionPath}: exclusion uses unknown dialect ${dialect}`);
+    }
+    if (strings(exclusion.dialects).length === 0)
+      add(
+        `${exclusionPath || '<missing>'}: exclusion dialects must not be empty`,
+      );
+  }
+}
+
 /**
  * @param {any} contract
  * @returns {{ok: boolean, findings: {code: string, entry: null, message: string}[]}}
@@ -178,98 +271,9 @@ export function validateDiscoveryContract(contract) {
   if (contract.projectionSchema !== 'kungfu.deprecation-inventory/v1') {
     add('unsupported deprecation inventory projection schema');
   }
-  const dialectIds = new Set();
-  for (const dialect of objects(contract.dialects)) {
-    if (!SUPPORTED_DIALECTS.has(dialect.id)) {
-      add(`unknown detector dialect: ${String(dialect.id || '<missing>')}`);
-      continue;
-    }
-    if (dialectIds.has(dialect.id)) {
-      add(`duplicate detector dialect: ${dialect.id}`);
-    }
-    dialectIds.add(dialect.id);
-    if (SUPPORTED_DIALECTS.get(dialect.id) !== dialect.kind) {
-      add(
-        `${dialect.id}: detector kind must be ${SUPPORTED_DIALECTS.get(dialect.id)}`,
-      );
-    }
-    if (dialect.kind !== 'structured') {
-      if (strings(dialect.roots).length === 0)
-        add(`${dialect.id}: roots must not be empty`);
-      if (strings(dialect.extensions).length === 0)
-        add(`${dialect.id}: extensions must not be empty`);
-    }
-  }
-  for (const id of SUPPORTED_DIALECTS.keys()) {
-    if (!dialectIds.has(id)) add(`required detector dialect is absent: ${id}`);
-  }
-  for (const source of objects(contract.structuredSources)) {
-    if (
-      !dialectIds.has(source.dialect) ||
-      SUPPORTED_DIALECTS.get(source.dialect) !== 'structured'
-    ) {
-      add(
-        `structured source uses unknown structured dialect: ${String(source.dialect || '<missing>')}`,
-      );
-    }
-    if (!['exact', 'basename', 'suffix'].includes(source.match)) {
-      add(`${source.dialect}: structured source match is unsupported`);
-    }
-    if (!['array-records', 'optional-record'].includes(source.mode)) {
-      add(`${source.dialect}: structured source mode is unsupported`);
-    }
-    if (source.match === 'exact' && !source.path)
-      add(`${source.dialect}: exact structured source needs a path`);
-    if (source.match !== 'exact' && strings(source.roots).length === 0)
-      add(`${source.dialect}: structured source roots must not be empty`);
-  }
-  for (const exclusion of objects(contract.exclusions)) {
-    if (!CLASSIFICATIONS.has(exclusion.classification)) {
-      add(
-        `exclusion has unknown classification: ${String(exclusion.classification || '<missing>')}`,
-      );
-    }
-    if (!['exact', 'prefix'].includes(exclusion.match)) {
-      add(`${exclusion.path || '<missing>'}: exclusion match is unsupported`);
-    }
-    const exclusionPath = String(exclusion.path || '');
-    if (
-      !exclusionPath ||
-      path.isAbsolute(exclusionPath) ||
-      exclusionPath.includes('..')
-    ) {
-      add(
-        `${exclusionPath || '<missing>'}: exclusion path must be repository-relative`,
-      );
-    }
-    if (
-      exclusion.match === 'prefix' &&
-      (!exclusionPath.endsWith('/') ||
-        !exclusionPath.split('/').includes('generated') ||
-        exclusionPath.split('/').filter(Boolean).length < 4)
-    ) {
-      add(
-        `${exclusionPath}: prefix exclusion must target one narrow generated subtree`,
-      );
-    }
-    if (exclusion.match === 'exact' && exclusionPath.endsWith('/')) {
-      add(`${exclusionPath}: exact exclusion must target one file`);
-    }
-    if (!String(exclusion.reason || '').trim()) {
-      add(
-        `${exclusionPath || '<missing>'}: exclusion needs a reviewable reason`,
-      );
-    }
-    for (const dialect of strings(exclusion.dialects)) {
-      if (!dialectIds.has(dialect))
-        add(`${exclusionPath}: exclusion uses unknown dialect ${dialect}`);
-    }
-    if (strings(exclusion.dialects).length === 0) {
-      add(
-        `${exclusionPath || '<missing>'}: exclusion dialects must not be empty`,
-      );
-    }
-  }
+  const dialectIds = validateDialects(contract, add);
+  validateStructuredSources(contract, dialectIds, add);
+  validateExclusions(contract, dialectIds, add);
   return { ok: findings.length === 0, findings };
 }
 

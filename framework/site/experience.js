@@ -644,6 +644,113 @@ function tableCells(line) {
     .map((cell) => cell.trim());
 }
 
+function startsMarkdownBlock(line, next) {
+  return (
+    !line.trim() ||
+    /^#{1,6}\s+/u.test(line) ||
+    /^```/u.test(line) ||
+    /^>\s?/u.test(line) ||
+    /^\s*[-*]\s+/u.test(line) ||
+    /^\s*\d+\.\s+/u.test(line) ||
+    (line.includes('|') && isTableDivider(next || ''))
+  );
+}
+
+function renderFenceBlock(lines, start, fence) {
+  const code = [];
+  let index = start + 1;
+  while (index < lines.length && !/^```\s*$/u.test(lines[index])) {
+    code.push(lines[index]);
+    index += 1;
+  }
+  if (index < lines.length) index += 1;
+  const language = fence[1]
+    ? ` class="language-${escapeAttribute(fence[1])}"`
+    : '';
+  return {
+    html: `<pre><code${language}>${escapeHtml(code.join('\n'))}</code></pre>`,
+    index,
+  };
+}
+
+function renderTableBlock(lines, start, linkMap) {
+  const headers = tableCells(lines[start]);
+  const rows = [];
+  let index = start + 2;
+  while (index < lines.length && lines[index].includes('|')) {
+    rows.push(tableCells(lines[index]));
+    index += 1;
+  }
+  return {
+    html: `<table>
+        <thead><tr>${headers.map((cell) => `<th>${renderInlineMarkdown(cell, linkMap)}</th>`).join('')}</tr></thead>
+        <tbody>${rows
+          .map(
+            (row) =>
+              `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell, linkMap)}</td>`).join('')}</tr>`,
+          )
+          .join('')}</tbody>
+      </table>`,
+    index,
+  };
+}
+
+function renderQuoteBlock(lines, start, linkMap) {
+  const quote = [];
+  let index = start;
+  while (index < lines.length && /^>\s?/u.test(lines[index])) {
+    quote.push(lines[index].replace(/^>\s?/u, ''));
+    index += 1;
+  }
+  return {
+    html: `<blockquote><p>${renderInlineMarkdown(quote.join(' '), linkMap)}</p></blockquote>`,
+    index,
+  };
+}
+
+function renderListBlock(lines, start, ordered, linkMap) {
+  const items = [];
+  const pattern = ordered ? /^\s*\d+\.\s+(.+)$/u : /^\s*[-*]\s+(.+)$/u;
+  let index = start;
+  while (index < lines.length) {
+    const item = lines[index].match(pattern);
+    if (!item) break;
+    const parts = [item[1]];
+    index += 1;
+    while (
+      index < lines.length &&
+      lines[index].trim() &&
+      !pattern.test(lines[index]) &&
+      !startsMarkdownBlock(lines[index], lines[index + 1])
+    ) {
+      parts.push(lines[index].trim());
+      index += 1;
+    }
+    items.push(parts.join(' '));
+  }
+  const tag = ordered ? 'ol' : 'ul';
+  return {
+    html: `<${tag}>${items.map((item) => `<li>${renderInlineMarkdown(item, linkMap)}</li>`).join('')}</${tag}>`,
+    index,
+  };
+}
+
+function renderParagraphBlock(lines, start, linkMap) {
+  const paragraph = [lines[start].trim()];
+  let index = start + 1;
+  while (
+    index < lines.length &&
+    !startsMarkdownBlock(lines[index], lines[index + 1])
+  ) {
+    paragraph.push(lines[index].trim());
+    index += 1;
+  }
+  return {
+    html: `<p>${renderInlineMarkdown(paragraph.join(' '), linkMap)}</p>`,
+    index,
+  };
+}
+
 function renderMarkdown(body, linkMap = {}) {
   const normalized = String(body).replace(/\r\n?/gu, '\n');
   const withoutFrontmatter = normalized.startsWith('---\n')
@@ -652,14 +759,6 @@ function renderMarkdown(body, linkMap = {}) {
   const lines = withoutFrontmatter.split('\n');
   const html = [];
   let index = 0;
-  const startsBlock = (line, next) =>
-    !line.trim() ||
-    /^#{1,6}\s+/u.test(line) ||
-    /^```/u.test(line) ||
-    /^>\s?/u.test(line) ||
-    /^\s*[-*]\s+/u.test(line) ||
-    /^\s*\d+\.\s+/u.test(line) ||
-    (line.includes('|') && isTableDivider(next || ''));
 
   while (index < lines.length) {
     const line = lines[index];
@@ -669,16 +768,9 @@ function renderMarkdown(body, linkMap = {}) {
     }
     const fence = line.match(/^```\s*([a-zA-Z0-9_-]*)\s*$/u);
     if (fence) {
-      const code = [];
-      index += 1;
-      while (index < lines.length && !/^```\s*$/u.test(lines[index])) {
-        code.push(lines[index]);
-        index += 1;
-      }
-      if (index < lines.length) index += 1;
-      html.push(
-        `<pre><code${fence[1] ? ` class="language-${escapeAttribute(fence[1])}"` : ''}>${escapeHtml(code.join('\n'))}</code></pre>`,
-      );
+      const block = renderFenceBlock(lines, index, fence);
+      html.push(block.html);
+      index = block.index;
       continue;
     }
     const heading = line.match(/^(#{1,6})\s+(.+)$/u);
@@ -691,72 +783,27 @@ function renderMarkdown(body, linkMap = {}) {
       continue;
     }
     if (line.includes('|') && isTableDivider(lines[index + 1] || '')) {
-      const headers = tableCells(line);
-      index += 2;
-      const rows = [];
-      while (index < lines.length && lines[index].includes('|')) {
-        rows.push(tableCells(lines[index]));
-        index += 1;
-      }
-      html.push(`<table>
-        <thead><tr>${headers.map((cell) => `<th>${renderInlineMarkdown(cell, linkMap)}</th>`).join('')}</tr></thead>
-        <tbody>${rows
-          .map(
-            (row) =>
-              `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell, linkMap)}</td>`).join('')}</tr>`,
-          )
-          .join('')}</tbody>
-      </table>`);
+      const block = renderTableBlock(lines, index, linkMap);
+      html.push(block.html);
+      index = block.index;
       continue;
     }
     if (/^>\s?/u.test(line)) {
-      const quote = [];
-      while (index < lines.length && /^>\s?/u.test(lines[index])) {
-        quote.push(lines[index].replace(/^>\s?/u, ''));
-        index += 1;
-      }
-      html.push(
-        `<blockquote><p>${renderInlineMarkdown(quote.join(' '), linkMap)}</p></blockquote>`,
-      );
+      const block = renderQuoteBlock(lines, index, linkMap);
+      html.push(block.html);
+      index = block.index;
       continue;
     }
     const list = line.match(/^\s*(?:([-*])|(\d+)\.)\s+(.+)$/u);
     if (list) {
-      const ordered = Boolean(list[2]);
-      const items = [];
-      const pattern = ordered ? /^\s*\d+\.\s+(.+)$/u : /^\s*[-*]\s+(.+)$/u;
-      while (index < lines.length) {
-        const item = lines[index].match(pattern);
-        if (!item) break;
-        const parts = [item[1]];
-        index += 1;
-        while (
-          index < lines.length &&
-          lines[index].trim() &&
-          !pattern.test(lines[index]) &&
-          !startsBlock(lines[index], lines[index + 1])
-        ) {
-          parts.push(lines[index].trim());
-          index += 1;
-        }
-        items.push(parts.join(' '));
-      }
-      const tag = ordered ? 'ol' : 'ul';
-      html.push(
-        `<${tag}>${items.map((item) => `<li>${renderInlineMarkdown(item, linkMap)}</li>`).join('')}</${tag}>`,
-      );
+      const block = renderListBlock(lines, index, Boolean(list[2]), linkMap);
+      html.push(block.html);
+      index = block.index;
       continue;
     }
-    const paragraph = [line.trim()];
-    index += 1;
-    while (
-      index < lines.length &&
-      !startsBlock(lines[index], lines[index + 1])
-    ) {
-      paragraph.push(lines[index].trim());
-      index += 1;
-    }
-    html.push(`<p>${renderInlineMarkdown(paragraph.join(' '), linkMap)}</p>`);
+    const block = renderParagraphBlock(lines, index, linkMap);
+    html.push(block.html);
+    index = block.index;
   }
   return html.join('\n');
 }

@@ -408,6 +408,214 @@ function compareProjection(actual, expected, location, issues) {
     );
 }
 
+function addAuthorityIssue(condition, message, issues) {
+  if (condition) issues.push(message);
+}
+
+const PERMITTED_STEP_AUTHORITIES = {
+  qualification: ['qualification', 'evidence-publication'],
+  diagnostic: ['qualification', 'diagnostic-write'],
+  'release-control': [
+    'qualification',
+    'evidence-publication',
+    'release-control',
+  ],
+  'product-publication': [
+    'qualification',
+    'evidence-publication',
+    'product-publication',
+  ],
+};
+
+function validateWorkflowStep(job, actualJob, step, stepIndex, jobAt, issues) {
+  exactKeys(
+    step,
+    ['index', 'label', 'definitionDigest'],
+    `${jobAt}.steps[${stepIndex}]`,
+    issues,
+    ['authority'],
+  );
+  const stepAuthority = step.authority || 'qualification';
+  addAuthorityIssue(
+    !STEP_AUTHORITIES.has(stepAuthority),
+    `[workflow-authority] ${jobAt}.steps[${stepIndex}]: unsupported authority`,
+    issues,
+  );
+  const actualStep = actualJob.steps[stepIndex];
+  if (!actualStep) return;
+  compareProjection(
+    actualStep.label,
+    step.label,
+    `${jobAt} step ${step.index} label`,
+    issues,
+  );
+  compareProjection(
+    actualStep.definitionDigest,
+    step.definitionDigest,
+    `${jobAt} step ${step.index} definition`,
+    issues,
+  );
+  addAuthorityIssue(
+    !PERMITTED_STEP_AUTHORITIES[job.authority]?.includes(stepAuthority),
+    `[workflow-authority] ${jobAt} step ${step.index}: step authority exceeds job authority`,
+    issues,
+  );
+}
+
+function validateWorkflowJob({
+  workflow,
+  workflowIndex,
+  workflowCarriesAuthority,
+  actualJobs,
+  job,
+  jobIndex,
+  issues,
+}) {
+  const at = `workflows[${workflowIndex}]`;
+  const jobAt = `${workflow.path}#${job.id}`;
+  exactKeys(
+    job,
+    [
+      'id',
+      'authority',
+      'publication',
+      'receipt',
+      'definitionDigest',
+      'credentials',
+      'externalActions',
+      'steps',
+    ],
+    `${at}.jobs[${jobIndex}]`,
+    issues,
+  );
+  addAuthorityIssue(
+    !JOB_AUTHORITIES.has(job.authority),
+    `[workflow-authority] ${jobAt}: unsupported authority`,
+    issues,
+  );
+  addAuthorityIssue(
+    !PUBLICATION_CLASSES.has(job.publication),
+    `[workflow-authority] ${jobAt}: unsupported publication`,
+    issues,
+  );
+  addAuthorityIssue(
+    !RECEIPT_CLASSES.has(job.receipt),
+    `[workflow-authority] ${jobAt}: unsupported receipt`,
+    issues,
+  );
+  addAuthorityIssue(
+    ['product', 'channel'].includes(job.publication) &&
+      !['product-publication', 'release-control'].includes(job.authority),
+    `[workflow-authority] ${jobAt}: publication requires publication authority`,
+    issues,
+  );
+  addAuthorityIssue(
+    job.receipt === 'qualifying' &&
+      job.authority !== 'qualification' &&
+      job.authority !== 'release-control',
+    `[workflow-authority] ${jobAt}: qualifying receipt requires qualification or release-control authority`,
+    issues,
+  );
+  const actualJob = actualJobs.get(job.id);
+  if (!actualJob) return;
+  addAuthorityIssue(
+    actualJob.credentials.inheritedSecrets &&
+      !['product-publication', 'release-control'].includes(job.authority),
+    `[workflow-authority] ${jobAt}: inherited secrets require product-publication or release-control authority`,
+    issues,
+  );
+  addAuthorityIssue(
+    actualJob.credentials.environment &&
+      !['product-publication', 'release-control'].includes(job.authority),
+    `[workflow-authority] ${jobAt}: Environment access requires product-publication or release-control authority`,
+    issues,
+  );
+  for (const field of ['definitionDigest', 'credentials', 'externalActions']) {
+    compareProjection(
+      actualJob[field],
+      job[field],
+      `${jobAt} ${field}`,
+      issues,
+    );
+  }
+  addAuthorityIssue(
+    workflowCarriesAuthority &&
+      actualJob.externalActions.some(
+        (reference) =>
+          !authorityReferenceAllowed(workflow.path, job.id, reference),
+      ),
+    `[workflow-authority] ${jobAt}: authority-bearing workflows require immutable external action refs`,
+    issues,
+  );
+  compareProjection(
+    actualJob.steps.map((item) => item.index),
+    (job.steps || []).map((item) => item.index),
+    `${jobAt} step inventory`,
+    issues,
+  );
+  for (const [stepIndex, step] of (job.steps || []).entries()) {
+    validateWorkflowStep(job, actualJob, step, stepIndex, jobAt, issues);
+  }
+}
+
+function validateWorkflowEntry({
+  workflow,
+  workflowIndex,
+  actualByPath,
+  seen,
+  issues,
+}) {
+  const at = `workflows[${workflowIndex}]`;
+  exactKeys(
+    workflow,
+    ['path', 'authority', 'definitionDigest', 'jobs'],
+    at,
+    issues,
+  );
+  addAuthorityIssue(
+    seen.has(workflow.path),
+    `[workflow-authority] duplicate workflow '${workflow.path}'`,
+    issues,
+  );
+  seen.add(workflow.path);
+  addAuthorityIssue(
+    !WORKFLOW_AUTHORITIES.has(workflow.authority),
+    `[workflow-authority] ${at}.authority is unsupported`,
+    issues,
+  );
+  const actualWorkflow = actualByPath.get(workflow.path);
+  if (!actualWorkflow) return;
+  const workflowCarriesAuthority = (workflow.jobs || []).some(
+    (job) => job.receipt === 'qualifying' || job.publication !== 'none',
+  );
+  compareProjection(
+    actualWorkflow.definitionDigest,
+    workflow.definitionDigest,
+    `${workflow.path} definition`,
+    issues,
+  );
+  compareProjection(
+    actualWorkflow.jobs.map((item) => item.id),
+    (workflow.jobs || []).map((item) => item.id),
+    `${workflow.path} job inventory`,
+    issues,
+  );
+  const actualJobs = new Map(
+    actualWorkflow.jobs.map((item) => [item.id, item]),
+  );
+  for (const [jobIndex, job] of (workflow.jobs || []).entries()) {
+    validateWorkflowJob({
+      workflow,
+      workflowIndex,
+      workflowCarriesAuthority,
+      actualJobs,
+      job,
+      jobIndex,
+      issues,
+    });
+  }
+}
+
 export function validateWorkflowAuthority(root = ROOT, document = null) {
   const issues = [];
   const manifest =
@@ -419,10 +627,16 @@ export function validateWorkflowAuthority(root = ROOT, document = null) {
     'document',
     issues,
   );
-  if (manifest.schema !== 'kungfu.workflow-authority/v1')
-    issues.push('[workflow-authority] unsupported schema');
-  if (manifest.workflowRoot !== '.github/workflows')
-    issues.push('[workflow-authority] workflowRoot must be .github/workflows');
+  addAuthorityIssue(
+    manifest.schema !== 'kungfu.workflow-authority/v1',
+    '[workflow-authority] unsupported schema',
+    issues,
+  );
+  addAuthorityIssue(
+    manifest.workflowRoot !== '.github/workflows',
+    '[workflow-authority] workflowRoot must be .github/workflows',
+    issues,
+  );
   if (!Array.isArray(manifest.workflows)) return { issues, document: manifest };
 
   const projected = projectWorkflowAuthority(root, manifest);
@@ -435,170 +649,13 @@ export function validateWorkflowAuthority(root = ROOT, document = null) {
   );
   const seen = new Set();
   for (const [workflowIndex, workflow] of manifest.workflows.entries()) {
-    const at = `workflows[${workflowIndex}]`;
-    exactKeys(
+    validateWorkflowEntry({
       workflow,
-      ['path', 'authority', 'definitionDigest', 'jobs'],
-      at,
+      workflowIndex,
+      actualByPath,
+      seen,
       issues,
-    );
-    if (seen.has(workflow.path))
-      issues.push(`[workflow-authority] duplicate workflow '${workflow.path}'`);
-    seen.add(workflow.path);
-    if (!WORKFLOW_AUTHORITIES.has(workflow.authority))
-      issues.push(`[workflow-authority] ${at}.authority is unsupported`);
-    const actualWorkflow = actualByPath.get(workflow.path);
-    if (!actualWorkflow) continue;
-    const workflowCarriesAuthority = (workflow.jobs || []).some(
-      (job) => job.receipt === 'qualifying' || job.publication !== 'none',
-    );
-    compareProjection(
-      actualWorkflow.definitionDigest,
-      workflow.definitionDigest,
-      `${workflow.path} definition`,
-      issues,
-    );
-    const actualJobIds = actualWorkflow.jobs.map((item) => item.id);
-    const declaredJobIds = (workflow.jobs || []).map((item) => item.id);
-    compareProjection(
-      actualJobIds,
-      declaredJobIds,
-      `${workflow.path} job inventory`,
-      issues,
-    );
-    const actualJobs = new Map(
-      actualWorkflow.jobs.map((item) => [item.id, item]),
-    );
-    for (const [jobIndex, job] of (workflow.jobs || []).entries()) {
-      const jobAt = `${workflow.path}#${job.id}`;
-      exactKeys(
-        job,
-        [
-          'id',
-          'authority',
-          'publication',
-          'receipt',
-          'definitionDigest',
-          'credentials',
-          'externalActions',
-          'steps',
-        ],
-        `${at}.jobs[${jobIndex}]`,
-        issues,
-      );
-      if (!JOB_AUTHORITIES.has(job.authority))
-        issues.push(`[workflow-authority] ${jobAt}: unsupported authority`);
-      if (!PUBLICATION_CLASSES.has(job.publication))
-        issues.push(`[workflow-authority] ${jobAt}: unsupported publication`);
-      if (!RECEIPT_CLASSES.has(job.receipt))
-        issues.push(`[workflow-authority] ${jobAt}: unsupported receipt`);
-      if (
-        ['product', 'channel'].includes(job.publication) &&
-        !['product-publication', 'release-control'].includes(job.authority)
-      )
-        issues.push(
-          `[workflow-authority] ${jobAt}: publication requires publication authority`,
-        );
-      if (
-        job.receipt === 'qualifying' &&
-        job.authority !== 'qualification' &&
-        job.authority !== 'release-control'
-      )
-        issues.push(
-          `[workflow-authority] ${jobAt}: qualifying receipt requires qualification or release-control authority`,
-        );
-      const actualJob = actualJobs.get(job.id);
-      if (!actualJob) continue;
-      if (
-        actualJob.credentials.inheritedSecrets &&
-        !['product-publication', 'release-control'].includes(job.authority)
-      )
-        issues.push(
-          `[workflow-authority] ${jobAt}: inherited secrets require product-publication or release-control authority`,
-        );
-      if (
-        actualJob.credentials.environment &&
-        !['product-publication', 'release-control'].includes(job.authority)
-      )
-        issues.push(
-          `[workflow-authority] ${jobAt}: Environment access requires product-publication or release-control authority`,
-        );
-      for (const field of [
-        'definitionDigest',
-        'credentials',
-        'externalActions',
-      ])
-        compareProjection(
-          actualJob[field],
-          job[field],
-          `${jobAt} ${field}`,
-          issues,
-        );
-      if (
-        workflowCarriesAuthority &&
-        actualJob.externalActions.some(
-          (reference) =>
-            !authorityReferenceAllowed(workflow.path, job.id, reference),
-        )
-      )
-        issues.push(
-          `[workflow-authority] ${jobAt}: authority-bearing workflows require immutable external action refs`,
-        );
-      const actualStepIndexes = actualJob.steps.map((item) => item.index);
-      const declaredStepIndexes = (job.steps || []).map((item) => item.index);
-      compareProjection(
-        actualStepIndexes,
-        declaredStepIndexes,
-        `${jobAt} step inventory`,
-        issues,
-      );
-      for (const [stepIndex, step] of (job.steps || []).entries()) {
-        exactKeys(
-          step,
-          ['index', 'label', 'definitionDigest'],
-          `${jobAt}.steps[${stepIndex}]`,
-          issues,
-          ['authority'],
-        );
-        const stepAuthority = step.authority || 'qualification';
-        if (!STEP_AUTHORITIES.has(stepAuthority))
-          issues.push(
-            `[workflow-authority] ${jobAt}.steps[${stepIndex}]: unsupported authority`,
-          );
-        const actualStep = actualJob.steps[stepIndex];
-        if (!actualStep) continue;
-        compareProjection(
-          actualStep.label,
-          step.label,
-          `${jobAt} step ${step.index} label`,
-          issues,
-        );
-        compareProjection(
-          actualStep.definitionDigest,
-          step.definitionDigest,
-          `${jobAt} step ${step.index} definition`,
-          issues,
-        );
-        const permittedStepAuthorities = {
-          qualification: ['qualification', 'evidence-publication'],
-          diagnostic: ['qualification', 'diagnostic-write'],
-          'release-control': [
-            'qualification',
-            'evidence-publication',
-            'release-control',
-          ],
-          'product-publication': [
-            'qualification',
-            'evidence-publication',
-            'product-publication',
-          ],
-        };
-        if (!permittedStepAuthorities[job.authority]?.includes(stepAuthority))
-          issues.push(
-            `[workflow-authority] ${jobAt} step ${step.index}: step authority exceeds job authority`,
-          );
-      }
-    }
+    });
   }
   return { issues, document: manifest, projection: projected.document };
 }

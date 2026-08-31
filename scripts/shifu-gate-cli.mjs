@@ -262,6 +262,90 @@ function humanPlan(plan, stdout) {
   }
 }
 
+function validateEffectiveParameters(parameters) {
+  const parameterFields = [
+    'budgetSeconds',
+    'episodeProfile',
+    'episodeTimeoutSeconds',
+    'fuzzSecondsPerTarget',
+    'reserveSeconds',
+    'upstreamBudgetSeconds',
+  ];
+  if (
+    !parameters ||
+    typeof parameters !== 'object' ||
+    Array.isArray(parameters) ||
+    Object.keys(parameters).sort().join('\0') !== parameterFields.join('\0')
+  )
+    throw new Error(
+      '--execution-context.effectiveParameters has unknown or missing fields',
+    );
+  for (const field of parameterFields.filter(
+    (field) => field !== 'episodeProfile',
+  ))
+    if (!Number.isInteger(parameters[field]) || parameters[field] <= 0)
+      throw new Error(
+        `--execution-context.${field} must be a positive integer`,
+      );
+  if (
+    typeof parameters.episodeProfile !== 'string' ||
+    !parameters.episodeProfile
+  )
+    throw new Error('--execution-context.episodeProfile is required');
+  if (
+    parameters.reserveSeconds + parameters.upstreamBudgetSeconds >=
+    parameters.budgetSeconds
+  )
+    throw new Error(
+      '--execution-context reserve plus upstream must be below budget',
+    );
+}
+
+function parseExecutionContext(raw) {
+  let executionContext;
+  try {
+    executionContext = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(
+      `--execution-context requires valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (
+    !executionContext ||
+    typeof executionContext !== 'object' ||
+    Array.isArray(executionContext)
+  )
+    throw new Error('--execution-context must be a JSON object');
+  const keys = Object.keys(executionContext).sort();
+  const expected = [
+    'effectiveParameters',
+    'executionProfile',
+    'policyDigest',
+    'policyRef',
+  ];
+  if (keys.join('\0') !== expected.join('\0'))
+    throw new Error('--execution-context has unknown or missing fields');
+  if (
+    typeof executionContext.executionProfile !== 'string' ||
+    !executionContext.executionProfile
+  )
+    throw new Error('--execution-context.executionProfile is required');
+  if (!/^sha256:[0-9a-f]{64}$/.test(executionContext.policyDigest))
+    throw new Error('--execution-context.policyDigest is invalid');
+  if (
+    typeof executionContext.policyRef !== 'string' ||
+    !executionContext.policyRef ||
+    path.posix.isAbsolute(executionContext.policyRef) ||
+    path.win32.isAbsolute(executionContext.policyRef) ||
+    executionContext.policyRef.split(/[\\/]/).includes('..')
+  )
+    throw new Error(
+      '--execution-context.policyRef must be repository-relative',
+    );
+  validateEffectiveParameters(executionContext.effectiveParameters);
+  return executionContext;
+}
+
 /** @param {string[]} argv */
 function parseRunArgs(argv) {
   let profile = '';
@@ -288,82 +372,7 @@ function parseRunArgs(argv) {
     else if (arg === '--execution-context') {
       if (executionContext)
         throw new Error('--execution-context may be specified once');
-      try {
-        executionContext = JSON.parse(value());
-      } catch (error) {
-        throw new Error(
-          `--execution-context requires valid JSON: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-      if (
-        !executionContext ||
-        typeof executionContext !== 'object' ||
-        Array.isArray(executionContext)
-      )
-        throw new Error('--execution-context must be a JSON object');
-      const keys = Object.keys(executionContext).sort();
-      const expected = [
-        'effectiveParameters',
-        'executionProfile',
-        'policyDigest',
-        'policyRef',
-      ];
-      if (keys.join('\0') !== expected.join('\0'))
-        throw new Error('--execution-context has unknown or missing fields');
-      if (
-        typeof executionContext.executionProfile !== 'string' ||
-        !executionContext.executionProfile
-      )
-        throw new Error('--execution-context.executionProfile is required');
-      if (!/^sha256:[0-9a-f]{64}$/.test(executionContext.policyDigest))
-        throw new Error('--execution-context.policyDigest is invalid');
-      if (
-        typeof executionContext.policyRef !== 'string' ||
-        !executionContext.policyRef ||
-        path.posix.isAbsolute(executionContext.policyRef) ||
-        path.win32.isAbsolute(executionContext.policyRef) ||
-        executionContext.policyRef.split(/[\\/]/).includes('..')
-      )
-        throw new Error(
-          '--execution-context.policyRef must be repository-relative',
-        );
-      const parameters = executionContext.effectiveParameters;
-      const parameterFields = [
-        'budgetSeconds',
-        'episodeProfile',
-        'episodeTimeoutSeconds',
-        'fuzzSecondsPerTarget',
-        'reserveSeconds',
-        'upstreamBudgetSeconds',
-      ];
-      if (
-        !parameters ||
-        typeof parameters !== 'object' ||
-        Array.isArray(parameters) ||
-        Object.keys(parameters).sort().join('\0') !== parameterFields.join('\0')
-      )
-        throw new Error(
-          '--execution-context.effectiveParameters has unknown or missing fields',
-        );
-      for (const field of parameterFields.filter(
-        (field) => field !== 'episodeProfile',
-      ))
-        if (!Number.isInteger(parameters[field]) || parameters[field] <= 0)
-          throw new Error(
-            `--execution-context.${field} must be a positive integer`,
-          );
-      if (
-        typeof parameters.episodeProfile !== 'string' ||
-        !parameters.episodeProfile
-      )
-        throw new Error('--execution-context.episodeProfile is required');
-      if (
-        parameters.reserveSeconds + parameters.upstreamBudgetSeconds >=
-        parameters.budgetSeconds
-      )
-        throw new Error(
-          '--execution-context reserve plus upstream must be below budget',
-        );
+      executionContext = parseExecutionContext(value());
     } else if (arg.startsWith('-'))
       throw new Error(`unknown gate run option: ${arg}`);
     else gates.push(arg);
