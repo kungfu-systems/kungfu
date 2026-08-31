@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8644,
+  "generation": 8645,
   "fencingCounter": 823,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:ac2ef7cc41ce3dd2ca54f999d7980aefb84f3af8fa5cc418621fe172cf30e88f",
@@ -54,8 +54,13 @@
     "issuedAt": "2026-08-31T15:17:31.534Z",
     "expiresAt": "2026-08-31T17:08:26.247Z",
     "fencingToken": "sha256:4917e4bd89aaeb74e313882e46c043f0c348f3a5b23c69f33e64b6548d75dd9c",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-31T15:38:26.247Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-31T15:38:26.247Z",
+    "nativeProofRoot": "sha256:7fbd17adfef2f12ed84c8e78895489493e2d8df53b78692c089c4af722dc4697",
+    "nativeExecutionReceiptRoot": "sha256:38553adde046e219ad2cdcdb9d17de1e26d4cd2c0441d0f99afbca4bb6d61e4e",
+    "nativeProofReuseRoot": "sha256:5d15ff72d202581efeb9ecb80a942e905e7ea7692badd3a8739cbfbbe47399c3",
+    "qualificationReceiptRoot": "sha256:d979f286fc838b10e8d2934f85170e87f0eaccd4949c278bd7a06f46ac6ac31b",
+    "qualifiedAt": "2026-08-31T15:38:52.572Z"
   },
   "candidates": [
     {
@@ -59814,10 +59819,10 @@
       "sourceWorkflowRunId": 33398074051,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T13:46:30.208Z",
-      "updatedAt": "2026-08-31T15:38:26.247Z",
+      "updatedAt": "2026-08-31T15:38:52.572Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/tests/qualification/runtime-activation/run.mjs",
@@ -59832,6 +59837,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T15:38:26.247Z",
-  "stateRoot": "sha256:a2e36f4a985c48a3c31e329cf23711a64843b5b674886c23e7d4fa692b9641a4"
+  "updatedAt": "2026-08-31T15:38:52.572Z",
+  "stateRoot": "sha256:1164eeab4f13eb1146bc1cdf9a98f0d2d1ab682f87dcb48b20c2cef167c70ef1"
 }
