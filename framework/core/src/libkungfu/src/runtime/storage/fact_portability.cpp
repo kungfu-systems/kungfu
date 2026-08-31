@@ -248,6 +248,73 @@ nlohmann::json pending_authority_operations(const nlohmann::json &operations,
   return pending;
 }
 
+nlohmann::json validate_authority_import_operations(nlohmann::json &operations, const nlohmann::json &record_roots,
+                                                    const std::string &bundle_protocol,
+                                                    std::set<std::string> &expected_roots) {
+  const std::string action = "authority-import";
+  for (size_t index = 0; index < operations.size(); ++index) {
+    const auto &operation = operations.at(index);
+    if (!operation.is_object() || !operation.contains("request") || !operation.at("request").is_object())
+      return failure(action, "bundle-invalid", "Fact authority bundle operation request is missing",
+                     {{"index", index}});
+    const auto operation_action = required_text(operation, "action");
+    const auto request_action = text_or(operation.at("request"), "action");
+    const auto record_root = required_text(operation, "recordRoot");
+    const auto source_receipt_root = required_text(operation, "sourceReceiptRoot");
+    const auto root_protocol = operation.value("rootProtocol", bundle_protocol);
+    validate_root(record_root, "recordRoot");
+    validate_root(source_receipt_root, "sourceReceiptRoot");
+    if (operation_action != request_action || record_roots.at(index) != record_root ||
+        operation_action == "authority-import" || operation_action == "authority-export" ||
+        operation_action == "query" || operation_action == "capabilities" ||
+        (root_protocol != LEGACY_ROOT_PROTOCOL && root_protocol != PORTABLE_ROOT_PROTOCOL) ||
+        !expected_roots.insert(record_root).second) {
+      return failure(action, "bundle-invalid", "Fact authority bundle operation is inconsistent",
+                     {{"index", index}, {"operation", operation_action}});
+    }
+    operations[index]["rootProtocol"] = root_protocol;
+  }
+  return nullptr;
+}
+
+nlohmann::json map_authority_import_responses(const nlohmann::json &operations, const nlohmann::json &responses,
+                                              std::set<std::string> &current_roots, bool write_occurred,
+                                              nlohmann::json &mappings) {
+  const std::string action = "authority-import";
+  size_t response_index = 0;
+  for (size_t index = 0; index < operations.size(); ++index) {
+    const auto &operation = operations.at(index);
+    const auto record_root = operation.at("recordRoot").get<std::string>();
+    if (current_roots.count(record_root) != 0) {
+      mappings.push_back({{"recordRoot", record_root},
+                          {"sourceReceiptRoot", operation.at("sourceReceiptRoot")},
+                          {"destinationReceiptRoot", nullptr},
+                          {"status", "already-present"}});
+      continue;
+    }
+    const auto operation_action = operation.at("action").get<std::string>();
+    const auto &response = responses.at(response_index++);
+    const auto actual_root = response_record_root(operation_action, response);
+    if (!response.value("ok", false) || actual_root != record_root) {
+      auto result = failure(action, "import-operation-mismatch",
+                            "Fact authority import did not reproduce the declared record root",
+                            {{"index", index},
+                             {"operation", operation_action},
+                             {"expected_record_root", record_root},
+                             {"actual_record_root", actual_root},
+                             {"kernel_response", response}});
+      result["write_occurred"] = write_occurred;
+      return result;
+    }
+    current_roots.insert(record_root);
+    mappings.push_back({{"recordRoot", record_root},
+                        {"sourceReceiptRoot", operation.at("sourceReceiptRoot")},
+                        {"destinationReceiptRoot", response.value("receipt_root", nlohmann::json(nullptr))},
+                        {"status", response.at("status")}});
+  }
+  return nullptr;
+}
+
 nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::json &input) {
   const std::string action = "authority-import";
   try {
@@ -281,29 +348,10 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
                      "Fact authority bundle operations and roots must be non-empty and aligned");
     }
     std::set<std::string> expected_roots;
-    for (size_t index = 0; index < operations.size(); ++index) {
-      const auto &operation = operations.at(index);
-      if (!operation.is_object() || !operation.contains("request") || !operation.at("request").is_object()) {
-        return failure(action, "bundle-invalid", "Fact authority bundle operation request is missing",
-                       {{"index", index}});
-      }
-      const auto operation_action = required_text(operation, "action");
-      const auto request_action = text_or(operation.at("request"), "action");
-      const auto record_root = required_text(operation, "recordRoot");
-      const auto source_receipt_root = required_text(operation, "sourceReceiptRoot");
-      const auto root_protocol = operation.value("rootProtocol", bundle_protocol);
-      validate_root(record_root, "recordRoot");
-      validate_root(source_receipt_root, "sourceReceiptRoot");
-      if (operation_action != request_action || record_roots.at(index) != record_root ||
-          operation_action == "authority-import" || operation_action == "authority-export" ||
-          operation_action == "query" || operation_action == "capabilities" ||
-          (root_protocol != LEGACY_ROOT_PROTOCOL && root_protocol != PORTABLE_ROOT_PROTOCOL) ||
-          !expected_roots.insert(record_root).second) {
-        return failure(action, "bundle-invalid", "Fact authority bundle operation is inconsistent",
-                       {{"index", index}, {"operation", operation_action}});
-      }
-      operations[index]["rootProtocol"] = root_protocol;
-    }
+    const auto operation_failure =
+        validate_authority_import_operations(operations, record_roots, bundle_protocol, expected_roots);
+    if (!operation_failure.is_null())
+      return operation_failure;
     auto before = fold_kernel(runtime_dir);
     if (before.unknown_records != 0) {
       return failure(action, "destination-diverged", "Destination Fact journal contains unknown records",
@@ -351,37 +399,10 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
     const auto responses = batch.at("responses");
     const auto write_occurred = batch.value("write_occurred", false);
     auto mappings = nlohmann::json::array();
-    size_t response_index = 0;
-    for (size_t index = 0; index < operations.size(); ++index) {
-      const auto &operation = operations.at(index);
-      const auto record_root = operation.at("recordRoot").get<std::string>();
-      if (current_roots.count(record_root) != 0) {
-        mappings.push_back({{"recordRoot", record_root},
-                            {"sourceReceiptRoot", operation.at("sourceReceiptRoot")},
-                            {"destinationReceiptRoot", nullptr},
-                            {"status", "already-present"}});
-        continue;
-      }
-      const auto operation_action = operation.at("action").get<std::string>();
-      const auto &response = responses.at(response_index++);
-      const auto actual_root = response_record_root(operation_action, response);
-      if (!response.value("ok", false) || actual_root != record_root) {
-        auto result = failure(action, "import-operation-mismatch",
-                              "Fact authority import did not reproduce the declared record root",
-                              {{"index", index},
-                               {"operation", operation_action},
-                               {"expected_record_root", record_root},
-                               {"actual_record_root", actual_root},
-                               {"kernel_response", response}});
-        result["write_occurred"] = write_occurred;
-        return result;
-      }
-      current_roots.insert(record_root);
-      mappings.push_back({{"recordRoot", record_root},
-                          {"sourceReceiptRoot", operation.at("sourceReceiptRoot")},
-                          {"destinationReceiptRoot", response.value("receipt_root", nlohmann::json(nullptr))},
-                          {"status", response.at("status")}});
-    }
+    const auto mapping_failure =
+        map_authority_import_responses(operations, responses, current_roots, write_occurred, mappings);
+    if (!mapping_failure.is_null())
+      return mapping_failure;
     const auto final_roots = batch.at("record_roots").get<std::set<std::string>>();
     const auto expected_counts = final_state.value("counts", nlohmann::json::object());
     const auto actual_counts = batch.at("counts");
