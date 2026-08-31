@@ -410,6 +410,47 @@ def _read_retained_cli_receipt(path: Path, generation: int) -> dict[str, Any]:
     }
 
 
+def _inspect_cli_image(entry: Path) -> dict[str, Any]:
+    if entry.is_symlink() or not entry.is_dir():
+        raise DistributionUpdateError(
+            "cli-image-path-unsafe",
+            "CLI image inventory entry is not a real directory",
+        )
+    image = _read_object(entry / "image.json")
+    frontend_build_id = _path_safe_id(
+        str(image.get("frontendBuildId") or ""), "frontend-build-id"
+    )
+    if (
+        image.get("schema") != CLI_IMAGE_SCHEMA
+        or frontend_build_id != entry.name
+        or Path(str(image.get("productRoot") or "")).resolve() != entry.resolve()
+    ):
+        raise DistributionUpdateError(
+            "cli-image-invalid", "CLI image identity or product root is invalid"
+        )
+    executable = (entry / str(image.get("executable") or "")).resolve()
+    bundled_manifest = (entry / str(image.get("upgradeManifest") or "")).resolve()
+    if (
+        entry.resolve() not in executable.parents
+        or not executable.is_file()
+        or entry.resolve() not in bundled_manifest.parents
+        or not bundled_manifest.is_file()
+    ):
+        raise DistributionUpdateError(
+            "cli-image-invalid",
+            "CLI image executable or release manifest is missing or unsafe",
+        )
+    return {
+        "frontendBuildId": frontend_build_id,
+        "runtimeBuildId": image["runtimeBuildId"],
+        "productVersion": image["productVersion"],
+        "artifactDigest": image["artifactDigest"],
+        "productRoot": image["productRoot"],
+        "releaseCutRoot": image.get("releaseCutRoot"),
+        "platformSliceRoot": image.get("platformSliceRoot"),
+    }
+
+
 def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
     root = _cli_inventory_root(config_home)
     images_root = root / "images"
@@ -423,51 +464,7 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                 retained_partials.append(relative)
                 continue
             try:
-                if entry.is_symlink() or not entry.is_dir():
-                    raise DistributionUpdateError(
-                        "cli-image-path-unsafe",
-                        "CLI image inventory entry is not a real directory",
-                    )
-                image = _read_object(entry / "image.json")
-                frontend_build_id = _path_safe_id(
-                    str(image.get("frontendBuildId") or ""),
-                    "frontend-build-id",
-                )
-                if (
-                    image.get("schema") != CLI_IMAGE_SCHEMA
-                    or frontend_build_id != entry.name
-                    or Path(str(image.get("productRoot") or "")).resolve()
-                    != entry.resolve()
-                ):
-                    raise DistributionUpdateError(
-                        "cli-image-invalid",
-                        "CLI image identity or product root is invalid",
-                    )
-                executable = (entry / str(image.get("executable") or "")).resolve()
-                bundled_manifest = (
-                    entry / str(image.get("upgradeManifest") or "")
-                ).resolve()
-                if (
-                    entry.resolve() not in executable.parents
-                    or not executable.is_file()
-                    or entry.resolve() not in bundled_manifest.parents
-                    or not bundled_manifest.is_file()
-                ):
-                    raise DistributionUpdateError(
-                        "cli-image-invalid",
-                        "CLI image executable or release manifest is missing or unsafe",
-                    )
-                images.append(
-                    {
-                        "frontendBuildId": frontend_build_id,
-                        "runtimeBuildId": image["runtimeBuildId"],
-                        "productVersion": image["productVersion"],
-                        "artifactDigest": image["artifactDigest"],
-                        "productRoot": image["productRoot"],
-                        "releaseCutRoot": image.get("releaseCutRoot"),
-                        "platformSliceRoot": image.get("platformSliceRoot"),
-                    }
-                )
+                images.append(_inspect_cli_image(entry))
             except (
                 DistributionUpdateError,
                 KeyError,
