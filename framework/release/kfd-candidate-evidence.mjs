@@ -475,6 +475,49 @@ export function releaseArtifactRoot(root = process.cwd()) {
   return { files: rows, root: rooted(rows) };
 }
 
+function releaseArtifactDelta(expectedFiles, actualFiles) {
+  const expected = new Map(
+    (expectedFiles || []).map((entry) => [entry.path, entry]),
+  );
+  const actual = new Map(
+    (actualFiles || []).map((entry) => [entry.path, entry]),
+  );
+  const added = [];
+  const removed = [];
+  const changed = [];
+  for (const artifactPath of [
+    ...new Set([...expected.keys(), ...actual.keys()]),
+  ].sort()) {
+    const before = expected.get(artifactPath);
+    const after = actual.get(artifactPath);
+    if (!before) added.push(artifactPath);
+    else if (!after) removed.push(artifactPath);
+    else if (before.bytes !== after.bytes || before.sha256 !== after.sha256)
+      changed.push(artifactPath);
+  }
+  return { added, removed, changed };
+}
+
+export function verifyReleaseArtifactRoot({
+  root = process.cwd(),
+  expectedRoot = '',
+  expectedFiles,
+} = {}) {
+  if (!/^sha256:[a-f0-9]{64}$/u.test(expectedRoot))
+    throw new Error('expected KFD release artifact root is missing or invalid');
+  const artifact = releaseArtifactRoot(root);
+  if (artifact.root === expectedRoot) return artifact;
+  const delta = expectedFiles
+    ? releaseArtifactDelta(expectedFiles, artifact.files)
+    : null;
+  const detail = delta
+    ? `; added=${delta.added.join(',') || '<none>'}; removed=${delta.removed.join(',') || '<none>'}; changed=${delta.changed.join(',') || '<none>'}`
+    : '';
+  throw new Error(
+    `KFD artifact digest mismatch: expected ${expectedRoot}, got ${artifact.root}${detail}`,
+  );
+}
+
 function assertPlatform(platform) {
   if (!SUPPORTED_KFD_PLATFORMS.includes(platform)) {
     throw new Error(
@@ -529,6 +572,7 @@ export function prepareKfdArtifactWitness({
     candidate: identity,
     sourceGateRoot: sourceGate.gateRoot,
     artifactRoot: artifact.root,
+    artifactFiles: artifact.files,
   };
   const witness = {
     ...baseWitness,
@@ -560,12 +604,11 @@ export function finalizeKfdCandidateEvidence({
   if (!fs.existsSync(witnessPath))
     throw new Error(`missing KFD artifact witness: ${platform}`);
   const witness = readJson(witnessPath);
-  const artifact = releaseArtifactRoot(root);
-  if (witness.candidateBinding?.artifactRoot !== artifact.root) {
-    throw new Error(
-      `KFD artifact digest mismatch: expected ${witness.candidateBinding?.artifactRoot || '<empty>'}, got ${artifact.root}`,
-    );
-  }
+  const artifact = verifyReleaseArtifactRoot({
+    root,
+    expectedRoot: witness.candidateBinding?.artifactRoot || '',
+    expectedFiles: witness.candidateBinding?.artifactFiles,
+  });
   if (
     witness.candidateBinding?.candidate?.sourceSha !== identity.sourceSha ||
     witness.candidateBinding?.candidate?.sourceTree !== identity.sourceTree ||
@@ -758,6 +801,8 @@ export function runVerifiedQualification({
     env: {
       ...process.env,
       KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
+      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT:
+        releaseArtifactRoot(root).root,
     },
     stdio: 'inherit',
   });

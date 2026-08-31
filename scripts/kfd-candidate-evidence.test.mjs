@@ -12,12 +12,14 @@ import {
   finalizeKfdCandidateEvidence,
   kfdEvidenceRoot,
   prepareKfdArtifactWitness,
+  releaseArtifactRoot,
   resolveKfdSourcePlatform,
   restoreKfdPrebuiltLayerArtifact,
   runVerifiedQualification,
   sealKfdPrebuiltLayerArtifacts,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
+  verifyReleaseArtifactRoot,
 } from '../framework/release/kfd-candidate-evidence.mjs';
 
 const SOURCE_SHA = 'a'.repeat(40);
@@ -260,7 +262,7 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
   const command = [
     process.execPath,
     '-e',
-    `const fs=require('node:fs');if(process.env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS!=='1')process.exit(23);fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n')`,
+    `const fs=require('node:fs');if(process.env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS!=='1'||!/^sha256:[a-f0-9]{64}$/.test(process.env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT||''))process.exit(23);fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n')`,
   ];
   assert.equal(
     runVerifiedQualification({
@@ -361,7 +363,35 @@ test('fails before Verify completion when artifact bytes change after witnessing
   );
   assert.throws(
     () => finalizeKfdCandidateEvidence(fixture),
-    /KFD artifact digest mismatch/u,
+    /KFD artifact digest mismatch:.*changed=artifact\.bin/u,
+  );
+});
+
+test('reports added, removed, and changed release artifacts without restoring them', () => {
+  const fixture = artifactFixture();
+  const before = verifyReleaseArtifactRoot({
+    root: fixture.root,
+    expectedRoot: releaseArtifactRoot(fixture.root).root,
+  });
+  fs.appendFileSync(
+    path.join(fixture.root, 'product/release/artifact.bin'),
+    'changed\n',
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'product/release/added.bin'),
+    'added\n',
+  );
+  assert.throws(
+    () =>
+      verifyReleaseArtifactRoot({
+        root: fixture.root,
+        expectedRoot: before.root,
+        expectedFiles: [
+          ...before.files,
+          { path: 'removed.bin', bytes: 1, sha256: `sha256:${'0'.repeat(64)}` },
+        ],
+      }),
+    /added=added\.bin; removed=removed\.bin; changed=artifact\.bin/u,
   );
 });
 
