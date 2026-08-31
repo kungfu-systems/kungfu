@@ -95,6 +95,31 @@ def _receipt_projection(
     return receipt_path, receipt, receipt_valid
 
 
+def _project_cut_episode_roots(cut):
+    return [
+        row.get("root")
+        for row in (cut.get("episodeDelta") or {}).get("nativeRoots", [])
+        if isinstance(row, dict) and row.get("root")
+    ]
+
+
+def _project_cut_losses(cut):
+    return {
+        field: list(cut.get(field) or [])
+        for field in ("omissions", "conflicts", "unknowns")
+    }
+
+
+def _project_cut_inventory(cut):
+    return {
+        "parentCutRoots": list(cut.get("parentCutRoots") or []),
+        "sourceRoot": (cut.get("sourceProjection") or {}).get("root"),
+        "atlasRoot": (cut.get("atlas") or {}).get("root"),
+        "episodeRoots": _project_cut_episode_roots(cut),
+        **_project_cut_losses(cut),
+    }
+
+
 def _project_cut_candidate(manifest, cut, documents, publications):
     cut_root = str(cut.get("cutRoot") or "")
     receipt_path, receipt, receipt_valid = _receipt_projection(
@@ -103,17 +128,7 @@ def _project_cut_candidate(manifest, cut, documents, publications):
     publication = publications.get(manifest)
     return {
         "cutRoot": cut_root,
-        "parentCutRoots": list(cut.get("parentCutRoots") or []),
-        "sourceRoot": (cut.get("sourceProjection") or {}).get("root"),
-        "atlasRoot": (cut.get("atlas") or {}).get("root"),
-        "episodeRoots": [
-            row.get("root")
-            for row in (cut.get("episodeDelta") or {}).get("nativeRoots", [])
-            if isinstance(row, dict) and row.get("root")
-        ],
-        "omissions": list(cut.get("omissions") or []),
-        "conflicts": list(cut.get("conflicts") or []),
-        "unknowns": list(cut.get("unknowns") or []),
+        **_project_cut_inventory(cut),
         "manifest": manifest,
         "receipt": receipt_path if receipt is not None else None,
         "receiptValid": receipt_valid,

@@ -97,37 +97,43 @@ def _text_bytes(value: dict[str, Any]) -> bytes:
     return raw
 
 
+def _typed_integer(value: dict[str, Any], kind: str) -> bytes:
+    raw = value.get("value")
+    pattern = _DECIMAL if kind == "u64" else _SIGNED_DECIMAL
+    if not isinstance(raw, str) or not pattern.fullmatch(raw):
+        _fail("canonical-invalid-descriptor", f"{kind} must use canonical decimal")
+    number = int(raw)
+    lower, upper = (0, 2**64 - 1) if kind == "u64" else (-(2**63), 2**63 - 1)
+    if not lower <= number <= upper:
+        _fail("canonical-integer-range", f"{kind} is out of range")
+    if kind == "u64":
+        return b"\x10" + _u64(number)
+    return b"\x11" + number.to_bytes(8, "big", signed=True)
+
+
+def _typed_float(value: dict[str, Any]) -> bytes:
+    bits = _hex(value.get("bits"), "bits")
+    if len(bits) != 8:
+        _fail("canonical-invalid-hex", "f64 bits must contain 8 bytes")
+    number = struct.unpack(">d", bits)[0]
+    if number != number or number in {float("inf"), float("-inf")}:
+        _fail("canonical-non-finite-float", "NaN and infinity are forbidden")
+    return b"\x12" + bits
+
+
 def _typed_scalar(value: dict[str, Any], kind: str) -> bytes:
-    if kind == "absent":
-        _fail("canonical-absent", "absent is a schema condition, not a value")
-    if kind == "null":
+    if kind in {"absent", "null"}:
+        if kind == "absent":
+            _fail("canonical-absent", "absent is a schema condition, not a value")
         return b"\x00"
     if kind == "bool":
         if not isinstance(value.get("value"), bool):
             _fail("canonical-invalid-descriptor", "bool value must be boolean")
         return b"\x02" if value["value"] else b"\x01"
     if kind in {"u64", "i64"}:
-        raw = value.get("value")
-        pattern = _DECIMAL if kind == "u64" else _SIGNED_DECIMAL
-        if not isinstance(raw, str) or not pattern.fullmatch(raw):
-            _fail("canonical-invalid-descriptor", f"{kind} must use canonical decimal")
-        number = int(raw)
-        lower, upper = (0, 2**64 - 1) if kind == "u64" else (-(2**63), 2**63 - 1)
-        if not lower <= number <= upper:
-            _fail("canonical-integer-range", f"{kind} is out of range")
-        return (
-            (b"\x10" + _u64(number))
-            if kind == "u64"
-            else (b"\x11" + number.to_bytes(8, "big", signed=True))
-        )
+        return _typed_integer(value, kind)
     if kind == "f64":
-        bits = _hex(value.get("bits"), "bits")
-        if len(bits) != 8:
-            _fail("canonical-invalid-hex", "f64 bits must contain 8 bytes")
-        number = struct.unpack(">d", bits)[0]
-        if number != number or number in {float("inf"), float("-inf")}:
-            _fail("canonical-non-finite-float", "NaN and infinity are forbidden")
-        return b"\x12" + bits
+        return _typed_float(value)
     if kind == "text":
         raw = _text_bytes(value)
         return b"\x20" + _u64(len(raw)) + raw
@@ -177,32 +183,40 @@ def _typed_map(value: dict[str, Any]) -> bytes:
     )
 
 
-def _typed_record(value: dict[str, Any]) -> bytes:
-    schema = value.get("schema")
-    fields = value.get("fields")
-    if not isinstance(schema, str):
-        _fail("canonical-invalid-descriptor", "record schema must be a string")
-    allowed = _SCHEMA_FIELDS.get(schema)
-    if allowed is None:
-        _fail("canonical-unknown-schema", "record schema is not registered")
+def _typed_record_field(field, allowed):
+    if not isinstance(field, dict) or set(field) != {"id", "value"}:
+        _fail("canonical-invalid-descriptor", "record field requires id and value")
+    raw_id = field["id"]
+    if not isinstance(raw_id, str) or not _DECIMAL.fullmatch(raw_id):
+        _fail("canonical-invalid-descriptor", "field id must be canonical decimal")
+    field_id = int(raw_id)
+    if field_id not in allowed:
+        _fail("canonical-unknown-field", f"field {field_id} is not registered")
+    return field_id, _typed(field["value"])
+
+
+def _typed_record_fields(fields, allowed):
     if not isinstance(fields, list):
         _fail("canonical-invalid-descriptor", "record fields must be an array")
     encoded_fields: list[tuple[int, bytes]] = []
     for field in fields:
-        if not isinstance(field, dict) or set(field) != {"id", "value"}:
-            _fail("canonical-invalid-descriptor", "record field requires id and value")
-        raw_id = field["id"]
-        if not isinstance(raw_id, str) or not _DECIMAL.fullmatch(raw_id):
-            _fail("canonical-invalid-descriptor", "field id must be canonical decimal")
-        field_id = int(raw_id)
-        if field_id not in allowed:
-            _fail("canonical-unknown-field", f"field {field_id} is not registered")
-        encoded_fields.append((field_id, _typed(field["value"])))
+        encoded_fields.append(_typed_record_field(field, allowed))
     encoded_fields.sort(key=lambda pair: pair[0])
     if any(
         left[0] == right[0] for left, right in zip(encoded_fields, encoded_fields[1:])
     ):
         _fail("canonical-duplicate-field", "record contains a duplicate field id")
+    return encoded_fields
+
+
+def _typed_record(value: dict[str, Any]) -> bytes:
+    schema = value.get("schema")
+    if not isinstance(schema, str):
+        _fail("canonical-invalid-descriptor", "record schema must be a string")
+    allowed = _SCHEMA_FIELDS.get(schema)
+    if allowed is None:
+        _fail("canonical-unknown-schema", "record schema is not registered")
+    encoded_fields = _typed_record_fields(value.get("fields"), allowed)
     present = {field_id for field_id, _child in encoded_fields}
     missing = set(allowed) - _SCHEMA_OPTIONAL_FIELDS.get(schema, frozenset()) - present
     if missing:

@@ -505,9 +505,9 @@ class WorkControlAuthority:
     def inspect(self) -> dict[str, Any]:
         portfolio_receipt = self._invoke("portfolio", {})
         portfolio = dict(portfolio_receipt.get("result") or {})
-        assignments = []
-        fact_refs = []
-        diagnostics = []
+        assignments: list[dict[str, Any]] = []
+        fact_refs: list[dict[str, str]] = []
+        diagnostics: list[dict[str, Any]] = []
         for raw in portfolio.get("assignments") or []:
             projected = self._inspect_assignment(raw, diagnostics)
             if projected is None:
