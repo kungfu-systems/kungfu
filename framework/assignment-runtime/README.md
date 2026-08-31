@@ -24,3 +24,11 @@ types `work.input.snapshot`, `work.run.record`, `work.effect.authorize`,
 revision, generation, idempotency, Attempt, lease, restart, and recovery
 semantics; they do not add another state store. The public protocol and CLI are
 documented in [`docs/profiles/work-control.md`](../../docs/profiles/work-control.md).
+
+[`work-authority-topology-v1.json`](work-authority-topology-v1.json) is the
+machine-checked migration inventory for Assignment, WorkRef, recovery,
+WorkConsole, SessionAttempt, lease, and continuation semantics. It classifies
+every listed call site by semantic role, names one writer or deriver for each
+identity, and records the exact debt that still prevents the target of zero
+post-plan authority rediscovery. The inventory is qualification evidence only;
+it is not runtime state, a reader status aggregate, or another Work authority.

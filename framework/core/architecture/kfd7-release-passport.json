@@ -1,7 +1,7 @@
 {
   "$schema": "kungfu.kfd7-library-release-passport/v1",
   "surface": "libkungfu-kfd7-library-boundary",
-  "version": "4.0.0-alpha.3",
+  "version": "4.0.0-alpha.4",
   "classifications": [
     {
       "id": "libkungfu-successor-c-abi",

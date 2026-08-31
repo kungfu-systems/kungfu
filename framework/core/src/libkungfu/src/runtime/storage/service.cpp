@@ -327,7 +327,8 @@ episode_frame_verification verify_episode_frame_claims(const storage_fsck_reques
 
     std::unordered_set<uint64_t> found;
     if (!location->locator->list_page_id(location, dest_uid).empty()) {
-      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      auto reader = std::make_shared<yjj::journal::reader>(yjj::journal::reader_policy::peer(), false,
+                                                           std::make_shared<yjj::journal::bus>(false));
       reader->join(location, dest_uid, 0);
       while (reader->data_available()) {
         const auto frame = reader->current_frame();
@@ -874,7 +875,8 @@ void collect_episode_bundle_material(const storage_service_options &options, sto
     journal.dest = journal_key.second;
     std::unordered_set<uint64_t> wanted(frame_uids.begin(), frame_uids.end());
     if (!location->locator->list_page_id(location, journal.dest).empty()) {
-      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      auto reader = std::make_shared<yjj::journal::reader>(yjj::journal::reader_policy::peer(), false,
+                                                           std::make_shared<yjj::journal::bus>(false));
       reader->join(location, journal.dest, 0);
       while (reader->data_available()) {
         const auto frame = reader->current_frame();

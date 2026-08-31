@@ -23,6 +23,22 @@ export const KFD_ARTIFACT_WITNESS_JSONS = SUPPORTED_KFD_PLATFORMS.map(
   (platform) => `product/release/qualification/kfd/artifacts/${platform}.json`,
 );
 
+export const KFD_PREBUILT_LAYER_ARTIFACTS = {
+  format: 'product/release/spec',
+  sdk: 'framework/core/build/stage/sdk',
+  surfaces: 'product/release/npm',
+};
+
+const KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT =
+  'kungfu.kfd-prebuilt-layer-artifacts/v1';
+
+const GITHUB_RUNNER_PLATFORM_IDS = new Map([
+  ['Linux:X64', 'linux-x64'],
+  ['Linux:ARM64', 'linux-arm64'],
+  ['macOS:ARM64', 'macos-arm64'],
+  ['Windows:X64', 'windows-x64'],
+]);
+
 const SOURCE_GATE_INPUTS = [
   '.buildchain/kfd/kfd-1/contract-world.witness.json',
   '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
@@ -111,23 +127,38 @@ function rooted(value) {
   return `sha256:${sha256(canonicalJson(value))}`;
 }
 
-export function kfdEvidenceRoot(value) {
-  return rooted(value);
-}
-
-export function kfdPlatformId(
-  hostPlatform = process.platform,
-  hostArch = process.arch,
+export function resolveKfdSourcePlatform(
+  explicitPlatform = '',
+  env = process.env,
 ) {
   const platform =
-    hostPlatform === 'darwin'
-      ? 'macos'
-      : hostPlatform === 'win32'
-        ? 'windows'
-        : hostPlatform;
-  const arch = hostArch === 'x64' ? 'x64' : hostArch;
-  const candidate = `${platform}-${arch}`;
-  return SUPPORTED_KFD_PLATFORMS.includes(candidate) ? candidate : '';
+    explicitPlatform ||
+    env.BUILDCHAIN_PLATFORM_ID ||
+    env['INPUT_PLATFORM-ID'] ||
+    '';
+  if (platform) {
+    assertPlatform(platform);
+    return platform;
+  }
+  const runnerOs = env.RUNNER_OS || '';
+  const runnerArch = env.RUNNER_ARCH || '';
+  if (!runnerOs && !runnerArch) return '';
+  if (!runnerOs || !runnerArch) {
+    throw new Error(
+      `incomplete GitHub runner platform identity: RUNNER_OS=${runnerOs || '<empty>'}, RUNNER_ARCH=${runnerArch || '<empty>'}`,
+    );
+  }
+  const inferred = GITHUB_RUNNER_PLATFORM_IDS.get(`${runnerOs}:${runnerArch}`);
+  if (!inferred) {
+    throw new Error(
+      `unsupported GitHub runner platform identity: RUNNER_OS=${runnerOs}, RUNNER_ARCH=${runnerArch}`,
+    );
+  }
+  return inferred;
+}
+
+export function kfdEvidenceRoot(value) {
+  return rooted(value);
 }
 
 function toPosix(value) {
@@ -153,16 +184,15 @@ function gitValue(root, args) {
   return result.stdout.trim();
 }
 
-function assertCheckoutIdentity({
-  resolvedSha,
-  resolvedTree,
-  declaredTree,
-  head,
-  tree,
-}) {
-  if (resolvedSha !== head && !declaredTree) {
+function resolveIdentity(root, sourceSha = '', sourceTree = '') {
+  const head = gitValue(root, ['rev-parse', 'HEAD']);
+  const tree = gitValue(root, ['rev-parse', 'HEAD^{tree}']);
+  const resolvedSha = sourceSha || process.env.BUILDCHAIN_SOURCE_SHA || head;
+  const resolvedTree =
+    sourceTree || process.env.BUILDCHAIN_SOURCE_TREE_SHA || tree;
+  if (resolvedSha !== head) {
     throw new Error(
-      `candidate source commit mismatch without an exact tree binding: expected ${resolvedSha}, checkout is ${head}`,
+      `candidate source root mismatch: expected ${resolvedSha}, checkout is ${head}`,
     );
   }
   if (resolvedTree !== tree) {
@@ -170,31 +200,7 @@ function assertCheckoutIdentity({
       `candidate source tree mismatch: expected ${resolvedTree}, checkout is ${tree}`,
     );
   }
-}
-
-function sourceIdentity(resolvedSha, resolvedTree, head) {
-  return {
-    sourceSha: resolvedSha,
-    sourceTree: resolvedTree,
-    checkoutSha: head,
-    checkoutBinding: 'checkout-tree-verified',
-  };
-}
-
-function resolveIdentity(root, sourceSha = '', sourceTree = '') {
-  const head = gitValue(root, ['rev-parse', 'HEAD']);
-  const tree = gitValue(root, ['rev-parse', 'HEAD^{tree}']);
-  const resolvedSha = sourceSha || process.env.BUILDCHAIN_SOURCE_SHA || head;
-  const declaredTree = sourceTree || process.env.BUILDCHAIN_SOURCE_TREE_SHA;
-  const resolvedTree = declaredTree || tree;
-  assertCheckoutIdentity({
-    resolvedSha,
-    resolvedTree,
-    declaredTree,
-    head,
-    tree,
-  });
-  return sourceIdentity(resolvedSha, resolvedTree, head);
+  return { sourceSha: resolvedSha, sourceTree: resolvedTree };
 }
 
 function fileRows(root, relativePaths) {
@@ -279,11 +285,9 @@ export function sealKfdSourceEvidence({
   expectedInputRoot = '',
   sourceSha = '',
   sourceTree = '',
-  platform = process.env.BUILDCHAIN_PLATFORM_ID ||
-    process.env['INPUT_PLATFORM-ID'] ||
-    kfdPlatformId(),
+  platform = '',
 } = {}) {
-  if (platform) assertPlatform(platform);
+  platform = resolveKfdSourcePlatform(platform);
   const prebuild = createKfdPrebuildGate({ root, sourceSha, sourceTree });
   if (expectedInputRoot && prebuild.inputRoot !== expectedInputRoot) {
     throw new Error(
@@ -372,6 +376,94 @@ function listFiles(directory, relativeRoot) {
   return rows.sort((left, right) => left.path.localeCompare(right.path));
 }
 
+function prebuiltLayerArtifactRoot(root) {
+  return path.join(
+    root,
+    '.buildchain',
+    'runtime',
+    'kfd-candidate-evidence',
+    'prebuilt-layer-artifacts',
+  );
+}
+
+function prebuiltLayerArtifactManifest(root) {
+  return path.join(prebuiltLayerArtifactRoot(root), 'manifest.json');
+}
+
+function validatePrebuiltLayerEntry(root, layer, entry, sourceRoot) {
+  const expectedPath = KFD_PREBUILT_LAYER_ARTIFACTS[layer];
+  if (!expectedPath || entry?.path !== expectedPath) {
+    throw new Error(`invalid sealed KFD ${layer} layer artifact path`);
+  }
+  const artifactRoot = path.join(sourceRoot, expectedPath);
+  const files = listFiles(artifactRoot, artifactRoot);
+  if (files.length === 0) {
+    throw new Error(`missing sealed KFD ${layer} layer artifact files`);
+  }
+  if (entry.root !== rooted(files)) {
+    throw new Error(`sealed KFD ${layer} layer artifact digest mismatch`);
+  }
+  return { artifactRoot, files };
+}
+
+export function sealKfdPrebuiltLayerArtifacts({ root = process.cwd() } = {}) {
+  const output = prebuiltLayerArtifactRoot(root);
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  const layers = {};
+  for (const [layer, relativePath] of Object.entries(
+    KFD_PREBUILT_LAYER_ARTIFACTS,
+  )) {
+    const source = path.join(root, relativePath);
+    const files = listFiles(source, source);
+    if (files.length === 0) {
+      throw new Error(`missing prebuilt KFD ${layer} layer artifacts`);
+    }
+    const target = path.join(output, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(source, target, { recursive: true });
+    layers[layer] = { path: relativePath, root: rooted(files) };
+  }
+  const body = {
+    schema: KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT,
+    layers,
+  };
+  const manifest = { ...body, manifestRoot: rooted(body) };
+  writeJson(prebuiltLayerArtifactManifest(root), manifest);
+  return manifest;
+}
+
+export function restoreKfdPrebuiltLayerArtifact({
+  root = process.cwd(),
+  layer,
+} = {}) {
+  const manifestPath = prebuiltLayerArtifactManifest(root);
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error('missing sealed KFD prebuilt layer artifact manifest');
+  }
+  const manifest = readJson(manifestPath);
+  const { manifestRoot, ...body } = manifest;
+  if (
+    manifest.schema !== KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT ||
+    manifestRoot !== rooted(body)
+  ) {
+    throw new Error('invalid sealed KFD prebuilt layer artifact manifest');
+  }
+  const entry = manifest.layers?.[layer];
+  const sealed = validatePrebuiltLayerEntry(
+    root,
+    layer,
+    entry,
+    prebuiltLayerArtifactRoot(root),
+  );
+  const target = path.join(root, entry.path);
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(sealed.artifactRoot, target, { recursive: true });
+  validatePrebuiltLayerEntry(root, layer, entry, root);
+  return entry;
+}
+
 export function releaseArtifactRoot(root = process.cwd()) {
   const releaseDir = path.join(root, 'product', 'release');
   const rows = listFiles(releaseDir, releaseDir).filter(
@@ -388,54 +480,6 @@ function assertPlatform(platform) {
     throw new Error(
       `unsupported KFD candidate platform: ${platform || '<empty>'}`,
     );
-  }
-}
-
-function validateSealedSourceGate({
-  sourceGate,
-  sourceDir,
-  platform,
-  identity,
-}) {
-  const { gateRoot, ...gateBody } = sourceGate;
-  if (gateRoot !== rooted(gateBody)) {
-    throw new Error('KFD source gate digest mismatch');
-  }
-  if (sourceGate.status !== 'passed') {
-    throw new Error('KFD source gate is not passed');
-  }
-  if (sourceGate.platform !== platform) {
-    throw new Error(
-      `KFD source gate platform mismatch: expected ${platform}, got ${sourceGate.platform || '<empty>'}`,
-    );
-  }
-  if (
-    sourceGate.candidate?.sourceSha !== identity.sourceSha ||
-    sourceGate.candidate?.sourceTree !== identity.sourceTree
-  ) {
-    throw new Error('KFD source gate candidate/source root mismatch');
-  }
-  if (sourceGate.evidenceRoot !== rooted(sourceGate.generatedEvidence || [])) {
-    throw new Error('KFD source evidence root mismatch');
-  }
-  const sourceRoot = path.resolve(sourceDir);
-  for (const row of sourceGate.generatedEvidence || []) {
-    const evidencePath = path.resolve(sourceRoot, String(row.path || ''));
-    if (
-      evidencePath === sourceRoot ||
-      !evidencePath.startsWith(`${sourceRoot}${path.sep}`) ||
-      !fs.existsSync(evidencePath)
-    ) {
-      throw new Error(
-        `missing sealed KFD source evidence: ${row.path || '<empty>'}`,
-      );
-    }
-    if (
-      fs.statSync(evidencePath).size !== row.bytes ||
-      `sha256:${sha256File(evidencePath)}` !== row.sha256
-    ) {
-      throw new Error(`tampered sealed KFD source evidence: ${row.path}`);
-    }
   }
 }
 
@@ -459,12 +503,14 @@ export function prepareKfdArtifactWitness({
   if (!fs.existsSync(sourceGatePath))
     throw new Error('missing sealed KFD source gate');
   const sourceGate = readJson(sourceGatePath);
-  validateSealedSourceGate({
-    sourceGate,
-    sourceDir: path.join(runtimeDir, 'source'),
-    platform,
-    identity,
-  });
+  if (
+    sourceGate.status !== 'passed' ||
+    sourceGate.platform !== platform ||
+    sourceGate.candidate?.sourceSha !== identity.sourceSha ||
+    sourceGate.candidate?.sourceTree !== identity.sourceTree
+  ) {
+    throw new Error('KFD source gate candidate/source root mismatch');
+  }
   const artifact = releaseArtifactRoot(root);
   const baseWitness = buildArtifactWitness();
   const platformPrebuildPath = path.join(
@@ -514,16 +560,6 @@ export function finalizeKfdCandidateEvidence({
   if (!fs.existsSync(witnessPath))
     throw new Error(`missing KFD artifact witness: ${platform}`);
   const witness = readJson(witnessPath);
-  validateSealedSourceGate({
-    sourceGate,
-    sourceDir: path.join(output, 'source'),
-    platform,
-    identity,
-  });
-  const { bindingRoot, ...bindingBody } = witness.candidateBinding || {};
-  if (bindingRoot !== rooted(bindingBody)) {
-    throw new Error('KFD artifact witness binding digest mismatch');
-  }
   const artifact = releaseArtifactRoot(root);
   if (witness.candidateBinding?.artifactRoot !== artifact.root) {
     throw new Error(
@@ -692,14 +728,13 @@ export function runVerifiedQualification({
   sourceSha,
   sourceTree,
   buildArtifactWitness,
+  prepareReleaseArtifacts,
 }) {
-  const result = spawnSync(command[0], command.slice(1), {
-    cwd: root,
-    env: process.env,
-    stdio: 'inherit',
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) return result.status || 1;
+  const prepareStatus = prepareReleaseArtifacts?.();
+  if (prepareStatus !== undefined && prepareStatus !== 0) {
+    return prepareStatus || 1;
+  }
+  sealKfdPrebuiltLayerArtifacts({ root });
   prepareKfdArtifactWitness({
     root,
     platform,
@@ -707,6 +742,30 @@ export function runVerifiedQualification({
     sourceTree,
     buildArtifactWitness,
   });
+  const output = path.join(root, 'product', 'release', 'qualification', 'kfd');
+  const sealed = path.join(
+    root,
+    '.buildchain',
+    'runtime',
+    'kfd-candidate-evidence',
+    'artifact-before-verify',
+  );
+  fs.rmSync(sealed, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(sealed), { recursive: true });
+  fs.renameSync(output, sealed);
+  const result = spawnSync(command[0], command.slice(1), {
+    cwd: root,
+    env: {
+      ...process.env,
+      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
+    },
+    stdio: 'inherit',
+  });
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  fs.renameSync(sealed, output);
+  if (result.error) throw result.error;
+  if (result.status !== 0) return result.status || 1;
   finalizeKfdCandidateEvidence({ root, platform, sourceSha, sourceTree });
   return 0;
 }

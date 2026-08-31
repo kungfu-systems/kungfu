@@ -149,12 +149,6 @@ public:
                    bus_ptr bus, uint64_t page_size,
                    yijinjing::enums::Priority priority = yijinjing::enums::Priority::Medium);
 
-  [[deprecated("kungfu-deprecation:core.yijinjing.journal-open-policy-adapters#journal-bool-constructor; use "
-               "journal_open_policy")]] explicit journal(data::location_ptr location, uint32_t dest_id, bool is_writing,
-                                                         bool lazy, bool low_latency, bus_ptr bus, uint64_t page_size,
-                                                         yijinjing::enums::Priority priority =
-                                                             yijinjing::enums::Priority::Medium);
-
   journal(const journal &other);
 
   virtual ~journal();
@@ -237,10 +231,6 @@ class reader {
 public:
   explicit reader(reader_policy policy, bool low_latency, bus_ptr bus)
       : policy_(policy), low_latency_(low_latency), bus_(std::move(bus)), current_(nullptr) {}
-
-  [[deprecated("kungfu-deprecation:core.yijinjing.journal-open-policy-adapters#reader-bool-constructor; use "
-               "reader_policy")]] explicit reader(bool lazy, bool low_latency, bus_ptr bus)
-      : reader(lazy ? reader_policy::peer() : reader_policy::coordinator(), low_latency, std::move(bus)) {}
 
   reader(const reader &other);
 

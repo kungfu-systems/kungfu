@@ -242,6 +242,316 @@ function hasExactCase(root, absolute) {
  * @param {{root?: string, files?: string[], contract?: DocsContract, vocabularyRegistry?: object | false, metadataContract?: object | false}} options
  * @returns {Finding[]}
  */
+function checkDocumentationHierarchy(files, hierarchy, findings) {
+  if (!hierarchy) return;
+  const hierarchyRoot = hierarchy.root.replace(/\/$/, '');
+  const entries = new Set(hierarchy.entryFiles || []);
+  const canonicalDirectories = hierarchy.canonicalDirectories || [];
+  const forbiddenMarkdownRoots = (hierarchy.forbiddenMarkdownRoots || []).map(
+    (directory) => directory.replace(/\/$/, ''),
+  );
+  for (const rel of files) {
+    const retiredRoot = forbiddenMarkdownRoots.find(
+      (directory) => rel === directory || rel.startsWith(`${directory}/`),
+    );
+    if (retiredRoot)
+      findings.push({
+        code: 'documentation-retired-root',
+        file: rel,
+        line: 1,
+        message: `Markdown is forbidden under retired documentation root: ${retiredRoot}`,
+      });
+  }
+  for (const rel of files.filter(
+    (file) => file.startsWith(`${hierarchyRoot}/`) || file === hierarchyRoot,
+  )) {
+    if (path.posix.dirname(rel) === hierarchyRoot) {
+      if (!entries.has(rel))
+        findings.push({
+          code: 'documentation-hierarchy-root',
+          file: rel,
+          line: 1,
+          message: 'root Markdown must be a declared entry file',
+        });
+      continue;
+    }
+    if (
+      !canonicalDirectories.some(
+        (directory) => rel === directory || rel.startsWith(`${directory}/`),
+      )
+    )
+      findings.push({
+        code: 'documentation-hierarchy-directory',
+        file: rel,
+        line: 1,
+        message:
+          'canonical documentation is outside the declared directory taxonomy',
+      });
+  }
+}
+
+function checkRequiredDocumentation(root, contract, findings) {
+  for (const rel of contract.requiredFiles || []) {
+    if (!fs.existsSync(path.join(root, rel)))
+      findings.push({
+        code: 'required-file',
+        file: rel,
+        line: 1,
+        message: 'required documentation surface is missing',
+      });
+  }
+}
+
+function checkDocumentLink(root, document, link, documents, findings) {
+  const local = resolveLocal(root, document.rel, link.href);
+  if (!local) return;
+  const targetRel = relativeInside(root, local.target);
+  if (!targetRel) {
+    findings.push({
+      code: 'outside-root',
+      file: document.rel,
+      line: link.line,
+      message: `local link escapes the repository: ${link.href}`,
+    });
+    return;
+  }
+  if (!fs.existsSync(local.target)) {
+    findings.push({
+      code: 'missing-target',
+      file: document.rel,
+      line: link.line,
+      message: `local link target does not exist: ${link.href}`,
+    });
+    return;
+  }
+  if (!hasExactCase(root, local.target)) {
+    findings.push({
+      code: 'case-mismatch',
+      file: document.rel,
+      line: link.line,
+      message: `local link path casing does not match the repository: ${link.href}`,
+    });
+    return;
+  }
+  if (!local.fragment || !/\.(?:md|markdown)$/i.test(targetRel)) return;
+  let target = documents.get(targetRel);
+  if (!target) {
+    target = parseDocument(targetRel, fs.readFileSync(local.target, 'utf8'));
+    documents.set(targetRel, target);
+  }
+  if (!target.anchors.has(local.fragment))
+    findings.push({
+      code: 'missing-anchor',
+      file: document.rel,
+      line: link.line,
+      message: `Markdown anchor does not exist: ${link.href}`,
+    });
+}
+
+function checkDocumentLinks(root, documents, findings) {
+  for (const document of documents.values()) {
+    for (const link of document.links)
+      checkDocumentLink(root, document, link, documents, findings);
+  }
+}
+
+function checkRequiredPointers(root, contract, documents, findings) {
+  for (const pointer of contract.requiredPointers || []) {
+    const source = documents.get(pointer.from);
+    if (!source) continue;
+    const found = source.links.some((link) => {
+      const local = resolveLocal(root, pointer.from, link.href);
+      return local && relativeInside(root, local.target) === pointer.to;
+    });
+    if (!found)
+      findings.push({
+        code: 'required-pointer',
+        file: pointer.from,
+        line: 1,
+        message: `required documentation pointer is missing: ${pointer.to}`,
+      });
+  }
+}
+
+function collectExecutableExamples(contract, documents, findings) {
+  const declared = new Map(
+    (contract.executableExamples || []).map((example) => [example.id, example]),
+  );
+  const observed = new Map();
+  for (const document of documents.values()) {
+    for (const example of document.examples) {
+      if (observed.has(example.id)) {
+        findings.push({
+          code: 'executable-example-duplicate',
+          file: document.rel,
+          line: example.line,
+          message: `duplicate executable example id: ${example.id}`,
+        });
+        continue;
+      }
+      observed.set(example.id, { ...example, file: document.rel });
+      const declaration = declared.get(example.id);
+      if (!declaration)
+        findings.push({
+          code: 'executable-example-undeclared',
+          file: document.rel,
+          line: example.line,
+          message: `executable example is not declared in ${DEFAULT_CONTRACT}: ${example.id}`,
+        });
+      else if (
+        declaration.file !== document.rel ||
+        declaration.command.join(' ') !== example.source
+      )
+        findings.push({
+          code: 'executable-example-drift',
+          file: document.rel,
+          line: example.line,
+          message: `executable example differs from its safe command contract: ${example.id}`,
+        });
+    }
+  }
+  return { declared, observed };
+}
+
+function checkExecutableDeclaration(declaration, observed, findings) {
+  if (!observed.has(declaration.id))
+    findings.push({
+      code: 'executable-example-missing',
+      file: declaration.file,
+      line: 1,
+      message: `declared executable example is missing: ${declaration.id}`,
+    });
+  if (
+    !Array.isArray(declaration.command) ||
+    !declaration.command.length ||
+    !Number.isInteger(declaration.timeoutMs) ||
+    declaration.timeoutMs < 100 ||
+    declaration.timeoutMs > 30000
+  )
+    findings.push({
+      code: 'executable-example-contract',
+      file: DEFAULT_CONTRACT,
+      line: 1,
+      message: `invalid bounded command contract: ${declaration.id}`,
+    });
+  else if (!SAFE_EXAMPLE_COMMANDS.has(JSON.stringify(declaration.command)))
+    findings.push({
+      code: 'executable-example-unsafe',
+      file: DEFAULT_CONTRACT,
+      line: 1,
+      message: `command is not in the side-effect-free documentation allowlist: ${declaration.id}`,
+    });
+  if (declaration.stdoutPattern) {
+    try {
+      new RegExp(declaration.stdoutPattern);
+    } catch {
+      findings.push({
+        code: 'executable-example-contract',
+        file: DEFAULT_CONTRACT,
+        line: 1,
+        message: `invalid stdoutPattern: ${declaration.id}`,
+      });
+    }
+  }
+}
+
+function checkExecutableExamples(contract, documents, findings) {
+  const examples = collectExecutableExamples(contract, documents, findings);
+  for (const declaration of examples.declared.values())
+    checkExecutableDeclaration(declaration, examples.observed, findings);
+}
+
+function enqueueImplicitCollections(
+  publication,
+  sourceRel,
+  included,
+  reachable,
+  queue,
+) {
+  for (const collection of publication.implicitCollections || []) {
+    if (collection.index !== sourceRel) continue;
+    const patterns = collection.patterns.map((value) => new RegExp(value));
+    for (const candidate of included) {
+      if (
+        !reachable.has(candidate) &&
+        patterns.some((pattern) => pattern.test(candidate))
+      ) {
+        reachable.add(candidate);
+        queue.push(candidate);
+      }
+    }
+  }
+}
+
+function publicationReachability(root, publication, files, documents) {
+  const included = new Set(
+    files.filter((rel) =>
+      publication.include.some(
+        (entry) => rel === entry || rel.startsWith(`${entry}/`),
+      ),
+    ),
+  );
+  const reachable = new Set(
+    publication.roots.filter((rel) => included.has(rel)),
+  );
+  const queue = [...reachable];
+  while (queue.length) {
+    const sourceRel = queue.shift();
+    const source = documents.get(sourceRel);
+    for (const link of source?.links || []) {
+      const local = resolveLocal(root, sourceRel, link.href);
+      if (!local) continue;
+      const targetRel = relativeInside(root, local.target);
+      if (targetRel && included.has(targetRel) && !reachable.has(targetRel)) {
+        reachable.add(targetRel);
+        queue.push(targetRel);
+      }
+    }
+    enqueueImplicitCollections(
+      publication,
+      sourceRel,
+      included,
+      reachable,
+      queue,
+    );
+  }
+  return { included, reachable };
+}
+
+function checkPublication(root, contract, files, documents, findings) {
+  const publication = contract.publication;
+  if (!publication) return;
+  const { included, reachable } = publicationReachability(
+    root,
+    publication,
+    files,
+    documents,
+  );
+  const allowed = new Set(publication.allowedOrphans || []);
+  for (const rel of included) {
+    if (!reachable.has(rel) && !allowed.has(rel))
+      findings.push({
+        code: 'publication-orphan',
+        file: rel,
+        line: 1,
+        message: 'public document is unreachable from every publication root',
+      });
+  }
+  for (const rel of allowed) {
+    if (!included.has(rel) || reachable.has(rel))
+      findings.push({
+        code: 'publication-orphan-exception',
+        file: DEFAULT_CONTRACT,
+        line: 1,
+        message: `stale or invalid allowed orphan: ${rel}`,
+      });
+  }
+}
+
+/**
+ * @param {{root?: string, files?: string[], contract?: DocsContract, vocabularyRegistry?: object | false, metadataContract?: object | false}} options
+ * @returns {Finding[]}
+ */
 export function checkDocs(options = {}) {
   const root = path.resolve(options.root || ROOT);
   const files = options.files || markdownFiles(root);
@@ -256,8 +566,7 @@ export function checkDocs(options = {}) {
           root,
           registry: /** @type {any} */ (options.vocabularyRegistry),
         });
-
-  if (options.metadataContract !== false) {
+  if (options.metadataContract !== false)
     findings.push(
       ...validateDocumentMetadata({
         root,
@@ -265,283 +574,17 @@ export function checkDocs(options = {}) {
         contract: /** @type {any} */ (options.metadataContract),
       }),
     );
-  }
-
   for (const rel of files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');
     documents.set(rel, parseDocument(rel, text));
   }
 
-  const hierarchy = contract.hierarchy;
-  if (hierarchy) {
-    const hierarchyRoot = hierarchy.root.replace(/\/$/, '');
-    const entries = new Set(hierarchy.entryFiles || []);
-    const canonicalDirectories = hierarchy.canonicalDirectories || [];
-    const forbiddenMarkdownRoots = (hierarchy.forbiddenMarkdownRoots || []).map(
-      (directory) => directory.replace(/\/$/, ''),
-    );
-    for (const rel of files) {
-      const retiredRoot = forbiddenMarkdownRoots.find(
-        (directory) => rel === directory || rel.startsWith(`${directory}/`),
-      );
-      if (retiredRoot) {
-        findings.push({
-          code: 'documentation-retired-root',
-          file: rel,
-          line: 1,
-          message: `Markdown is forbidden under retired documentation root: ${retiredRoot}`,
-        });
-      }
-    }
-    for (const rel of files.filter(
-      (file) => file.startsWith(`${hierarchyRoot}/`) || file === hierarchyRoot,
-    )) {
-      if (path.posix.dirname(rel) === hierarchyRoot) {
-        if (!entries.has(rel)) {
-          findings.push({
-            code: 'documentation-hierarchy-root',
-            file: rel,
-            line: 1,
-            message: 'root Markdown must be a declared entry file',
-          });
-        }
-        continue;
-      }
-      if (
-        !canonicalDirectories.some(
-          (directory) => rel === directory || rel.startsWith(`${directory}/`),
-        )
-      ) {
-        findings.push({
-          code: 'documentation-hierarchy-directory',
-          file: rel,
-          line: 1,
-          message:
-            'canonical documentation is outside the declared directory taxonomy',
-        });
-      }
-    }
-  }
-
-  for (const rel of contract.requiredFiles || []) {
-    if (!fs.existsSync(path.join(root, rel))) {
-      findings.push({
-        code: 'required-file',
-        file: rel,
-        line: 1,
-        message: 'required documentation surface is missing',
-      });
-    }
-  }
-
-  for (const document of documents.values()) {
-    for (const link of document.links) {
-      const local = resolveLocal(root, document.rel, link.href);
-      if (!local) continue;
-      const targetRel = relativeInside(root, local.target);
-      if (!targetRel) {
-        findings.push({
-          code: 'outside-root',
-          file: document.rel,
-          line: link.line,
-          message: `local link escapes the repository: ${link.href}`,
-        });
-        continue;
-      }
-      if (!fs.existsSync(local.target)) {
-        findings.push({
-          code: 'missing-target',
-          file: document.rel,
-          line: link.line,
-          message: `local link target does not exist: ${link.href}`,
-        });
-        continue;
-      }
-      if (!hasExactCase(root, local.target)) {
-        findings.push({
-          code: 'case-mismatch',
-          file: document.rel,
-          line: link.line,
-          message: `local link path casing does not match the repository: ${link.href}`,
-        });
-        continue;
-      }
-      if (!local.fragment || !/\.(?:md|markdown)$/i.test(targetRel)) continue;
-      let target = documents.get(targetRel);
-      if (!target) {
-        target = parseDocument(
-          targetRel,
-          fs.readFileSync(local.target, 'utf8'),
-        );
-        documents.set(targetRel, target);
-      }
-      if (!target.anchors.has(local.fragment)) {
-        findings.push({
-          code: 'missing-anchor',
-          file: document.rel,
-          line: link.line,
-          message: `Markdown anchor does not exist: ${link.href}`,
-        });
-      }
-    }
-  }
-
-  for (const pointer of contract.requiredPointers || []) {
-    const source = documents.get(pointer.from);
-    if (!source) continue;
-    const found = source.links.some((link) => {
-      const local = resolveLocal(root, pointer.from, link.href);
-      return local && relativeInside(root, local.target) === pointer.to;
-    });
-    if (!found) {
-      findings.push({
-        code: 'required-pointer',
-        file: pointer.from,
-        line: 1,
-        message: `required documentation pointer is missing: ${pointer.to}`,
-      });
-    }
-  }
-
-  const declaredExamples = new Map(
-    (contract.executableExamples || []).map((example) => [example.id, example]),
-  );
-  const observedExamples = new Map();
-  for (const document of documents.values()) {
-    for (const example of document.examples) {
-      if (observedExamples.has(example.id)) {
-        findings.push({
-          code: 'executable-example-duplicate',
-          file: document.rel,
-          line: example.line,
-          message: `duplicate executable example id: ${example.id}`,
-        });
-        continue;
-      }
-      observedExamples.set(example.id, { ...example, file: document.rel });
-      const declaration = declaredExamples.get(example.id);
-      if (!declaration) {
-        findings.push({
-          code: 'executable-example-undeclared',
-          file: document.rel,
-          line: example.line,
-          message: `executable example is not declared in ${DEFAULT_CONTRACT}: ${example.id}`,
-        });
-      } else if (
-        declaration.file !== document.rel ||
-        declaration.command.join(' ') !== example.source
-      ) {
-        findings.push({
-          code: 'executable-example-drift',
-          file: document.rel,
-          line: example.line,
-          message: `executable example differs from its safe command contract: ${example.id}`,
-        });
-      }
-    }
-  }
-  for (const declaration of declaredExamples.values()) {
-    if (!observedExamples.has(declaration.id))
-      findings.push({
-        code: 'executable-example-missing',
-        file: declaration.file,
-        line: 1,
-        message: `declared executable example is missing: ${declaration.id}`,
-      });
-    if (
-      !Array.isArray(declaration.command) ||
-      !declaration.command.length ||
-      !Number.isInteger(declaration.timeoutMs) ||
-      declaration.timeoutMs < 100 ||
-      declaration.timeoutMs > 30000
-    )
-      findings.push({
-        code: 'executable-example-contract',
-        file: DEFAULT_CONTRACT,
-        line: 1,
-        message: `invalid bounded command contract: ${declaration.id}`,
-      });
-    else if (!SAFE_EXAMPLE_COMMANDS.has(JSON.stringify(declaration.command)))
-      findings.push({
-        code: 'executable-example-unsafe',
-        file: DEFAULT_CONTRACT,
-        line: 1,
-        message: `command is not in the side-effect-free documentation allowlist: ${declaration.id}`,
-      });
-    if (declaration.stdoutPattern) {
-      try {
-        new RegExp(declaration.stdoutPattern);
-      } catch {
-        findings.push({
-          code: 'executable-example-contract',
-          file: DEFAULT_CONTRACT,
-          line: 1,
-          message: `invalid stdoutPattern: ${declaration.id}`,
-        });
-      }
-    }
-  }
-
-  const publication = contract.publication;
-  if (publication) {
-    const included = new Set(
-      files.filter((rel) =>
-        publication.include.some(
-          (entry) => rel === entry || rel.startsWith(`${entry}/`),
-        ),
-      ),
-    );
-    const allowed = new Set(publication.allowedOrphans || []);
-    const reachable = new Set(
-      publication.roots.filter((rel) => included.has(rel)),
-    );
-    const queue = [...reachable];
-    while (queue.length) {
-      const sourceRel = queue.shift();
-      const source = documents.get(sourceRel);
-      for (const link of source?.links || []) {
-        const local = resolveLocal(root, sourceRel, link.href);
-        if (!local) continue;
-        const targetRel = relativeInside(root, local.target);
-        if (targetRel && included.has(targetRel) && !reachable.has(targetRel)) {
-          reachable.add(targetRel);
-          queue.push(targetRel);
-        }
-      }
-      for (const collection of publication.implicitCollections || []) {
-        if (collection.index !== sourceRel) continue;
-        const patterns = collection.patterns.map((value) => new RegExp(value));
-        for (const candidate of included) {
-          if (
-            !reachable.has(candidate) &&
-            patterns.some((pattern) => pattern.test(candidate))
-          ) {
-            reachable.add(candidate);
-            queue.push(candidate);
-          }
-        }
-      }
-    }
-    for (const rel of included) {
-      if (!reachable.has(rel) && !allowed.has(rel))
-        findings.push({
-          code: 'publication-orphan',
-          file: rel,
-          line: 1,
-          message: 'public document is unreachable from every publication root',
-        });
-    }
-    for (const rel of allowed) {
-      if (!included.has(rel) || reachable.has(rel))
-        findings.push({
-          code: 'publication-orphan-exception',
-          file: DEFAULT_CONTRACT,
-          line: 1,
-          message: `stale or invalid allowed orphan: ${rel}`,
-        });
-    }
-  }
-
+  checkDocumentationHierarchy(files, contract.hierarchy, findings);
+  checkRequiredDocumentation(root, contract, findings);
+  checkDocumentLinks(root, documents, findings);
+  checkRequiredPointers(root, contract, documents, findings);
+  checkExecutableExamples(contract, documents, findings);
+  checkPublication(root, contract, files, documents, findings);
   return findings.sort(
     (left, right) =>
       left.file.localeCompare(right.file) || left.line - right.line,

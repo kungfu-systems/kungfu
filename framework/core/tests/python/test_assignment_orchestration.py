@@ -1619,28 +1619,46 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
     assert second_review["review"]["claim_id"] == second_claim["claim"]["claim_id"]
 
 
-@pytest.mark.parametrize("phase", ["executing", "recovered-closeout", "stage-ready"])
-def test_next_actions_defers_to_incomplete_work_semantics(phase):
+@pytest.mark.parametrize(
+    ("phase", "snapshot", "action", "reason"),
+    [
+        ("executing", True, "authorize-effect", "no-fresh-effect-authorization"),
+        (
+            "recovered-closeout",
+            True,
+            "authorize-effect",
+            "no-fresh-effect-authorization",
+        ),
+        ("stage-ready", True, "authorize-effect", "no-fresh-effect-authorization"),
+        (
+            "recovered-closeout",
+            False,
+            "record-input-snapshot",
+            "no-current-input-snapshot",
+        ),
+        ("stage-ready", False, "record-input-snapshot", "no-current-input-snapshot"),
+    ],
+)
+def test_next_actions_defers_to_incomplete_work_semantics(
+    phase, snapshot, action, reason
+):
     status = {
         "initiative_id": "initiative-a",
         "assignment_id": "assignment-a",
         "phase": phase,
         "active_lease": {"lease_id": "lease-a"},
         "work_semantics": {
-            "current_input_snapshot": {"record_root": _sha256("a")},
+            "current_input_snapshot": (
+                {"record_root": _sha256("a")} if snapshot else None
+            ),
             "completion_eligible": False,
-            "next_actions": [
-                {
-                    "action": "authorize-effect",
-                    "reason": "no-fresh-effect-authorization",
-                }
-            ],
+            "next_actions": [{"action": action, "reason": reason}],
         },
     }
 
     assert assignment_orchestration.next_actions(status) == [
         {
-            "action": "authorize-effect",
+            "action": action,
             "description": (
                 "Complete current Work semantics before publishing completion"
             ),
@@ -1648,7 +1666,7 @@ def test_next_actions_defers_to_incomplete_work_semantics(phase):
                 "initiative_id": "initiative-a",
                 "assignment_id": "assignment-a",
             },
-            "reason": "no-fresh-effect-authorization",
+            "reason": reason,
         }
     ]
 

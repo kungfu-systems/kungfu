@@ -215,12 +215,16 @@ def fsck(runtime_dir: str | Path, *, cut_root: str = "") -> dict[str, Any]:
             valid_frontier = (
                 isinstance(frontier, list)
                 and len(frontier) == 3
-                and isinstance(frontier[0], int)
-                and frontier[0] >= 0
-                and isinstance(frontier[1], str)
-                and bool(_ROOT.fullmatch(frontier[1]))
-                and isinstance(frontier[2], str)
-                and bool(frontier[2])
+                and all(
+                    (
+                        isinstance(frontier[0], int),
+                        frontier[0] >= 0,
+                        isinstance(frontier[1], str),
+                        bool(_ROOT.fullmatch(frontier[1])),
+                        isinstance(frontier[2], str),
+                        bool(frontier[2]),
+                    )
+                )
             )
             if not valid_frontier:
                 issue("episode-frontier-invalid", current_root, frontier=frontier)

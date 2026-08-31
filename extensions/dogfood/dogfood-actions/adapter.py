@@ -39,6 +39,22 @@ def _workspace(values: Mapping[str, Any]):
     return identity
 
 
+def _record_consideration(domain, runtime_dir: str, values: Mapping[str, Any]):
+    result = domain.record_consideration(
+        runtime_dir,
+        _workspace(values),
+        assignment=dict(values.get("assignment") or {}),
+        stage=str(values.get("stage") or ""),
+        actor=str(values.get("actor") or ""),
+        dispositions=values.get("dispositions") or [],
+        scope=str(values.get("scope") or "local"),
+        limit=int(values.get("limit") or 50),
+        config_home=str(values.get("configHome") or "") or None,
+        recorded_at=str(values.get("recordedAt") or ""),
+    )
+    return result, [result["consideration"]["receipt_root"]]
+
+
 def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
     if operation == "capture-finding":
         result = domain.capture_finding(
@@ -93,19 +109,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         )
         affected = [result["issue"]["issue_root"]]
     elif operation == "record-consideration":
-        result = domain.record_consideration(
-            runtime_dir,
-            _workspace(values),
-            assignment=dict(values.get("assignment") or {}),
-            stage=str(values.get("stage") or ""),
-            actor=str(values.get("actor") or ""),
-            dispositions=values.get("dispositions") or [],
-            scope=str(values.get("scope") or "local"),
-            limit=int(values.get("limit") or 50),
-            config_home=str(values.get("configHome") or "") or None,
-            recorded_at=str(values.get("recordedAt") or ""),
-        )
-        affected = [result["consideration"]["receipt_root"]]
+        result, affected = _record_consideration(domain, runtime_dir, values)
     else:
         raise ValueError(f"unsupported Dogfood action: {operation}")
     return {

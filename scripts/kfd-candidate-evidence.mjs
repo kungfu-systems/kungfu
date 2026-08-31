@@ -11,6 +11,7 @@ import {
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
 } from '../framework/release/kfd-candidate-evidence.mjs';
+import { runShifuWithCache } from './run-shifu-lifecycle.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -50,6 +51,14 @@ function usage() {
 `;
 }
 
+function prepareReleaseArtifacts() {
+  for (const task of ['pack:spec', 'pack:sdk', 'pack:npm-release-inventory']) {
+    const status = runShifuWithCache([task], { root: ROOT });
+    if (status !== 0) return status;
+  }
+  return 0;
+}
+
 const { mode, options } = parse(process.argv.slice(2));
 let result;
 if (mode === 'source-check') {
@@ -85,6 +94,7 @@ if (mode === 'source-check') {
     platform: options.platform,
     sourceSha: options.sourceSha,
     sourceTree: options.sourceTree,
+    prepareReleaseArtifacts,
   });
   result = { ok: process.exitCode === 0 };
 } else if (mode === 'verify-manifest-set') {
