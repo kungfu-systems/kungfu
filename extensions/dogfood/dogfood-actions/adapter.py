@@ -18,6 +18,13 @@ WRITE_OPERATIONS = {
 }
 
 
+def _strings(values, fields):
+    return {
+        argument: str(values.get(source) or default)
+        for argument, source, default in fields
+    }
+
+
 def _object(value: Any) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise TypeError("Dogfood adapter input must be an object")
@@ -58,19 +65,24 @@ def _record_consideration(domain, runtime_dir: str, values: Mapping[str, Any]):
 def _capture_finding(domain, runtime_dir, values):
     result = domain.capture_finding(
         runtime_dir,
-        finding_id=str(values.get("findingId") or ""),
-        title=str(values.get("title") or ""),
-        summary=str(values.get("summary") or ""),
-        episode_root=str(values.get("episodeRoot") or ""),
+        **_strings(
+            values,
+            (
+                ("finding_id", "findingId", ""),
+                ("title", "title", ""),
+                ("summary", "summary", ""),
+                ("episode_root", "episodeRoot", ""),
+                ("privacy", "privacy", "internal"),
+                ("runtime_surface", "runtimeSurface", ""),
+                ("runtime_receipt_root", "runtimeReceiptRoot", ""),
+                ("actor", "actor", ""),
+                ("observed_at", "observedAt", ""),
+                ("impact", "impact", "medium"),
+                ("hard_class", "hardClass", ""),
+            ),
+        ),
         evidence_roots=values.get("evidenceRoots") or [],
         dimensions=values.get("dimensions") or {},
-        privacy=str(values.get("privacy") or "internal"),
-        runtime_surface=str(values.get("runtimeSurface") or ""),
-        runtime_receipt_root=str(values.get("runtimeReceiptRoot") or ""),
-        actor=str(values.get("actor") or ""),
-        observed_at=str(values.get("observedAt") or ""),
-        impact=str(values.get("impact") or "medium"),
-        hard_class=str(values.get("hardClass") or ""),
         recurrence=int(values.get("recurrence") or 1),
     )
     return result, [result["finding"]["finding_root"]]
@@ -95,18 +107,23 @@ def _admit_issue(domain, runtime_dir, values):
 def _transition_issue(domain, runtime_dir, values):
     result = domain.transition_issue(
         runtime_dir,
-        issue_id=str(values.get("issueId") or ""),
-        expected_issue_root=str(values.get("expectedIssueRoot") or ""),
-        to_state=str(values.get("toState") or ""),
-        actor=str(values.get("actor") or ""),
-        reason=str(values.get("reason") or ""),
-        owner=str(values.get("owner") or ""),
-        independent_assessment_root=str(values.get("independentAssessmentRoot") or ""),
-        authorized_decision_root=str(values.get("authorizedDecisionRoot") or ""),
-        successor_fact_root=str(values.get("successorFactRoot") or ""),
-        product_root=str(values.get("productRoot") or ""),
+        **_strings(
+            values,
+            (
+                ("issue_id", "issueId", ""),
+                ("expected_issue_root", "expectedIssueRoot", ""),
+                ("to_state", "toState", ""),
+                ("actor", "actor", ""),
+                ("reason", "reason", ""),
+                ("owner", "owner", ""),
+                ("independent_assessment_root", "independentAssessmentRoot", ""),
+                ("authorized_decision_root", "authorizedDecisionRoot", ""),
+                ("successor_fact_root", "successorFactRoot", ""),
+                ("product_root", "productRoot", ""),
+                ("transitioned_at", "transitionedAt", ""),
+            ),
+        ),
         verification_evidence_roots=values.get("verificationEvidenceRoots") or [],
-        transitioned_at=str(values.get("transitionedAt") or ""),
     )
     return result, [result["issue"]["issue_root"]]
 

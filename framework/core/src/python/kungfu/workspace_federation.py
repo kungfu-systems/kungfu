@@ -509,14 +509,9 @@ def _verify_available_component(
         issues.append({"code": "component-runtime-incompatible", "index": index})
 
 
-def _verify_component(component: Mapping[str, Any], index, issues):
-    envelope = component.get("envelope")
-    if not isinstance(envelope, Mapping):
-        issues.append({"code": "component-envelope-missing", "index": index})
-        return
+def _verify_component_identity(component, envelope, index, issues):
     declared = str(envelope.get("envelope_root") or "")
-    body = dict(envelope)
-    body.pop("envelope_root", None)
+    body = {key: value for key, value in envelope.items() if key != "envelope_root"}
     if body.get("schema") != COMPONENT_ENVELOPE_SCHEMA:
         issues.append({"code": "component-envelope-schema", "index": index})
     elif not _ROOT.fullmatch(declared) or semantic_root(body) != declared:
@@ -552,6 +547,9 @@ def _verify_component(component: Mapping[str, Any], index, issues):
         issues.append({"code": "component-result-root-mismatch", "index": index})
     if component.get("availability") == "available":
         _verify_available_component(envelope, index, issues)
+
+
+def _verify_component_retained(component, index, issues):
     retained_states = component.get("retained_assignment_states") or []
     retained_root = str(component.get("retained_state_index_root") or "")
     if retained_root and (
@@ -559,6 +557,10 @@ def _verify_component(component: Mapping[str, Any], index, issues):
         or _retained_state_projection_root(retained_states) != retained_root
     ):
         issues.append({"code": "component-retained-state-index-root", "index": index})
+
+
+def _verify_component_rows(component, index, issues):
+    _verify_component_retained(component, index, issues)
     for kind in ("initiatives", "assignments"):
         rows = component.get(kind)
         if not isinstance(rows, list):
@@ -570,6 +572,15 @@ def _verify_component(component: Mapping[str, Any], index, issues):
             except (AttributeError, TypeError, ValueError):
                 issues.append({"code": "component-work-ref-invalid", "index": index})
                 break
+
+
+def _verify_component(component: Mapping[str, Any], index, issues):
+    envelope = component.get("envelope")
+    if not isinstance(envelope, Mapping):
+        issues.append({"code": "component-envelope-missing", "index": index})
+        return
+    _verify_component_identity(component, envelope, index, issues)
+    _verify_component_rows(component, index, issues)
 
 
 def _verify_global_work(value, issues):

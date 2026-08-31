@@ -410,36 +410,54 @@ def _project_cut_verify_relationships(bundle, verified, primary_root, roots):
             )
 
 
+def _project_cut_publication_identity(row):
+    manifest = _project_cut_parse_material(
+        row.get("manifestBase64"), "publicationBase64"
+    )
+    if row.get("manifest") != manifest:
+        raise ProjectCutExitError(
+            "project-cut-publication-mismatch", "publication bytes differ"
+        )
+    preimage = dict(manifest)
+    manifest_root = preimage.pop("manifestRoot", None)
+    batch_root = _project_cut_require_root(manifest.get("batchRoot"), "batchRoot")
+    return manifest, preimage, manifest_root, batch_root
+
+
+def _project_cut_publication_valid(row, manifest, preimage, roots, verified):
+    manifest_root, batch_root = roots
+    batch_input = manifest.get("batchInput")
+    if not isinstance(batch_input, Mapping):
+        return False
+    selected = {
+        str(entry.get("cutRoot") or "")
+        for entry in (manifest.get("selection") or {}).get("projectCuts") or []
+        if isinstance(entry, Mapping)
+    }
+    return all(
+        (
+            manifest.get("schema") == _PROJECT_CUT_PUBLICATION_SCHEMA,
+            manifest_root == row.get("manifestRoot"),
+            _project_cut_semantic_root(preimage) == manifest_root,
+            row.get("batchRoot") == batch_root,
+            _project_cut_semantic_root(batch_input) == batch_root,
+            bool(selected.intersection(verified)),
+            manifest.get("authority") == "projection-of-kungfu-native-settlement",
+            manifest.get("generatedBy") == "kungfu-settlement-publication/v1",
+            (manifest.get("runtimeContinuation") or {}).get("publicationIsAuthority")
+            is False,
+        )
+    )
+
+
 def _project_cut_verify_publications(publications, verified):
     publication_roots = []
     for row in publications:
-        manifest = _project_cut_parse_material(
-            row.get("manifestBase64"), "publicationBase64"
+        manifest, preimage, manifest_root, batch_root = (
+            _project_cut_publication_identity(row)
         )
-        if row.get("manifest") != manifest:
-            raise ProjectCutExitError(
-                "project-cut-publication-mismatch", "publication bytes differ"
-            )
-        preimage = dict(manifest)
-        manifest_root = preimage.pop("manifestRoot", None)
-        batch_root = _project_cut_require_root(manifest.get("batchRoot"), "batchRoot")
-        selected = {
-            str(entry.get("cutRoot") or "")
-            for entry in (manifest.get("selection") or {}).get("projectCuts") or []
-            if isinstance(entry, Mapping)
-        }
-        if (
-            manifest.get("schema") != _PROJECT_CUT_PUBLICATION_SCHEMA
-            or manifest_root != row.get("manifestRoot")
-            or _project_cut_semantic_root(preimage) != manifest_root
-            or row.get("batchRoot") != batch_root
-            or not isinstance(manifest.get("batchInput"), Mapping)
-            or _project_cut_semantic_root(manifest["batchInput"]) != batch_root
-            or not selected.intersection(verified)
-            or manifest.get("authority") != "projection-of-kungfu-native-settlement"
-            or manifest.get("generatedBy") != "kungfu-settlement-publication/v1"
-            or (manifest.get("runtimeContinuation") or {}).get("publicationIsAuthority")
-            is not False
+        if not _project_cut_publication_valid(
+            row, manifest, preimage, (manifest_root, batch_root), verified
         ):
             raise ProjectCutExitError(
                 "project-cut-publication-root-mismatch",
