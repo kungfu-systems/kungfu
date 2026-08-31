@@ -40,6 +40,11 @@ import {
   requiredMergeQueueWindow,
   selectLatencyCohort as selectCohort,
 } from './candidate-timeline-events.cjs';
+import {
+  collectRunnerWaitEvidence,
+  collectWastedRunnerEvidence,
+  parseAndValidateNativeEvidenceMembers,
+} from './measure-dev-required-latency-evidence.mjs';
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 export { requiredMergeQueueWindow };
 export {
@@ -319,93 +324,6 @@ function collectMergeQueueRounds(events, runs, jobsByRun) {
   return { orderedEvents, orderedRuns, rounds, diagnostics };
 }
 
-function runnerWaitEvidenceForRun(run, jobs) {
-  const upperBounds = [];
-  let complete = true;
-  for (const job of jobs) {
-    const upperBoundMs =
-      run.createdAt && job.started_at
-        ? milliseconds(run.createdAt, job.started_at)
-        : Number.NaN;
-    if (!Number.isFinite(upperBoundMs) || upperBoundMs < 0) {
-      complete = false;
-      continue;
-    }
-    upperBounds.push({
-      workflowRunId: run.id,
-      jobId: job.id,
-      jobName: job.name,
-      upperBoundMs,
-      authority:
-        'github-actions-workflow-created_at-to-job-started_at-upper-bound',
-    });
-  }
-  return { complete, upperBounds };
-}
-
-function collectRunnerWaitEvidence(allRuns, jobsByRun) {
-  const runs = allRuns.map((run) =>
-    runnerWaitEvidenceForRun(run, jobsByRun[String(run.id)] || []),
-  );
-  return {
-    complete:
-      allRuns.every(
-        ({ id, createdAt }) =>
-          Boolean(createdAt) &&
-          Array.isArray(jobsByRun[String(id)]) &&
-          jobsByRun[String(id)].length > 0,
-      ) && runs.every(({ complete }) => complete),
-    upperBounds: runs.flatMap(({ upperBounds }) => upperBounds),
-  };
-}
-
-function wastedRunnerEvidenceForRun(run, jobs) {
-  const diagnostics = [];
-  let complete = true;
-  let wastedRunnerMs = 0;
-  let postDequeueRunnerMs = 0;
-  for (const job of jobs) {
-    const durationMs = jobDuration(job);
-    if (durationMs === null) {
-      diagnostics.push('merge-group-job-not-terminal');
-      complete = false;
-      continue;
-    }
-    wastedRunnerMs += durationMs;
-    const afterRemoval =
-      job.started_at && job.completed_at
-        ? milliseconds(
-            new Date(
-              Math.max(
-                new Date(job.started_at).getTime(),
-                new Date(run.removedAt).getTime(),
-              ),
-            ).toISOString(),
-            job.completed_at,
-          )
-        : 0;
-    postDequeueRunnerMs += Math.max(0, afterRemoval);
-  }
-  return { complete, wastedRunnerMs, postDequeueRunnerMs, diagnostics };
-}
-
-function collectWastedRunnerEvidence(wastedRuns, jobsByRun, diagnostics) {
-  const runs = wastedRuns.map((run) =>
-    wastedRunnerEvidenceForRun(run, jobsByRun[String(run.id)] || []),
-  );
-  diagnostics.push(...runs.flatMap((run) => run.diagnostics));
-  return {
-    complete:
-      wastedRuns.every(({ id }) => Array.isArray(jobsByRun[String(id)])) &&
-      runs.every(({ complete }) => complete),
-    wastedRunnerMs: runs.reduce((total, run) => total + run.wastedRunnerMs, 0),
-    postDequeueRunnerMs: runs.reduce(
-      (total, run) => total + run.postDequeueRunnerMs,
-      0,
-    ),
-  };
-}
-
 export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
   const { orderedEvents, orderedRuns, rounds, diagnostics } =
     collectMergeQueueRounds(events, runs, jobsByRun);
@@ -425,11 +343,14 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
   const wastedRuns = exitedRounds.flatMap(({ removedAt, mergeGroupRuns }) =>
     mergeGroupRuns.map((run) => ({ ...run, removedAt })),
   );
-  const runnerWait = collectRunnerWaitEvidence(allRuns, jobsByRun);
+  const runnerWait = collectRunnerWaitEvidence(allRuns, jobsByRun, {
+    milliseconds,
+  });
   const runnerWaste = collectWastedRunnerEvidence(
     wastedRuns,
     jobsByRun,
     diagnostics,
+    { jobDuration, milliseconds },
   );
   const firstEnqueuedAt = rounds[0]?.enqueuedAt || null;
   const mergedRounds = rounds.filter(({ reason }) => reason === 'merged');
@@ -724,96 +645,6 @@ export function cacheEvidenceFromMembers(members, classification) {
   }
 }
 
-function requireNativeEvidence(condition, message) {
-  if (!condition) throw new Error(message);
-}
-
-function parseNativeEvidenceMembers(members) {
-  requireNativeEvidence(members['receipt.json'], 'missing native receipt');
-  requireNativeEvidence(
-    members['diagnostics.json'],
-    'missing Buildchain diagnostics',
-  );
-  return {
-    receipt: JSON.parse(members['receipt.json']),
-    diagnostics: JSON.parse(members['diagnostics.json']),
-    candidateEvents: (members['candidate-events.jsonl'] || '')
-      .split(/\r?\n/u)
-      .filter(Boolean)
-      .map((line) => JSON.parse(line)),
-  };
-}
-
-function validateNativeReceipt(receipt) {
-  requireNativeEvidence(
-    receipt.schema === 'kungfu.core-affected-native-receipt/v1' &&
-      receipt.status === 'passed' &&
-      Array.isArray(receipt.steps),
-    'invalid native receipt',
-  );
-}
-
-function validateNativeCandidateEvents(candidateEvents, receipt) {
-  requireNativeEvidence(
-    candidateEvents.every(
-      (event) =>
-        event.id &&
-        event.attempt?.id &&
-        event.phase &&
-        event.status &&
-        event.attributes?.sourceSha === receipt.source.head,
-    ),
-    'invalid candidate timeline event binding',
-  );
-}
-
-function validateNativePlanDigest(receipt) {
-  if (!receipt.plan?.planDigest) return;
-  const { planDigest, ...planWithoutDigest } = receipt.plan;
-  requireNativeEvidence(
-    planDigest === structuredDigest(planWithoutDigest) &&
-      receipt.planDigest === planDigest,
-    'native receipt plan digest drift',
-  );
-}
-
-function validateNativeDiagnostics(receipt, diagnostics, members) {
-  requireNativeEvidence(
-    diagnostics.contract === 'kungfu-buildchain-diagnostics' &&
-      diagnostics.consumer?.contract ===
-        'kungfu.affected-native-diagnostics/v1' &&
-      diagnostics.consumer?.gateId === 'source.changed-scope',
-    'invalid Buildchain diagnostics binding',
-  );
-  requireNativeEvidence(
-    receipt.diagnostics?.digest === digest(members['diagnostics.json']) &&
-      receipt.diagnostics?.consumerContract === diagnostics.consumer.contract &&
-      receipt.planDigest === diagnostics.consumer.planDigest,
-    'native diagnostics digest or plan binding drift',
-  );
-}
-
-function validateNativePartition(receipt, diagnostics) {
-  const partition = receipt.executionPartition || null;
-  if (!partition) return null;
-  requireNativeEvidence(
-    partition.schema === 'kungfu.core-affected-native-partition/v1' &&
-      Number.isInteger(partition.index) &&
-      Number.isInteger(partition.count) &&
-      partition.count >= 1 &&
-      partition.index >= 0 &&
-      partition.index < partition.count &&
-      Array.isArray(partition.targets) &&
-      Array.isArray(partition.tests) &&
-      diagnostics.consumer?.executionPartition?.partitionDigest ===
-        partition.partitionDigest &&
-      diagnostics.consumer?.executionPartition?.coverageDigest ===
-        partition.coverageDigest,
-    'invalid native execution partition binding',
-  );
-  return partition;
-}
-
 export function nativeEvidenceFromMembers(members, classification) {
   if (classification.kind === 'non-native') {
     return {
@@ -832,13 +663,11 @@ export function nativeEvidenceFromMembers(members, classification) {
     };
   }
   try {
-    const { receipt, diagnostics, candidateEvents } =
-      parseNativeEvidenceMembers(members);
-    validateNativeReceipt(receipt);
-    validateNativeCandidateEvents(candidateEvents, receipt);
-    validateNativePlanDigest(receipt);
-    validateNativeDiagnostics(receipt, diagnostics, members);
-    const partition = validateNativePartition(receipt, diagnostics);
+    const { receipt, diagnostics, candidateEvents, partition } =
+      parseAndValidateNativeEvidenceMembers(members, {
+        digest,
+        structuredDigest,
+      });
     return {
       outcome: 'observed',
       authority: 'affected-native-receipt-and-buildchain-diagnostics',
