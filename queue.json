@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8555,
+  "generation": 8556,
   "fencingCounter": 816,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:113b5045fdec579ad0ef1b303e86805b5763c1e75659072ac84887415217d3cb",
@@ -60,8 +60,13 @@
     "issuedAt": "2026-08-31T06:06:46.042Z",
     "expiresAt": "2026-08-31T07:42:08.854Z",
     "fencingToken": "sha256:e759f5d705e3904536eed01f2f5267df26f0f7b346414b5220115dd60b36ac1a",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-31T06:12:08.854Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-31T06:12:08.854Z",
+    "nativeProofRoot": "sha256:d10d3a7c9ea7b4de9a239f45abf0d64fb19a22a6883bcd803711e4104de26eef",
+    "nativeExecutionReceiptRoot": "sha256:85370d7d2f3aa45d74393aa5a116342dc773afd39faa0cd12c4f38ddadb0d2d5",
+    "nativeProofReuseRoot": "sha256:cfca3f9afcf9f5743858f1ae0cddc5ac99edebefe70dd9e2f557309a4c08d923",
+    "qualificationReceiptRoot": "sha256:1476eb880c2569cd3d84bdb8a6ccb58d3631a615a2d5612939bb358e1f6ca47a",
+    "qualifiedAt": "2026-08-31T06:12:32.961Z"
   },
   "candidates": [
     {
@@ -58729,10 +58734,10 @@
       "sourceWorkflowRunId": 33360632082,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T05:43:34.615Z",
-      "updatedAt": "2026-08-31T06:12:08.854Z",
+      "updatedAt": "2026-08-31T06:12:32.961Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "crates/xinfa/engine/manifest.json",
@@ -58803,6 +58808,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T06:12:08.854Z",
-  "stateRoot": "sha256:8b1ca05aa3548beb63f775505ac8e57c5335d7c6d3bf09520fbf83480a89ff4f"
+  "updatedAt": "2026-08-31T06:12:32.961Z",
+  "stateRoot": "sha256:cec2704237da04816bc2d7b2c93ad0259a4f2c2da618b2fcc6b7d016ef217cb2"
 }
