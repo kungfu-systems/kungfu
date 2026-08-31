@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8672,
+  "generation": 8673,
   "fencingCounter": 826,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:60cbb93dbe57c883f21f6ce4dde7a914c8146af53b21b5cef496513a6e18b283",
@@ -57,8 +57,13 @@
     "issuedAt": "2026-08-31T18:30:17.677Z",
     "expiresAt": "2026-08-31T20:26:21.580Z",
     "fencingToken": "sha256:c0fad5a2f886e1d4633a730d4abfdbf18a2e9ac534148fa49be5f51fa037ae49",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-31T18:56:21.580Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-31T18:56:21.580Z",
+    "nativeProofRoot": "sha256:43ba69e840501a8665f6e5f57bbcfeabea2329e6217ce2e44a617566b2dfabd8",
+    "nativeExecutionReceiptRoot": "sha256:c302b0151ac63c0b8d58785cebc25b5a22b0591925a3127499a50fcee0cbd7c2",
+    "nativeProofReuseRoot": "sha256:440fb9207db2256095fde433db95e3292199acc9831fd37be7fdae85e8d5088e",
+    "qualificationReceiptRoot": "sha256:c771e1d19a399b3c3fd1e94a946c9f8868956af490df72d482ee879b0f94c26d",
+    "qualifiedAt": "2026-08-31T18:56:44.744Z"
   },
   "candidates": [
     {
@@ -60044,10 +60049,10 @@
       "sourceWorkflowRunId": 33417897803,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T18:15:49.729Z",
-      "updatedAt": "2026-08-31T18:56:21.580Z",
+      "updatedAt": "2026-08-31T18:56:44.744Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "docs/guides/native-agent-adapters.md",
@@ -60065,6 +60070,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T18:56:21.580Z",
-  "stateRoot": "sha256:1417e939a3870c0c0134f4746d68f23bf25cfe5be99a04412f6545d502ca352c"
+  "updatedAt": "2026-08-31T18:56:44.744Z",
+  "stateRoot": "sha256:718e4e567e54af770d69f6656eec6ef2ba0746bc334b851aee2d5c45f4c6aca9"
 }
