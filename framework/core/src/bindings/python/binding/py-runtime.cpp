@@ -1456,8 +1456,12 @@ void bind_journal_and_io_types(py::module_ &m) {
       .def("wait", &observer::wait)
       .def("get_notice", &observer::get_notice);
 
+  py::class_<reader_policy>(m, "reader_policy")
+      .def_static("peer", &reader_policy::peer)
+      .def_static("coordinator", &reader_policy::coordinator);
+
   py::class_<reader, reader_ptr>(m, "reader")
-      .def(py::init<bool, bool, bus_ptr>())
+      .def(py::init<reader_policy, bool, bus_ptr>(), py::arg("policy"), py::arg("low_latency"), py::arg("bus"))
       .def(py::init<const reader &>())
       .def("subscribe", &reader::join)
       .def("current_frame", &reader::current_frame)

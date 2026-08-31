@@ -487,7 +487,8 @@ nlohmann::json materialize_episode_bundle_material(const storage_service_options
     int64_t last_gen_time = 0;
     bool journal_has_frames = false;
     if (!locator->list_page_id(location, journal.dest).empty()) {
-      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      auto reader = std::make_shared<yjj::journal::reader>(yjj::journal::reader_policy::peer(), false,
+                                                           std::make_shared<yjj::journal::bus>(false));
       reader->join(location, journal.dest, 0);
       while (reader->data_available()) {
         const auto frame = reader->current_frame();

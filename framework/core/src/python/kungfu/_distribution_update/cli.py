@@ -386,6 +386,30 @@ def _select_cli_image(
             return finish_selection(selection)
 
 
+def _read_retained_cli_receipt(path: Path, generation: int) -> dict[str, Any]:
+    receipt = _read_object(path)
+    selection = receipt.get("frontendSelection")
+    receipt_root = receipt.get("receiptRoot")
+    receipt_core = {
+        key: value for key, value in receipt.items() if key != "receiptRoot"
+    }
+    if (
+        not isinstance(selection, Mapping)
+        or int(selection.get("generation") or 0) != generation
+        or not isinstance(receipt_root, str)
+        or receipt_root != _content_root(receipt_core)
+    ):
+        raise DistributionUpdateError(
+            "cli-selection-receipt-invalid",
+            "CLI selection receipt does not verify against its generation",
+        )
+    return {
+        "generation": generation,
+        "receiptRoot": receipt_root,
+        "frontendBuildId": selection.get("frontendBuildId"),
+    }
+
+
 def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
     root = _cli_inventory_root(config_home)
     images_root = root / "images"
@@ -493,27 +517,7 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                 continue
             path = _cli_selection_receipt_path(config_home, generation)
             try:
-                receipt = _read_object(path)
-                receipt_selection = receipt.get("frontendSelection")
-                receipt_root = receipt.get("receiptRoot")
-                receipt_core = {
-                    key: value for key, value in receipt.items() if key != "receiptRoot"
-                }
-                if (
-                    not isinstance(receipt_selection, Mapping)
-                    or int(receipt_selection.get("generation") or 0) != generation
-                    or not isinstance(receipt_root, str)
-                    or receipt_root != _content_root(receipt_core)
-                ):
-                    raise DistributionUpdateError(
-                        "cli-selection-receipt-invalid",
-                        "CLI selection receipt does not verify against its generation",
-                    )
-                retained = {
-                    "generation": generation,
-                    "receiptRoot": receipt_root,
-                    "frontendBuildId": receipt_selection.get("frontendBuildId"),
-                }
+                retained = _read_retained_cli_receipt(path, generation)
                 retained_receipts.append(retained)
                 if generation > selected_generation and (
                     selection is not None or not selection_path_exists

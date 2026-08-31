@@ -103,31 +103,24 @@ export function proseFiles(root, registry) {
  * @param {{root?: string, registry?: VocabularyRegistry, registryPath?: string}} options
  * @returns {Finding[]}
  */
-export function validateVocabularyContract(options = {}) {
-  const root = path.resolve(options.root || ROOT);
-  const registryPath = options.registryPath || DEFAULT_REGISTRY;
-  const registry =
-    options.registry || readVocabularyRegistry(root, registryPath);
-  /** @type {Finding[]} */
-  const findings = [];
-  const add = (code, message, file = registryPath) =>
-    findings.push({ code, file, line: 1, message });
-
-  if (registry.schemaVersion !== 1) {
-    add(
-      'vocabulary-schema',
-      `unsupported schemaVersion ${String(registry.schemaVersion)}`,
-    );
-    return findings;
+function validateVocabularyTerm(term, layerId, seenTerms, add) {
+  if (!term.name) {
+    add('vocabulary-schema', `empty term in layer ${layerId}`);
+    return;
   }
-  if (!safeRelative(registry.canonicalReference)) {
-    add(
-      'vocabulary-schema',
-      'canonicalReference must be a repository-relative path',
-    );
-    return findings;
+  if (seenTerms.has(term.name))
+    add('vocabulary-duplicate', `duplicate canonical term: ${term.name}`);
+  seenTerms.add(term.name);
+  for (const form of term.caseForms || []) {
+    if (!form || /\s/.test(form))
+      add(
+        'vocabulary-pattern',
+        `invalid case-sensitive form for ${term.name}: ${JSON.stringify(form)}`,
+      );
   }
+}
 
+function validateVocabularyLayers(registry, add) {
   if (!Array.isArray(registry.layers) || !registry.layers.length)
     add('vocabulary-schema', 'at least one vocabulary layer is required');
   if (
@@ -146,32 +139,20 @@ export function validateVocabularyContract(options = {}) {
     if (seenLayers.has(layer.id))
       add('vocabulary-duplicate', `duplicate layer id: ${layer.id}`);
     seenLayers.add(layer.id);
-    for (const term of layer.terms) {
-      if (!term.name) {
-        add('vocabulary-schema', `empty term in layer ${layer.id}`);
-        continue;
-      }
-      if (seenTerms.has(term.name))
-        add('vocabulary-duplicate', `duplicate canonical term: ${term.name}`);
-      seenTerms.add(term.name);
-      for (const form of term.caseForms || []) {
-        if (!form || /\s/.test(form))
-          add(
-            'vocabulary-pattern',
-            `invalid case-sensitive form for ${term.name}: ${JSON.stringify(form)}`,
-          );
-      }
-    }
+    for (const term of layer.terms)
+      validateVocabularyTerm(term, layer.id, seenTerms, add);
   }
+}
 
+function validateCompatibilityTerms(registry, add) {
   const domainTerms = new Set(
     (registry.domainProfiles || []).flatMap((profile) => profile.terms || []),
   );
-  const seenCompatibilityTerms = new Set();
+  const seen = new Set();
   for (const term of registry.compatibilityTerms || []) {
-    if (term.name && seenCompatibilityTerms.has(term.name))
+    if (term.name && seen.has(term.name))
       add('vocabulary-duplicate', `duplicate compatibility term: ${term.name}`);
-    if (term.name) seenCompatibilityTerms.add(term.name);
+    if (term.name) seen.add(term.name);
     if (
       !term.name ||
       !term.replacement ||
@@ -197,30 +178,33 @@ export function validateVocabularyContract(options = {}) {
         `duplicate retention reason for compatibility term: ${term.name}`,
       );
   }
+}
 
+function validateVocabularyReference(root, registry, findings, add) {
   const referencePath = path.join(root, registry.canonicalReference);
   if (!fs.existsSync(referencePath)) {
     add(
       'vocabulary-reference',
       `canonical reference is missing: ${registry.canonicalReference}`,
     );
-  } else {
-    const actual = documentedLayers(fs.readFileSync(referencePath, 'utf8'));
-    const expected = (registry.layers || []).map((layer) => ({
-      heading: layer.heading,
-      terms: layer.terms.map((term) => term.name),
-    }));
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      findings.push({
-        code: 'vocabulary-reference-drift',
-        file: registry.canonicalReference,
-        line: 1,
-        message:
-          'layer headings or canonical term headings differ from vocabulary.registry.json',
-      });
-    }
+    return;
   }
+  const actual = documentedLayers(fs.readFileSync(referencePath, 'utf8'));
+  const expected = (registry.layers || []).map((layer) => ({
+    heading: layer.heading,
+    terms: layer.terms.map((term) => term.name),
+  }));
+  if (JSON.stringify(actual) !== JSON.stringify(expected))
+    findings.push({
+      code: 'vocabulary-reference-drift',
+      file: registry.canonicalReference,
+      line: 1,
+      message:
+        'layer headings or canonical term headings differ from vocabulary.registry.json',
+    });
+}
 
+function validateProseRoots(root, registry, add) {
   for (const rel of registry.prosePolicy?.roots || []) {
     if (!safeRelative(rel)) {
       add(
@@ -232,56 +216,94 @@ export function validateVocabularyContract(options = {}) {
     if (!fs.existsSync(path.join(root, rel)))
       add('prose-policy-root', `governed prose root is missing: ${rel}`);
   }
-  if (!proseFiles(root, registry).includes(registry.canonicalReference)) {
+  if (!proseFiles(root, registry).includes(registry.canonicalReference))
     add(
       'prose-policy-root',
       'canonicalReference must be included below prosePolicy.roots',
     );
-  }
+}
 
+function validateProseRule(kind, rule, ids, add) {
+  if (!rule.id || ids.has(rule.id))
+    add('prose-policy-id', `${kind} needs a unique stable id`);
+  ids.add(rule.id);
+  if (!LEVELS.has(rule.level))
+    add('prose-policy-level', `${kind} has invalid level: ${rule.level}`);
+  const promotion = rule.promotion;
+  if (!promotion || !['advisory', 'required'].includes(promotion.status))
+    add(
+      'prose-policy-promotion',
+      `${kind} ${rule.id || ''} needs promotion status`,
+    );
+  if (
+    rule.level === 'error' &&
+    (promotion?.status !== 'required' ||
+      promotion?.negativeFixture !== true ||
+      promotion?.baselineFindings !== 0)
+  )
+    add(
+      'prose-policy-promotion',
+      `${kind} ${rule.id || ''} cannot be error without a negative fixture and clean baseline`,
+    );
+  const pattern = 'pattern' in rule ? rule.pattern : regexEscape(rule.text);
+  try {
+    validatePattern(pattern);
+  } catch (error) {
+    add(
+      'prose-policy-pattern',
+      `invalid ${kind} pattern: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function validateProseRules(registry, add) {
   for (const [kind, rules] of [
     ['retired phrase', registry.prosePolicy?.retiredPhrases || []],
     ['preferred term', registry.prosePolicy?.preferredTerms || []],
     ['claim guard', registry.prosePolicy?.claimGuards || []],
   ]) {
     const ids = new Set();
-    for (const rule of rules) {
-      if (!rule.id || ids.has(rule.id))
-        add('prose-policy-id', `${kind} needs a unique stable id`);
-      ids.add(rule.id);
-      if (!LEVELS.has(rule.level))
-        add('prose-policy-level', `${kind} has invalid level: ${rule.level}`);
-      const promotion = rule.promotion;
-      if (!promotion || !['advisory', 'required'].includes(promotion.status))
-        add(
-          'prose-policy-promotion',
-          `${kind} ${rule.id || ''} needs promotion status`,
-        );
-      if (
-        rule.level === 'error' &&
-        (promotion?.status !== 'required' ||
-          promotion?.negativeFixture !== true ||
-          promotion?.baselineFindings !== 0)
-      )
-        add(
-          'prose-policy-promotion',
-          `${kind} ${rule.id || ''} cannot be error without a negative fixture and clean baseline`,
-        );
-      const pattern = 'pattern' in rule ? rule.pattern : regexEscape(rule.text);
-      try {
-        validatePattern(pattern);
-      } catch (error) {
-        add(
-          'prose-policy-pattern',
-          `invalid ${kind} pattern: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
+    for (const rule of rules) validateProseRule(kind, rule, ids, add);
   }
-
-  return findings.sort((left, right) => left.code.localeCompare(right.code));
 }
 
+/**
+ * Validate the executable vocabulary authority and its public projection.
+ * @param {{root?: string, registry?: VocabularyRegistry, registryPath?: string}} options
+ * @returns {Finding[]}
+ */
+export function validateVocabularyContract(options = {}) {
+  const root = path.resolve(options.root || ROOT);
+  const registryPath = options.registryPath || DEFAULT_REGISTRY;
+  const registry =
+    options.registry || readVocabularyRegistry(root, registryPath);
+  /** @type {Finding[]} */
+  const findings = [];
+  const add = (code, message, file = registryPath) =>
+    findings.push({ code, file, line: 1, message });
+
+  if (registry.schemaVersion !== 1) {
+    add(
+      'vocabulary-schema',
+      `unsupported schemaVersion ${String(registry.schemaVersion)}`,
+    );
+    return findings;
+  }
+  if (!safeRelative(registry.canonicalReference)) {
+    add(
+      'vocabulary-schema',
+      'canonicalReference must be a repository-relative path',
+    );
+    return findings;
+  }
+
+  validateVocabularyLayers(registry, add);
+  validateCompatibilityTerms(registry, add);
+  validateVocabularyReference(root, registry, findings, add);
+  validateProseRoots(root, registry, add);
+  validateProseRules(registry, add);
+  return findings.sort((left, right) => left.code.localeCompare(right.code));
+}
 /**
  * Materialize a disposable Vale projection. The registry remains authoritative.
  * @param {string} destination

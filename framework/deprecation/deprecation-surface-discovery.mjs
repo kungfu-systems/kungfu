@@ -296,6 +296,123 @@ function structuredSourceMatches(source, file) {
 /**
  * @param {{root: string, contract: any, changedFiles?: string[]}} options
  */
+function discoveryCandidates(root, contract, changedFiles) {
+  const candidates = new Set();
+  if (changedFiles) {
+    for (const file of changedFiles) {
+      const absolute = path.join(root, file);
+      if (fs.existsSync(absolute) && fs.statSync(absolute).isFile())
+        candidates.add(file);
+    }
+    return candidates;
+  }
+
+  const roots = new Set();
+  for (const dialect of objects(contract.dialects)) {
+    for (const scanRoot of strings(dialect.roots)) roots.add(scanRoot);
+  }
+  for (const source of objects(contract.structuredSources)) {
+    if (source.match === 'exact') candidates.add(normalizePath(source.path));
+    else for (const scanRoot of strings(source.roots)) roots.add(scanRoot);
+  }
+  for (const scanRoot of roots) {
+    for (const file of walkFiles(path.join(root, scanRoot)))
+      candidates.add(relativePath(root, file));
+  }
+  return candidates;
+}
+
+function markerClassification(contract, file, dialect) {
+  const exclusion = objects(contract.exclusions).find((candidate) =>
+    exclusionMatches(candidate, file, dialect),
+  );
+  return {
+    classification: exclusion?.classification || 'live',
+    classificationReason: exclusion?.reason || null,
+  };
+}
+
+function discoverTextSurfaceMarkers(contract, file, extension, text) {
+  const markers = [];
+  for (const dialect of objects(contract.dialects)) {
+    if (
+      dialect.kind === 'structured' ||
+      !strings(dialect.extensions).includes(extension) ||
+      !strings(dialect.roots).some(
+        (scanRoot) => file === scanRoot || file.startsWith(`${scanRoot}/`),
+      )
+    )
+      continue;
+    let detected = [];
+    if (dialect.kind === 'document') {
+      const metadata = frontmatter(text);
+      if (metadata?.document_status === 'deprecated') {
+        const binding =
+          metadata.deprecation_entry && metadata.deprecation_marker
+            ? {
+                entryId: metadata.deprecation_entry,
+                markerId: metadata.deprecation_marker,
+              }
+            : null;
+        detected = [{ offset: 0, raw: 'document_status: deprecated', binding }];
+      }
+    } else {
+      detected = textMarkers(dialect.id, text);
+    }
+    for (const marker of detected) {
+      markers.push({
+        dialect: dialect.id,
+        path: file,
+        line: lineAt(text, marker.offset),
+        binding: marker.binding,
+        ...markerClassification(contract, file, dialect.id),
+      });
+    }
+  }
+  return markers;
+}
+
+function discoverStructuredSurfaceMarkers(contract, file, absolute) {
+  if (path.extname(file).toLowerCase() !== '.json') return [];
+  const markers = [];
+  for (const source of objects(contract.structuredSources)) {
+    if (!structuredSourceMatches(source, file)) continue;
+    const value = jsonPointer(readJson(absolute), String(source.pointer || ''));
+    let records = [];
+    if (source.mode === 'array-records') {
+      records = Array.isArray(value) ? value : [];
+    } else if (source.mode === 'optional-record' && value !== undefined) {
+      records = [value];
+    }
+    for (let index = 0; index < records.length; index += 1) {
+      markers.push({
+        dialect: source.dialect,
+        path: file,
+        line: null,
+        recordIndex: index,
+        binding: bindingFromRecord(records[index]),
+        ...markerClassification(contract, file, source.dialect),
+      });
+    }
+  }
+  return markers;
+}
+
+function discoverFileSurfaceMarkers(root, contract, file) {
+  const absolute = path.join(root, file);
+  if (!fs.existsSync(absolute) || fs.readFileSync(absolute).includes(0))
+    return [];
+  const extension = path.extname(file).toLowerCase();
+  const text = fs.readFileSync(absolute, 'utf8');
+  return [
+    ...discoverTextSurfaceMarkers(contract, file, extension, text),
+    ...discoverStructuredSurfaceMarkers(contract, file, absolute),
+  ];
+}
+
+/**
+ * @param {{root: string, contract: any, changedFiles?: string[]}} options
+ */
 export function discoverDeprecationSurfaces(options) {
   const root = path.resolve(options.root);
   const contract = options.contract;
@@ -310,113 +427,10 @@ export function discoverDeprecationSurfaces(options) {
       contractRoot: hashJson(contract),
     };
   }
-  const candidates = new Set();
-  if (changedFiles) {
-    for (const file of changedFiles) {
-      const absolute = path.join(root, file);
-      if (fs.existsSync(absolute) && fs.statSync(absolute).isFile())
-        candidates.add(file);
-    }
-  } else {
-    const roots = new Set();
-    for (const dialect of objects(contract.dialects)) {
-      for (const scanRoot of strings(dialect.roots)) roots.add(scanRoot);
-    }
-    for (const source of objects(contract.structuredSources)) {
-      if (source.match === 'exact') candidates.add(normalizePath(source.path));
-      else for (const scanRoot of strings(source.roots)) roots.add(scanRoot);
-    }
-    for (const scanRoot of roots) {
-      for (const file of walkFiles(path.join(root, scanRoot))) {
-        candidates.add(relativePath(root, file));
-      }
-    }
-  }
-
-  const markers = [];
-  for (const file of [...candidates].sort()) {
-    const absolute = path.join(root, file);
-    if (!fs.existsSync(absolute) || fs.readFileSync(absolute).includes(0))
-      continue;
-    const extension = path.extname(file).toLowerCase();
-    let text;
-    for (const dialect of objects(contract.dialects)) {
-      if (
-        dialect.kind === 'structured' ||
-        !strings(dialect.extensions).includes(extension) ||
-        !strings(dialect.roots).some(
-          (scanRoot) => file === scanRoot || file.startsWith(`${scanRoot}/`),
-        )
-      )
-        continue;
-      text ??= fs.readFileSync(absolute, 'utf8');
-      let detected = [];
-      if (dialect.kind === 'document') {
-        const metadata = frontmatter(text);
-        if (metadata?.document_status === 'deprecated') {
-          const binding =
-            metadata.deprecation_entry && metadata.deprecation_marker
-              ? {
-                  entryId: metadata.deprecation_entry,
-                  markerId: metadata.deprecation_marker,
-                }
-              : null;
-          detected = [
-            {
-              offset: 0,
-              raw: 'document_status: deprecated',
-              binding,
-            },
-          ];
-        }
-      } else {
-        detected = textMarkers(dialect.id, text);
-      }
-      for (const marker of detected) {
-        const exclusion = objects(contract.exclusions).find((candidate) =>
-          exclusionMatches(candidate, file, dialect.id),
-        );
-        markers.push({
-          dialect: dialect.id,
-          path: file,
-          line: lineAt(text, marker.offset),
-          binding: marker.binding,
-          classification: exclusion?.classification || 'live',
-          classificationReason: exclusion?.reason || null,
-        });
-      }
-    }
-
-    if (extension === '.json') {
-      for (const source of objects(contract.structuredSources)) {
-        if (!structuredSourceMatches(source, file)) continue;
-        const value = jsonPointer(
-          readJson(absolute),
-          String(source.pointer || ''),
-        );
-        let records = [];
-        if (source.mode === 'array-records') {
-          records = Array.isArray(value) ? value : [];
-        } else if (source.mode === 'optional-record' && value !== undefined) {
-          records = [value];
-        }
-        for (let index = 0; index < records.length; index += 1) {
-          const exclusion = objects(contract.exclusions).find((candidate) =>
-            exclusionMatches(candidate, file, source.dialect),
-          );
-          markers.push({
-            dialect: source.dialect,
-            path: file,
-            line: null,
-            recordIndex: index,
-            binding: bindingFromRecord(records[index]),
-            classification: exclusion?.classification || 'live',
-            classificationReason: exclusion?.reason || null,
-          });
-        }
-      }
-    }
-  }
+  const candidates = discoveryCandidates(root, contract, changedFiles);
+  const markers = [...candidates]
+    .sort()
+    .flatMap((file) => discoverFileSurfaceMarkers(root, contract, file));
   return {
     scope,
     markers,
@@ -424,7 +438,6 @@ export function discoverDeprecationSurfaces(options) {
     contractRoot: hashJson(contract),
   };
 }
-
 /**
  * @param {{root: string, contract: any, registry: any, changedFiles?: string[]}} options
  */

@@ -1,9 +1,10 @@
 {
-  "version": "4.0.0-alpha.3",
+  "version": "4.0.0-alpha.4",
   "packages": [
     "framework/*",
     "developer/*",
     "extensions/*",
+    "extensions/*/*",
     "examples/*",
     "product"
   ],

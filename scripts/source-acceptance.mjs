@@ -23,6 +23,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
 const GENERATED_EVIDENCE_ROOTS = ['.kungfu/', '.xinfa/'];
+const XINFA_BASELINE_PREFIX = '.xinfa/baselines/sha256/';
+const XINFA_BASELINE_WITNESS_FILES = new Set(['manifest.json', 'receipt.json']);
 const RUFF_CONFIG = 'framework/core/pyproject.toml';
 // Repo-relative roots of the mypy-checked surface. Mirrors `files` under
 // [tool.mypy] in framework/core/pyproject.toml, which stays the single source of
@@ -264,6 +266,19 @@ export function isLocalQualificationRuntime(relativePath) {
   );
 }
 
+/** @param {string[]} trackedFiles */
+export function assertTrackedXinfaBaselinesAreWitnessOnly(trackedFiles) {
+  const material = trackedFiles.filter((relative) => {
+    if (!relative.startsWith(XINFA_BASELINE_PREFIX)) return false;
+    return !XINFA_BASELINE_WITNESS_FILES.has(path.posix.basename(relative));
+  });
+  if (material.length) {
+    throw new Error(
+      `Xinfa baseline material must remain outside Git; only manifest.json and receipt.json may be tracked:\n${material.join('\n')}`,
+    );
+  }
+}
+
 function assertYijinjingWriterInterface() {
   const negativeGuard =
     'framework/core/src/libyijinjing/tests/writer_interface_surface_tests.cpp';
@@ -495,6 +510,33 @@ export function findGitTreeEquivalentAncestor(
   );
   if (treeMatch) return treeMatch;
 
+  // A qualified Project Cut is itself a two-parent composition commit: its
+  // first parent is the protected release base and its second parent is the
+  // protected development head, while its tree is exactly the development
+  // tree. GitHub then wraps that cut in the synthetic PR merge inspected
+  // above. Admit a retained exact-tree replay from the development chain only
+  // when every edge and tree in that nested topology is unchanged. An
+  // ordinary merge, a differently based cut, or a composed/conflict-resolved
+  // cut cannot enter this path.
+  const [cutSha, cutBaseParent, cutDevelopmentParent, ...cutExtraParents] =
+    gitRead(['rev-list', '--parents', '-n', '1', candidateParent])
+      .trim()
+      .split(/\s+/u);
+  if (
+    cutSha === candidateParent &&
+    cutBaseParent === baseParent &&
+    cutDevelopmentParent &&
+    cutExtraParents.length === 0 &&
+    gitRead(['rev-parse', `${cutDevelopmentParent}^{tree}`]) === candidateTree
+  ) {
+    const projectCutTreeMatch = findFirstParentTreeEquivalent(
+      sourceTree,
+      cutDevelopmentParent,
+      gitRead,
+    );
+    if (projectCutTreeMatch) return projectCutTreeMatch;
+  }
+
   // A protected base may advance in unrelated paths while GitHub exactly
   // replays the candidate's Project Cut. The whole trees then differ even
   // though the cumulative binary patch is byte-for-byte identical. Admit only
@@ -721,7 +763,7 @@ export function sourceAcceptancePlan(
       'deprecation lifecycle authority',
       'framework/deprecation/deprecation-lifecycle.mjs',
       '--as-of',
-      '2026-07-29',
+      '2026-08-28',
     ],
     ...(files.length
       ? [
@@ -729,7 +771,7 @@ export function sourceAcceptancePlan(
             'changed deprecation surface enrollment',
             'framework/deprecation/deprecation-lifecycle.mjs',
             '--as-of',
-            '2026-07-29',
+            '2026-08-28',
             ...files.flatMap((file) => ['--changed-file', file]),
           ],
         ]
@@ -844,6 +886,11 @@ export function sourceAcceptancePlan(
       'KFD candidate evidence fixtures',
       '--test',
       'scripts/kfd-candidate-evidence.test.mjs',
+    ],
+    [
+      'SDK package platform fixtures',
+      '--test',
+      'framework/storage/package-platforms.test.mjs',
     ],
     [
       'KFD-4 perspective qualification negative fixtures',
@@ -1259,6 +1306,10 @@ function main() {
   try {
     const files = sourceChangedFiles();
     console.log(`[source-acceptance] changed files: ${files.length}`);
+    assertTrackedXinfaBaselinesAreWitnessOnly(
+      git(['ls-files', '--cached', `${XINFA_BASELINE_PREFIX}**`]).split('\n'),
+    );
+    console.log('[source-acceptance] Xinfa baselines are witness-only');
     if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1') {
       assertYijinjingWriterInterface();
       console.log('[source-acceptance] yijinjing writer interface passed');

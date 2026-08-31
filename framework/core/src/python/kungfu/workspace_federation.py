@@ -485,6 +485,30 @@ def query_federation(
     return result
 
 
+def _verify_available_component(
+    envelope: Mapping[str, Any], index: int, issues: list[dict[str, Any]]
+) -> None:
+    roots = (
+        ("profile", envelope.get("profile_root")),
+        (
+            "reader-runtime",
+            (envelope.get("reader_runtime") or {}).get("runtime_root"),
+        ),
+        (
+            "workspace-runtime",
+            (envelope.get("workspace_runtime") or {}).get("runtime_root"),
+        ),
+        ("cut", envelope.get("cut_root")),
+        ("query-proof", envelope.get("query_proof_root")),
+    )
+    for field, root in roots:
+        if not _ROOT.fullmatch(str(root or "")):
+            issues.append({"code": f"component-{field}-root-untrusted", "index": index})
+    compatibility = envelope.get("compatibility") or {}
+    if not str(compatibility.get("state") or "").startswith("compatible"):
+        issues.append({"code": "component-runtime-incompatible", "index": index})
+
+
 def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
     """Verify root-bound component envelopes before global composition."""
 
@@ -525,31 +549,7 @@ def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
         if envelope.get("observed_at") != component.get("observed_at"):
             issues.append({"code": "component-observation-mismatch", "index": index})
         if component.get("availability") == "available":
-            for field, root in (
-                ("profile", envelope.get("profile_root")),
-                (
-                    "reader-runtime",
-                    (envelope.get("reader_runtime") or {}).get("runtime_root"),
-                ),
-                (
-                    "workspace-runtime",
-                    (envelope.get("workspace_runtime") or {}).get("runtime_root"),
-                ),
-                ("cut", envelope.get("cut_root")),
-                ("query-proof", envelope.get("query_proof_root")),
-            ):
-                if not _ROOT.fullmatch(str(root or "")):
-                    issues.append(
-                        {
-                            "code": f"component-{field}-root-untrusted",
-                            "index": index,
-                        }
-                    )
-            compatibility = envelope.get("compatibility") or {}
-            if not str(compatibility.get("state") or "").startswith("compatible"):
-                issues.append(
-                    {"code": "component-runtime-incompatible", "index": index}
-                )
+            _verify_available_component(envelope, index, issues)
         retained_states = component.get("retained_assignment_states") or []
         retained_root = str(component.get("retained_state_index_root") or "")
         if retained_root and (

@@ -116,6 +116,26 @@ export const SUITES = [
   },
 ];
 
+export function productDistributionCommand(env = process.env) {
+  if (env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS !== '1')
+    return [LAUNCHER, 'dist'];
+  const expectedRoot = env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT || '';
+  if (!/^sha256:[a-f0-9]{64}$/u.test(expectedRoot)) {
+    throw new Error(
+      'prebuilt product qualification requires an exact release artifact root',
+    );
+  }
+  return [
+    LAUNCHER,
+    'exec',
+    process.execPath,
+    'scripts/kfd-candidate-evidence.mjs',
+    'artifact-root-check',
+    '--expected-root',
+    expectedRoot,
+  ];
+}
+
 const COVERAGE = {
   'daemonless-storage': ['activation-core'],
   'direct-no-fork-coordinator': ['activation-core'],
@@ -198,12 +218,15 @@ export function sourceFacts() {
   };
 }
 
-export function qualificationPlan({ mode, withProduct }) {
+export function qualificationPlan({ mode, withProduct }, env = process.env) {
   return SUITES.map((suite) => {
     const required = !suite.product || withProduct;
     return {
       id: suite.id,
-      command: [...suite.command],
+      command:
+        suite.id === 'product-distribution'
+          ? productDistributionCommand(env)
+          : [...suite.command],
       required,
       status: mode === 'dry-run' ? 'planned' : required ? 'planned' : 'skipped',
       exit_code: null,
