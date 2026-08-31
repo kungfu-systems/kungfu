@@ -205,31 +205,45 @@ std::string backup_identity(const recovery_backup_bundle &bundle) {
   return digest(identity.str());
 }
 
-void validate_backup_contract(const recovery_backup_bundle &bundle) {
+bool valid_backup_identity(const recovery_backup_bundle &bundle) {
+  return bundle.schema == RECOVERY_BACKUP_SCHEMA_V1 && !bundle.bundle_id.empty() &&
+         bundle.bundle_id == backup_identity(bundle) && bundle.backup_cut.has_value() &&
+         bundle.durable_record_count != 0 && !bundle.files.empty();
+}
+
+bool valid_backup_report_position(const recovery_backup_bundle &bundle) {
+  const auto &report = bundle.source_report;
+  return report.outcome == recovery_outcome::Ready && report.schema == RECOVERY_REPORT_SCHEMA_V1 &&
+         bundle.backup_cut->stream_id == bundle.stream_id &&
+         bundle.backup_cut->container_epoch == bundle.container_epoch && report.stream_id == bundle.stream_id &&
+         report.container_epoch == bundle.container_epoch && report.durable_frontier == bundle.backup_cut &&
+         report.durable_record_count == bundle.durable_record_count;
+}
+
+bool valid_backup_report_evidence(const recovery_backup_bundle &bundle) {
+  const auto &report = bundle.source_report;
   const std::vector<recovery_phase> completed_phases = {recovery_phase::Discover, recovery_phase::Verify,
                                                         recovery_phase::Select, recovery_phase::Classify,
                                                         recovery_phase::Report};
+  return report.completed_phases == completed_phases &&
+         report.unacknowledged_tail_bytes == bundle.lost_visible_tail_bytes &&
+         report.unacknowledged_tail_integrity == durability::tail_integrity::None &&
+         report.evidence_error == durability::ingest_error::None && report.evidence_message.empty() &&
+         report.qualification_passed && report.episode_unknown_record_count == 0 &&
+         report.interrupted_episodes.empty() && report.episode_findings.empty() && !report.mutation_performed;
+}
+
+bool valid_backup_policy(const recovery_backup_bundle &bundle) {
   const std::vector<std::string> restart_order = {"supervisor", "state_service", "projection", "peers"};
-  if (bundle.schema != RECOVERY_BACKUP_SCHEMA_V1 || bundle.bundle_id.empty() ||
-      bundle.bundle_id != backup_identity(bundle) || bundle.source_report.outcome != recovery_outcome::Ready ||
-      bundle.source_report.schema != RECOVERY_REPORT_SCHEMA_V1 ||
-      bundle.source_report.completed_phases != completed_phases || !bundle.backup_cut.has_value() ||
-      bundle.backup_cut->stream_id != bundle.stream_id ||
-      bundle.backup_cut->container_epoch != bundle.container_epoch || bundle.durable_record_count == 0 ||
-      bundle.files.empty() || bundle.source_report.stream_id != bundle.stream_id ||
-      bundle.source_report.container_epoch != bundle.container_epoch ||
-      bundle.source_report.durable_frontier != bundle.backup_cut ||
-      bundle.source_report.durable_record_count != bundle.durable_record_count ||
-      bundle.source_report.unacknowledged_tail_bytes != bundle.lost_visible_tail_bytes ||
-      bundle.source_report.unacknowledged_tail_integrity != durability::tail_integrity::None ||
-      bundle.source_report.evidence_error != durability::ingest_error::None ||
-      !bundle.source_report.evidence_message.empty() || !bundle.source_report.qualification_passed ||
-      bundle.source_report.episode_unknown_record_count != 0 || !bundle.source_report.interrupted_episodes.empty() ||
-      !bundle.source_report.episode_findings.empty() || bundle.source_report.mutation_performed ||
-      bundle.source_report.restart_order != restart_order || bundle.lost_visible_tail_bytes != 0 ||
-      bundle.rpo_boundary != "through-checkpoint-covered-durable-frontier" ||
-      bundle.qualification_profile != bundle.source_report.qualification_profile ||
-      !bundle.projection_rebuild_required) {
+  return bundle.source_report.restart_order == restart_order && bundle.lost_visible_tail_bytes == 0 &&
+         bundle.rpo_boundary == "through-checkpoint-covered-durable-frontier" &&
+         bundle.qualification_profile == bundle.source_report.qualification_profile &&
+         bundle.projection_rebuild_required;
+}
+
+void validate_backup_contract(const recovery_backup_bundle &bundle) {
+  if (!valid_backup_identity(bundle) || !valid_backup_report_position(bundle) ||
+      !valid_backup_report_evidence(bundle) || !valid_backup_policy(bundle)) {
     throw std::runtime_error("recovery_backup_bundle_identity_invalid");
   }
 }
@@ -246,6 +260,26 @@ void validate_backup_files(const recovery_backup_bundle &bundle) {
   }
 }
 
+void validate_episode_payloads(const recovery_backup_bundle &bundle, const episode_backup_identity &episode) {
+  for (const auto &payload_hash : episode.payload_hashes) {
+    constexpr size_t SHA256_HEX_SIZE = 64;
+    const std::string prefix = "sha256:";
+    const auto value = payload_hash.starts_with(prefix) ? payload_hash.substr(prefix.size()) : std::string{};
+    const bool lowercase_hex =
+        value.size() == SHA256_HEX_SIZE && std::ranges::all_of(value, [](unsigned char character) {
+          return std::isdigit(character) != 0 ||
+                 (character >= static_cast<unsigned char>('a') && character <= static_cast<unsigned char>('f'));
+        });
+    const auto payload_path =
+        fs::path("storage") / "payloads" / value.substr(0, std::min<size_t>(2, value.size())) / value;
+    const auto material = std::find_if(bundle.files.begin(), bundle.files.end(), [&payload_path](const auto &file) {
+      return file.relative_path == payload_path.generic_string();
+    });
+    if (!lowercase_hex || material == bundle.files.end() || material->sha256 != value)
+      throw std::runtime_error("recovery_backup_episode_payload_invalid");
+  }
+}
+
 void validate_backup_episodes(const recovery_backup_bundle &bundle) {
   uint64_t previous_episode = 0;
   bool first_episode = true;
@@ -255,24 +289,7 @@ void validate_backup_episodes(const recovery_backup_bundle &bundle) {
         !std::is_sorted(episode.payload_hashes.begin(), episode.payload_hashes.end())) {
       throw std::runtime_error("recovery_backup_episode_identity_invalid");
     }
-    for (const auto &payload_hash : episode.payload_hashes) {
-      constexpr size_t SHA256_HEX_SIZE = 64;
-      const std::string prefix = "sha256:";
-      const auto value = payload_hash.starts_with(prefix) ? payload_hash.substr(prefix.size()) : std::string{};
-      const bool lowercase_hex =
-          value.size() == SHA256_HEX_SIZE && std::ranges::all_of(value, [](unsigned char character) {
-            return std::isdigit(character) != 0 ||
-                   (character >= static_cast<unsigned char>('a') && character <= static_cast<unsigned char>('f'));
-          });
-      const auto payload_path =
-          fs::path("storage") / "payloads" / value.substr(0, std::min<size_t>(2, value.size())) / value;
-      const auto material = std::find_if(bundle.files.begin(), bundle.files.end(), [&payload_path](const auto &file) {
-        return file.relative_path == payload_path.generic_string();
-      });
-      if (!lowercase_hex || material == bundle.files.end() || material->sha256 != value) {
-        throw std::runtime_error("recovery_backup_episode_payload_invalid");
-      }
-    }
+    validate_episode_payloads(bundle, episode);
     first_episode = false;
     previous_episode = episode.episode_id;
   }
@@ -1031,35 +1048,40 @@ backup_export_result recovery_engine::export_consistent_backup() const {
   }
 }
 
+void write_pending_restore_file(const fs::path &temporary, const backup_file_material &file) {
+  std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+  output.write(file.bytes.data(), static_cast<std::streamsize>(file.bytes.size()));
+  output.flush();
+  if (!output)
+    throw std::runtime_error("recovery_restore_file_write_failed");
+}
+
+bool restore_backup_file(const fs::path &root, const backup_file_material &file) {
+  const auto destination = root / fs::path(file.relative_path);
+  const auto temporary = fs::path(destination.string() + ".pending");
+  if (fs::is_regular_file(destination)) {
+    if (fs::exists(temporary))
+      throw std::runtime_error("recovery_restore_stale_pending_file");
+    if (fs::file_size(destination) != file.size || digest(read_bytes(destination)) != file.sha256)
+      throw std::runtime_error("recovery_restore_existing_file_mismatch");
+    return false;
+  }
+  if (fs::exists(destination))
+    throw std::runtime_error("recovery_restore_destination_path_conflict");
+  fs::create_directories(destination.parent_path());
+  if (fs::exists(temporary) && (!fs::is_regular_file(temporary) || fs::is_symlink(temporary)))
+    throw std::runtime_error("recovery_restore_pending_path_conflict");
+  write_pending_restore_file(temporary, file);
+  if (fs::file_size(temporary) != file.size || digest(read_bytes(temporary)) != file.sha256)
+    throw std::runtime_error("recovery_restore_file_verification_failed");
+  fs::rename(temporary, destination);
+  return true;
+}
+
 bool restore_backup_files(const fs::path &root, const recovery_backup_bundle &bundle) {
   bool mutated = false;
-  for (const auto &file : bundle.files) {
-    const auto destination = root / fs::path(file.relative_path);
-    const auto temporary = fs::path(destination.string() + ".pending");
-    if (fs::is_regular_file(destination)) {
-      if (fs::exists(temporary))
-        throw std::runtime_error("recovery_restore_stale_pending_file");
-      if (fs::file_size(destination) != file.size || digest(read_bytes(destination)) != file.sha256)
-        throw std::runtime_error("recovery_restore_existing_file_mismatch");
-      continue;
-    }
-    if (fs::exists(destination))
-      throw std::runtime_error("recovery_restore_destination_path_conflict");
-    mutated = fs::create_directories(destination.parent_path()) || mutated;
-    if (fs::exists(temporary) && (!fs::is_regular_file(temporary) || fs::is_symlink(temporary)))
-      throw std::runtime_error("recovery_restore_pending_path_conflict");
-    mutated = true;
-    {
-      std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
-      output.write(file.bytes.data(), static_cast<std::streamsize>(file.bytes.size()));
-      output.flush();
-      if (!output)
-        throw std::runtime_error("recovery_restore_file_write_failed");
-    }
-    if (fs::file_size(temporary) != file.size || digest(read_bytes(temporary)) != file.sha256)
-      throw std::runtime_error("recovery_restore_file_verification_failed");
-    fs::rename(temporary, destination);
-  }
+  for (const auto &file : bundle.files)
+    mutated = restore_backup_file(root, file) || mutated;
   return mutated;
 }
 

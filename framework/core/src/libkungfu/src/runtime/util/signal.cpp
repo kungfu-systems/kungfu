@@ -4,6 +4,8 @@
 // Created by Keren Dong on 2019-06-10.
 //
 
+#include <algorithm>
+#include <array>
 #include <cerrno>
 #include <csignal>
 #include <cstdio>
@@ -57,21 +59,18 @@ void exit_reactor(int signum) {
 
 #ifdef _WIN32
 void handle_windows_signal(int signum) {
-  switch (signum) {
-  case SIGINT:   // interrupt
-  case SIGBREAK: // Ctrl-Break sequence
+  if (signum == SIGINT || signum == SIGBREAK) {
     KF_LOG_INFO("kungfu app interrupted");
     stop_reactor();
-    break;
-  case SIGTERM: // Software termination signal from kill
+    return;
+  }
+  if (signum == SIGTERM) {
     KF_LOG_INFO("kungfu app terminated");
     stop_reactor();
-    break;
-  case SIGILL:         // illegal instruction - invalid function image
-  case SIGFPE:         // floating point exception
-  case SIGSEGV:        // segment violation
-  case SIGABRT:        // abnormal termination triggered by abort call
-  case SIGABRT_COMPAT: // SIGABRT compatible with other platforms, same as SIGABRT
+    return;
+  }
+  constexpr std::array<int, 5> fatal_signals = {SIGILL, SIGFPE, SIGSEGV, SIGABRT, SIGABRT_COMPAT};
+  if (std::ranges::find(fatal_signals, signum) != fatal_signals.end()) {
     // Fatal crash path: do NOT call KF_LOG_* (spdlog) here -- it allocates and
     // locks and can deadlock or double-fault before we reach the dumper. The
     // real symbolized dump comes from the SEH __except (reactor.cpp) and the
@@ -79,10 +78,9 @@ void handle_windows_signal(int signum) {
     // CRT-signal path is only a last resort.
     print_stack_trace(nullptr);
     exit_reactor(signum);
-    break;
-  default:
-    KF_LOG_INFO("kungfu app caught unknown signal {}, signal ignored", signum);
+    return;
   }
+  KF_LOG_INFO("kungfu app caught unknown signal {}, signal ignored", signum);
 }
 #endif
 

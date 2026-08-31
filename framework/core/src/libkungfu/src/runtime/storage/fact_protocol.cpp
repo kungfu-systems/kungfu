@@ -435,11 +435,8 @@ std::string portable_map_value(const nlohmann::json &value) {
   return output;
 }
 
-std::string portable_record_value(const nlohmann::json &value) {
-  const auto schema = required_descriptor_text(value, "schema");
-  const auto known_schema = PORTABLE_RECORD_SCHEMAS.find(schema);
-  if (known_schema == PORTABLE_RECORD_SCHEMAS.end())
-    canonical_fail("canonical-unknown-schema", "record schema is not registered");
+std::vector<std::pair<uint64_t, std::string>>
+collect_portable_record_fields(const nlohmann::json &value, const std::vector<portable_record_field> &schema_fields) {
   if (!value.contains("fields") || !value.at("fields").is_array())
     canonical_fail("canonical-invalid-descriptor", "record fields must be an array");
   std::vector<std::pair<uint64_t, std::string>> fields;
@@ -447,9 +444,9 @@ std::string portable_record_value(const nlohmann::json &value) {
     if (!field.is_object() || field.size() != 2 || !field.contains("id") || !field.contains("value"))
       canonical_fail("canonical-invalid-descriptor", "record field requires id and value");
     const auto field_id = parse_canonical_u64(required_descriptor_text(field, "id"));
-    const auto registered_field = std::find_if(known_schema->second.begin(), known_schema->second.end(),
+    const auto registered_field = std::find_if(schema_fields.begin(), schema_fields.end(),
                                                [field_id](const auto &candidate) { return candidate.id == field_id; });
-    if (registered_field == known_schema->second.end())
+    if (registered_field == schema_fields.end())
       canonical_fail("canonical-unknown-field", "record field is not registered");
     fields.emplace_back(field_id, portable_typed_value(field.at("value")));
   }
@@ -457,13 +454,27 @@ std::string portable_record_value(const nlohmann::json &value) {
   if (std::adjacent_find(fields.begin(), fields.end(),
                          [](const auto &left, const auto &right) { return left.first == right.first; }) != fields.end())
     canonical_fail("canonical-duplicate-field", "record contains a duplicate field id");
-  for (const auto &registered_field : known_schema->second) {
+  return fields;
+}
+
+void validate_required_record_fields(const std::vector<std::pair<uint64_t, std::string>> &fields,
+                                     const std::vector<portable_record_field> &schema_fields) {
+  for (const auto &registered_field : schema_fields) {
     const auto is_present = std::any_of(fields.begin(), fields.end(), [&registered_field](const auto &field) {
       return field.first == registered_field.id;
     });
     if (!registered_field.optional && !is_present)
       canonical_fail("canonical-missing-field", "record is missing a required field");
   }
+}
+
+std::string portable_record_value(const nlohmann::json &value) {
+  const auto schema = required_descriptor_text(value, "schema");
+  const auto known_schema = PORTABLE_RECORD_SCHEMAS.find(schema);
+  if (known_schema == PORTABLE_RECORD_SCHEMAS.end())
+    canonical_fail("canonical-unknown-schema", "record schema is not registered");
+  const auto fields = collect_portable_record_fields(value, known_schema->second);
+  validate_required_record_fields(fields, known_schema->second);
   std::string output;
   output.push_back(static_cast<char>(0x40));
   append_text_value(output, schema);
