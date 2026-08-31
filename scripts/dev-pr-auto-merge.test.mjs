@@ -111,6 +111,17 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     workflow,
     /source-workflow-jobs\.json[\s\S]*Candidate source acceptance \/ check[\s\S]*\.conclusion == "success"/u,
   );
+  assert.match(
+    workflow,
+    /EVENT_NAME" = "repository_dispatch"[\s\S]*actions\/workflows\/affected-native-pr\.yml\/runs[\s\S]*-f event=pull_request[\s\S]*-f per_page=100/u,
+  );
+  assert.doesNotMatch(
+    workflow.slice(
+      workflow.indexOf('elif [ "$EVENT_NAME" = "repository_dispatch" ]'),
+      workflow.indexOf('elif [ "$EVENT_NAME" = "workflow_dispatch" ]'),
+    ),
+    /-f status=completed/u,
+  );
   const sourceRunVerification = workflow.slice(
     workflow.indexOf('      - name: Verify exact source qualification run'),
     workflow.indexOf('source-workflow-jobs.json'),
@@ -136,6 +147,23 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     /delivery-warrant-mode:.*workflow_run.*workflow_dispatch.*inputs\.dry-run == false.*required/u,
   );
   assert.doesNotMatch(workflow, /delivery-warrant-mode:[^\n]*shadow/u);
+});
+
+test('Core source qualification emits one exact Warrant bootstrap wake', () => {
+  const sourceWorkflow = fs.readFileSync(
+    '.github/workflows/affected-native-pr.yml',
+    'utf8',
+  );
+  assert.match(
+    sourceWorkflow,
+    /wake_warrant_bootstrap:[\s\S]*needs:[\s\S]*- dco[\s\S]*- source_acceptance[\s\S]*needs\.source_acceptance\.result == 'success'/u,
+  );
+  assert.match(sourceWorkflow, /name: Wake exact Delivery Warrant bootstrap/u);
+  assert.match(
+    sourceWorkflow,
+    /event_type:"buildchain-dev-delivery-wake"[\s\S]*candidate:\{targetBranch:\$targetBranch,pullRequestNumber:\$pullRequestNumber,sourceHead:\$sourceHead\}/u,
+  );
+  assert.match(sourceWorkflow, /repos\/\$GITHUB_REPOSITORY\/dispatches/u);
 });
 
 test('Dev cadence patrol remains an explicit non-targeted path', () => {

@@ -152,6 +152,16 @@
           "steps": []
         },
         {
+          "id": "wake_warrant_bootstrap",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:bb6463b3224d0ebfab64ac60147edcd436eaad63ed7f96d7d34a394d226c68a6",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [{"index":1,"label":"name:Dispatch the exact source-qualified candidate","definitionDigest":"sha256:44252fdc664125e7020f6d1457f14f3c3ad0e5725ef0be9d98a1df89a81858cb"}]
+        },
+        {
           "id": "warrant_admission",
           "authority": "qualification",
           "publication": "none",
@@ -671,10 +681,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:513f996de00ae992a01101b2b707a58ad4081f35f1e8c4af9bee81850b358721",
+          "definitionDigest": "sha256:c94eace16fe8e761dd5a712f132318447e575e0266460e5d029ba8f621c49b00",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:34db525b038d513393e5c37cdf2cee4029df30b625bcf657ae74338b62aa188f"}]
+          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:6915c23c055bd9a869a624d3d16e81833b68943b37caf13c7b3d1f145606c758"}]
         }
       ]
     },

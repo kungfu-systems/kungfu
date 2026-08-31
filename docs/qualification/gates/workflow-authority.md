@@ -52,6 +52,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `proof_probe` | qualification | none | diagnostic | token:read | none | 10 |
 | `.github/workflows/affected-native-pr.yml` | `shifu_workspace` | qualification | none | diagnostic | token:write | none | 3 |
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
+| `.github/workflows/affected-native-pr.yml` | `wake_warrant_bootstrap` | qualification | none | diagnostic | token:write | none | 1 |
 | `.github/workflows/affected-native-pr.yml` | `warrant_admission` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
