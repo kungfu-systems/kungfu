@@ -262,6 +262,7 @@ function humanPlan(plan, stdout) {
   }
 }
 
+/** @param {any} parameters */
 function validateEffectiveParameters(parameters) {
   const parameterFields = [
     'budgetSeconds',
@@ -301,6 +302,7 @@ function validateEffectiveParameters(parameters) {
     );
 }
 
+/** @param {string} raw */
 function parseExecutionContext(raw) {
   let executionContext;
   try {

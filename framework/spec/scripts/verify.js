@@ -61,6 +61,13 @@ function digest(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+/**
+ * @param {string} id
+ * @param {any} artifact
+ * @param {any} manifest
+ * @param {(condition: unknown, message: string) => void} check
+ * @param {string[]} failures
+ */
 function verifySpecArtifact(id, artifact, manifest, check, failures) {
   let file;
   try {
@@ -119,12 +126,22 @@ function verifySpecArtifact(id, artifact, manifest, check, failures) {
   );
 }
 
+/**
+ * @param {any} manifest
+ * @param {(condition: unknown, message: string) => void} check
+ * @param {string[]} failures
+ */
 function verifySpecArtifacts(manifest, check, failures) {
   for (const [id, artifact] of Object.entries(manifest.artifacts)) {
     verifySpecArtifact(id, artifact, manifest, check, failures);
   }
 }
 
+/**
+ * @param {ReaderJourneyGuide} guide
+ * @param {Set<string>} guideIds
+ * @param {(condition: unknown, message: string) => void} check
+ */
 function verifyReaderGuide(guide, guideIds, check) {
   const guidePath = inside(distDir, guide.path);
   const bytes = fs.readFileSync(guidePath);
@@ -155,6 +172,11 @@ function verifyReaderGuide(guide, guideIds, check) {
   }
 }
 
+/**
+ * @param {any} manifest
+ * @param {(condition: unknown, message: string) => void} check
+ * @param {string[]} failures
+ */
 function verifyReaderJourney(manifest, check, failures) {
   try {
     const journeyPath = inside(distDir, manifest.reader_journey.path);

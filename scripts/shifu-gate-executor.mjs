@@ -379,6 +379,11 @@ function actionFailureOutputTail(result) {
   return output.slice(-700).trim();
 }
 
+/**
+ * @param {any} gate
+ * @param {any} context
+ * @param {string} actionId
+ */
 async function executeHandlerAction(gate, context, actionId) {
   const handler = context.handlers[gate.action.handler];
   if (!handler) {
@@ -419,6 +424,12 @@ async function executeHandlerAction(gate, context, actionId) {
   }
 }
 
+/**
+ * @param {any} gate
+ * @param {any} context
+ * @param {string} actionId
+ * @param {string} evidenceFile
+ */
 function executeSpawnedAction(gate, context, actionId, evidenceFile) {
   const invocation = buildGateActionInvocation(
     gate.action,
@@ -481,6 +492,7 @@ function executeSpawnedAction(gate, context, actionId, evidenceFile) {
   }
 }
 
+/** @param {string} evidenceFile @param {any} state */
 function loadActionEvidence(evidenceFile, state) {
   if (state.evidence || !fs.existsSync(evidenceFile)) return state;
   try {
@@ -497,6 +509,7 @@ function loadActionEvidence(evidenceFile, state) {
   }
 }
 
+/** @param {any} gate @param {any} state */
 function validateActionEvidence(gate, state) {
   const next = { ...state };
   if (
@@ -590,6 +603,7 @@ function requiredCoverage(results) {
     .every((item) => item.attempted && item.status === 'pass');
 }
 
+/** @param {any} receipt @param {(...args:any[])=>void} add */
 function validateGateReceiptHeader(receipt, add) {
   if (receipt.$schema !== GATE_RECEIPT_SCHEMA)
     add('schema-id', '/$schema', `must be ${GATE_RECEIPT_SCHEMA}`);
@@ -609,6 +623,12 @@ function validateGateReceiptHeader(receipt, add) {
     );
 }
 
+/**
+ * @param {any} receipt
+ * @param {any} options
+ * @param {any} source
+ * @param {(...args:any[])=>void} add
+ */
 function validateGateReceiptIdentity(receipt, options, source, add) {
   let current = true;
   if (receipt.registry?.digest !== options.registryDigest) {
@@ -641,6 +661,12 @@ function validateGateReceiptIdentity(receipt, options, source, add) {
   return current;
 }
 
+/**
+ * @param {any} receipt
+ * @param {any} registry
+ * @param {any} options
+ * @param {(...args:any[])=>void} add
+ */
 function validateGateReceiptPlan(receipt, registry, options, add) {
   let current = true;
   try {
@@ -686,6 +712,13 @@ function validateGateReceiptPlan(receipt, registry, options, add) {
   }
 }
 
+/**
+ * @param {any} result
+ * @param {number} index
+ * @param {Map<any,any>} expected
+ * @param {Set<any>} seen
+ * @param {(...args:any[])=>void} add
+ */
 function validateGateResult(result, index, expected, seen, add) {
   const at = `/results/${index}`;
   if (!result || typeof result !== 'object') {
@@ -718,6 +751,11 @@ function validateGateResult(result, index, expected, seen, add) {
   return current;
 }
 
+/**
+ * @param {any} receipt
+ * @param {any} plan
+ * @param {(...args:any[])=>void} add
+ */
 function validateGateReceiptResults(receipt, plan, add) {
   const expected = new Map();
   for (const group of plan?.groups || [])
@@ -725,11 +763,13 @@ function validateGateReceiptResults(receipt, plan, add) {
   const seen = new Set();
   let current = true;
   if (Array.isArray(receipt.results)) {
-    receipt.results.forEach((result, index) => {
-      if (!validateGateResult(result, index, expected, seen, add)) {
-        current = false;
-      }
-    });
+    receipt.results.forEach(
+      (/** @type {any} */ result, /** @type {number} */ index) => {
+        if (!validateGateResult(result, index, expected, seen, add)) {
+          current = false;
+        }
+      },
+    );
   }
   for (const id of expected.keys())
     if (!seen.has(id))
@@ -737,6 +777,11 @@ function validateGateReceiptResults(receipt, plan, add) {
   return { expected, current };
 }
 
+/**
+ * @param {any} receipt
+ * @param {Map<any,any>} expected
+ * @param {(...args:any[])=>void} add
+ */
 function validateGateActionCoverage(receipt, expected, add) {
   const expectedActionIds = [...expected.values()].map((gate) => gate.actionId);
   const attemptedActionIds = Array.isArray(receipt.results)
@@ -764,6 +809,7 @@ function validateGateActionCoverage(receipt, expected, add) {
     );
 }
 
+/** @param {any} receipt @param {(...args:any[])=>void} add */
 function validateGateReceiptOutcome(receipt, add) {
   const derivedStatus = overallStatus(
     Array.isArray(receipt.results) ? receipt.results : [],
