@@ -198,7 +198,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:9071ad9f5fa2d19ee6a579a8b2cadb3ab7258d2e5547aca7aa67486fe0b1c3fe"
+          "sourceRoot": "sha256:1f8a3d75461d5c448b1cd3877ed9d412d0c0cdf9c507404adb68291c552286be"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:b5eab7cb51257de6e3ddb1fd8f2adf65abd9b333af98d6e6d073280f72631b55"
+  "registryRoot": "sha256:f738447b53fb675732b7655be551fb0137327ff5a5557fe93ce191313f3e6a23"
 }
