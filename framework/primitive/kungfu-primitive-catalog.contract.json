@@ -1072,7 +1072,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
-                "root": "sha256:0b9d99cb83421242d97206aa90a6ac5ac7bf41727f76e3477a062124bcb2e992"
+                "root": "sha256:ae1fced4e6ef432aac37d5d1ac70107c3461e6cbc3edcfc168f98ee60e3b4678"
               },
               {
                 "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
@@ -1123,7 +1123,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
-                "root": "sha256:0b9d99cb83421242d97206aa90a6ac5ac7bf41727f76e3477a062124bcb2e992"
+                "root": "sha256:ae1fced4e6ef432aac37d5d1ac70107c3461e6cbc3edcfc168f98ee60e3b4678"
               },
               {
                 "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
@@ -1144,7 +1144,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
-                "root": "sha256:0b9d99cb83421242d97206aa90a6ac5ac7bf41727f76e3477a062124bcb2e992"
+                "root": "sha256:ae1fced4e6ef432aac37d5d1ac70107c3461e6cbc3edcfc168f98ee60e3b4678"
               }
             ],
             "proofRefs": [
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:39fd7f9088e38caa333a3bfc0f78e07e9ebb4593392d4690c63eec6744c7500d"
+  "catalogRoot": "sha256:b48062dde752b1869640948c0296fce7a4d6c2cbcda79b0edefe9376f4b702fc"
 }

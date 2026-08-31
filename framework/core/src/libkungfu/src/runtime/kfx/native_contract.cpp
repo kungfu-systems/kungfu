@@ -53,24 +53,33 @@ const json &resolve_schema_ref(const json &root, const std::string &reference) {
 
 void validate_schema_value(const json &value, const json &rule, const json &root, const std::string &path);
 
+void validate_required_object_fields(const json &value, const json &rule, const std::string &path) {
+  if (!rule.contains("required"))
+    return;
+  for (const auto &field : rule.at("required")) {
+    if (!field.is_string() || !value.contains(field.get<std::string>()))
+      refuse("KF_KFX_SCHEMA_INVALID", path + " is missing a required field");
+  }
+}
+
+void validate_additional_object_fields(const json &value, const json &rule, const json &properties,
+                                       const std::string &path) {
+  if (!rule.contains("additionalProperties") || !rule.at("additionalProperties").is_boolean() ||
+      rule.at("additionalProperties").get<bool>())
+    return;
+  for (const auto &[field, ignored] : value.items()) {
+    (void)ignored;
+    if (!properties.contains(field))
+      refuse("KF_KFX_SCHEMA_INVALID", path + " contains unknown field " + field);
+  }
+}
+
 void validate_schema_object(const json &value, const json &rule, const json &root, const std::string &path) {
   if (!value.is_object())
     refuse("KF_KFX_SCHEMA_INVALID", path + " must be an object");
-  if (rule.contains("required")) {
-    for (const auto &field : rule.at("required")) {
-      if (!field.is_string() || !value.contains(field.get<std::string>()))
-        refuse("KF_KFX_SCHEMA_INVALID", path + " is missing a required field");
-    }
-  }
+  validate_required_object_fields(value, rule, path);
   const auto properties = rule.value("properties", json::object());
-  if (rule.contains("additionalProperties") && rule.at("additionalProperties").is_boolean() &&
-      !rule.at("additionalProperties").get<bool>()) {
-    for (const auto &[field, ignored] : value.items()) {
-      (void)ignored;
-      if (!properties.contains(field))
-        refuse("KF_KFX_SCHEMA_INVALID", path + " contains unknown field " + field);
-    }
-  }
+  validate_additional_object_fields(value, rule, properties, path);
   for (const auto &[field, child] : properties.items()) {
     if (value.contains(field))
       validate_schema_value(value.at(field), child, root, path + "." + field);
