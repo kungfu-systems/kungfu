@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8603,
+  "generation": 8604,
   "fencingCounter": 820,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:d11675f08ce71f735a59e3f4f46b44258e416fb60e3b21ae8749a42441d5f91c",
@@ -54,8 +54,13 @@
     "issuedAt": "2026-08-31T10:07:31.790Z",
     "expiresAt": "2026-08-31T12:03:27.960Z",
     "fencingToken": "sha256:e86d26bdbe8ee2a490bdca1ba0a4ff98973c26450ceee635efffa226da32c4f5",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-08-31T10:33:27.960Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-08-31T10:33:27.960Z",
+    "nativeProofRoot": "sha256:c832f7fca96b4f63e716c9c44d03b73b57777f7e0ae9f7d5503f2d1f11e41809",
+    "nativeExecutionReceiptRoot": "sha256:3ee14ff9f7151c8c553e73299cf546172dca812b4c54bffc2128b5c9fe0c77d0",
+    "nativeProofReuseRoot": "sha256:cb32d548770ae71f03f85545592c8dbdef65a04c3e9cd0bf9002a1753f39ef6d",
+    "qualificationReceiptRoot": "sha256:cacba8375e9863993de39f34dcc63fc1361c693032f5b0080e1b362d1827af2e",
+    "qualifiedAt": "2026-08-31T10:33:52.268Z"
   },
   "candidates": [
     {
@@ -59191,10 +59196,10 @@
       "sourceWorkflowRunId": 33377191378,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T09:28:57.169Z",
-      "updatedAt": "2026-08-31T10:33:27.960Z",
+      "updatedAt": "2026-08-31T10:33:52.268Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/release/kfd-candidate-evidence.mjs",
@@ -59261,6 +59266,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T10:33:27.960Z",
-  "stateRoot": "sha256:26d9deaf4da556a3ad039fb0a815191e698cfdaaf06d8de84999449a81cfd44e"
+  "updatedAt": "2026-08-31T10:33:52.268Z",
+  "stateRoot": "sha256:51dbc5bdb131561750e9e3e0827515e0ebf2a54de694eb99931559e9bfe1e2e9"
 }
