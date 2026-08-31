@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from typing import Any, Callable, Mapping, Sequence
 import uuid
 
@@ -52,6 +53,11 @@ _PROMPT_INSTRUCTION_PREFIX = (
     "including surrogate pairs, then follow the decoded prompt exactly: "
 )
 _PROMPT_SAFE_CHARACTERS = frozenset(" .,:;/_-")
+_FINALIZED_AGENT_AUDIT = re.compile(
+    r"agent-console-native:(?P<attempt>[0-9a-f-]{36})-final\.json\Z"
+)
+_PROVIDER_LOG_RETENTION_SECONDS = 7 * 24 * 60 * 60
+_PROVIDER_LOG_MAX_BYTES = 256 * 1024 * 1024
 
 
 def resolve_command_wrapper(
@@ -447,6 +453,133 @@ def write_runtime_file(path: Path, content: str) -> None:
             temporary.unlink()
 
 
+def _finalized_native_attempts(runtime_dir: Path) -> set[str]:
+    attempts = set()
+    for audit in (runtime_dir / "skill-manager").glob(
+        "agent-console-native:*-final.json"
+    ):
+        match = _FINALIZED_AGENT_AUDIT.fullmatch(audit.name)
+        if match is None or audit.is_symlink() or not audit.is_file():
+            continue
+        try:
+            payload = json.loads(audit.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if str(payload.get("schema") or "").startswith("kungfu.skill-runtime-audit/"):
+            attempts.add(match.group("attempt"))
+    return attempts
+
+
+def _provider_log_files(provider_root: Path) -> list[Path]:
+    files: list[Path] = []
+    for parent, dirnames, filenames in os.walk(provider_root, followlinks=False):
+        dirnames[:] = [
+            name for name in dirnames if not (Path(parent) / name).is_symlink()
+        ]
+        files.extend(
+            path
+            for name in filenames
+            if not (path := Path(parent) / name).is_symlink() and path.is_file()
+        )
+    return files
+
+
+def _provider_log_inventory(
+    runtime_dir: Path, finalized: set[str]
+) -> tuple[list[tuple[int, str, int, Path]], int]:
+    eligible = []
+    active_files = 0
+    attempts_root = runtime_dir / "agent-sessions" / "native-attempts"
+    for attempt_root in attempts_root.iterdir() if attempts_root.is_dir() else []:
+        if not attempt_root.is_dir() or attempt_root.is_symlink():
+            continue
+        files = _provider_log_files(attempt_root / "provider-logs")
+        if attempt_root.name not in finalized:
+            active_files += len(files)
+            continue
+        for path in files:
+            stat = path.stat()
+            eligible.append((stat.st_mtime_ns, str(path), stat.st_size, path))
+    return eligible, active_files
+
+
+def _provider_log_removals(
+    eligible: list[tuple[int, str, int, Path]], cutoff_ns: int, max_bytes: int
+) -> set[Path]:
+    removals = {row[3] for row in eligible if row[0] < cutoff_ns}
+    retained_bytes = sum(row[2] for row in eligible if row[3] not in removals)
+    for _, _, size, path in sorted(eligible):
+        if retained_bytes <= max_bytes:
+            break
+        if path not in removals:
+            removals.add(path)
+            retained_bytes -= size
+    return removals
+
+
+def _remove_provider_logs(paths: set[Path]) -> tuple[int, int]:
+    removed_bytes = 0
+    removed_files = 0
+    for path in sorted(paths, key=lambda value: str(value).encode("utf-8")):
+        try:
+            size = path.stat().st_size
+            path.unlink()
+        except FileNotFoundError:
+            continue
+        removed_bytes += size
+        removed_files += 1
+    return removed_bytes, removed_files
+
+
+def _remove_empty_provider_log_dirs(runtime_dir: Path, finalized: set[str]) -> None:
+    attempts_root = runtime_dir / "agent-sessions" / "native-attempts"
+    for attempt in finalized:
+        provider_root = attempts_root / attempt / "provider-logs"
+        if not provider_root.is_dir() or provider_root.is_symlink():
+            continue
+        for parent, dirnames, _ in os.walk(provider_root, topdown=False):
+            for name in dirnames:
+                try:
+                    (Path(parent) / name).rmdir()
+                except OSError:
+                    pass
+
+
+def prune_finalized_provider_logs(
+    runtime_dir: str | Path,
+    *,
+    now_ns: int | None = None,
+    retention_seconds: int = _PROVIDER_LOG_RETENTION_SECONDS,
+    max_bytes: int = _PROVIDER_LOG_MAX_BYTES,
+) -> dict[str, Any]:
+    """Bound provider logs without touching unfinalized Agent attempts."""
+
+    root = Path(runtime_dir)
+    finalized = _finalized_native_attempts(root)
+    current_ns = time.time_ns() if now_ns is None else now_ns
+    cutoff_ns = current_ns - retention_seconds * 1_000_000_000
+    eligible, active_files = _provider_log_inventory(root, finalized)
+    before_bytes = sum(row[2] for row in eligible)
+    removals = _provider_log_removals(eligible, cutoff_ns, max_bytes)
+    removed_bytes, removed_files = _remove_provider_logs(removals)
+    _remove_empty_provider_log_dirs(root, finalized)
+
+    return {
+        "schema": "kungfu.provider-log-retention-receipt/v1",
+        "policy": {
+            "finalizedMaxAgeSeconds": retention_seconds,
+            "finalizedMaxBytes": max_bytes,
+            "unfinalizedAttempts": "preserved",
+        },
+        "eligibleBytesBefore": before_bytes,
+        "eligibleBytesAfter": max(0, before_bytes - removed_bytes),
+        "removedBytes": removed_bytes,
+        "removedFiles": removed_files,
+        "unfinalizedFilesPreserved": active_files,
+        "status": "within-budget",
+    }
+
+
 class ProviderBootstrapAdapter:
     """Materialize one provider Skill adapter under runtime state only."""
 
@@ -481,6 +614,7 @@ class ProviderBootstrapAdapter:
             / "native-provider-adapters"
             / adapter_id
         )
+        log_retention = None
         if session_id is None:
             session_root = adapter_root
         else:
@@ -491,6 +625,7 @@ class ProviderBootstrapAdapter:
                 raise ValueError(
                     "native Provider adapter session id must be a UUID"
                 ) from error
+            log_retention = prune_finalized_provider_logs(runtime_dir)
             session_root = (
                 Path(runtime_dir) / "agent-sessions" / "native-attempts" / session_token
             )
@@ -546,6 +681,7 @@ class ProviderBootstrapAdapter:
             "provider": adapter_id,
             "skillFile": str(skill_file),
             "providerLogDir": str(provider_log_dir),
+            "providerLogRetention": log_retention,
             "argv": [
                 render_text(str(value), paths) for value in skill.get("argv") or []
             ],
