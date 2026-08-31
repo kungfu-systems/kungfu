@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8684,
+  "generation": 8685,
   "fencingCounter": 827,
   "policy": {
     "agingSeconds": 900,
@@ -60344,7 +60344,7 @@
       "candidateId": "sha256:827fd008369b6b52f1c1dc0b46c64053e9f45ba5cf3f97a3386b67fd24737d4b",
       "sourceHead": "b1273ab2d547c1bacfecee4713260b40b2340830",
       "sourcePatchRoot": "sha256:19eaf765ab005a4688b8b486180bd60133a9216e3f009f1552e8dcf538775db5",
-      "sourceProofRoot": "sha256:2aecd493ed6cef65df161990d4e91eff1e8163b424cc62474ac6d0ffb340496e",
+      "sourceProofRoot": "sha256:761d7f26b9bed2f91013a335383f3b1ebbcd5d87bd7109930743990f82e3f3ed",
       "planRoot": "sha256:e682b1187a3577f9ceff15f4814b91f94307abdaf8926ac9017b08f88b353fb7",
       "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
       "dependencyRoot": "sha256:59322990c0ceadbb24186485274c7399bd2f6db882f0f076a1df81e435d20263",
@@ -60356,11 +60356,11 @@
         "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3613 --expected-head b1273ab2d547c1bacfecee4713260b40b2340830 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
         "commandRoot": "sha256:61c347cfec9ea9a7e1c7f3ca02b0e8aba2a90db50301a7c19aebe3f815f7dd73"
       },
-      "sourceWorkflowRunId": 33429369168,
+      "sourceWorkflowRunId": 33430370349,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T19:29:14.936Z",
-      "updatedAt": "2026-08-31T19:29:14.936Z",
-      "attempts": 1,
+      "updatedAt": "2026-08-31T19:32:06.465Z",
+      "attempts": 2,
       "recoveries": 0,
       "status": "queued",
       "terminal": null,
@@ -60378,6 +60378,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T19:29:14.936Z",
-  "stateRoot": "sha256:8078ed3ee2ec391cdabaa76cfc9e9ff1ebf68c742630fb0643bac8703796d20e"
+  "updatedAt": "2026-08-31T19:32:06.465Z",
+  "stateRoot": "sha256:7e980673a44da09e55b561b22df4f8b077db4d7a2ad282dcbb76b95c329fb795"
 }
