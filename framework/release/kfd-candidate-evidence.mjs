@@ -652,7 +652,10 @@ export function runVerifiedQualification({
   fs.renameSync(output, sealed);
   const result = spawnSync(command[0], command.slice(1), {
     cwd: root,
-    env: process.env,
+    env: {
+      ...process.env,
+      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
+    },
     stdio: 'inherit',
   });
   fs.rmSync(output, { recursive: true, force: true });

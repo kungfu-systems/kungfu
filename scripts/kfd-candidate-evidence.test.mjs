@@ -243,7 +243,7 @@ test('the Verify wrapper restores pre-qualification evidence after qualification
   const command = [
     process.execPath,
     '-e',
-    `const fs=require('node:fs');fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n')`,
+    `const fs=require('node:fs');if(process.env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS!=='1')process.exit(23);fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n')`,
   ];
   assert.equal(
     runVerifiedQualification({
