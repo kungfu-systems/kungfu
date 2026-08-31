@@ -1,0 +1,67 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "2faf6449032238a88ccf26f8f585a8a91884fcba",
+  "changeRoot": "sha256:e76c8920965d0b66f901acc737c00d0ac9c5967f308e1bcd5126324e4e01a69f",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:c5da8fabd279e8e13390a342a1aa4f608f6bbdeb5c633f2cd84597972535586d",
+      "contentRoot": "sha256:a7616baf4bfad363420aff7802c163ad59ad802adeac913c3e69aeea459743c1",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d8be96b79af34092eb6dd7658fcba9afd7eb06154431ac3889f698894300dfa9",
+      "contentRoot": "sha256:68022d3f276f65e3eaf3fadc69aab0bafb5d31a85d8bf15cdff3ffc009da3829",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4dfb0265a52b7fcfb5121a65d66f9a30ddf10524f1e1a9f593e9d9870f07d541",
+      "contentRoot": "sha256:e2426e0ab1e5644620055fdf56ff4cc9dbe619e0bfa5dcad2b7839581f51f5c7",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c5da8fabd279e8e13390a342a1aa4f608f6bbdeb5c633f2cd84597972535586d",
+      "contentRoot": "sha256:a7616baf4bfad363420aff7802c163ad59ad802adeac913c3e69aeea459743c1",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4dfb0265a52b7fcfb5121a65d66f9a30ddf10524f1e1a9f593e9d9870f07d541",
+      "contentRoot": "sha256:e2426e0ab1e5644620055fdf56ff4cc9dbe619e0bfa5dcad2b7839581f51f5c7",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:016c67c42618df951be534502108fdbde6b6ee35538094287d7dc10d754bb638",
+      "contentRoot": "sha256:43594189454b9b6ccb5942cc77a9628bd950d20ff6da8d3b8ec9b18d19f79df4",
+      "path": "extensions/system/kfx-manager/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a0fa463f1b4c9f303f22407446a0537616f9a5c63c815e892bedcdd3a70f8784",
+      "contentRoot": "sha256:5ed49cb2abd811f02181e2bd525087d515f3cd748ddf2789b8d35d11b1aa4e7b",
+      "path": "extensions/system/settings/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c46e24bb31a915f29676bfa588e8adf04085104bc7ae0fbb47367e3817cf2c87",
+      "contentRoot": "sha256:129a5adf4870a0d04e2b9d36f3991cf9ceacd5ade7d29a64f33dc087228165cf",
+      "path": "extensions/system/skill-manager/src/view/index.tsx",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Internal product view composition refactor preserves the shipped site bundle, public routes, and versioned assets.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:76cc167980ec5110cceb98e13c580e492bc4dbcfe6f7124e2d125ec474ed964c"
+}
