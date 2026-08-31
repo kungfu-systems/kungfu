@@ -97,11 +97,7 @@ def _text_bytes(value: dict[str, Any]) -> bytes:
     return raw
 
 
-def _typed(value: Any) -> bytes:
-    if not isinstance(value, dict) or not isinstance(value.get("type"), str):
-        _fail("canonical-invalid-descriptor", "typed value requires a type")
-    kind = value["type"]
-
+def _typed_scalar(value: dict[str, Any], kind: str) -> bytes:
     if kind == "absent":
         _fail("canonical-absent", "absent is a schema condition, not a value")
     if kind == "null":
@@ -138,91 +134,100 @@ def _typed(value: Any) -> bytes:
     if kind == "bytes":
         raw = _hex(value.get("hex"), "hex")
         return b"\x21" + _u64(len(raw)) + raw
+    _fail("canonical-unsupported-type", f"unsupported canonical type: {kind}")
+
+
+def _typed_sequence(value: dict[str, Any], kind: str) -> bytes:
+    items = value.get("items")
+    if not isinstance(items, list):
+        _fail("canonical-invalid-descriptor", f"{kind} items must be an array")
+    encoded_items = [_typed(item) for item in items]
+    if kind == "set":
+        encoded_items.sort()
+        if any(left == right for left, right in zip(encoded_items, encoded_items[1:])):
+            _fail("canonical-duplicate-item", "set contains equal canonical items")
+    return (
+        (b"\x30" if kind == "array" else b"\x31")
+        + _u64(len(encoded_items))
+        + b"".join(encoded_items)
+    )
+
+
+def _typed_map(value: dict[str, Any]) -> bytes:
+    entries = value.get("entries")
+    if not isinstance(entries, list):
+        _fail("canonical-invalid-descriptor", "map entries must be an array")
+    encoded_entries: list[tuple[bytes, bytes]] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != {"key", "value"}:
+            _fail("canonical-invalid-descriptor", "map entry requires key and value")
+        key = entry["key"]
+        if not isinstance(key, dict) or key.get("type") != "text":
+            _fail("canonical-invalid-descriptor", "map keys must be text")
+        encoded_entries.append((_typed(key), _typed(entry["value"])))
+    encoded_entries.sort(key=lambda pair: pair[0])
+    if any(
+        left[0] == right[0] for left, right in zip(encoded_entries, encoded_entries[1:])
+    ):
+        _fail("canonical-duplicate-key", "map contains equal canonical keys")
+    return (
+        b"\x32"
+        + _u64(len(encoded_entries))
+        + b"".join(key + child for key, child in encoded_entries)
+    )
+
+
+def _typed_record(value: dict[str, Any]) -> bytes:
+    schema = value.get("schema")
+    fields = value.get("fields")
+    if not isinstance(schema, str):
+        _fail("canonical-invalid-descriptor", "record schema must be a string")
+    allowed = _SCHEMA_FIELDS.get(schema)
+    if allowed is None:
+        _fail("canonical-unknown-schema", "record schema is not registered")
+    if not isinstance(fields, list):
+        _fail("canonical-invalid-descriptor", "record fields must be an array")
+    encoded_fields: list[tuple[int, bytes]] = []
+    for field in fields:
+        if not isinstance(field, dict) or set(field) != {"id", "value"}:
+            _fail("canonical-invalid-descriptor", "record field requires id and value")
+        raw_id = field["id"]
+        if not isinstance(raw_id, str) or not _DECIMAL.fullmatch(raw_id):
+            _fail("canonical-invalid-descriptor", "field id must be canonical decimal")
+        field_id = int(raw_id)
+        if field_id not in allowed:
+            _fail("canonical-unknown-field", f"field {field_id} is not registered")
+        encoded_fields.append((field_id, _typed(field["value"])))
+    encoded_fields.sort(key=lambda pair: pair[0])
+    if any(
+        left[0] == right[0] for left, right in zip(encoded_fields, encoded_fields[1:])
+    ):
+        _fail("canonical-duplicate-field", "record contains a duplicate field id")
+    present = {field_id for field_id, _child in encoded_fields}
+    missing = set(allowed) - _SCHEMA_OPTIONAL_FIELDS.get(schema, frozenset()) - present
+    if missing:
+        _fail("canonical-missing-field", "record is missing a required field")
+    schema_value = _typed({"type": "text", "value": schema})
+    return (
+        b"\x40"
+        + schema_value
+        + _u64(len(encoded_fields))
+        + b"".join(_u64(field_id) + child for field_id, child in encoded_fields)
+    )
+
+
+def _typed(value: Any) -> bytes:
+    if not isinstance(value, dict) or not isinstance(value.get("type"), str):
+        _fail("canonical-invalid-descriptor", "typed value requires a type")
+    kind = value["type"]
+    if kind in {"absent", "null", "bool", "u64", "i64", "f64", "text", "bytes"}:
+        return _typed_scalar(value, kind)
     if kind in {"array", "set"}:
-        items = value.get("items")
-        if not isinstance(items, list):
-            _fail("canonical-invalid-descriptor", f"{kind} items must be an array")
-        encoded_items = [_typed(item) for item in items]
-        if kind == "set":
-            encoded_items.sort()
-            if any(
-                left == right for left, right in zip(encoded_items, encoded_items[1:])
-            ):
-                _fail("canonical-duplicate-item", "set contains equal canonical items")
-        return (
-            (b"\x30" if kind == "array" else b"\x31")
-            + _u64(len(encoded_items))
-            + b"".join(encoded_items)
-        )
+        return _typed_sequence(value, kind)
     if kind == "map":
-        entries = value.get("entries")
-        if not isinstance(entries, list):
-            _fail("canonical-invalid-descriptor", "map entries must be an array")
-        encoded_entries: list[tuple[bytes, bytes]] = []
-        for entry in entries:
-            if not isinstance(entry, dict) or set(entry) != {"key", "value"}:
-                _fail(
-                    "canonical-invalid-descriptor", "map entry requires key and value"
-                )
-            key = entry["key"]
-            if not isinstance(key, dict) or key.get("type") != "text":
-                _fail("canonical-invalid-descriptor", "map keys must be text")
-            encoded_entries.append((_typed(key), _typed(entry["value"])))
-        encoded_entries.sort(key=lambda pair: pair[0])
-        if any(
-            left[0] == right[0]
-            for left, right in zip(encoded_entries, encoded_entries[1:])
-        ):
-            _fail("canonical-duplicate-key", "map contains equal canonical keys")
-        return (
-            b"\x32"
-            + _u64(len(encoded_entries))
-            + b"".join(key + child for key, child in encoded_entries)
-        )
+        return _typed_map(value)
     if kind == "record":
-        schema = value.get("schema")
-        fields = value.get("fields")
-        if not isinstance(schema, str):
-            _fail("canonical-invalid-descriptor", "record schema must be a string")
-        allowed = _SCHEMA_FIELDS.get(schema)
-        if allowed is None:
-            _fail("canonical-unknown-schema", "record schema is not registered")
-        if not isinstance(fields, list):
-            _fail("canonical-invalid-descriptor", "record fields must be an array")
-        encoded_fields: list[tuple[int, bytes]] = []
-        for field in fields:
-            if not isinstance(field, dict) or set(field) != {"id", "value"}:
-                _fail(
-                    "canonical-invalid-descriptor", "record field requires id and value"
-                )
-            raw_id = field["id"]
-            if not isinstance(raw_id, str) or not _DECIMAL.fullmatch(raw_id):
-                _fail(
-                    "canonical-invalid-descriptor", "field id must be canonical decimal"
-                )
-            field_id = int(raw_id)
-            if field_id not in allowed:
-                _fail("canonical-unknown-field", f"field {field_id} is not registered")
-            encoded_fields.append((field_id, _typed(field["value"])))
-        encoded_fields.sort(key=lambda pair: pair[0])
-        if any(
-            left[0] == right[0]
-            for left, right in zip(encoded_fields, encoded_fields[1:])
-        ):
-            _fail("canonical-duplicate-field", "record contains a duplicate field id")
-        present = {field_id for field_id, _child in encoded_fields}
-        missing = (
-            set(allowed) - _SCHEMA_OPTIONAL_FIELDS.get(schema, frozenset()) - present
-        )
-        if missing:
-            _fail("canonical-missing-field", "record is missing a required field")
-        schema_value = _typed({"type": "text", "value": schema})
-        return (
-            b"\x40"
-            + schema_value
-            + _u64(len(encoded_fields))
-            + b"".join(_u64(field_id) + child for field_id, child in encoded_fields)
-        )
+        return _typed_record(value)
     _fail("canonical-unsupported-type", f"unsupported canonical type: {kind}")
 
 

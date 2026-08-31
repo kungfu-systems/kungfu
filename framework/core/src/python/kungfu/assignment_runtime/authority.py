@@ -455,6 +455,53 @@ class WorkControlAuthority:
             }
         return projected
 
+    def _inspect_assignment(
+        self, raw: Mapping[str, Any], diagnostics: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        projected = self._record(dict(raw))
+        initiative_id = str(projected.get("initiativeId") or "")
+        assignment_id = str(projected.get("assignmentId") or "")
+        if not initiative_id or not assignment_id:
+            diagnostics.append(
+                {
+                    "code": "assignment-identity-incomplete",
+                    "message": "An authority row has no canonical Assignment identity",
+                    "severity": "error",
+                    "recovery": ["diagnostics.get"],
+                }
+            )
+            return None
+        try:
+            status_receipt = self._invoke(
+                "assignment-status",
+                {
+                    "initiativeId": initiative_id,
+                    "assignmentId": assignment_id,
+                    "source": "kungfu",
+                },
+            )
+            status = dict(status_receipt.get("result") or {})
+            projected["lifecycle"] = _copy_json(status)
+            projected["phase"] = str(status.get("phase") or "admitted")
+            projected["attempt"] = self._attempt(status)
+            projected["lease"] = self._lease(status)
+            projected["queryProofRoot"] = str(
+                status.get("query_proof_root") or status.get("queryProofRoot") or ""
+            )
+        except LocalRuntimeError:
+            projected["phase"] = "admitted"
+            projected["attempt"] = None
+            projected["lease"] = None
+            diagnostics.append(
+                {
+                    "code": "assignment-status-unavailable",
+                    "message": "One Assignment status could not be folded at this cut",
+                    "severity": "error",
+                    "recovery": ["diagnostics.get", "recovery.plan"],
+                }
+            )
+        return projected
+
     def inspect(self) -> dict[str, Any]:
         portfolio_receipt = self._invoke("portfolio", {})
         portfolio = dict(portfolio_receipt.get("result") or {})
@@ -462,49 +509,9 @@ class WorkControlAuthority:
         fact_refs = []
         diagnostics = []
         for raw in portfolio.get("assignments") or []:
-            row = dict(raw)
-            projected = self._record(row)
-            initiative_id = str(projected.get("initiativeId") or "")
-            assignment_id = str(projected.get("assignmentId") or "")
-            if not initiative_id or not assignment_id:
-                diagnostics.append(
-                    {
-                        "code": "assignment-identity-incomplete",
-                        "message": "An authority row has no canonical Assignment identity",
-                        "severity": "error",
-                        "recovery": ["diagnostics.get"],
-                    }
-                )
+            projected = self._inspect_assignment(raw, diagnostics)
+            if projected is None:
                 continue
-            try:
-                status_receipt = self._invoke(
-                    "assignment-status",
-                    {
-                        "initiativeId": initiative_id,
-                        "assignmentId": assignment_id,
-                        "source": "kungfu",
-                    },
-                )
-                status = dict(status_receipt.get("result") or {})
-                projected["lifecycle"] = _copy_json(status)
-                projected["phase"] = str(status.get("phase") or "admitted")
-                projected["attempt"] = self._attempt(status)
-                projected["lease"] = self._lease(status)
-                projected["queryProofRoot"] = str(
-                    status.get("query_proof_root") or status.get("queryProofRoot") or ""
-                )
-            except LocalRuntimeError:
-                projected["phase"] = "admitted"
-                projected["attempt"] = None
-                projected["lease"] = None
-                diagnostics.append(
-                    {
-                        "code": "assignment-status-unavailable",
-                        "message": "One Assignment status could not be folded at this cut",
-                        "severity": "error",
-                        "recovery": ["diagnostics.get", "recovery.plan"],
-                    }
-                )
             assignments.append(projected)
             sealed = projected.get("sealedIdentity") or {}
             fact_root = str(sealed.get("payloadRoot") or "")
