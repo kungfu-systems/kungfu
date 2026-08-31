@@ -165,6 +165,14 @@ test('Core source qualification emits one exact Warrant bootstrap wake', () => {
     /event_type:"buildchain-dev-delivery-wake"[\s\S]*candidate:\{targetBranch:\$targetBranch,pullRequestNumber:\$pullRequestNumber,sourceHead:\$sourceHead\}/u,
   );
   assert.match(sourceWorkflow, /repos\/\$GITHUB_REPOSITORY\/dispatches/u);
+  assert.match(
+    sourceWorkflow,
+    /test "\$protected_base" = "\$GITHUB_BASE_REF"/u,
+  );
+  assert.doesNotMatch(
+    sourceWorkflow,
+    /test "\$protected_base" = "\$GITHUB_REF_NAME"/u,
+  );
 });
 
 test('Dev cadence patrol remains an explicit non-targeted path', () => {

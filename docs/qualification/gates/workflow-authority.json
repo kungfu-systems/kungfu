@@ -156,10 +156,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3f91bea99fd977d35bc1d9292daa5226f1d2835e03c3e7dbc9c871e04ccd3ab0",
+          "definitionDigest": "sha256:8ba6afdd0c41a023453d5f1a14d42b9e6e5d5ddadb870ce98f43fcb9ea38aa1f",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Dispatch the exact source-qualified candidate","definitionDigest":"sha256:44252fdc664125e7020f6d1457f14f3c3ad0e5725ef0be9d98a1df89a81858cb"}]
+          "steps": [{"index":1,"label":"name:Dispatch the exact source-qualified candidate","definitionDigest":"sha256:5da655c0793a280ecfde7e0ade35b1b0ef2839bfc0d12ee844555d46970d0a52"}]
         },
         {
           "id": "warrant_admission",

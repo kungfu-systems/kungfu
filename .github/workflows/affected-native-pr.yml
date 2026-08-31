@@ -132,7 +132,9 @@ jobs:
           pull_request="$(jq -er '.pull_request.number' "$GITHUB_EVENT_PATH")"
           source_head="$(jq -er '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
           protected_base="$(jq -er '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
-          test "$protected_base" = "$GITHUB_REF_NAME"
+          # pull_request runs use refs/pull/<number>/merge for GITHUB_REF_NAME;
+          # only GITHUB_BASE_REF is the event's protected target branch.
+          test "$protected_base" = "$GITHUB_BASE_REF"
           case "$pull_request" in
             *[!0-9]*|0) echo "invalid exact pull request number" >&2; exit 1 ;;
           esac
