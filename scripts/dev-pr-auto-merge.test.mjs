@@ -111,11 +111,23 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     workflow,
     /source-workflow-jobs\.json[\s\S]*Candidate source acceptance \/ check[\s\S]*\.conclusion == "success"/u,
   );
+  assert.match(
+    workflow,
+    /EVENT_NAME" = "repository_dispatch"[\s\S]*actions\/workflows\/affected-native-pr\.yml\/runs[\s\S]*-f event=pull_request[\s\S]*-f per_page=100/u,
+  );
+  assert.doesNotMatch(
+    workflow.slice(
+      workflow.indexOf('elif [ "$EVENT_NAME" = "repository_dispatch" ]'),
+      workflow.indexOf('elif [ "$EVENT_NAME" = "workflow_dispatch" ]'),
+    ),
+    /-f status=completed/u,
+  );
   const sourceRunVerification = workflow.slice(
     workflow.indexOf('      - name: Verify exact source qualification run'),
     workflow.indexOf('source-workflow-jobs.json'),
   );
   assert.doesNotMatch(sourceRunVerification, /\.conclusion/u);
+  assert.doesNotMatch(sourceRunVerification, /\.status == "completed"/u);
   assert.match(
     workflow,
     /expected-pr-number: \$\{\{ fromJSON\(needs\.resolve-target\.outputs\.expected-pr-number \|\| '0'\) \}\}/u,
@@ -136,6 +148,31 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     /delivery-warrant-mode:.*workflow_run.*workflow_dispatch.*inputs\.dry-run == false.*required/u,
   );
   assert.doesNotMatch(workflow, /delivery-warrant-mode:[^\n]*shadow/u);
+});
+
+test('Core source qualification emits one exact Warrant bootstrap wake', () => {
+  const sourceWorkflow = fs.readFileSync(
+    '.github/workflows/affected-native-pr.yml',
+    'utf8',
+  );
+  assert.match(
+    sourceWorkflow,
+    /wake_warrant_bootstrap:[\s\S]*needs:[\s\S]*- dco[\s\S]*- source_acceptance[\s\S]*github\.run_attempt == 1[\s\S]*needs\.source_acceptance\.result == 'success'/u,
+  );
+  assert.match(sourceWorkflow, /name: Wake exact Delivery Warrant bootstrap/u);
+  assert.match(
+    sourceWorkflow,
+    /event_type:"buildchain-dev-delivery-wake"[\s\S]*candidate:\{targetBranch:\$targetBranch,pullRequestNumber:\$pullRequestNumber,sourceHead:\$sourceHead\}/u,
+  );
+  assert.match(sourceWorkflow, /repos\/\$GITHUB_REPOSITORY\/dispatches/u);
+  assert.match(
+    sourceWorkflow,
+    /test "\$protected_base" = "\$GITHUB_BASE_REF"/u,
+  );
+  assert.doesNotMatch(
+    sourceWorkflow,
+    /test "\$protected_base" = "\$GITHUB_REF_NAME"/u,
+  );
 });
 
 test('Dev cadence patrol remains an explicit non-targeted path', () => {
@@ -249,12 +286,16 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   const landing = workflow.slice(workflow.indexOf('  landing:\n'));
 
   assert.match(bridge, /needs\.admission\.result == 'success'/u);
+  assert.match(
+    bridge,
+    /needs\.admission\.outputs\.qualified-warrant-receipt-root != ''/u,
+  );
   assert.match(bridge, /actions: write/u);
   assert.match(bridge, /checks: read/u);
   assert.doesNotMatch(bridge, /checks: write/u);
   assert.match(
     bridge,
-    /pattern: buildchain-dev-delivery-warrant-\*-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
+    /name: buildchain-dev-delivery-control-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
   );
   assert.match(
     bridge,
@@ -295,7 +336,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.doesNotMatch(bridge, /check-runs\/\$[A-Za-z_]/u);
   assert.match(
     bridge,
-    /for _ in \$\(seq 1 100\)[\s\S]*observed_attempt" -gt "\$expected_attempt[\s\S]*source workflow advanced beyond the single authorized retry[\s\S]*source workflow retry did not complete within the bounded wait/u,
+    /timeout-minutes: 120[\s\S]*for _ in \$\(seq 1 230\)[\s\S]*observed_attempt" -gt "\$expected_attempt[\s\S]*source workflow advanced beyond the single authorized retry[\s\S]*source workflow retry did not complete within the bounded wait/u,
   );
   assert.match(
     bridge,
@@ -320,6 +361,10 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.match(
     landing,
     /- native-check-bridge[\s\S]*needs\.native-check-bridge\.result == 'success'/u,
+  );
+  assert.match(
+    landing,
+    /needs\.admission\.outputs\.qualified-warrant-receipt-root != ''/u,
   );
   assert.match(
     landing,

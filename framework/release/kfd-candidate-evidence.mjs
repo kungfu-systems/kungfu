@@ -23,6 +23,15 @@ export const KFD_ARTIFACT_WITNESS_JSONS = SUPPORTED_KFD_PLATFORMS.map(
   (platform) => `product/release/qualification/kfd/artifacts/${platform}.json`,
 );
 
+export const KFD_PREBUILT_LAYER_ARTIFACTS = {
+  format: 'product/release/spec',
+  sdk: 'framework/core/build/stage/sdk',
+  surfaces: 'product/release/npm',
+};
+
+const KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT =
+  'kungfu.kfd-prebuilt-layer-artifacts/v1';
+
 const GITHUB_RUNNER_PLATFORM_IDS = new Map([
   ['Linux:X64', 'linux-x64'],
   ['Linux:ARM64', 'linux-arm64'],
@@ -367,6 +376,94 @@ function listFiles(directory, relativeRoot) {
   return rows.sort((left, right) => left.path.localeCompare(right.path));
 }
 
+function prebuiltLayerArtifactRoot(root) {
+  return path.join(
+    root,
+    '.buildchain',
+    'runtime',
+    'kfd-candidate-evidence',
+    'prebuilt-layer-artifacts',
+  );
+}
+
+function prebuiltLayerArtifactManifest(root) {
+  return path.join(prebuiltLayerArtifactRoot(root), 'manifest.json');
+}
+
+function validatePrebuiltLayerEntry(root, layer, entry, sourceRoot) {
+  const expectedPath = KFD_PREBUILT_LAYER_ARTIFACTS[layer];
+  if (!expectedPath || entry?.path !== expectedPath) {
+    throw new Error(`invalid sealed KFD ${layer} layer artifact path`);
+  }
+  const artifactRoot = path.join(sourceRoot, expectedPath);
+  const files = listFiles(artifactRoot, artifactRoot);
+  if (files.length === 0) {
+    throw new Error(`missing sealed KFD ${layer} layer artifact files`);
+  }
+  if (entry.root !== rooted(files)) {
+    throw new Error(`sealed KFD ${layer} layer artifact digest mismatch`);
+  }
+  return { artifactRoot, files };
+}
+
+export function sealKfdPrebuiltLayerArtifacts({ root = process.cwd() } = {}) {
+  const output = prebuiltLayerArtifactRoot(root);
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  const layers = {};
+  for (const [layer, relativePath] of Object.entries(
+    KFD_PREBUILT_LAYER_ARTIFACTS,
+  )) {
+    const source = path.join(root, relativePath);
+    const files = listFiles(source, source);
+    if (files.length === 0) {
+      throw new Error(`missing prebuilt KFD ${layer} layer artifacts`);
+    }
+    const target = path.join(output, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(source, target, { recursive: true });
+    layers[layer] = { path: relativePath, root: rooted(files) };
+  }
+  const body = {
+    schema: KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT,
+    layers,
+  };
+  const manifest = { ...body, manifestRoot: rooted(body) };
+  writeJson(prebuiltLayerArtifactManifest(root), manifest);
+  return manifest;
+}
+
+export function restoreKfdPrebuiltLayerArtifact({
+  root = process.cwd(),
+  layer,
+} = {}) {
+  const manifestPath = prebuiltLayerArtifactManifest(root);
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error('missing sealed KFD prebuilt layer artifact manifest');
+  }
+  const manifest = readJson(manifestPath);
+  const { manifestRoot, ...body } = manifest;
+  if (
+    manifest.schema !== KFD_PREBUILT_LAYER_ARTIFACTS_CONTRACT ||
+    manifestRoot !== rooted(body)
+  ) {
+    throw new Error('invalid sealed KFD prebuilt layer artifact manifest');
+  }
+  const entry = manifest.layers?.[layer];
+  const sealed = validatePrebuiltLayerEntry(
+    root,
+    layer,
+    entry,
+    prebuiltLayerArtifactRoot(root),
+  );
+  const target = path.join(root, entry.path);
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(sealed.artifactRoot, target, { recursive: true });
+  validatePrebuiltLayerEntry(root, layer, entry, root);
+  return entry;
+}
+
 export function releaseArtifactRoot(root = process.cwd()) {
   const releaseDir = path.join(root, 'product', 'release');
   const rows = listFiles(releaseDir, releaseDir).filter(
@@ -376,6 +473,49 @@ export function releaseArtifactRoot(root = process.cwd()) {
   if (rows.length === 0)
     throw new Error('missing product/release artifact files');
   return { files: rows, root: rooted(rows) };
+}
+
+function releaseArtifactDelta(expectedFiles, actualFiles) {
+  const expected = new Map(
+    (expectedFiles || []).map((entry) => [entry.path, entry]),
+  );
+  const actual = new Map(
+    (actualFiles || []).map((entry) => [entry.path, entry]),
+  );
+  const added = [];
+  const removed = [];
+  const changed = [];
+  for (const artifactPath of [
+    ...new Set([...expected.keys(), ...actual.keys()]),
+  ].sort()) {
+    const before = expected.get(artifactPath);
+    const after = actual.get(artifactPath);
+    if (!before) added.push(artifactPath);
+    else if (!after) removed.push(artifactPath);
+    else if (before.bytes !== after.bytes || before.sha256 !== after.sha256)
+      changed.push(artifactPath);
+  }
+  return { added, removed, changed };
+}
+
+export function verifyReleaseArtifactRoot({
+  root = process.cwd(),
+  expectedRoot = '',
+  expectedFiles,
+} = {}) {
+  if (!/^sha256:[a-f0-9]{64}$/u.test(expectedRoot))
+    throw new Error('expected KFD release artifact root is missing or invalid');
+  const artifact = releaseArtifactRoot(root);
+  if (artifact.root === expectedRoot) return artifact;
+  const delta = expectedFiles
+    ? releaseArtifactDelta(expectedFiles, artifact.files)
+    : null;
+  const detail = delta
+    ? `; added=${delta.added.join(',') || '<none>'}; removed=${delta.removed.join(',') || '<none>'}; changed=${delta.changed.join(',') || '<none>'}`
+    : '';
+  throw new Error(
+    `KFD artifact digest mismatch: expected ${expectedRoot}, got ${artifact.root}${detail}`,
+  );
 }
 
 function assertPlatform(platform) {
@@ -432,6 +572,7 @@ export function prepareKfdArtifactWitness({
     candidate: identity,
     sourceGateRoot: sourceGate.gateRoot,
     artifactRoot: artifact.root,
+    artifactFiles: artifact.files,
   };
   const witness = {
     ...baseWitness,
@@ -463,12 +604,11 @@ export function finalizeKfdCandidateEvidence({
   if (!fs.existsSync(witnessPath))
     throw new Error(`missing KFD artifact witness: ${platform}`);
   const witness = readJson(witnessPath);
-  const artifact = releaseArtifactRoot(root);
-  if (witness.candidateBinding?.artifactRoot !== artifact.root) {
-    throw new Error(
-      `KFD artifact digest mismatch: expected ${witness.candidateBinding?.artifactRoot || '<empty>'}, got ${artifact.root}`,
-    );
-  }
+  const artifact = verifyReleaseArtifactRoot({
+    root,
+    expectedRoot: witness.candidateBinding?.artifactRoot || '',
+    expectedFiles: witness.candidateBinding?.artifactFiles,
+  });
   if (
     witness.candidateBinding?.candidate?.sourceSha !== identity.sourceSha ||
     witness.candidateBinding?.candidate?.sourceTree !== identity.sourceTree ||
@@ -631,7 +771,13 @@ export function runVerifiedQualification({
   sourceSha,
   sourceTree,
   buildArtifactWitness,
+  prepareReleaseArtifacts,
 }) {
+  const prepareStatus = prepareReleaseArtifacts?.();
+  if (prepareStatus !== undefined && prepareStatus !== 0) {
+    return prepareStatus || 1;
+  }
+  sealKfdPrebuiltLayerArtifacts({ root });
   prepareKfdArtifactWitness({
     root,
     platform,
@@ -655,6 +801,8 @@ export function runVerifiedQualification({
     env: {
       ...process.env,
       KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
+      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT:
+        releaseArtifactRoot(root).root,
     },
     stdio: 'inherit',
   });

@@ -38,14 +38,19 @@ test('artifact Gate fails closed and does not advance after a failed stage', () 
 
 test('KFD Verify qualifies sealed release artifacts without repacking them', () => {
   const calls = [];
+  const restored = [];
   const status = runLayerArtifactGate('sdk', {
     run(args) {
       calls.push(args);
       return 0;
     },
     env: { KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1' },
+    restore(options) {
+      restored.push(options.layer);
+    },
   });
   assert.equal(status, 0);
+  assert.deepEqual(restored, ['sdk']);
   assert.deepEqual(calls, [
     [
       'layers:qualify:sdk',
@@ -64,6 +69,7 @@ test('prebuilt-artifact qualification still fails closed without a pack fallback
       return 23;
     },
     env: { KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1' },
+    restore() {},
   });
   assert.equal(status, 23);
   assert.deepEqual(calls, [
