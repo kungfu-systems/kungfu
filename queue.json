@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8710,
+  "generation": 8711,
   "fencingCounter": 829,
   "policy": {
     "agingSeconds": 900,
@@ -60514,11 +60514,20 @@
       "sourceWorkflowRunId": 33434027890,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-31T20:13:44.067Z",
-      "updatedAt": "2026-08-31T20:13:44.067Z",
+      "updatedAt": "2026-08-31T22:14:53.127Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:b1371689de15628bd6e20de513a8b77f5bb1cb6a46b3196ca86c98b6105777fb",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "071fd196b6e83b00326a438c0459c86f4431144b",
+        "observedSourceHead": "071fd196b6e83b00326a438c0459c86f4431144b",
+        "eventAction": "closed",
+        "closedAt": "2026-08-31T22:14:53.127Z"
+      },
       "affectedPaths": [
         ".xinfa/portable-atlas-classification.json.gz",
         ".xinfa/product-atlas-bundle.json",
@@ -60659,6 +60668,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-31T21:34:28.998Z",
-  "stateRoot": "sha256:c398ee0191ccaa3cf8e2b145b10443acebad152a2e21769f4e8c27a119760051"
+  "updatedAt": "2026-08-31T22:14:53.127Z",
+  "stateRoot": "sha256:671e70294a252a1a1647e4a2be2a9f106c4e239762bcdf3d0940bec0fc7291d8"
 }
