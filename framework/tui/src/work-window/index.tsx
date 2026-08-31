@@ -40,19 +40,19 @@ import type {
   ProjectWorkspaceSelection,
 } from '../projects-view/index.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
+import { projectWorkSessionState } from './project-work-session-state.js';
+import { NativeWorkProjectionView } from './project-work-session-view.js';
 import {
   type ProjectWorkComposer,
   workWindowInputAction,
-} from './input-action.js';
-import { projectWorkSessionState } from './project-work-session-state.js';
-import { NativeWorkProjectionView } from './project-work-session-view.js';
+} from './work-window-input.js';
 
 export {
   type ProjectWorkComposer,
   type WorkWindowInputAction,
   type WorkWindowInputContext,
   workWindowInputAction,
-} from './input-action.js';
+} from './work-window-input.js';
 
 export type WorkSort = 'updated-desc' | 'project-asc' | 'title-asc';
 

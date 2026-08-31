@@ -67,7 +67,7 @@ test('current semantic amplification projection has one route per family', () =>
   assert.equal(report.verdict, 'pass');
   assert.equal(report.summary.families, 7);
   assert.equal(report.summary.authorities, 7);
-  assert.equal(report.summary.mappedSurfaces, 103);
+  assert.equal(report.summary.mappedSurfaces, 104);
   assert.equal(
     report.integrity.schema,
     'kungfu.abstraction-integrity-report/v1',

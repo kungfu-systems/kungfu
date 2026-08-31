@@ -10,7 +10,10 @@ import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const REPORT_ROOT = path.join(ROOT, 'product', 'release', 'qualification');
 
-export function layerArtifactStages(layer) {
+export function layerArtifactStages(
+  layer,
+  { usePrebuiltArtifacts = false } = {},
+) {
   const definitions = {
     format: [
       ['pack:spec'],
@@ -42,7 +45,9 @@ export function layerArtifactStages(layer) {
   };
   if (!definitions[layer])
     throw new Error(`unknown layer artifact Gate '${layer}'`);
-  return definitions[layer];
+  return usePrebuiltArtifacts
+    ? definitions[layer].slice(1)
+    : definitions[layer];
 }
 
 function reportFile(layer) {
@@ -54,7 +59,9 @@ export function runLayerArtifactGate(
   layer,
   { run = runShifuWithCache, env = process.env } = {},
 ) {
-  for (const args of layerArtifactStages(layer)) {
+  const usePrebuiltArtifacts =
+    env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS === '1';
+  for (const args of layerArtifactStages(layer, { usePrebuiltArtifacts })) {
     const status = run(args, { env });
     if (status !== 0) return status;
   }

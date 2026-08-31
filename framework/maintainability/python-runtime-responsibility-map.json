@@ -99,19 +99,19 @@
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
-      "sha256": "799fb1a5f01c21ca35fb20b773ce85b472c03fccbd6a022091ef55cd024c8123"
+      "sha256": "3ee51f915a912edb2fdb0db6dd7e7c3d11ba29e066252e1ed4d11629b3cf67f7"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/peer.py",
-      "sha256": "977f32a802b9042f63ad7c294ab7d91020ed5e074d0f8f91826905395a0febae"
+      "sha256": "478153d7cfbdf4af1d2bbe5cc4731eef92b21f3b8da00fae185797a62be97317"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
-      "sha256": "72245bb04eea56b55f56d11ab44e955685182fd929861c8bd64aa23a4d20ce8f"
+      "sha256": "31087321eebe2c102e66ad7fc765cba785ebdc57753e38d84ce7922b910548c6"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/service.py",
-      "sha256": "be0623ab7988e197571ce93003060f651597b06d16e66cf6ee3d76803afcb26c"
+      "sha256": "0240622ca15675b4ec9dc19326b8397545e733f858d570dcb8fd38e0d0b24cc6"
     },
     {
       "path": "framework/core/tests/python/test_runtime_cli.py",
@@ -136,7 +136,7 @@
     }
   },
   "current": {
-    "physicalLines": 3673,
+    "physicalLines": 3739,
     "responsibilities": 191,
     "maximumPhysicalLines": 850,
     "maximumResponsibilities": 51,
@@ -163,10 +163,7 @@
     "retired": {
       "functions": 2,
       "previousBaseRisk": 9,
-      "symbols": [
-        "_empty_routes",
-        "_supervisor_always_on"
-      ]
+      "symbols": ["_empty_routes", "_supervisor_always_on"]
     }
   },
   "functionRiskAdapters": [
@@ -292,9 +289,7 @@
       "route_status"
     ]
   },
-  "serviceLocalDefinitions": [
-    "_terminate_and_reap_child"
-  ],
+  "serviceLocalDefinitions": ["_terminate_and_reap_child"],
   "ownedDefinitions": {
     "moduleFunctions": [
       "_terminate_process_if_matches",
