@@ -78,17 +78,23 @@ async function main() {
       'usage: preflight-layer-publication.mjs --manifest FILE --npm-registry FILE --version VERSION --repo OWNER/REPO --tag TAG --report FILE',
     );
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
+  const expectedNpmCount = npmRegistry.releaseInventory?.expectedPackageCount;
+  const expectedArtifactCount = expectedNpmCount + 10;
   if (
     manifest.schema !== 'kungfu.layer-publication.staging-manifest/v1' ||
-    manifest.artifacts?.length !== 39
+    manifest.artifacts?.length !== expectedArtifactCount
   )
-    fail('publication manifest is not the complete 39-artifact set');
-  const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
+    fail(
+      `publication manifest is not the complete ${expectedArtifactCount}-artifact set`,
+    );
   if (
     npmRegistry.schema !== 'kungfu.npm-release-package-registry/v1' ||
-    npmRegistry.packages?.length !== 29
+    npmRegistry.packages?.length !== expectedNpmCount
   )
-    fail('npm package registry is not the exact 29-package Release inventory');
+    fail(
+      `npm package registry is not the exact ${expectedNpmCount}-package Release inventory`,
+    );
   validateStagedNpmArtifacts(manifest, npmRegistry, version);
   const checks = [];
   for (const { name: packageName } of npmRegistry.packages) {
@@ -166,8 +172,7 @@ async function main() {
     release_tag: tag,
     staging_manifest_sha256: sha256(manifestPath),
     checks,
-    boundary:
-      'Preflight proves the exact 39-artifact set, including all 29 npm packages, and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
+    boundary: `Preflight proves the exact ${expectedArtifactCount}-artifact set, including all ${expectedNpmCount} npm packages, and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.`,
   };
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);

@@ -226,7 +226,6 @@ jobs:
               "repos/$GITHUB_REPOSITORY/actions/workflows/affected-native-pr.yml/runs" \
               -f head_sha="$expected_head_sha" \
               -f event=pull_request \
-              -f status=completed \
               -f per_page=100)"
             source_workflow_run_id="$(jq -er \
               --argjson pullRequest "$expected_pr_number" \
@@ -246,7 +245,6 @@ jobs:
               "repos/$GITHUB_REPOSITORY/actions/workflows/affected-native-pr.yml/runs" \
               -f head_sha="$expected_head_sha" \
               -f event=pull_request \
-              -f status=completed \
               -f per_page=100)"
             source_workflow_run_id="$(jq -er \
               --argjson pullRequest "$expected_pr_number" \
