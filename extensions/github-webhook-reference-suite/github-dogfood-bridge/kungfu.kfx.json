@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.manifest/v1",
-  "name": "@kungfu-kfx/github-dogfood-bridge",
-  "version": "0.1.0",
+  "name": "@kungfu-tech/kfx-github-dogfood-bridge",
+  "version": "4.0.0-alpha.4",
   "kungfuConfig": {
     "key": "github-dogfood-bridge",
     "registry": {

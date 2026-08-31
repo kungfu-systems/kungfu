@@ -1,9 +1,17 @@
 {
-  "name": "@kungfu-kfx/github-webhook-ingress",
-  "version": "0.1.0",
+  "name": "@kungfu-tech/kfx-github-webhook-ingress",
+  "version": "4.0.0-alpha.4",
   "description": "Provider-specific GitHub webhook ingress over the public KFX service host",
   "license": "Apache-2.0",
   "type": "module",
+  "main": "package.json",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "files": [
     "README.md",
     "fixtures",
