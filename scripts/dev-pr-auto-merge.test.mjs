@@ -324,7 +324,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.doesNotMatch(bridge, /check-runs\/\$[A-Za-z_]/u);
   assert.match(
     bridge,
-    /for _ in \$\(seq 1 100\)[\s\S]*observed_attempt" -gt "\$expected_attempt[\s\S]*source workflow advanced beyond the single authorized retry[\s\S]*source workflow retry did not complete within the bounded wait/u,
+    /timeout-minutes: 120[\s\S]*for _ in \$\(seq 1 230\)[\s\S]*observed_attempt" -gt "\$expected_attempt[\s\S]*source workflow advanced beyond the single authorized retry[\s\S]*source workflow retry did not complete within the bounded wait/u,
   );
   assert.match(
     bridge,

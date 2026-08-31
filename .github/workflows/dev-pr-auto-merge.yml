@@ -734,7 +734,10 @@ jobs:
       needs.resolve-target.outputs.expected-pr-number != '' &&
       (github.event_name != 'workflow_dispatch' || inputs.dry-run == false)
     runs-on: ubuntu-24.04
-    timeout-minutes: 55
+    # The source native matrix has two serialized lanes.  Preserve one exact
+    # retry while leaving sufficient bounded time for both lanes and runner
+    # queueing to finish before the bridge declares the Warrant unusable.
+    timeout-minutes: 120
     permissions:
       actions: write
       checks: read
@@ -887,7 +890,7 @@ jobs:
             expected_attempt="$((prior_attempt + 1))"
             source_run="$evidence/source-workflow-run.json"
             completed=false
-            for _ in $(seq 1 100); do
+            for _ in $(seq 1 230); do
               gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$source_run"
               observed_attempt="$(jq -er '.run_attempt' "$source_run")"
               observed_status="$(jq -er '.status' "$source_run")"
