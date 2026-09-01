@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8859,
+  "generation": 8860,
   "fencingCounter": 845,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:65edb2e6bf94d7cbbecffb2248cbc7bfc910caa421b1815517f80ec1908a87a5",
@@ -53,8 +53,13 @@
     "issuedAt": "2026-09-01T08:39:28.061Z",
     "expiresAt": "2026-09-01T10:30:17.129Z",
     "fencingToken": "sha256:06d5262b78b8b8fa743f9dab6d1069bb6da34ee3c16db11a2bb93a62384a9574",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-01T09:00:17.129Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-01T09:00:17.129Z",
+    "nativeProofRoot": "sha256:e0d3632bd77db7f4d57ae21a11d6fd8cca85c5facde7a7a6c258a39a75388c4c",
+    "nativeExecutionReceiptRoot": "sha256:5d24693e4a86437e03ba46c8fcf93cc93af2989b042e5083d7f723ac4f7f40a1",
+    "nativeProofReuseRoot": "sha256:674b65b3ea71b0cefa5610e4b4d8c67acbb141daf40cc4f803888a8feee4354f",
+    "qualificationReceiptRoot": "sha256:97c48d95a3d83dcc5a62b6cd652a30d491223bbfd0d111b2859e82c84ee2d9b9",
+    "qualifiedAt": "2026-09-01T09:00:45.681Z"
   },
   "candidates": [
     {
@@ -62786,10 +62791,10 @@
       "sourceWorkflowRunId": 33487522211,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T08:39:23.462Z",
-      "updatedAt": "2026-09-01T09:00:17.129Z",
+      "updatedAt": "2026-09-01T09:00:45.681Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/_profile_composition/support.py",
@@ -62803,6 +62808,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T09:00:17.129Z",
-  "stateRoot": "sha256:e4b5a7279358f60dd19f057c408d1ca52a672280e7d8b6bdfe716d89c6fb42af"
+  "updatedAt": "2026-09-01T09:00:45.681Z",
+  "stateRoot": "sha256:54ec56151e14ef16c08675c7b96cf810019fb7006a5f253e0353dc7a8f10dc11"
 }
