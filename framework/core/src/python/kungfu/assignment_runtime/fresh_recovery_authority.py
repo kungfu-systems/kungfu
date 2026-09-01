@@ -216,22 +216,20 @@ def verify_recovery_profile_source(
 
 def verify_planned_workspace(plan: Mapping[str, Any]) -> tuple[Path, JsonObject]:
     workspace = dict((plan.get("plannedTarget") or {}).get("workspace") or {})
-    workspace_id = _text(workspace.get("id"))
-    runtime_root = _text(workspace.get("runtimeRoot"))
+    workspace_id, runtime_root = (
+        _text(workspace.get("id")),
+        _text(workspace.get("runtimeRoot")),
+    )
     if not runtime_root:
         raise ValueError("fresh recovery planned workspace runtime changed")
+    workspace_root = Path(_text(workspace.get("root"))).expanduser().resolve()
     runtime_dir = Path(runtime_root).expanduser().resolve()
-    if workspace_id == "home":
-        expected_kind = "home"
-        runtime_matches = not _text(workspace.get("root"))
-    elif workspace_id.startswith("project:"):
-        expected_kind = "project"
-        workspace_root = Path(_text(workspace.get("root"))).expanduser().resolve()
-        runtime_matches = runtime_dir == workspace_root / ".kungfu" / "runtime"
-    else:
-        expected_kind = ""
-        runtime_matches = False
-    if not runtime_matches:
+    home_workspace = workspace_id == "home"
+    expected_kind = ("project", "home")[home_workspace]
+    expected_runtime = (workspace_root / ".kungfu" / "runtime", runtime_dir)[
+        home_workspace
+    ]
+    if runtime_dir != expected_runtime:
         raise ValueError("fresh recovery planned workspace runtime changed")
     identity_path = runtime_dir.parent / "workspace-identity.json"
     try:
@@ -243,10 +241,9 @@ def verify_planned_workspace(plan: Mapping[str, Any]) -> tuple[Path, JsonObject]
     body = {key: value for key, value in material.items() if key != "identityRoot"}
     identity_root = str(material.get("identityRoot") or "")
     expected_workspace_id = (
-        "home"
-        if expected_kind == "home"
-        else f"project:{identity_root.removeprefix('sha256:')[:16]}"
-    )
+        f"project:{identity_root.removeprefix('sha256:')[:16]}",
+        "home",
+    )[home_workspace]
     checks = (
         material.get("schema") == "kungfu.workspace.identity-material/v1",
         material.get("workspaceKind") == expected_kind,
