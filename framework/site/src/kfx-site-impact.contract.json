@@ -96,6 +96,22 @@
       "disposition": "semantic-update-required"
     },
     {
+      "id": "python-kfx-cli-implementation",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/python/kungfu/cli/kfx_"
+        }
+      ],
+      "facets": [
+        "registry-admission-lifecycle",
+        "capabilities",
+        "agent-first-authoring",
+        "sdk-cli"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
       "id": "installed-kfx-authoring-surface",
       "selectors": [
         {

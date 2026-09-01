@@ -276,6 +276,141 @@ const specs: Record<GenericQueryViewSpec['kind'], GenericQueryViewSpec> = {
   },
 };
 
+type QueryPanelMutators = {
+  setSavedText: (value: string) => void;
+  setSaved: (value: SavedQueryView | null) => void;
+  setCatalog: (value: SavedQueryEntry[]) => void;
+  setCatalogEntry: (value: SavedQueryEntry | null) => void;
+  setInspection: (value: SavedQueryViewInspection | null) => void;
+  setState: (value: ReturnType<typeof emptyQueryChangelogState>) => void;
+  setError: (value: string) => void;
+};
+
+function queryPanelError(
+  setError: QueryPanelMutators['setError'],
+  cause: unknown,
+) {
+  setError(cause instanceof Error ? cause.message : String(cause));
+}
+
+function refreshQueryCatalog(caps: KfxCapabilities, ui: QueryPanelMutators) {
+  try {
+    ui.setCatalog(caps.storage.savedQueries().entries);
+  } catch (cause) {
+    queryPanelError(ui.setError, cause);
+  }
+}
+
+function resolveQueryArtifact(artifact: unknown, ui: QueryPanelMutators) {
+  const next = inspectSavedQueryView(artifact);
+  ui.setInspection(next);
+  if (next.view.status === 'degraded') {
+    ui.setError(
+      `${next.view.diagnosis.code} · ${next.view.diagnosis.message} · QueryDefinition preserved`,
+    );
+    return null;
+  }
+  return {
+    schema: 'kungfu.query.saved-view/v1',
+    name: next.name,
+    definition: next.definition,
+    view: next.view.spec,
+  } satisfies SavedQueryView;
+}
+
+function selectSavedQuery(
+  caps: KfxCapabilities,
+  queryId: string,
+  ui: QueryPanelMutators,
+) {
+  try {
+    const entry = caps.storage.savedQuery(queryId);
+    ui.setCatalogEntry(entry);
+    const value = resolveQueryArtifact(entry.saved_view, ui);
+    ui.setSaved(value);
+    ui.setSavedText(JSON.stringify(entry.saved_view, null, 2));
+    if (value) ui.setError('');
+  } catch (cause) {
+    queryPanelError(ui.setError, cause);
+  }
+}
+
+function persistQueryArtifact(
+  caps: KfxCapabilities,
+  value: SavedQueryView,
+  catalogEntry: SavedQueryEntry | null,
+  ui: QueryPanelMutators,
+) {
+  const entry = caps.storage.putSavedQuery(
+    value,
+    catalogEntry?.query_id,
+    catalogEntry?.revision,
+  );
+  ui.setCatalogEntry(entry);
+  ui.setSaved(entry.saved_view);
+  ui.setInspection(inspectSavedQueryView(entry.saved_view));
+  ui.setSavedText(JSON.stringify(entry.saved_view, null, 2));
+  refreshQueryCatalog(caps, ui);
+}
+
+function loadQueryExample(
+  caps: KfxCapabilities,
+  name: string,
+  view: GenericQueryViewSpec,
+  ui: QueryPanelMutators,
+) {
+  try {
+    const examples = caps.storage.queryExamples() as {
+      examples?: {
+        name?: string;
+        definition?: SavedQueryView['definition'];
+      }[];
+    };
+    const definition = examples.examples?.find(
+      (example) => example.name === name,
+    )?.definition;
+    if (!definition) throw new Error('query example unavailable');
+    const value: SavedQueryView = {
+      schema: 'kungfu.query.saved-view/v1',
+      name,
+      definition,
+      view,
+    };
+    ui.setCatalogEntry(null);
+    ui.setSavedText(JSON.stringify(value, null, 2));
+    ui.setSaved(value);
+    ui.setInspection(inspectSavedQueryView(value));
+    ui.setError('');
+  } catch (cause) {
+    queryPanelError(ui.setError, cause);
+  }
+}
+
+function refreshQueryChangelog(
+  caps: KfxCapabilities,
+  saved: SavedQueryView | null,
+  ui: QueryPanelMutators,
+) {
+  if (!saved) return;
+  try {
+    let next = emptyQueryChangelogState();
+    let token: QueryResumeToken | undefined;
+    // The reference intentionally asks the public changelog for a complete
+    // bounded snapshot. Rows stay in memory; only definition + ViewSpec are
+    // persisted in the workspace catalog.
+    for (let pageCount = 0; pageCount < 100; pageCount += 1) {
+      const page = caps.storage.factChangelog(saved.definition, token, 100);
+      next = applyQueryChangelogPage(next, page);
+      if (page.complete) break;
+      token = page.resume_token;
+    }
+    ui.setState(next);
+    ui.setError(next.gap ? `gap: ${next.gap.recovery_hint}` : '');
+  } catch (cause) {
+    queryPanelError(ui.setError, cause);
+  }
+}
+
 export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
   const [savedText, setSavedText] = React.useState('');
   const [saved, setSaved] = React.useState<SavedQueryView | null>(null);
@@ -286,14 +421,17 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
     React.useState<SavedQueryViewInspection | null>(null);
   const [state, setState] = React.useState(emptyQueryChangelogState);
   const [error, setError] = React.useState('');
-
-  const refreshCatalog = () => {
-    try {
-      setCatalog(caps.storage.savedQueries().entries);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    }
+  const ui: QueryPanelMutators = {
+    setSavedText,
+    setSaved,
+    setCatalog,
+    setCatalogEntry,
+    setInspection,
+    setState,
+    setError,
   };
+
+  const refreshCatalog = () => refreshQueryCatalog(caps, ui);
 
   React.useEffect(() => {
     try {
@@ -303,80 +441,19 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
     }
   }, [caps]);
 
-  const resolveArtifact = (artifact: unknown): SavedQueryView | null => {
-    const next = inspectSavedQueryView(artifact);
-    setInspection(next);
-    if (next.view.status === 'degraded') {
-      setError(
-        `${next.view.diagnosis.code} · ${next.view.diagnosis.message} · QueryDefinition preserved`,
-      );
-      return null;
-    }
-    return {
-      schema: 'kungfu.query.saved-view/v1',
-      name: next.name,
-      definition: next.definition,
-      view: next.view.spec,
-    };
-  };
+  const resolveArtifact = (artifact: unknown) =>
+    resolveQueryArtifact(artifact, ui);
 
-  const selectCatalogEntry = (queryId: string) => {
-    try {
-      const entry = caps.storage.savedQuery(queryId);
-      setCatalogEntry(entry);
-      const value = resolveArtifact(entry.saved_view);
-      setSaved(value);
-      setSavedText(JSON.stringify(entry.saved_view, null, 2));
-      if (value) setError('');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    }
-  };
+  const selectCatalogEntry = (queryId: string) =>
+    selectSavedQuery(caps, queryId, ui);
 
-  const persistArtifact = (value: SavedQueryView) => {
-    const entry = caps.storage.putSavedQuery(
-      value,
-      catalogEntry?.query_id,
-      catalogEntry?.revision,
-    );
-    setCatalogEntry(entry);
-    setSaved(entry.saved_view);
-    setInspection(inspectSavedQueryView(entry.saved_view));
-    setSavedText(JSON.stringify(entry.saved_view, null, 2));
-    refreshCatalog();
-  };
+  const persistArtifact = (value: SavedQueryView) =>
+    persistQueryArtifact(caps, value, catalogEntry, ui);
 
   const loadExample = (
     name = 'episode-head',
     view: GenericQueryViewSpec = specs.table,
-  ) => {
-    try {
-      const examples = caps.storage.queryExamples() as {
-        examples?: {
-          name?: string;
-          definition?: SavedQueryView['definition'];
-        }[];
-      };
-      const definition = examples.examples?.find(
-        (example) => example.name === name,
-      )?.definition;
-      if (!definition) throw new Error('query example unavailable');
-      const value: SavedQueryView = {
-        schema: 'kungfu.query.saved-view/v1',
-        name,
-        definition,
-        view,
-      };
-      const text = JSON.stringify(value, null, 2);
-      setCatalogEntry(null);
-      setSavedText(text);
-      setSaved(value);
-      setInspection(inspectSavedQueryView(value));
-      setError('');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    }
-  };
+  ) => loadQueryExample(caps, name, view, ui);
 
   const applyArtifact = () => {
     try {
@@ -401,26 +478,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
     }
   };
 
-  const refresh = () => {
-    if (!saved) return;
-    try {
-      let next = emptyQueryChangelogState();
-      let token: QueryResumeToken | undefined;
-      // The reference intentionally asks the public changelog for a complete
-      // bounded snapshot. Rows stay in memory; only definition + ViewSpec are
-      // persisted in the workspace catalog.
-      for (let pageCount = 0; pageCount < 100; pageCount += 1) {
-        const page = caps.storage.factChangelog(saved.definition, token, 100);
-        next = applyQueryChangelogPage(next, page);
-        if (page.complete) break;
-        token = page.resume_token;
-      }
-      setState(next);
-      setError(next.gap ? `gap: ${next.gap.recovery_hint}` : '');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    }
-  };
+  const refresh = () => refreshQueryChangelog(caps, saved, ui);
 
   return (
     <section style={{ ...panelStyle, gridColumn: '1 / -1' }}>

@@ -123,6 +123,97 @@ function updateHtmlDepth(depth, html) {
   return selfClosing || HTML_VOID_ELEMENTS.has(name) ? depth : depth + 1;
 }
 
+function checkMalformedAdrReferences(child, token, rel, linkHref, findings) {
+  for (const match of matches(child.content, ADR_LIKE)) {
+    if (classifyAdrIdentity(match[0])) continue;
+    const linked = linkHref ? linkedTarget(rel, linkHref) : null;
+    const linkedId = linked ? path.posix.basename(linked, '.md') : '';
+    // A linked leading prefix is an intentional human navigation key,
+    // not a second ADR identity. Complete-looking drift still fails.
+    if (linkedId.startsWith(match[0])) continue;
+    findings.push({
+      code: 'malformed-adr-reference',
+      file: rel,
+      line: (token.map?.[0] ?? 0) + lineAt(child.content, match.index),
+      message: `ADR identity is not a canonical owner-prefixed UUIDv7: ${match[0]}`,
+    });
+  }
+}
+
+function checkCanonicalAdrReferences(
+  child,
+  token,
+  rel,
+  linkHref,
+  targets,
+  findings,
+) {
+  for (const match of matches(child.content, ADR_REFERENCE)) {
+    const id = match[0];
+    if (occurrenceIsBareUrl(child.content, match.index)) continue;
+    const expected = targets.get(id);
+    const line = (token.map?.[0] ?? 0) + lineAt(child.content, match.index);
+    if (!expected) {
+      findings.push({
+        code: 'missing-adr-target',
+        file: rel,
+        line,
+        message: `ADR reference has no canonical target: ${id}`,
+      });
+      continue;
+    }
+    if (!linkHref) {
+      findings.push({
+        code: 'unlinked-adr-reference',
+        file: rel,
+        line,
+        message: `${id} must link to ${expected}`,
+      });
+      continue;
+    }
+    if (linkedTarget(rel, linkHref) !== expected) {
+      findings.push({
+        code: 'adr-reference-target-mismatch',
+        file: rel,
+        line,
+        message: `${id} must link to ${expected}, not ${linkHref}`,
+      });
+    }
+  }
+}
+
+function checkAdrInlineToken(token, rel, targets, findings) {
+  let linkHref = '';
+  let htmlDepth = 0;
+  for (const child of token.children || []) {
+    if (child.type === 'link_open') {
+      linkHref = child.attrGet('href') || '';
+      continue;
+    }
+    if (child.type === 'link_close') {
+      linkHref = '';
+      continue;
+    }
+    if (child.type === 'html_inline') {
+      htmlDepth = updateHtmlDepth(htmlDepth, child.content);
+      continue;
+    }
+    if (child.type !== 'text' || htmlDepth > 0) continue;
+    checkMalformedAdrReferences(child, token, rel, linkHref, findings);
+    checkCanonicalAdrReferences(child, token, rel, linkHref, targets, findings);
+  }
+}
+
+function checkAuthoredAdrFile(root, rel, targets, findings) {
+  const text = fs.readFileSync(path.join(root, rel), 'utf8');
+  const frontmatterLines = frontmatterEndLine(text);
+  for (const token of MARKDOWN.parse(text, {})) {
+    if (token.type !== 'inline') continue;
+    if ((token.map?.[0] ?? 0) < frontmatterLines) continue;
+    checkAdrInlineToken(token, rel, targets, findings);
+  }
+}
+
 /**
  * @param {{
  *   root?: string,
@@ -144,81 +235,7 @@ export function checkAdrReferenceLinks(options = {}) {
 
   for (const rel of files) {
     if (lifecycleFor.get(rel) !== 'authored') continue;
-    const text = fs.readFileSync(path.join(root, rel), 'utf8');
-    const tokens = MARKDOWN.parse(text, {});
-    const frontmatterLines = frontmatterEndLine(text);
-
-    for (const token of tokens) {
-      if (token.type !== 'inline') continue;
-      if ((token.map?.[0] ?? 0) < frontmatterLines) continue;
-      let linkHref = '';
-      let htmlDepth = 0;
-      for (const child of token.children || []) {
-        if (child.type === 'link_open') {
-          linkHref = child.attrGet('href') || '';
-          continue;
-        }
-        if (child.type === 'link_close') {
-          linkHref = '';
-          continue;
-        }
-        if (child.type === 'html_inline') {
-          htmlDepth = updateHtmlDepth(htmlDepth, child.content);
-          continue;
-        }
-        if (child.type !== 'text') continue;
-        if (htmlDepth > 0) continue;
-
-        for (const match of matches(child.content, ADR_LIKE)) {
-          if (classifyAdrIdentity(match[0])) continue;
-          const linked = linkHref ? linkedTarget(rel, linkHref) : null;
-          const linkedId = linked ? path.posix.basename(linked, '.md') : '';
-          // A linked leading prefix is an intentional human navigation key,
-          // not a second ADR identity. Complete-looking drift still fails.
-          if (linkedId.startsWith(match[0])) continue;
-          findings.push({
-            code: 'malformed-adr-reference',
-            file: rel,
-            line: (token.map?.[0] ?? 0) + lineAt(child.content, match.index),
-            message: `ADR identity is not a canonical owner-prefixed UUIDv7: ${match[0]}`,
-          });
-        }
-
-        for (const match of matches(child.content, ADR_REFERENCE)) {
-          const id = match[0];
-          if (occurrenceIsBareUrl(child.content, match.index)) continue;
-          const expected = targets.get(id);
-          const line =
-            (token.map?.[0] ?? 0) + lineAt(child.content, match.index);
-          if (!expected) {
-            findings.push({
-              code: 'missing-adr-target',
-              file: rel,
-              line,
-              message: `ADR reference has no canonical target: ${id}`,
-            });
-            continue;
-          }
-          if (!linkHref) {
-            findings.push({
-              code: 'unlinked-adr-reference',
-              file: rel,
-              line,
-              message: `${id} must link to ${expected}`,
-            });
-            continue;
-          }
-          if (linkedTarget(rel, linkHref) !== expected) {
-            findings.push({
-              code: 'adr-reference-target-mismatch',
-              file: rel,
-              line,
-              message: `${id} must link to ${expected}, not ${linkHref}`,
-            });
-          }
-        }
-      }
-    }
+    checkAuthoredAdrFile(root, rel, targets, findings);
   }
 
   return findings.sort(

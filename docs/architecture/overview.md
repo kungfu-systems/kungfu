@@ -270,7 +270,7 @@ build` bundles with esbuild.
 ## Repository layout
 
 ```
-framework/    platform + contracts you build ON (imported as a dependency)
+framework/    architecture roots: npm packages plus source-only contracts/tools
   core        runtime + core (C++ yijinjing schema/journal, bindings, kungfu)
   api         capability SDK and host/guest capability relay
   kfx         extension package/facet/trust contract
@@ -288,13 +288,16 @@ shifu   build orchestrator (pins the toolchain)
 
 ### Where a new package goes
 
-Place a package by what it *is*, not where it looks tidy. The dividing line is
-build-*on* (a contract or library others import) versus build-*with* (a tool
-others invoke):
+Place a component by what it *is*, not where it looks tidy. The dividing line is
+build-*on* (a contract or library others consume) versus build-*with* (a tool
+others invoke). The complete classification and its machine-checked package
+boundary are maintained in [`framework/README.md`](../../framework/README.md):
 
-- **`framework/`** — a runtime component, or a publishable, framework-neutral
-  contract/library that others build on and take as a **dependency** (`core`,
-  `api`, `kfx`, `skill`, `spec`, plus the reference `gui` / `tui`).
+- **`framework/`** — an architecture root. Some immediate children are npm
+  packages; others are source-only contracts, internal libraries or repository
+  tools. A directory becomes an npm package only when it has `package.json` and
+  is owned by the npm release registry; its location alone grants no package or
+  publication boundary.
 - **`developer/`** — a build-time **tool** you build with: invoked (typically a
   CLI) and taken as a **devDependency**, never imported at runtime (`sdk`).
 - **`extensions/`** — a kfx plugin built on the extension contract.
@@ -304,8 +307,9 @@ others invoke):
   desktop and CLI products.
 
 By this rule a format spec is a contract, so it lives in `framework`; the `sdk`
-build CLI is a tool, so it lives in `developer` — even when that leaves a single
-package there.
+build CLI is a distributable developer tool, so it lives in `developer`. A
+repository-only tool may still live in `framework` when it governs or qualifies
+framework contracts without claiming an independently released package.
 
 ## Direction
 

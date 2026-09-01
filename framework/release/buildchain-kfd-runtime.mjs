@@ -222,245 +222,254 @@ function validateRows(matrix, gates, issues) {
   return rows;
 }
 
-function alphaKfdSupportCompatibility(productGates) {
-  function createKfdSupportProjection({
+function createKfdSupportProjection(
+  productGates,
+  {
     matrix,
     matrixRoot = '',
     gateResults = [],
     authorityPath = '.buildchain/kfd/support-matrix.json',
     expectedSourceSha = '',
     checkedAt = new Date().toISOString(),
-  } = {}) {
-    const issues = [];
-    if (
-      !matrix ||
-      typeof matrix !== 'object' ||
-      Array.isArray(matrix) ||
-      matrix.contract !== 'kungfu-kfd-support-matrix' ||
-      matrix.schemaVersion !== 1
-    )
+  } = {},
+) {
+  const issues = [];
+  if (
+    !matrix ||
+    typeof matrix !== 'object' ||
+    Array.isArray(matrix) ||
+    matrix.contract !== 'kungfu-kfd-support-matrix' ||
+    matrix.schemaVersion !== 1
+  )
+    issues.push(
+      issue(
+        'matrix-contract',
+        '',
+        'support matrix must use kungfu-kfd-support-matrix v1',
+      ),
+    );
+  if (
+    matrix?.upstream?.package !== kfdPackage.name ||
+    matrix?.upstream?.version !== kfdPackage.version ||
+    matrix?.upstream?.standardsSha256 !== standardsDigest()
+  )
+    issues.push(
+      issue(
+        'matrix-standard-package',
+        'upstream',
+        'support matrix must bind the installed KFD package and standards bytes',
+      ),
+    );
+  const gates = new Map();
+  for (const [index, gate] of gateResults.entries()) {
+    const result = productGates.validateKfdProductGateResult(gate, {
+      expectedSourceSha,
+      checkedAt,
+    });
+    if (!result.valid)
       issues.push(
         issue(
-          'matrix-contract',
-          '',
-          'support matrix must use kungfu-kfd-support-matrix v1',
+          'gate-result-invalid',
+          `gateResults[${index}]`,
+          'gate result is invalid',
+          { gateIssues: result.issues },
         ),
       );
-    if (
-      matrix?.upstream?.package !== kfdPackage.name ||
-      matrix?.upstream?.version !== kfdPackage.version ||
-      matrix?.upstream?.standardsSha256 !== standardsDigest()
-    )
+    if (gates.has(gate?.standard))
       issues.push(
         issue(
-          'matrix-standard-package',
-          'upstream',
-          'support matrix must bind the installed KFD package and standards bytes',
+          'gate-result-duplicate',
+          `gateResults[${index}].standard`,
+          `${gate.standard} gate result is duplicated`,
         ),
       );
-    const gates = new Map();
-    for (const [index, gate] of gateResults.entries()) {
-      const result = productGates.validateKfdProductGateResult(gate, {
-        expectedSourceSha,
-        checkedAt,
-      });
-      if (!result.valid)
-        issues.push(
-          issue(
-            'gate-result-invalid',
-            `gateResults[${index}]`,
-            'gate result is invalid',
-            { gateIssues: result.issues },
-          ),
-        );
-      if (gates.has(gate?.standard))
-        issues.push(
-          issue(
-            'gate-result-duplicate',
-            `gateResults[${index}].standard`,
-            `${gate.standard} gate result is duplicated`,
-          ),
-        );
-      gates.set(gate?.standard, gate);
-    }
-    const rows = validateRows(matrix, gates, issues);
-    const projection = {
-      schemaVersion: 1,
-      contract: CONTRACT,
-      matrix: {
-        contract: matrix?.contract || '',
-        root: normalizeRoot(matrixRoot) || digest(matrix),
-        authorityPath: text(matrix?.authority?.path || authorityPath),
-      },
-      standardPackage: {
-        name: kfdPackage.name,
-        version: kfdPackage.version,
-        standardsSha256: standardsDigest(),
-      },
-      gateResults: SUPPORTED.map((standard) => {
-        const gate = gates.get(standard);
-        return gate
-          ? {
-              standard,
-              standardRevision: gate.standardRevision,
-              sourceSha: gate?.source?.sha || '',
-              evidenceCut: gate.evidenceCut,
-              status: gate.status,
-              gateRoot: gate.gateRoot,
-              issueCount: Array.isArray(gate.issues) ? gate.issues.length : 0,
-            }
-          : { standard, status: 'missing', gateRoot: '', issueCount: 1 };
-      }),
-      rows: rows.map(projectRow),
-      status: issues.length === 0 ? 'passed' : 'failed',
-      nonClaims: [
-        'This projection does not replace the product-owned support matrix.',
-        'A passed Buildchain gate does not by itself activate, ship, or certify a KFD adoption.',
-        'Candidate, unsupported, draft, and non-qualifying matrix states cannot be widened by this projection.',
+    gates.set(gate?.standard, gate);
+  }
+  const rows = validateRows(matrix, gates, issues);
+  const projection = {
+    schemaVersion: 1,
+    contract: CONTRACT,
+    matrix: {
+      contract: matrix?.contract || '',
+      root: normalizeRoot(matrixRoot) || digest(matrix),
+      authorityPath: text(matrix?.authority?.path || authorityPath),
+    },
+    standardPackage: {
+      name: kfdPackage.name,
+      version: kfdPackage.version,
+      standardsSha256: standardsDigest(),
+    },
+    gateResults: SUPPORTED.map((standard) => {
+      const gate = gates.get(standard);
+      return gate
+        ? {
+            standard,
+            standardRevision: gate.standardRevision,
+            sourceSha: gate?.source?.sha || '',
+            evidenceCut: gate.evidenceCut,
+            status: gate.status,
+            gateRoot: gate.gateRoot,
+            issueCount: Array.isArray(gate.issues) ? gate.issues.length : 0,
+          }
+        : { standard, status: 'missing', gateRoot: '', issueCount: 1 };
+    }),
+    rows: rows.map(projectRow),
+    status: issues.length === 0 ? 'passed' : 'failed',
+    nonClaims: [
+      'This projection does not replace the product-owned support matrix.',
+      'A passed Buildchain gate does not by itself activate, ship, or certify a KFD adoption.',
+      'Candidate, unsupported, draft, and non-qualifying matrix states cannot be widened by this projection.',
+    ],
+    issues,
+  };
+  projection.projectionRoot = digest(projection);
+  return projection;
+}
+
+function validateKfdSupportProjection(
+  productGates,
+  projection,
+  { expectedSourceSha = '', checkedAt = new Date().toISOString() } = {},
+) {
+  const issues = [];
+  if (
+    !projection ||
+    typeof projection !== 'object' ||
+    Array.isArray(projection) ||
+    projection.schemaVersion !== 1 ||
+    projection.contract !== CONTRACT
+  )
+    return {
+      valid: false,
+      issues: [
+        issue('projection-contract', '', `projection must use ${CONTRACT} v1`),
       ],
-      issues,
     };
-    projection.projectionRoot = digest(projection);
-    return projection;
-  }
-
-  function validateKfdSupportProjection(
-    projection,
-    { expectedSourceSha = '', checkedAt = new Date().toISOString() } = {},
-  ) {
-    const issues = [];
-    if (
-      !projection ||
-      typeof projection !== 'object' ||
-      Array.isArray(projection) ||
-      projection.schemaVersion !== 1 ||
-      projection.contract !== CONTRACT
-    )
-      return {
-        valid: false,
-        issues: [
-          issue(
-            'projection-contract',
-            '',
-            `projection must use ${CONTRACT} v1`,
-          ),
-        ],
-      };
-    const { projectionRoot: root, ...copy } = structuredClone(projection);
-    if (root !== digest(copy))
+  const { projectionRoot: root, ...copy } = structuredClone(projection);
+  if (root !== digest(copy))
+    issues.push(
+      issue(
+        'projection-root',
+        'projectionRoot',
+        'support projection root does not match its content',
+      ),
+    );
+  if (projection.status !== 'passed' || (projection.issues || []).length)
+    issues.push(
+      issue(
+        'projection-status',
+        'status',
+        'release passport requires a passed support projection',
+      ),
+    );
+  if (
+    projection?.standardPackage?.name !== kfdPackage.name ||
+    projection?.standardPackage?.version !== kfdPackage.version ||
+    projection?.standardPackage?.standardsSha256 !== standardsDigest()
+  )
+    issues.push(
+      issue(
+        'projection-standard-package',
+        'standardPackage',
+        'support projection uses stale KFD package metadata',
+      ),
+    );
+  if (!SHA256.test(text(projection?.matrix?.root)))
+    issues.push(
+      issue(
+        'projection-matrix-root',
+        'matrix.root',
+        'support projection must bind the exact support matrix bytes',
+      ),
+    );
+  if (!text(projection?.matrix?.authorityPath))
+    issues.push(
+      issue(
+        'projection-matrix-authority',
+        'matrix.authorityPath',
+        'support projection must retain the product-owned matrix authority path',
+      ),
+    );
+  const gates = new Map();
+  for (const [index, gate] of (projection.gateResults || []).entries()) {
+    if (!SUPPORTED_SET.has(gate?.standard)) {
       issues.push(
         issue(
-          'projection-root',
-          'projectionRoot',
-          'support projection root does not match its content',
+          'projection-gate-standard',
+          `gateResults[${index}].standard`,
+          'projected gate must be kfd-4, kfd-5, or kfd-7',
         ),
       );
-    if (projection.status !== 'passed' || (projection.issues || []).length)
-      issues.push(
-        issue(
-          'projection-status',
-          'status',
-          'release passport requires a passed support projection',
-        ),
-      );
-    if (
-      projection?.standardPackage?.name !== kfdPackage.name ||
-      projection?.standardPackage?.version !== kfdPackage.version ||
-      projection?.standardPackage?.standardsSha256 !== standardsDigest()
-    )
-      issues.push(
-        issue(
-          'projection-standard-package',
-          'standardPackage',
-          'support projection uses stale KFD package metadata',
-        ),
-      );
-    if (!SHA256.test(text(projection?.matrix?.root)))
-      issues.push(
-        issue(
-          'projection-matrix-root',
-          'matrix.root',
-          'support projection must bind the exact support matrix bytes',
-        ),
-      );
-    if (!text(projection?.matrix?.authorityPath))
-      issues.push(
-        issue(
-          'projection-matrix-authority',
-          'matrix.authorityPath',
-          'support projection must retain the product-owned matrix authority path',
-        ),
-      );
-    const gates = new Map();
-    for (const [index, gate] of (projection.gateResults || []).entries()) {
-      if (!SUPPORTED_SET.has(gate?.standard)) {
-        issues.push(
-          issue(
-            'projection-gate-standard',
-            `gateResults[${index}].standard`,
-            'projected gate must be kfd-4, kfd-5, or kfd-7',
-          ),
-        );
-        continue;
-      }
-      if (gates.has(gate.standard))
-        issues.push(
-          issue(
-            'projection-gate-duplicate',
-            `gateResults[${index}].standard`,
-            `${gate.standard} is duplicated`,
-          ),
-        );
-      gates.set(gate.standard, gate);
-      if (gate.standardRevision !== metadata(gate.standard).revision)
-        issues.push(
-          issue(
-            'projection-gate-revision',
-            `gateResults[${index}].standardRevision`,
-            'projected gate revision is stale',
-          ),
-        );
-      if (!SHA256.test(text(gate.gateRoot)))
-        issues.push(
-          issue(
-            'projection-gate-root',
-            `gateResults[${index}].gateRoot`,
-            'projected gate must retain its gate root',
-          ),
-        );
-      if (expectedSourceSha && gate.sourceSha !== expectedSourceSha)
-        issues.push(
-          issue(
-            'projection-source',
-            `gateResults[${index}].sourceSha`,
-            'gate source must match the release source',
-          ),
-        );
-      if (
-        !Number.isFinite(date(gate?.evidenceCut?.expiresAt)) ||
-        date(gate?.evidenceCut?.expiresAt) <= date(checkedAt)
-      )
-        issues.push(
-          issue(
-            'projection-stale-gate',
-            `gateResults[${index}].evidenceCut.expiresAt`,
-            'projected gate evidence is stale',
-          ),
-        );
+      continue;
     }
-    validateRows({ rows: projection.rows }, gates, issues);
-    if (!Array.isArray(projection.nonClaims) || !projection.nonClaims.length)
+    if (gates.has(gate.standard))
       issues.push(
         issue(
-          'projection-non-claims',
-          'nonClaims',
-          'support projection must preserve non-claims',
+          'projection-gate-duplicate',
+          `gateResults[${index}].standard`,
+          `${gate.standard} is duplicated`,
         ),
       );
-    return { valid: issues.length === 0, issues };
+    gates.set(gate.standard, gate);
+    if (gate.standardRevision !== metadata(gate.standard).revision)
+      issues.push(
+        issue(
+          'projection-gate-revision',
+          `gateResults[${index}].standardRevision`,
+          'projected gate revision is stale',
+        ),
+      );
+    if (!SHA256.test(text(gate.gateRoot)))
+      issues.push(
+        issue(
+          'projection-gate-root',
+          `gateResults[${index}].gateRoot`,
+          'projected gate must retain its gate root',
+        ),
+      );
+    if (expectedSourceSha && gate.sourceSha !== expectedSourceSha)
+      issues.push(
+        issue(
+          'projection-source',
+          `gateResults[${index}].sourceSha`,
+          'gate source must match the release source',
+        ),
+      );
+    if (
+      !Number.isFinite(date(gate?.evidenceCut?.expiresAt)) ||
+      date(gate?.evidenceCut?.expiresAt) <= date(checkedAt)
+    )
+      issues.push(
+        issue(
+          'projection-stale-gate',
+          `gateResults[${index}].evidenceCut.expiresAt`,
+          'projected gate evidence is stale',
+        ),
+      );
   }
+  validateRows({ rows: projection.rows }, gates, issues);
+  if (!Array.isArray(projection.nonClaims) || !projection.nonClaims.length)
+    issues.push(
+      issue(
+        'projection-non-claims',
+        'nonClaims',
+        'support projection must preserve non-claims',
+      ),
+    );
+  return { valid: issues.length === 0, issues };
+}
 
-  return { createKfdSupportProjection, validateKfdSupportProjection };
+function alphaKfdSupportCompatibility(productGates) {
+  return {
+    createKfdSupportProjection: createKfdSupportProjection.bind(
+      null,
+      productGates,
+    ),
+    validateKfdSupportProjection: validateKfdSupportProjection.bind(
+      null,
+      productGates,
+    ),
+  };
 }
 
 const COMPACT_SURFACE_IDS = ['kungfu.agent.', 'shifu.agent.', 'xinfa.agent.'];

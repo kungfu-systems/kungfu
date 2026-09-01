@@ -384,7 +384,12 @@ kungfu runtime upgrade gc-plan --json
 
 Unknown ownership fails closed. Cleanup owns only runtime-image inventory roots; it
 never owns workspace, Episode, journal, or session data. Applying a GC plan is an
-advanced operation and requires the unchanged plan id plus `--execute`.
+advanced operation and requires the unchanged plan id plus `--execute`. When
+`--references` is omitted, Core derives live references from runtime status and the
+active image pin; if an installed inventory has no active pin, the plan is blocked
+instead of treating the missing authority as an empty reference set. Operators may
+provide a verified reference array explicitly when another owner supplies the
+complete process, generation, lease, rollback, and recovery view.
 
 ## Offline and manual updates
 

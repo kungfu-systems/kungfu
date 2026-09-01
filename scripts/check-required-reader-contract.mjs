@@ -110,25 +110,7 @@ export function evaluateRequiredReader(contract, input) {
   };
 }
 
-/**
- * @param {Record<string, unknown>} contract
- * @param {{root?: string, readSource?: (relative: string) => string}} [options]
- */
-export function validateRequiredReaderContract(contract, options = {}) {
-  const root = options.root || ROOT;
-  const readSource =
-    options.readSource ||
-    ((relative) => fs.readFileSync(path.join(root, relative), 'utf8'));
-  /** @type {string[]} */
-  const issues = [];
-  const fail = (message) => issues.push(message);
-  if (
-    contract.schema !== 'kungfu.required-reader.contract/v1' ||
-    contract.id !== 'kungfu-required-reader' ||
-    contract.version !== 1
-  )
-    fail('required-reader contract identity drifted');
-
+function validateOutcomeCatalog(contract, fail) {
   const outcomes = isObject(contract.outcomes) ? contract.outcomes : {};
   for (const outcome of [
     'read',
@@ -138,7 +120,10 @@ export function validateRequiredReaderContract(contract, options = {}) {
     'reject',
   ])
     if (!isObject(outcomes[outcome])) fail(`missing outcome: ${outcome}`);
+  return outcomes;
+}
 
+function validateCapabilityCatalog(contract, fail) {
   const capabilities = Array.isArray(contract.capabilities)
     ? contract.capabilities
     : [];
@@ -149,10 +134,9 @@ export function validateRequiredReaderContract(contract, options = {}) {
   );
   for (const required of REQUIRED_PROFILES)
     if (!capabilityIds.has(required)) fail(`missing capability: ${required}`);
+}
 
-  const profiles = Array.isArray(contract.readerProfiles)
-    ? contract.readerProfiles
-    : [];
+function validateProfileCatalog(profiles, fail) {
   const profileIds = profiles.map((entry) =>
     isObject(entry) ? String(entry.id || '') : '',
   );
@@ -164,7 +148,9 @@ export function validateRequiredReaderContract(contract, options = {}) {
   for (const required of REQUIRED_PROFILES)
     if (!profileIds.includes(required))
       fail(`missing reader profile: ${required}`);
+}
 
+function validateProfileReferences(contract, profiles, outcomes, fail) {
   const errors = Array.isArray(contract.errorDictionary)
     ? contract.errorDictionary
     : [];
@@ -187,13 +173,23 @@ export function validateRequiredReaderContract(contract, options = {}) {
         fail(`${id} references unknown failure code: ${code}`);
     if (
       AUTHORITY_PROFILES.has(id) &&
-      (profile.unknownOutcome === 'read' ||
-        profile.unknownOutcome === 'read-degraded' ||
-        profile.unknownOutcome === 'preserve-only')
+      ['read', 'read-degraded', 'preserve-only'].includes(
+        String(profile.unknownOutcome || ''),
+      )
     )
       fail(`${id} silently upgrades unknown material into authority`);
   }
+}
 
+function validateReaderProfiles(contract, outcomes, fail) {
+  const profiles = Array.isArray(contract.readerProfiles)
+    ? contract.readerProfiles
+    : [];
+  validateProfileCatalog(profiles, fail);
+  validateProfileReferences(contract, profiles, outcomes, fail);
+}
+
+function validateImplementationBindings(contract, readSource, fail) {
   const bindings = isObject(contract.implementationBindings)
     ? contract.implementationBindings
     : {};
@@ -215,7 +211,9 @@ export function validateRequiredReaderContract(contract, options = {}) {
       )
         fail(`${bindingId} binding marker drifted: ${marker}`);
   }
+}
 
+function validateUnknownAuthorityBoundary(contract, fail) {
   for (const profile of REQUIRED_PROFILES) {
     const unknown = evaluateRequiredReader(contract, {
       profile,
@@ -229,6 +227,32 @@ export function validateRequiredReaderContract(contract, options = {}) {
     )
       fail(`${profile} lets unknown material cross the authority boundary`);
   }
+}
+
+/**
+ * @param {Record<string, unknown>} contract
+ * @param {{root?: string, readSource?: (relative: string) => string}} [options]
+ */
+export function validateRequiredReaderContract(contract, options = {}) {
+  const root = options.root || ROOT;
+  const readSource =
+    options.readSource ||
+    ((relative) => fs.readFileSync(path.join(root, relative), 'utf8'));
+  /** @type {string[]} */
+  const issues = [];
+  const fail = (message) => issues.push(message);
+  if (
+    contract.schema !== 'kungfu.required-reader.contract/v1' ||
+    contract.id !== 'kungfu-required-reader' ||
+    contract.version !== 1
+  )
+    fail('required-reader contract identity drifted');
+
+  const outcomes = validateOutcomeCatalog(contract, fail);
+  validateCapabilityCatalog(contract, fail);
+  validateReaderProfiles(contract, outcomes, fail);
+  validateImplementationBindings(contract, readSource, fail);
+  validateUnknownAuthorityBoundary(contract, fail);
   return issues;
 }
 

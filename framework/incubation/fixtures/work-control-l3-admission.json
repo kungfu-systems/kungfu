@@ -23,7 +23,7 @@
       {
         "language": "c++",
         "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
-        "root": "sha256:cfaace4238fb3f0146c649db0bc7c908852bda02b92aaa16eaa762293a89abeb"
+        "root": "sha256:57629365d9ccc38756e0ee70ece70a4c36d00a860ac9bf70c5e195e8ce891124"
       },
       {
         "language": "python",
@@ -85,9 +85,9 @@
       },
       "recorded": {
         "assignmentId": "2026-08-16-kungfu-initiative-assignment-l5-root-admission",
-        "bindingRoot": "sha256:e44123a929700a9c680ac2aff8272045b3945610ed90bf5a18fefedf980870cf",
+        "bindingRoot": "sha256:d2ac718d70d65df64306ed9851b063e764629f72402a8ecd727ce2a9e169b553",
         "computedRoot": "sha256:45e19884936d203da919bfd6ae6ac4d03cd4088c3e649a10db726c8070933f73",
-        "eventRoot": "sha256:3127c8585a4add0f41719700495b896ee24acc4875a23c918cdb17eb85582671",
+        "eventRoot": "sha256:cbdfabd0c9f9a43a5fe59d7823ec76cbc2f8373e5e81ca5a754cb661969e4f63",
         "journal": {
           "frameUid": 4294967296,
           "name": "admission",
@@ -99,9 +99,9 @@
       },
       "evidence": {
         "assignmentId": "2026-08-16-kungfu-initiative-assignment-l5-root-admission",
-        "bindingRoot": "sha256:e44123a929700a9c680ac2aff8272045b3945610ed90bf5a18fefedf980870cf",
+        "bindingRoot": "sha256:d2ac718d70d65df64306ed9851b063e764629f72402a8ecd727ce2a9e169b553",
         "computedRoot": "sha256:45e19884936d203da919bfd6ae6ac4d03cd4088c3e649a10db726c8070933f73",
-        "eventRoot": "sha256:3127c8585a4add0f41719700495b896ee24acc4875a23c918cdb17eb85582671",
+        "eventRoot": "sha256:cbdfabd0c9f9a43a5fe59d7823ec76cbc2f8373e5e81ca5a754cb661969e4f63",
         "journal": {
           "dest": 0,
           "frameUid": 4294967296,
@@ -111,7 +111,7 @@
           "source": 3530105584
         },
         "matchedEventCount": 1,
-        "replayEvidenceRoot": "sha256:b16e200a65364670d7c97a9c0da29fdca6b48a50040d35ee4bca4148a0ded93a",
+        "replayEvidenceRoot": "sha256:9272606fcf66060d5c4f1aa1afc916d460cf92ed6786c5de2f1a4facc6fa7c77",
         "schema": "kungfu.initiative-assignment.native-replay-evidence/v1"
       },
       "assertions": [
@@ -120,7 +120,7 @@
         "restarted context replays one exact event",
         "receipt binds replay evidence Root"
       ],
-      "root": "sha256:312ee353ddffb101562c2c5f3533a3e58b4223d32f3318775aa2d829407296e6"
+      "root": "sha256:85adc2f0e82a471802eb72c321c34674e4949d5cb47dfdf2832ffb3a48d66d4c"
     }
   },
   "receipt": {
@@ -131,13 +131,13 @@
         "c++",
         "python"
       ],
-      "nativeRoot": "sha256:cfaace4238fb3f0146c649db0bc7c908852bda02b92aaa16eaa762293a89abeb",
+      "nativeRoot": "sha256:57629365d9ccc38756e0ee70ece70a4c36d00a860ac9bf70c5e195e8ce891124",
       "pythonRoot": "sha256:a944fef5068cb344a8ee72f4dcd2c3b5c15d7cdbd2c90dc4e39df6e9605c25f3"
     },
     "journal": {
-      "bindingRoot": "sha256:e44123a929700a9c680ac2aff8272045b3945610ed90bf5a18fefedf980870cf",
-      "eventRoot": "sha256:3127c8585a4add0f41719700495b896ee24acc4875a23c918cdb17eb85582671",
-      "replayEvidenceRoot": "sha256:b16e200a65364670d7c97a9c0da29fdca6b48a50040d35ee4bca4148a0ded93a"
+      "bindingRoot": "sha256:d2ac718d70d65df64306ed9851b063e764629f72402a8ecd727ce2a9e169b553",
+      "eventRoot": "sha256:cbdfabd0c9f9a43a5fe59d7823ec76cbc2f8373e5e81ca5a754cb661969e4f63",
+      "replayEvidenceRoot": "sha256:9272606fcf66060d5c4f1aa1afc916d460cf92ed6786c5de2f1a4facc6fa7c77"
     },
     "platformEvidenceRoot": "sha256:558904a5130b26210c79f47ea82547eff9128da70e30242f0a217f88c5696746",
     "rootProtocol": {
@@ -151,6 +151,6 @@
       "head": "b1fcf00ce6df6c2452e69eeda1741de7b9ff9591",
       "tree": "ec7674527cc8e0b7e1d2acb0c5d738826d481959"
     },
-    "receiptRoot": "sha256:7f2e7a309eb2007d78ad963e1a1900c29dbd6fcd5e8971a91534d816da67abb2"
+    "receiptRoot": "sha256:911d09d458ebe39b9d908157ca45beeee1530644b3d1e3544314c84faf01027b"
   }
 }

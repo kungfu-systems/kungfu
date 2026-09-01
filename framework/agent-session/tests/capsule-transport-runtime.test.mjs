@@ -10,6 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import {
   CapsuleTransportUnavailableError,
+  capsuleNodePtyCandidates,
   createCapsuleNodePtyLoader,
 } from '../src/capsule-transport-runtime.mjs';
 import { detachedAgentSessionPaths } from '../src/product-client.mjs';
@@ -119,6 +120,39 @@ test('Capsule node-pty resolution is lazy and reports an optional capability', (
     },
   );
   assert.equal(resolveCalls, 1);
+});
+
+test('Capsule node-pty resolution includes the signed desktop app layout', () => {
+  const bundleDirectory = path.join(
+    path.sep,
+    'Applications',
+    'Kungfu Episodes.app',
+    'Contents',
+    'Resources',
+    'tui',
+  );
+  assert.deepEqual(capsuleNodePtyCandidates({ bundleDirectory }), [
+    null,
+    null,
+    path.join(bundleDirectory, 'node_modules', 'node-pty', 'lib', 'index.js'),
+    path.join(
+      bundleDirectory,
+      '..',
+      'node_modules',
+      'node-pty',
+      'lib',
+      'index.js',
+    ),
+    path.join(
+      bundleDirectory,
+      '..',
+      'app',
+      'node_modules',
+      'node-pty',
+      'lib',
+      'index.js',
+    ),
+  ]);
 });
 
 test('the detached control core starts without node-pty for native sessions', async () => {

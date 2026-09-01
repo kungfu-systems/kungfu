@@ -62,7 +62,7 @@ test('reference-only KFX suites stay outside product assembly', () => {
     packageNames.every((name) => !name.includes('github-webhook')),
     packageNames.join(', '),
   );
-  assert.ok(!packageNames.includes('@kungfu-kfx/github-dogfood-bridge'));
+  assert.ok(!packageNames.includes('@kungfu-tech/kfx-github-dogfood-bridge'));
 });
 
 test('Intel macOS is rejected by the product-wide host policy', () => {

@@ -339,34 +339,17 @@ function emptyReceipt(base, target, diagnostics, evidencePaths = []) {
   return { ...preimage, compositionRoot: semanticRoot(preimage) };
 }
 
-export function observeComposition(rootInput, baseInput, commitInput) {
-  const root = resolve(rootInput);
-  const base = commitFacts(root, baseInput);
-  const target = commitFacts(root, commitInput);
-  const diagnostics = [];
-  if (!isAncestor(root, base.commitOid, target.commitOid))
-    diagnostics.push(
-      diagnostic(
-        'scope-not-ancestor',
-        '$.scope',
-        'composition base must be an ancestor of the candidate',
-      ),
-    );
-  const allPaths = manifestPaths(root, target.commitOid);
-  const cuts = allPaths.map((path) => cutAt(root, target.commitOid, path));
-  const availableRoots = sortedUnique(cuts.map((cut) => cut.cutRoot));
-  const admittedEpisodeRoots = episodeProviderRoots(root, target.commitOid);
-  const scope = scopedManifestPaths(
-    root,
-    base.commitOid,
-    target.commitOid,
-    allPaths,
-    cuts,
-  );
-  const scopedPaths = scope.manifestPaths;
-  if (scopedPaths.length === 0)
-    return emptyReceipt(base, target, diagnostics, scope.evidencePaths);
-
+function collectCompositionCandidates({
+  root,
+  target,
+  scopedPaths,
+  allPaths,
+  cuts,
+  availableRoots,
+  admittedEpisodeRoots,
+  diagnostics,
+  base,
+}) {
   const candidates = [];
   for (const path of scopedPaths) {
     let cut;
@@ -403,7 +386,7 @@ export function observeComposition(rootInput, baseInput, commitInput) {
         diagnostic('missing-cut-receipt', receipt, String(error.message)),
       );
     }
-    for (const parentRoot of cut.parentCutRoots) {
+    for (const parentRoot of cut.parentCutRoots)
       if (!availableRoots.includes(parentRoot))
         diagnostics.push(
           diagnostic(
@@ -412,7 +395,6 @@ export function observeComposition(rootInput, baseInput, commitInput) {
             `parent ${parentRoot} is absent`,
           ),
         );
-    }
     const published = publicationCommit(root, target.commitOid, path);
     if (!published) {
       diagnostics.push(
@@ -424,7 +406,7 @@ export function observeComposition(rootInput, baseInput, commitInput) {
     const parentPublications = [];
     for (const episodeRoot of cut.episodeDelta.nativeRoots.map(
       (entry) => entry.root,
-    )) {
+    ))
       if (!admittedEpisodeRoots.has(episodeRoot))
         diagnostics.push(
           diagnostic(
@@ -433,7 +415,6 @@ export function observeComposition(rootInput, baseInput, commitInput) {
             `Episode provider ${episodeRoot} is absent`,
           ),
         );
-    }
     for (const parentRoot of cut.parentCutRoots) {
       const parentPath = findCutPath(allPaths, cuts, parentRoot);
       const parentCommit = parentPath
@@ -443,106 +424,176 @@ export function observeComposition(rootInput, baseInput, commitInput) {
     }
     candidates.push({ cut, path, publication, parentPublications });
   }
-  candidates.sort((left, right) => {
+  return candidates.sort((left, right) => {
     const distance =
       ancestryDistance(root, base.commitOid, left.publication.commitOid) -
       ancestryDistance(root, base.commitOid, right.publication.commitOid);
     return distance || compareText(left.cut.cutRoot, right.cut.cutRoot);
   });
+}
+
+function replayCompositionCandidate(
+  root,
+  base,
+  candidate,
+  processed,
+  chronologicalInputs,
+) {
+  const { cut, path, publication, parentPublications } = candidate;
+  let drift = null;
+  let replayDiagnostic = null;
+  let projection = sourceProjectionAtCommit(root, publication.commitOid, cut);
+  let publicationMode = 'direct';
+  let reconstructedTreeOid = publication.treeOid;
+  let semanticBaseTreeOid =
+    parentPublications.length === 1
+      ? commitFacts(root, parentPublications[0]).treeOid
+      : base.treeOid;
+  let deltaBaseCommitOid =
+    parentPublications.length === 1 ? parentPublications[0] : base.commitOid;
+  if (projection.root !== cut.sourceProjection.root) {
+    const preceding = chronologicalInputs
+      .filter((input) =>
+        isAncestor(root, input.publication.commitOid, publication.commitOid),
+      )
+      .sort(
+        (left, right) =>
+          ancestryDistance(root, base.commitOid, right.publication.commitOid) -
+          ancestryDistance(root, base.commitOid, left.publication.commitOid),
+      )[0];
+    // When no earlier replay is available, prefer the parent publication
+    // over the merge base so a Cut squash-published together with its
+    // parent replays an empty delta instead of re-applying the whole
+    // branch onto a tree that already contains it. The outcome must not
+    // depend on which sibling Cut of one publication commit sorts first.
+    const parentDeltaBase =
+      parentPublications.length === 1 &&
+      isAncestor(root, base.commitOid, parentPublications[0])
+        ? parentPublications[0]
+        : null;
+    deltaBaseCommitOid =
+      preceding?.publication.commitOid ?? parentDeltaBase ?? base.commitOid;
+    if (cut.parentCutRoots.length === 1) {
+      const replayedParent = processed.get(cut.parentCutRoots[0]);
+      semanticBaseTreeOid =
+        replayedParent?.reconstructedTreeOid ?? semanticBaseTreeOid;
+    }
+    try {
+      if (!isAncestor(root, deltaBaseCommitOid, publication.commitOid))
+        throw new Error('publication is not a linear queue successor');
+      reconstructedTreeOid = replayTree(
+        root,
+        semanticBaseTreeOid,
+        deltaBaseCommitOid,
+        publication.commitOid,
+      );
+      projection = sourceProjectionAtTree(root, reconstructedTreeOid, cut);
+      publicationMode = 'rebased-replay';
+    } catch (error) {
+      replayDiagnostic = diagnostic(
+        'source-replay-conflict',
+        path,
+        String(error.message),
+      );
+    }
+    if (projection.root !== cut.sourceProjection.root)
+      drift = {
+        cutRoot: cut.cutRoot,
+        path,
+        observedSourceProjectionRoot: projection.root,
+        expectedSourceProjectionRoot: cut.sourceProjection.root,
+      };
+  }
+  const input = {
+    project: cut.project,
+    cutRoot: cut.cutRoot,
+    sourceProjectionRoot: cut.sourceProjection.root,
+    atlasRoot: cut.atlas.root,
+    episodeRoots: sortedUnique(
+      cut.episodeDelta.nativeRoots.map((entry) => entry.root),
+    ),
+    parentCutRoots: cut.parentCutRoots,
+    publication,
+    publicationMode,
+    semanticBaseTreeOid,
+    reconstructedTreeOid,
+    deltaBaseCommitOid,
+    changedPaths: changedPaths(root, deltaBaseCommitOid, publication.commitOid),
+  };
+  return { input, drift, replayDiagnostic };
+}
+
+function replayCompositionCandidates(root, base, candidates) {
   const processed = new Map();
   const chronologicalInputs = [];
   const publicationDrifts = [];
   const replayDiagnostics = new Map();
   for (const candidate of candidates) {
-    const { cut, path, publication, parentPublications } = candidate;
-    let projection = sourceProjectionAtCommit(root, publication.commitOid, cut);
-    let publicationMode = 'direct';
-    let reconstructedTreeOid = publication.treeOid;
-    let semanticBaseTreeOid =
-      parentPublications.length === 1
-        ? commitFacts(root, parentPublications[0]).treeOid
-        : base.treeOid;
-    let deltaBaseCommitOid =
-      parentPublications.length === 1 ? parentPublications[0] : base.commitOid;
-    if (projection.root !== cut.sourceProjection.root) {
-      const preceding = chronologicalInputs
-        .filter((input) =>
-          isAncestor(root, input.publication.commitOid, publication.commitOid),
-        )
-        .sort(
-          (left, right) =>
-            ancestryDistance(
-              root,
-              base.commitOid,
-              right.publication.commitOid,
-            ) -
-            ancestryDistance(root, base.commitOid, left.publication.commitOid),
-        )[0];
-      // When no earlier replay is available, prefer the parent publication
-      // over the merge base so a Cut squash-published together with its
-      // parent replays an empty delta instead of re-applying the whole
-      // branch onto a tree that already contains it. The outcome must not
-      // depend on which sibling Cut of one publication commit sorts first.
-      const parentDeltaBase =
-        parentPublications.length === 1 &&
-        isAncestor(root, base.commitOid, parentPublications[0])
-          ? parentPublications[0]
-          : null;
-      deltaBaseCommitOid =
-        preceding?.publication.commitOid ?? parentDeltaBase ?? base.commitOid;
-      if (cut.parentCutRoots.length === 1) {
-        const replayedParent = processed.get(cut.parentCutRoots[0]);
-        semanticBaseTreeOid =
-          replayedParent?.reconstructedTreeOid ?? semanticBaseTreeOid;
-      }
-      try {
-        if (!isAncestor(root, deltaBaseCommitOid, publication.commitOid))
-          throw new Error('publication is not a linear queue successor');
-        reconstructedTreeOid = replayTree(
-          root,
-          semanticBaseTreeOid,
-          deltaBaseCommitOid,
-          publication.commitOid,
-        );
-        projection = sourceProjectionAtTree(root, reconstructedTreeOid, cut);
-        publicationMode = 'rebased-replay';
-      } catch (error) {
-        replayDiagnostics.set(
-          cut.cutRoot,
-          diagnostic('source-replay-conflict', path, String(error.message)),
-        );
-      }
-      if (projection.root !== cut.sourceProjection.root)
-        publicationDrifts.push({
-          cutRoot: cut.cutRoot,
-          path,
-          observedSourceProjectionRoot: projection.root,
-          expectedSourceProjectionRoot: cut.sourceProjection.root,
-        });
-    }
-    const input = {
-      project: cut.project,
-      cutRoot: cut.cutRoot,
-      sourceProjectionRoot: cut.sourceProjection.root,
-      atlasRoot: cut.atlas.root,
-      episodeRoots: sortedUnique(
-        cut.episodeDelta.nativeRoots.map((entry) => entry.root),
-      ),
-      parentCutRoots: cut.parentCutRoots,
-      publication,
-      publicationMode,
-      semanticBaseTreeOid,
-      reconstructedTreeOid,
-      deltaBaseCommitOid,
-      changedPaths: changedPaths(
-        root,
-        deltaBaseCommitOid,
-        publication.commitOid,
-      ),
-    };
-    processed.set(cut.cutRoot, input);
+    const { input, drift, replayDiagnostic } = replayCompositionCandidate(
+      root,
+      base,
+      candidate,
+      processed,
+      chronologicalInputs,
+    );
+    processed.set(candidate.cut.cutRoot, input);
     chronologicalInputs.push(input);
+    if (drift) publicationDrifts.push(drift);
+    if (replayDiagnostic)
+      replayDiagnostics.set(candidate.cut.cutRoot, replayDiagnostic);
   }
+  return {
+    processed,
+    chronologicalInputs,
+    publicationDrifts,
+    replayDiagnostics,
+  };
+}
+
+export function observeComposition(rootInput, baseInput, commitInput) {
+  const root = resolve(rootInput);
+  const base = commitFacts(root, baseInput);
+  const target = commitFacts(root, commitInput);
+  const diagnostics = [];
+  if (!isAncestor(root, base.commitOid, target.commitOid))
+    diagnostics.push(
+      diagnostic(
+        'scope-not-ancestor',
+        '$.scope',
+        'composition base must be an ancestor of the candidate',
+      ),
+    );
+  const allPaths = manifestPaths(root, target.commitOid);
+  const cuts = allPaths.map((path) => cutAt(root, target.commitOid, path));
+  const availableRoots = sortedUnique(cuts.map((cut) => cut.cutRoot));
+  const admittedEpisodeRoots = episodeProviderRoots(root, target.commitOid);
+  const scope = scopedManifestPaths(
+    root,
+    base.commitOid,
+    target.commitOid,
+    allPaths,
+    cuts,
+  );
+  const scopedPaths = scope.manifestPaths;
+  if (scopedPaths.length === 0)
+    return emptyReceipt(base, target, diagnostics, scope.evidencePaths);
+
+  const candidates = collectCompositionCandidates({
+    root,
+    target,
+    scopedPaths,
+    allPaths,
+    cuts,
+    availableRoots,
+    admittedEpisodeRoots,
+    diagnostics,
+    base,
+  });
+  const replay = replayCompositionCandidates(root, base, candidates);
+  const processed = replay.processed;
+  const chronologicalInputs = replay.chronologicalInputs;
+  const publicationDrifts = replay.publicationDrifts;
+  const replayDiagnostics = replay.replayDiagnostics;
   const inputs = [...chronologicalInputs];
   inputs.sort((left, right) => compareText(left.cutRoot, right.cutRoot));
   const outputProjects = [];

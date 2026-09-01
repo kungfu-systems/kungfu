@@ -17,6 +17,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = JSON.parse(
   fs.readFileSync(path.join(HERE, 'fixtures/contract-cases-v1.json'), 'utf8'),
 );
+const workAuthorityTopology = JSON.parse(
+  fs.readFileSync(path.join(HERE, 'work-authority-topology-v1.json'), 'utf8'),
+);
 const readRepoJson = (relative) =>
   JSON.parse(fs.readFileSync(path.join(HERE, '..', '..', relative), 'utf8'));
 const readRepo = (relative) =>
@@ -136,6 +139,125 @@ test('pins the current Assignment authority and client-path audit', () => {
     for (const witness of witnesses)
       assert.ok(text.includes(witness), `${file} must retain ${witness}`);
   }
+});
+
+test('freezes the converged Work authority topology and resolved migration debt', () => {
+  assert.equal(
+    workAuthorityTopology.schema,
+    'kungfu.work-authority-topology/v1',
+  );
+  assert.equal(
+    workAuthorityTopology.authority,
+    'qualification-only-non-authoritative',
+  );
+  assert.deepEqual(
+    new Set(workAuthorityTopology.classes),
+    new Set([
+      'authority',
+      'historical-identity',
+      'observation',
+      'projection',
+      'discovery',
+      'verification',
+      'mutation',
+      'compatibility',
+      'cache',
+    ]),
+  );
+
+  const ownerIds = workAuthorityTopology.semanticOwners.map((row) => row.id);
+  assert.equal(ownerIds.length, new Set(ownerIds).size);
+  assert.equal(
+    workAuthorityTopology.budgets.semanticWriterOrDeriverPerIdentity,
+    1,
+  );
+  assert.equal(
+    workAuthorityTopology.budgets.postPlanAuthorityRediscoveryTarget,
+    0,
+  );
+  assert.equal(
+    workAuthorityTopology.knownDebt.length,
+    workAuthorityTopology.budgets.knownDebtCount,
+  );
+  assert.equal(
+    workAuthorityTopology.budgets.postPlanAuthorityRediscoveryCurrent,
+    0,
+  );
+  assert.equal(
+    workAuthorityTopology.resolvedDebt.filter(
+      (row) => row.class === 'discovery',
+    ).length,
+    workAuthorityTopology.budgets.postPlanAuthorityRediscoveryBaseline,
+  );
+
+  const callSiteIds = new Set();
+  for (const site of workAuthorityTopology.callSites) {
+    assert.equal(
+      callSiteIds.has(site.id),
+      false,
+      `duplicate call site ${site.id}`,
+    );
+    callSiteIds.add(site.id);
+    assert.ok(workAuthorityTopology.classes.includes(site.class));
+    const source = readRepo(site.path);
+    assert.ok(
+      source.includes(site.anchor),
+      `${site.path} must retain ${site.anchor}`,
+    );
+  }
+
+  for (const role of workAuthorityTopology.sourceRoles) {
+    assert.ok(workAuthorityTopology.classes.includes(role.class));
+    assert.match(role.schema, /^kungfu\.work\.[a-z-]+\/v1$/u);
+    assert.ok(role.owner);
+    assert.ok(role.rule);
+  }
+  for (const debt of workAuthorityTopology.knownDebt) {
+    assert.ok(workAuthorityTopology.classes.includes(debt.class));
+    assert.match(debt.site, /^[^#]+#[^#]+$/u);
+    assert.ok(debt.risk);
+    assert.ok(debt.target);
+  }
+  for (const debt of workAuthorityTopology.resolvedDebt) {
+    assert.ok(workAuthorityTopology.classes.includes(debt.class));
+    assert.match(debt.site, /^[^#]+#[^#]+$/u);
+  }
+});
+
+test('fresh recovery apply has zero post-plan authority rediscovery sites', () => {
+  const recovery = readRepo(
+    'framework/core/src/python/kungfu/assignment_runtime/fresh_recovery.py',
+  );
+  const apply = recovery.slice(
+    recovery.indexOf('def _apply_from_ports('),
+    recovery.indexOf('def _create_plan_command('),
+  );
+  for (const forbidden of [
+    'runtime(',
+    '_retained_status(',
+    '_current_binding_context(',
+    'bind_current_native_work(',
+    'resolve_workspace_target(',
+  ])
+    assert.equal(
+      apply.includes(forbidden),
+      false,
+      `fresh recovery apply must not contain ${forbidden}`,
+    );
+
+  const exact = readRepo(
+    'framework/core/src/python/kungfu/agent/planned_work_binding.py',
+  );
+  for (const forbidden of [
+    'resolve_workspace_target(',
+    '_status(',
+    'resolve_qualified_work_profile(',
+  ])
+    assert.equal(
+      exact.includes(forbidden),
+      false,
+      `planned binder must not contain ${forbidden}`,
+    );
 });
 
 test('zero-residue blockers fail closed across runtime, tests, and CLI registry', () => {

@@ -386,6 +386,71 @@ def _select_cli_image(
             return finish_selection(selection)
 
 
+def _read_retained_cli_receipt(path: Path, generation: int) -> dict[str, Any]:
+    receipt = _read_object(path)
+    selection = receipt.get("frontendSelection")
+    receipt_root = receipt.get("receiptRoot")
+    receipt_core = {
+        key: value for key, value in receipt.items() if key != "receiptRoot"
+    }
+    if (
+        not isinstance(selection, Mapping)
+        or int(selection.get("generation") or 0) != generation
+        or not isinstance(receipt_root, str)
+        or receipt_root != _content_root(receipt_core)
+    ):
+        raise DistributionUpdateError(
+            "cli-selection-receipt-invalid",
+            "CLI selection receipt does not verify against its generation",
+        )
+    return {
+        "generation": generation,
+        "receiptRoot": receipt_root,
+        "frontendBuildId": selection.get("frontendBuildId"),
+    }
+
+
+def _cli_image_file(entry: Path, image, field: str) -> Path:
+    candidate = (entry / str(image.get(field) or "")).resolve()
+    if entry.resolve() not in candidate.parents or not candidate.is_file():
+        raise DistributionUpdateError(
+            "cli-image-invalid",
+            "CLI image executable or release manifest is missing or unsafe",
+        )
+    return candidate
+
+
+def _inspect_cli_image(entry: Path) -> dict[str, Any]:
+    if entry.is_symlink() or not entry.is_dir():
+        raise DistributionUpdateError(
+            "cli-image-path-unsafe",
+            "CLI image inventory entry is not a real directory",
+        )
+    image = _read_object(entry / "image.json")
+    frontend_build_id = _path_safe_id(
+        str(image.get("frontendBuildId") or ""), "frontend-build-id"
+    )
+    if (
+        image.get("schema") != CLI_IMAGE_SCHEMA
+        or frontend_build_id != entry.name
+        or Path(str(image.get("productRoot") or "")).resolve() != entry.resolve()
+    ):
+        raise DistributionUpdateError(
+            "cli-image-invalid", "CLI image identity or product root is invalid"
+        )
+    _cli_image_file(entry, image, "executable")
+    _cli_image_file(entry, image, "upgradeManifest")
+    return {
+        "frontendBuildId": frontend_build_id,
+        "runtimeBuildId": image["runtimeBuildId"],
+        "productVersion": image["productVersion"],
+        "artifactDigest": image["artifactDigest"],
+        "productRoot": image["productRoot"],
+        "releaseCutRoot": image.get("releaseCutRoot"),
+        "platformSliceRoot": image.get("platformSliceRoot"),
+    }
+
+
 def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
     root = _cli_inventory_root(config_home)
     images_root = root / "images"
@@ -399,51 +464,7 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                 retained_partials.append(relative)
                 continue
             try:
-                if entry.is_symlink() or not entry.is_dir():
-                    raise DistributionUpdateError(
-                        "cli-image-path-unsafe",
-                        "CLI image inventory entry is not a real directory",
-                    )
-                image = _read_object(entry / "image.json")
-                frontend_build_id = _path_safe_id(
-                    str(image.get("frontendBuildId") or ""),
-                    "frontend-build-id",
-                )
-                if (
-                    image.get("schema") != CLI_IMAGE_SCHEMA
-                    or frontend_build_id != entry.name
-                    or Path(str(image.get("productRoot") or "")).resolve()
-                    != entry.resolve()
-                ):
-                    raise DistributionUpdateError(
-                        "cli-image-invalid",
-                        "CLI image identity or product root is invalid",
-                    )
-                executable = (entry / str(image.get("executable") or "")).resolve()
-                bundled_manifest = (
-                    entry / str(image.get("upgradeManifest") or "")
-                ).resolve()
-                if (
-                    entry.resolve() not in executable.parents
-                    or not executable.is_file()
-                    or entry.resolve() not in bundled_manifest.parents
-                    or not bundled_manifest.is_file()
-                ):
-                    raise DistributionUpdateError(
-                        "cli-image-invalid",
-                        "CLI image executable or release manifest is missing or unsafe",
-                    )
-                images.append(
-                    {
-                        "frontendBuildId": frontend_build_id,
-                        "runtimeBuildId": image["runtimeBuildId"],
-                        "productVersion": image["productVersion"],
-                        "artifactDigest": image["artifactDigest"],
-                        "productRoot": image["productRoot"],
-                        "releaseCutRoot": image.get("releaseCutRoot"),
-                        "platformSliceRoot": image.get("platformSliceRoot"),
-                    }
-                )
+                images.append(_inspect_cli_image(entry))
             except (
                 DistributionUpdateError,
                 KeyError,
@@ -493,27 +514,7 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                 continue
             path = _cli_selection_receipt_path(config_home, generation)
             try:
-                receipt = _read_object(path)
-                receipt_selection = receipt.get("frontendSelection")
-                receipt_root = receipt.get("receiptRoot")
-                receipt_core = {
-                    key: value for key, value in receipt.items() if key != "receiptRoot"
-                }
-                if (
-                    not isinstance(receipt_selection, Mapping)
-                    or int(receipt_selection.get("generation") or 0) != generation
-                    or not isinstance(receipt_root, str)
-                    or receipt_root != _content_root(receipt_core)
-                ):
-                    raise DistributionUpdateError(
-                        "cli-selection-receipt-invalid",
-                        "CLI selection receipt does not verify against its generation",
-                    )
-                retained = {
-                    "generation": generation,
-                    "receiptRoot": receipt_root,
-                    "frontendBuildId": receipt_selection.get("frontendBuildId"),
-                }
+                retained = _read_retained_cli_receipt(path, generation)
                 retained_receipts.append(retained)
                 if generation > selected_generation and (
                     selection is not None or not selection_path_exists

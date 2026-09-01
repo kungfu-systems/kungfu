@@ -1,0 +1,37 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "a4fef259fd9ec84e3982d856664590eefb4fcd6e",
+  "changeRoot": "sha256:bf4b4de46639486d664afdcc88973eaaf95ca43b36ff7de7f7ee33d5688a4c34",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:016c67c42618df951be534502108fdbde6b6ee35538094287d7dc10d754bb638",
+      "contentRoot": "sha256:43594189454b9b6ccb5942cc77a9628bd950d20ff6da8d3b8ec9b18d19f79df4",
+      "path": "extensions/system/kfx-manager/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a0fa463f1b4c9f303f22407446a0537616f9a5c63c815e892bedcdd3a70f8784",
+      "contentRoot": "sha256:5ed49cb2abd811f02181e2bd525087d515f3cd748ddf2789b8d35d11b1aa4e7b",
+      "path": "extensions/system/settings/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c46e24bb31a915f29676bfa588e8adf04085104bc7ae0fbb47367e3817cf2c87",
+      "contentRoot": "sha256:129a5adf4870a0d04e2b9d36f3991cf9ceacd5ade7d29a64f33dc087228165cf",
+      "path": "extensions/system/skill-manager/src/view/index.tsx",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "The refactor only extracts cohesive render and state helpers inside three existing system views; public behavior, public contracts, and reader journeys remain unchanged.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:57a927545f1a422035a9a2ca5b1dcd0a0b47d5005f004dd83c4afea739aad900"
+}

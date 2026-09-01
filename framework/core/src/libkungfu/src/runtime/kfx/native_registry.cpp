@@ -31,6 +31,7 @@ namespace kungfu::runtime::kfx {
 
 using json = nlohmann::json;
 using namespace native_registry_internal;
+namespace fs = std::filesystem;
 
 json native_kfx_control_bootstrap_policy() { return control_bootstrap_policy(); }
 
@@ -63,6 +64,9 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
       refuse("KF_KFX_CONTROL_SELF_GRANT",
              std::string("caller may not supply embedded Control Suite authority field ") + field);
   }
+  if (request.contains("developmentRuntimeDir"))
+    refuse("KF_KFX_DEVELOPMENT_BOOTSTRAP_FORBIDDEN",
+           "caller may not supply the Core-bound development runtime directory");
   if (action == "history")
     return lifecycle_history(runtime_dir, request);
   const bool runtime_transition = action == "runtime-warrant-heartbeat" || action == "runtime-warrant-revoke" ||
@@ -80,6 +84,9 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     return authority::kfd10_runtime_witness(
         request, runtime_dir, lifecycle_history(runtime_dir, {{"packageKey", request.value("packageKey", "")}}));
   const auto lifecycle = load_lifecycle(runtime_dir);
+  auto authority_request = request;
+  if (authority_request.contains("developmentSourceBootstrap"))
+    authority_request["developmentRuntimeDir"] = fs::weakly_canonical(fs::path(runtime_dir)).string();
   auto snapshot_request = request;
   if (action == "apply")
     snapshot_request.erase("expectedRegistryRoot");
@@ -99,7 +106,7 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
   } else {
     refuse("KF_KFX_CUT_MISSING", "no named KFX Fact Cut exists; provide a bounded discovery observation to plan");
   }
-  const auto load_plan = lifecycle_plan(selected, lifecycle, request);
+  const auto load_plan = lifecycle_plan(selected, lifecycle, authority_request);
   if (action == "runtime-warrant-issue" || action == "runtime-warrant-adopt") {
     const auto &descriptor = load_plan.at("hostContract");
     const auto launch = authorize_host_launch(descriptor, lifecycle, request);
@@ -118,12 +125,12 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
         !request.contains("expectedCutRoot") || request.at("expectedCutRoot") != actual_cut || candidate.is_null() ||
         request.value("expectedPackageRoot", "") != candidate.value("packageRoot", ""))
       refuse("KF_KFX_CONTROL_PLAN_STALE", "Control Suite Cut or candidate root changed since planning");
-    const auto planned = control_plan(selected, lifecycle, request, load_plan);
+    const auto planned = control_plan(selected, lifecycle, authority_request, load_plan);
     if (request.value("expectedControlPlanRoot", "") != planned.at("controlPlanRoot").get<std::string>())
       refuse("KF_KFX_CONTROL_PLAN_STALE", "Control Suite plan root changed since authorization");
     if (request.value("expectedBootstrapPolicyRoot", "") != planned.at("bootstrapPolicyRoot").get<std::string>())
       refuse("KF_KFX_CONTROL_POLICY_STALE", "Control Suite bootstrap policy root changed since authorization");
-    const auto application = apply_lifecycle_mutation(selected, lifecycle, load_plan, request, runtime_dir);
+    const auto application = apply_lifecycle_mutation(selected, lifecycle, load_plan, authority_request, runtime_dir);
     const auto settled = load_lifecycle(runtime_dir);
     return {{"schema", "kungfu.kfx.control-suite-application/v1"},
             {"controllerId", KFX_CONTROL_SUITE_ID},
@@ -137,11 +144,11 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
             {"verified", true}};
   }
   if (action == "apply")
-    return apply_lifecycle_mutation(selected, lifecycle, load_plan, request, runtime_dir);
+    return apply_lifecycle_mutation(selected, lifecycle, load_plan, authority_request, runtime_dir);
   if (control_request && action == "status")
     return control_status(lifecycle);
   if (control_request && action == "plan")
-    return control_plan(selected, lifecycle, request, load_plan);
+    return control_plan(selected, lifecycle, authority_request, load_plan);
   if (control_request)
     refuse("KF_KFX_CONTROL_OPERATION_REJECTED", "Control Suite supports only public status, plan, and apply");
   const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);

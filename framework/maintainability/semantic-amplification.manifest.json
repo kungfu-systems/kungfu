@@ -1121,6 +1121,10 @@
       },
       "surfaces": [
         {
+          "path": "scripts/trademark-public-use-contract.mjs",
+          "role": "conformance-oracle"
+        },
+        {
           "path": "scripts/verify-kungfu-release-admission.mjs",
           "role": "conformance-oracle"
         },

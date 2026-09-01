@@ -114,6 +114,86 @@ def test_fold_keeps_stable_identity_separate_from_path_and_projects_risk():
     assert read_surface["mutation_class"] == "read"
     assert mutate_surface["mutation_class"] == "write"
     assert mutate_surface["approval_policy"]["mode"] == "explicit-execute"
+    assert read_surface["output"] == {
+        "defaultMode": "unspecified",
+        "modes": [],
+        "schemaRefs": [],
+    }
+
+
+def test_project_discovery_surfaces_declare_executable_json_modes():
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import __registry__  # noqa: F401
+    from kungfu.cli.commands import kfc
+
+    contract = surface_contract.fold(kfc, schema=SCHEMA)
+    rows = contract["surfaces"]
+    expected = {
+        "kungfu project list": "kungfu.projects.catalog/v1",
+        "kungfu project works": "kungfu.project-work.inventory/v1",
+    }
+    for path, schema_ref in expected.items():
+        row = _surface(rows, path)
+        assert row["output"] == {
+            "defaultMode": "json",
+            "modes": ["json"],
+            "schemaRefs": [schema_ref],
+        }
+        json_parameter = next(
+            parameter
+            for parameter in row["parameters"]
+            if parameter["name"] == "as_json"
+        )
+        assert "--json" in json_parameter["flags"]
+
+
+def test_output_contract_rejects_unknown_or_unregistered_modes():
+    contract = _sample_contract()
+    rows = copy.deepcopy(contract["surfaces"])
+    _surface(rows, "kungfu sample read")["output"] = {
+        "defaultMode": "json",
+        "modes": ["json"],
+        "schemaRefs": ["kungfu.fixture.unknown/v1"],
+    }
+
+    diagnostics = surface_contract.validate(
+        rows,
+        metadata_registry=_sample_registry(),
+        schema=SCHEMA,
+        kfd3_registry=EMPTY_KFD3,
+        command_catalog=EMPTY_CATALOG,
+        observed_paths=_observed_paths(),
+    )
+
+    assert diagnostics["ok"] is False
+    assert {row["code"] for row in diagnostics["errors"]} == {
+        "dangling-output-schema-ref"
+    }
+
+
+@pytest.mark.parametrize(
+    "invalid_output",
+    [
+        "json",
+        {"defaultMode": "json", "modes": "json", "schemaRefs": []},
+        {"defaultMode": "json", "modes": ["json"], "schemaRefs": "schema"},
+    ],
+)
+def test_output_contract_rejects_malformed_shapes_without_crashing(invalid_output):
+    rows = copy.deepcopy(_sample_contract()["surfaces"])
+    _surface(rows, "kungfu sample read")["output"] = invalid_output
+
+    diagnostics = surface_contract.validate(
+        rows,
+        metadata_registry=_sample_registry(),
+        schema=SCHEMA,
+        kfd3_registry=EMPTY_KFD3,
+        command_catalog=EMPTY_CATALOG,
+        observed_paths=_observed_paths(),
+    )
+
+    assert diagnostics["ok"] is False
+    assert "invalid-output-contract" in {row["code"] for row in diagnostics["errors"]}
 
 
 def test_standalone_catalog_route_binds_to_one_live_click_authority():

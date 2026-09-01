@@ -31,15 +31,7 @@ const isObject = (value) =>
  * @param {Record<string, unknown>} contract
  * @param {{root?: string, readSource?: (relative: string) => string}} [options]
  */
-export function validatePortableFormatAuthority(contract, options = {}) {
-  const root = options.root || ROOT;
-  const readSource =
-    options.readSource ||
-    ((relative) => fs.readFileSync(path.join(root, relative), 'utf8'));
-  /** @type {string[]} */
-  const issues = [];
-  const fail = (message) => issues.push(message);
-
+function validatePortableIdentity(contract, readSource, fail) {
   if (
     contract.schema !== 'kungfu.portable-format-authority.contract/v1' ||
     contract.id !== 'kungfu-portable-format-authority' ||
@@ -70,7 +62,43 @@ export function validatePortableFormatAuthority(contract, options = {}) {
   } catch {
     fail(`missing authority decision: ${decision}`);
   }
+}
 
+function validatePortableAuthorityEntry(item, ids, roles, readSource, fail) {
+  if (!isObject(item)) {
+    fail('authority entry must be an object');
+    return;
+  }
+  const protocolId = String(item.protocolId || '');
+  const source = String(item.source || '');
+  const sourceRole = String(item.sourceRole || '');
+  if (!protocolId || ids.has(protocolId))
+    fail(`duplicate or missing protocol id: ${protocolId || '<empty>'}`);
+  ids.add(protocolId);
+  if (!sourceRole || roles.has(sourceRole))
+    fail(`duplicate or missing source role: ${sourceRole || '<empty>'}`);
+  roles.add(sourceRole);
+  for (const field of ['identityDomain', 'versionAxis', 'compatibilityOwner'])
+    if (!String(item[field] || ''))
+      fail(`${protocolId || '<unknown>'} has no ${field}`);
+  let sourceText = '';
+  try {
+    sourceText = readSource(source);
+  } catch {
+    fail(`${protocolId || '<unknown>'} source is missing: ${source}`);
+    return;
+  }
+  const markers = Array.isArray(item.identityMarkers)
+    ? item.identityMarkers
+    : [];
+  if (markers.length === 0)
+    fail(`${protocolId || '<unknown>'} has no identity markers`);
+  for (const marker of markers)
+    if (!sourceText.includes(String(marker)))
+      fail(`${protocolId || '<unknown>'} identity marker drifted: ${marker}`);
+}
+
+function validatePortableAuthorities(contract, readSource, fail) {
   const authorities = Array.isArray(contract.authorities)
     ? contract.authorities
     : [];
@@ -78,40 +106,12 @@ export function validatePortableFormatAuthority(contract, options = {}) {
     fail('portable authority inventory is incomplete');
   const ids = new Set();
   const roles = new Set();
-  for (const item of authorities) {
-    if (!isObject(item)) {
-      fail('authority entry must be an object');
-      continue;
-    }
-    const protocolId = String(item.protocolId || '');
-    const source = String(item.source || '');
-    const sourceRole = String(item.sourceRole || '');
-    if (!protocolId || ids.has(protocolId))
-      fail(`duplicate or missing protocol id: ${protocolId || '<empty>'}`);
-    ids.add(protocolId);
-    if (!sourceRole || roles.has(sourceRole))
-      fail(`duplicate or missing source role: ${sourceRole || '<empty>'}`);
-    roles.add(sourceRole);
-    for (const field of ['identityDomain', 'versionAxis', 'compatibilityOwner'])
-      if (!String(item[field] || ''))
-        fail(`${protocolId || '<unknown>'} has no ${field}`);
-    let sourceText = '';
-    try {
-      sourceText = readSource(source);
-    } catch {
-      fail(`${protocolId || '<unknown>'} source is missing: ${source}`);
-      continue;
-    }
-    const markers = Array.isArray(item.identityMarkers)
-      ? item.identityMarkers
-      : [];
-    if (markers.length === 0)
-      fail(`${protocolId || '<unknown>'} has no identity markers`);
-    for (const marker of markers)
-      if (!sourceText.includes(String(marker)))
-        fail(`${protocolId || '<unknown>'} identity marker drifted: ${marker}`);
-  }
+  for (const item of authorities)
+    validatePortableAuthorityEntry(item, ids, roles, readSource, fail);
+  return ids;
+}
 
+function validatePortableVocabulary(contract, ids, fail) {
   const terminology = isObject(contract.terminology)
     ? contract.terminology
     : {};
@@ -147,7 +147,20 @@ export function validatePortableFormatAuthority(contract, options = {}) {
     )
   )
     fail('projection authority boundary drifted');
+}
 
+function validatePortableReader(reader, expected, markers, readSource, fail) {
+  if (reader.id !== expected.id) fail(expected.identityIssue);
+  try {
+    const source = readSource(String(reader.source || ''));
+    if (markers.some((marker) => !source.includes(marker)))
+      fail(expected.sourceIssue);
+  } catch {
+    fail(`${expected.missingIssue}: ${reader.source || '<empty>'}`);
+  }
+}
+
+function validatePortableReaders(contract, readSource, fail) {
   const status = isObject(contract.status) ? contract.status : {};
   if (status.requiredReader !== 'implemented')
     fail('required-reader authority is not implemented');
@@ -157,45 +170,59 @@ export function validatePortableFormatAuthority(contract, options = {}) {
   const requiredReader = isObject(readers.requiredReader)
     ? readers.requiredReader
     : {};
-  if (requiredReader.id !== 'kungfu-required-reader')
-    fail('required-reader identity drifted');
-  try {
-    const readerSource = readSource(String(requiredReader.source || ''));
-    if (
-      !readerSource.includes(
-        '"schema": "kungfu.required-reader.contract/v1"',
-      ) ||
-      !readerSource.includes('"id": "kungfu-required-reader"')
-    )
-      fail('required-reader source identity drifted');
-  } catch {
-    fail(
-      `missing required-reader source: ${requiredReader.source || '<empty>'}`,
-    );
-  }
+  validatePortableReader(
+    requiredReader,
+    {
+      id: 'kungfu-required-reader',
+      identityIssue: 'required-reader identity drifted',
+      sourceIssue: 'required-reader source identity drifted',
+      missingIssue: 'missing required-reader source',
+    },
+    [
+      '"schema": "kungfu.required-reader.contract/v1"',
+      '"id": "kungfu-required-reader"',
+    ],
+    readSource,
+    fail,
+  );
   const migrationProtocol = isObject(readers.migrationProtocol)
     ? readers.migrationProtocol
     : {};
-  if (migrationProtocol.id !== 'kungfu-format-migration')
-    fail('migration protocol identity drifted');
-  try {
-    const migrationSource = readSource(String(migrationProtocol.source || ''));
-    if (
-      !migrationSource.includes(
-        '"schema": "kungfu.format-migration.contract/v1"',
-      ) ||
-      !migrationSource.includes('"id": "kungfu-format-migration"')
-    )
-      fail('migration protocol source identity drifted');
-  } catch {
-    fail(
-      `missing migration protocol source: ${migrationProtocol.source || '<empty>'}`,
-    );
-  }
-
-  return issues;
+  validatePortableReader(
+    migrationProtocol,
+    {
+      id: 'kungfu-format-migration',
+      identityIssue: 'migration protocol identity drifted',
+      sourceIssue: 'migration protocol source identity drifted',
+      missingIssue: 'missing migration protocol source',
+    },
+    [
+      '"schema": "kungfu.format-migration.contract/v1"',
+      '"id": "kungfu-format-migration"',
+    ],
+    readSource,
+    fail,
+  );
 }
 
+/**
+ * @param {Record<string, unknown>} contract
+ * @param {{root?: string, readSource?: (relative: string) => string}} [options]
+ */
+export function validatePortableFormatAuthority(contract, options = {}) {
+  const root = options.root || ROOT;
+  const readSource =
+    options.readSource ||
+    ((relative) => fs.readFileSync(path.join(root, relative), 'utf8'));
+  /** @type {string[]} */
+  const issues = [];
+  const fail = (message) => issues.push(message);
+  validatePortableIdentity(contract, readSource, fail);
+  const ids = validatePortableAuthorities(contract, readSource, fail);
+  validatePortableVocabulary(contract, ids, fail);
+  validatePortableReaders(contract, readSource, fail);
+  return issues;
+}
 export function checkPortableFormatAuthority(root = ROOT) {
   const contract = JSON.parse(
     fs.readFileSync(path.join(root, CONTRACT_PATH), 'utf8'),

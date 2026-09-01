@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:2200ddaade3f2c3ae865dcd681b57b839b8a93b64866f1bece75a98e7289e7a2"
+            "sha256": "sha256:536c755b17b5058b9ddb026d15df5304780c87458bd16796ce71cc8af8b34f2a"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -262,7 +262,7 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:8078c1a1df495816eeefc1be4ceea98212353acf6aa77e9dadbbc91858cabc69"
+            "sha256": "sha256:596696d05699256a03b739037630c9e6a78d5079252e1d1a595b77ad82f28e96"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:3bee9c11911295b142bbec8ef5fc0fc6cc98d45bd7675ea228dbeec7cfd07adc"
+            "sha256": "sha256:bf21a69efe053bb0a5ec2e2458f22ef9f14fc44ba94dc617cd8c22fe5d4c02fe"
           }
         ]
       },
@@ -401,7 +401,7 @@
           },
           {
             "path": "framework/core/architecture/kfd7-release-passport.json",
-            "sha256": "sha256:ab751c0914a11e258899cd8a514af021c366bd1ee84e4aa11ded4ec3f7bd5a22"
+            "sha256": "sha256:2642a1ba47a204b2565060b6ce5233b1bb161d47bfb767d55586758d799ff896"
           }
         ]
       },
@@ -542,7 +542,7 @@
         "evidenceRoots": [
           {
             "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
-            "sha256": "sha256:0c6d92d16659bfede7d5340c66d94d783a632e2af256d2e5771cf6b92f2a384a"
+            "sha256": "sha256:7a8bb1d212b752bde513d32c354a790bbeb24769b53b17cd90de019958f26e38"
           }
         ]
       },
@@ -635,7 +635,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:009cebcd0abb38435421181c91900ed615a8fbd4e273d2cde6b84cb4073b9b9f"
+            "sha256": "sha256:41668878eb536531124e691d37a649105675252ab13af959492cf2ee3b56cc82"
           }
         ]
       },

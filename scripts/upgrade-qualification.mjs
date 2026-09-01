@@ -138,189 +138,197 @@ function artifactRowsRoot(manifest) {
   );
 }
 
-function verifyUpdateCampaign(manifest, campaign, contract, options = {}) {
-  if (!campaign)
-    fail(
-      'qualification-campaign-missing',
-      'one-command update campaign evidence is required',
-    );
-  if (campaign.schema !== contract.campaignSchema)
-    fail(
-      'qualification-campaign-schema',
-      'one-command update campaign schema is unsupported',
-    );
-  if (campaign.campaignRoot !== updateCampaignRoot(campaign))
-    fail(
-      'qualification-campaign-root',
-      'one-command update campaign root is not canonical',
-    );
+function qualifyCampaign(condition, code, message) {
+  if (!condition) fail(code, message);
+}
+
+function verifyCampaignEnvelope(campaign, contract, options) {
+  qualifyCampaign(
+    campaign,
+    'qualification-campaign-missing',
+    'one-command update campaign evidence is required',
+  );
+  qualifyCampaign(
+    campaign.schema === contract.campaignSchema,
+    'qualification-campaign-schema',
+    'one-command update campaign schema is unsupported',
+  );
+  qualifyCampaign(
+    campaign.campaignRoot === updateCampaignRoot(campaign),
+    'qualification-campaign-root',
+    'one-command update campaign root is not canonical',
+  );
   const generatedAt = Date.parse(campaign.generatedAt || '');
   const now = options.now ? new Date(options.now).getTime() : Date.now();
   const maximumAge = contract.maximumCampaignAgeHours * 60 * 60 * 1000;
-  if (
-    !Number.isFinite(generatedAt) ||
-    generatedAt > now + 5 * 60 * 1000 ||
-    now - generatedAt > maximumAge
-  )
-    fail(
-      'qualification-campaign-stale',
-      'one-command update campaign is missing, future-dated, or stale',
-    );
-  if (
-    campaign.evidenceTier !== contract.promotionTier ||
-    campaign.cleanEnvironment !== true ||
-    campaign.publicClaim?.advertised !== true ||
-    campaign.publicClaim?.mechanicsOnly !== false
-  )
-    fail(
-      'qualification-campaign-simulated',
-      'advertised updates require a clean native-packaged campaign',
-    );
+  qualifyCampaign(
+    Number.isFinite(generatedAt) &&
+      generatedAt <= now + 5 * 60 * 1000 &&
+      now - generatedAt <= maximumAge,
+    'qualification-campaign-stale',
+    'one-command update campaign is missing, future-dated, or stale',
+  );
+  qualifyCampaign(
+    campaign.evidenceTier === contract.promotionTier &&
+      campaign.cleanEnvironment === true &&
+      campaign.publicClaim?.advertised === true &&
+      campaign.publicClaim?.mechanicsOnly === false,
+    'qualification-campaign-simulated',
+    'advertised updates require a clean native-packaged campaign',
+  );
+}
+
+function verifyCampaignIdentity(manifest, campaign, contract) {
   for (const field of ['sourceCommit', 'productVersion']) {
-    if (campaign.candidate?.[field] !== manifest[field])
-      fail(
-        'qualification-campaign-source-mismatch',
-        `campaign candidate ${field} does not match the manifest`,
-      );
+    qualifyCampaign(
+      campaign.candidate?.[field] === manifest[field],
+      'qualification-campaign-source-mismatch',
+      `campaign candidate ${field} does not match the manifest`,
+    );
   }
-  if (
-    campaign.platform !== manifest.platform ||
-    campaign.architecture !== manifest.architecture
-  )
-    fail(
-      'qualification-campaign-platform-mismatch',
-      'campaign platform identity does not match the manifest',
-    );
-  if (
-    campaign.channel !== manifest.releaseChannel ||
-    !['alpha', 'stable'].includes(campaign.channel)
-  )
-    fail(
-      'qualification-campaign-channel-mismatch',
-      'campaign channel does not match the release manifest',
-    );
+  qualifyCampaign(
+    campaign.platform === manifest.platform &&
+      campaign.architecture === manifest.architecture,
+    'qualification-campaign-platform-mismatch',
+    'campaign platform identity does not match the manifest',
+  );
+  qualifyCampaign(
+    campaign.channel === manifest.releaseChannel &&
+      ['alpha', 'stable'].includes(campaign.channel),
+    'qualification-campaign-channel-mismatch',
+    'campaign channel does not match the release manifest',
+  );
   const sourcePolicy = contract.installSources?.[campaign.installSource];
-  if (
-    !sourcePolicy ||
-    campaign.installOwner !== sourcePolicy.owner ||
-    campaign.action !== sourcePolicy.action
-  )
-    fail(
-      'qualification-campaign-owner-mismatch',
-      'campaign install source, owner, and action are inconsistent',
-    );
-  if (
-    campaign.candidate?.manifestRoot !== qualificationContentRoot(manifest) ||
-    campaign.candidate?.artifactRoot !== artifactRowsRoot(manifest) ||
-    !SHA256_ROOT_PATTERN.test(campaign.candidate?.channelIndexRoot || '') ||
-    !SHA256_ROOT_PATTERN.test(campaign.candidate?.releasePassportRoot || '')
-  )
-    fail(
-      'qualification-campaign-candidate-root-mismatch',
-      'campaign candidate roots do not bind the release manifest',
-    );
-  if (
-    options.releasePassportRoot &&
-    campaign.candidate.releasePassportRoot !== options.releasePassportRoot
-  )
-    fail(
-      'qualification-campaign-passport-mismatch',
-      'campaign release-passport root does not match Buildchain',
-    );
-  if (
-    !campaign.previousPublic ||
-    !SHA1_PATTERN.test(campaign.previousPublic.sourceCommit || '') ||
-    !SHA256_ROOT_PATTERN.test(campaign.previousPublic.channelIndexRoot || '') ||
-    !SHA256_ROOT_PATTERN.test(
-      campaign.previousPublic.releasePassportRoot || '',
-    ) ||
-    !SHA256_ROOT_PATTERN.test(campaign.previousPublic.manifestRoot || '') ||
-    !SHA256_ROOT_PATTERN.test(campaign.previousPublic.artifactRoot || '') ||
-    compareSemver(
-      campaign.previousPublic.productVersion,
-      campaign.candidate.productVersion,
-    ) >= 0
-  )
-    fail(
-      'qualification-campaign-previous-public-invalid',
-      'campaign must start from one exact older public version',
-    );
-  if (
-    JSON.stringify(campaign.invocation?.argv) !==
-      JSON.stringify(contract.requiredCommand) ||
-    !Number.isInteger(campaign.invocation?.confirmationCount) ||
-    campaign.invocation.confirmationCount < 0 ||
-    campaign.invocation.confirmationCount > 1
-  )
-    fail(
-      'qualification-campaign-command-mismatch',
-      'campaign must use the exact one-command update surface with at most one confirmation',
-    );
-  if (
-    campaign.result?.state !== 'complete' ||
-    campaign.result?.observedVersion !== manifest.productVersion ||
-    !SHA256_ROOT_PATTERN.test(campaign.result?.receiptRoot || '')
-  )
-    fail(
-      'qualification-campaign-result-mismatch',
-      'campaign result does not prove the exact candidate and receipt',
-    );
+  qualifyCampaign(
+    sourcePolicy &&
+      campaign.installOwner === sourcePolicy.owner &&
+      campaign.action === sourcePolicy.action,
+    'qualification-campaign-owner-mismatch',
+    'campaign install source, owner, and action are inconsistent',
+  );
+}
+
+function verifyCampaignCandidateRoots(manifest, campaign, options) {
+  qualifyCampaign(
+    campaign.candidate?.manifestRoot === qualificationContentRoot(manifest) &&
+      campaign.candidate?.artifactRoot === artifactRowsRoot(manifest) &&
+      SHA256_ROOT_PATTERN.test(campaign.candidate?.channelIndexRoot || '') &&
+      SHA256_ROOT_PATTERN.test(campaign.candidate?.releasePassportRoot || ''),
+    'qualification-campaign-candidate-root-mismatch',
+    'campaign candidate roots do not bind the release manifest',
+  );
+  qualifyCampaign(
+    !options.releasePassportRoot ||
+      campaign.candidate.releasePassportRoot === options.releasePassportRoot,
+    'qualification-campaign-passport-mismatch',
+    'campaign release-passport root does not match Buildchain',
+  );
+}
+
+function verifyPreviousPublicCandidate(campaign) {
+  qualifyCampaign(
+    campaign.previousPublic &&
+      SHA1_PATTERN.test(campaign.previousPublic.sourceCommit || '') &&
+      SHA256_ROOT_PATTERN.test(
+        campaign.previousPublic.channelIndexRoot || '',
+      ) &&
+      SHA256_ROOT_PATTERN.test(
+        campaign.previousPublic.releasePassportRoot || '',
+      ) &&
+      SHA256_ROOT_PATTERN.test(campaign.previousPublic.manifestRoot || '') &&
+      SHA256_ROOT_PATTERN.test(campaign.previousPublic.artifactRoot || '') &&
+      compareSemver(
+        campaign.previousPublic.productVersion,
+        campaign.candidate.productVersion,
+      ) < 0,
+    'qualification-campaign-previous-public-invalid',
+    'campaign must start from one exact older public version',
+  );
+}
+
+function verifyCampaignExecution(manifest, campaign, contract) {
+  qualifyCampaign(
+    JSON.stringify(campaign.invocation?.argv) ===
+      JSON.stringify(contract.requiredCommand) &&
+      Number.isInteger(campaign.invocation?.confirmationCount) &&
+      campaign.invocation.confirmationCount >= 0 &&
+      campaign.invocation.confirmationCount <= 1,
+    'qualification-campaign-command-mismatch',
+    'campaign must use the exact one-command update surface with at most one confirmation',
+  );
+  qualifyCampaign(
+    campaign.result?.state === 'complete' &&
+      campaign.result?.observedVersion === manifest.productVersion &&
+      SHA256_ROOT_PATTERN.test(campaign.result?.receiptRoot || ''),
+    'qualification-campaign-result-mismatch',
+    'campaign result does not prove the exact candidate and receipt',
+  );
   for (const check of contract.requiredSmokeChecks) {
-    if (campaign.result?.smokeChecks?.[check] !== true)
-      fail(
-        'qualification-campaign-smoke-missing',
-        `campaign smoke did not pass: ${check}`,
-      );
+    qualifyCampaign(
+      campaign.result?.smokeChecks?.[check] === true,
+      'qualification-campaign-smoke-missing',
+      `campaign smoke did not pass: ${check}`,
+    );
   }
-  if (
-    campaign.activation?.activeWorkContinues !== true ||
-    campaign.activation?.existingWorkRuntime !== 'previous-pinned' ||
-    campaign.activation?.newWorkActivation !==
-      'fenced-safe-point-or-next-command' ||
-    campaign.activation?.supervisorActionRequired !== false
-  )
-    fail(
-      'qualification-campaign-activation-mismatch',
-      'campaign activation evidence does not preserve the declared work boundary',
-    );
+  qualifyCampaign(
+    campaign.activation?.activeWorkContinues === true &&
+      campaign.activation?.existingWorkRuntime === 'previous-pinned' &&
+      campaign.activation?.newWorkActivation ===
+        'fenced-safe-point-or-next-command' &&
+      campaign.activation?.supervisorActionRequired === false,
+    'qualification-campaign-activation-mismatch',
+    'campaign activation evidence does not preserve the declared work boundary',
+  );
+}
+
+function verifyCampaignFaults(campaign, contract) {
   const faults = new Map((campaign.faults || []).map((row) => [row.id, row]));
-  if (faults.size !== (campaign.faults || []).length)
-    fail(
-      'qualification-campaign-fault-duplicate',
-      'campaign fault identities must be unique',
-    );
+  qualifyCampaign(
+    faults.size === (campaign.faults || []).length,
+    'qualification-campaign-fault-duplicate',
+    'campaign fault identities must be unique',
+  );
   for (const faultId of contract.requiredFaults) {
     const row = faults.get(faultId);
-    if (
-      !row ||
-      !contract.permittedFaultVerdicts.includes(row.verdict) ||
-      row.previousAuthorityRetained !== true ||
-      !SHA256_ROOT_PATTERN.test(row.receiptRoot || '') ||
-      typeof row.recoveryAction !== 'string' ||
-      row.recoveryAction.length === 0
-    )
-      fail(
-        'qualification-campaign-fault-missing',
-        `campaign fault evidence is missing or non-qualifying: ${faultId}`,
-      );
-  }
-  if (
-    campaign.nonClaims?.powerLossDurability !== false ||
-    campaign.nonClaims?.maliciousTamperRecovery !== false ||
-    campaign.nonClaims?.uninterruptedActiveWork !== false
-  )
-    fail(
-      'qualification-campaign-nonclaim-mismatch',
-      'campaign must keep power-loss, malicious-tamper, and uninterrupted-work claims false',
+    qualifyCampaign(
+      row &&
+        contract.permittedFaultVerdicts.includes(row.verdict) &&
+        row.previousAuthorityRetained === true &&
+        SHA256_ROOT_PATTERN.test(row.receiptRoot || '') &&
+        typeof row.recoveryAction === 'string' &&
+        row.recoveryAction.length > 0,
+      'qualification-campaign-fault-missing',
+      `campaign fault evidence is missing or non-qualifying: ${faultId}`,
     );
+  }
+}
+
+function verifyCampaignClaimsAndDocumentation(campaign, contract) {
+  qualifyCampaign(
+    campaign.nonClaims?.powerLossDurability === false &&
+      campaign.nonClaims?.maliciousTamperRecovery === false &&
+      campaign.nonClaims?.uninterruptedActiveWork === false,
+    'qualification-campaign-nonclaim-mismatch',
+    'campaign must keep power-loss, malicious-tamper, and uninterrupted-work claims false',
+  );
   const documentationPaths = new Set(campaign.documentationPaths || []);
   for (const required of contract.documentation.requiredPaths) {
-    if (!documentationPaths.has(required))
-      fail(
-        'qualification-campaign-docs-missing',
-        `campaign does not bind required documentation: ${required}`,
-      );
+    qualifyCampaign(
+      documentationPaths.has(required),
+      'qualification-campaign-docs-missing',
+      `campaign does not bind required documentation: ${required}`,
+    );
   }
+}
+
+function verifyUpdateCampaign(manifest, campaign, contract, options = {}) {
+  verifyCampaignEnvelope(campaign, contract, options);
+  verifyCampaignIdentity(manifest, campaign, contract);
+  verifyCampaignCandidateRoots(manifest, campaign, options);
+  verifyPreviousPublicCandidate(campaign);
+  verifyCampaignExecution(manifest, campaign, contract);
+  verifyCampaignFaults(campaign, contract);
+  verifyCampaignClaimsAndDocumentation(campaign, contract);
   return campaign;
 }
 

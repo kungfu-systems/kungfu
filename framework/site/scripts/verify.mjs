@@ -26,6 +26,110 @@ function check(condition, message, failures) {
   if (!condition) failures.push(message);
 }
 
+function verifySiteSources(bundle, failures) {
+  const sourceIds = new Set(bundle.sources?.map((entry) => entry.id));
+  for (const sourceId of bundle.siteExperienceDefaults?.kfd3?.sourceIds || []) {
+    check(
+      sourceIds.has(sourceId),
+      `site experience KFD-3 source is missing: ${sourceId}`,
+      failures,
+    );
+  }
+  for (const source of bundle.sources || []) {
+    const absolute = assertRelativeSourcePath(source.path);
+    const packaged = path.resolve(DIST_ROOT, source.packagePath || '');
+    check(
+      fileRoot(absolute) === source.contentRoot,
+      `source digest drifted: ${source.path}`,
+      failures,
+    );
+    check(
+      packaged.startsWith(`${DIST_ROOT}${path.sep}`) && fs.existsSync(packaged),
+      `packaged source is missing: ${source.path}`,
+      failures,
+    );
+    if (fs.existsSync(packaged)) {
+      check(
+        fileRoot(packaged) === source.contentRoot &&
+          fs.statSync(packaged).size === source.byteLength,
+        `packaged source bytes drifted: ${source.path}`,
+        failures,
+      );
+    }
+    check(
+      source.url ===
+        `${bundle.source.repository}/blob/${bundle.source.revision}/${source.path}`,
+      `source URL drifted: ${source.path}`,
+      failures,
+    );
+  }
+  return sourceIds;
+}
+
+function verifySiteSurfaces(bundle, sourceIds, failures) {
+  const surfaceIds = new Set();
+  const routes = new Set();
+  for (const surface of bundle.surfaces || []) {
+    check(
+      !surfaceIds.has(surface.id),
+      `duplicate surface id ${surface.id}`,
+      failures,
+    );
+    check(
+      !routes.has(surface.route),
+      `duplicate surface route ${surface.route}`,
+      failures,
+    );
+    surfaceIds.add(surface.id);
+    routes.add(surface.route);
+    check(
+      surface.knownLimits?.length > 0,
+      `${surface.id} has no known limits`,
+      failures,
+    );
+    check(
+      surface.sourceIds?.length > 0,
+      `${surface.id} has no source bindings`,
+      failures,
+    );
+    for (const sourceId of surface.sourceIds || []) {
+      check(
+        sourceIds.has(sourceId),
+        `${surface.id} has unknown source ${sourceId}`,
+        failures,
+      );
+    }
+  }
+  for (const id of [
+    'overview',
+    'format',
+    'primitives',
+    'runtime',
+    'abi',
+    'sdk',
+    'extensions',
+    'products',
+    'qualification',
+    'decisions',
+    'horizons',
+  ]) {
+    check(
+      surfaceIds.has(id),
+      `required product surface missing: ${id}`,
+      failures,
+    );
+  }
+  return surfaceIds;
+}
+
+function verifySiteCollections(bundle, failures) {
+  return verifySiteSurfaces(
+    bundle,
+    verifySiteSources(bundle, failures),
+    failures,
+  );
+}
+
 function main() {
   const failures = [];
   for (const file of [
@@ -286,94 +390,7 @@ function main() {
     'agent index format authority projection drifted',
     failures,
   );
-  const sourceIds = new Set(bundle.sources?.map((entry) => entry.id));
-  for (const sourceId of bundle.siteExperienceDefaults?.kfd3?.sourceIds || []) {
-    check(
-      sourceIds.has(sourceId),
-      `site experience KFD-3 source is missing: ${sourceId}`,
-      failures,
-    );
-  }
-  for (const source of bundle.sources || []) {
-    const absolute = assertRelativeSourcePath(source.path);
-    const packaged = path.resolve(DIST_ROOT, source.packagePath || '');
-    check(
-      fileRoot(absolute) === source.contentRoot,
-      `source digest drifted: ${source.path}`,
-      failures,
-    );
-    check(
-      packaged.startsWith(`${DIST_ROOT}${path.sep}`) && fs.existsSync(packaged),
-      `packaged source is missing: ${source.path}`,
-      failures,
-    );
-    if (fs.existsSync(packaged)) {
-      check(
-        fileRoot(packaged) === source.contentRoot &&
-          fs.statSync(packaged).size === source.byteLength,
-        `packaged source bytes drifted: ${source.path}`,
-        failures,
-      );
-    }
-    check(
-      source.url ===
-        `${bundle.source.repository}/blob/${bundle.source.revision}/${source.path}`,
-      `source URL drifted: ${source.path}`,
-      failures,
-    );
-  }
-  const surfaceIds = new Set();
-  const routes = new Set();
-  for (const surface of bundle.surfaces || []) {
-    check(
-      !surfaceIds.has(surface.id),
-      `duplicate surface id ${surface.id}`,
-      failures,
-    );
-    check(
-      !routes.has(surface.route),
-      `duplicate surface route ${surface.route}`,
-      failures,
-    );
-    surfaceIds.add(surface.id);
-    routes.add(surface.route);
-    check(
-      surface.knownLimits?.length > 0,
-      `${surface.id} has no known limits`,
-      failures,
-    );
-    check(
-      surface.sourceIds?.length > 0,
-      `${surface.id} has no source bindings`,
-      failures,
-    );
-    for (const sourceId of surface.sourceIds || []) {
-      check(
-        sourceIds.has(sourceId),
-        `${surface.id} has unknown source ${sourceId}`,
-        failures,
-      );
-    }
-  }
-  for (const id of [
-    'overview',
-    'format',
-    'primitives',
-    'runtime',
-    'abi',
-    'sdk',
-    'extensions',
-    'products',
-    'qualification',
-    'decisions',
-    'horizons',
-  ]) {
-    check(
-      surfaceIds.has(id),
-      `required product surface missing: ${id}`,
-      failures,
-    );
-  }
+  const surfaceIds = verifySiteCollections(bundle, failures);
   const formatSurface = bundle.surfaces.find((entry) => entry.id === 'format');
   check(
     formatSurface?.maturity === 'staged' &&

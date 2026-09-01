@@ -478,6 +478,18 @@ json mutation_authorization_plan(const snapshot &value, const lifecycle_view &li
                          load_plan, assess_package);
 }
 
+json development_source_bootstrap_policy() {
+  return {{"schema", "kungfu.kfx-development-source-bootstrap/v1"},
+          {"sourceCandidate", "sourceRoot/extensions/system/kfx-manager"},
+          {"workspaceScope", "same-git-common-directory local workspace only"},
+          {"runtimePlacement", "workspaceRoot/.kungfu/runtime"},
+          {"operations", json::array({"install"})},
+          {"grantedCapabilities", json::array({"kfxControl"})},
+          {"publicationAllowed", false},
+          {"sharedInstallationAllowed", false},
+          {"externalCapabilitiesAllowed", false}};
+}
+
 json control_bootstrap_policy() {
   const json identity = {
       {"schema", "kungfu.kfx.control-bootstrap-policy/v1"},
@@ -496,6 +508,7 @@ json control_bootstrap_policy() {
         {"originAuthority", false},
         {"productAssemblyAuthority", false},
         {"receiptsBypassPolicy", false}}},
+      {"developmentSourceBootstrap", development_source_bootstrap_policy()},
       {"recovery",
        {{"lastKnownGood", "retained-package-referenced-by-sealed-kfx-episode-fact"},
         {"corruptOrMissingActive", "deterministic-safe-mode"},
@@ -505,6 +518,48 @@ json control_bootstrap_policy() {
   return result;
 }
 
+const std::vector<const char *> &control_authority_roots(bool development_source_bootstrap) {
+  static const std::vector<const char *> development = {
+      "corePolicyRoot",      "requestedPolicyRoot", "policyRoot", "authorizationPlanRoot", "capabilityDeclarationRoot",
+      "capabilityGrantRoot", "warrantRoot"};
+  static const std::vector<const char *> production = {"reportRoot",
+                                                       "admissionPlanRoot",
+                                                       "corePolicyRoot",
+                                                       "requestedPolicyRoot",
+                                                       "policyRoot",
+                                                       "authorizationPlanRoot",
+                                                       "capabilityDeclarationRoot",
+                                                       "capabilityGrantRoot",
+                                                       "warrantRoot"};
+  return development_source_bootstrap ? development : production;
+}
+
+bool authority_roots_present(const json &authority, bool development_source_bootstrap) {
+  return std::all_of(control_authority_roots(development_source_bootstrap).begin(),
+                     control_authority_roots(development_source_bootstrap).end(), [&](const char *root) {
+                       return authority.contains(root) && authority.at(root).is_string() &&
+                              !authority.at(root).get<std::string>().empty();
+                     });
+}
+
+bool development_authority_is_confined(const json &authority, const json &granted) {
+  return authority.value("reportRoot", json(nullptr)).is_null() &&
+         authority.value("admissionPlanRoot", json(nullptr)).is_null() && granted == json::array({"kfxControl"});
+}
+
+void validate_control_authority(json &reasons, const json &package, const json &policy) {
+  const auto authority = package.value("authority", json::object());
+  const auto granted = package.value("grantedCapabilities", json::array());
+  const bool development_source_bootstrap = authority.value("mode", "") == "development-source-bootstrap";
+  if (!authority_roots_present(authority, development_source_bootstrap) ||
+      (development_source_bootstrap && !development_authority_is_confined(authority, granted)))
+    reasons.push_back("KF_KFX_CONTROL_AUTHORITY_MISSING");
+  for (const auto &required : policy.at("requiredCapabilities")) {
+    if (std::find(granted.begin(), granted.end(), required) == granted.end())
+      reasons.push_back("KF_KFX_CONTROL_GRANT_MISSING");
+  }
+}
+
 json validate_control_package(const json &package, bool require_authority = false) {
   const auto policy = control_bootstrap_policy();
   json reasons = json::array();
@@ -512,30 +567,12 @@ json validate_control_package(const json &package, bool require_authority = fals
     reasons.push_back("KF_KFX_CONTROL_CANDIDATE_MISSING");
   } else {
     const auto capabilities = package.value("declaredCapabilities", json::array());
-    for (const auto &required : policy.at("requiredCapabilities")) {
-      if (std::find(capabilities.begin(), capabilities.end(), required) == capabilities.end())
-        reasons.push_back("KF_KFX_CONTROL_CAPABILITY_MISSING");
-    }
-    for (const auto &capability : capabilities) {
-      if (std::find(policy.at("maximumCapabilities").begin(), policy.at("maximumCapabilities").end(), capability) ==
-          policy.at("maximumCapabilities").end())
-        reasons.push_back("KF_KFX_CONTROL_SELF_GRANT");
-    }
-    if (require_authority) {
-      const auto authority = package.value("authority", json::object());
-      const auto granted = package.value("grantedCapabilities", json::array());
-      for (const auto *root :
-           {"reportRoot", "admissionPlanRoot", "corePolicyRoot", "requestedPolicyRoot", "policyRoot",
-            "authorizationPlanRoot", "capabilityDeclarationRoot", "capabilityGrantRoot", "warrantRoot"}) {
-        if (!authority.contains(root) || !authority.at(root).is_string() ||
-            authority.at(root).get<std::string>().empty())
-          reasons.push_back("KF_KFX_CONTROL_AUTHORITY_MISSING");
-      }
-      for (const auto &required : policy.at("requiredCapabilities")) {
-        if (std::find(granted.begin(), granted.end(), required) == granted.end())
-          reasons.push_back("KF_KFX_CONTROL_GRANT_MISSING");
-      }
-    }
+    if (!capabilities_cover(capabilities, policy.at("requiredCapabilities")))
+      reasons.push_back("KF_KFX_CONTROL_CAPABILITY_MISSING");
+    if (!capabilities_cover(policy.at("maximumCapabilities"), capabilities))
+      reasons.push_back("KF_KFX_CONTROL_SELF_GRANT");
+    if (require_authority)
+      validate_control_authority(reasons, package, policy);
   }
   return {{"schema", "kungfu.kfx.control-bootstrap-verification/v1"},
           {"controllerId", KFX_CONTROL_SUITE_ID},
@@ -668,6 +705,20 @@ json control_status(const lifecycle_view &lifecycle) {
   return result;
 }
 
+bool development_source_bootstrap(const json &mutation_authorization) {
+  return mutation_authorization.at("mode") == "development-source-bootstrap";
+}
+
+const char *control_plan_authority(const json &mutation_authorization) {
+  if (development_source_bootstrap(mutation_authorization))
+    return "development-source-local-only";
+  const auto assessment = mutation_authorization.at("assessment");
+  if (assessment.is_null() || assessment.at("trustReport").value("admissionGrade", "") != "kfd-attested")
+    refuse("KF_KFX_CONTROL_TRUST_REJECTED",
+           "Control Suite requires exact KFD eligibility before public Fact/Work authorization");
+  return "public-kfx-plan-plus-fact-work-settlement";
+}
+
 json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const json &request, const json &load_plan) {
   const auto operation = request.value("operation", "");
   if (operation != "install" && operation != "update")
@@ -683,10 +734,7 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
   }
   const auto status = control_status(lifecycle);
   const auto mutation_authorization = mutation_authorization_plan(value, lifecycle, request, load_plan);
-  const auto assessment = mutation_authorization.at("assessment");
-  if (assessment.is_null() || assessment.at("trustReport").value("admissionGrade", "") != "kfd-attested")
-    refuse("KF_KFX_CONTROL_TRUST_REJECTED",
-           "Control Suite requires exact KFD eligibility before public Fact/Work authorization");
+  const auto authority = control_plan_authority(mutation_authorization);
   const json identity = {
       {"schema", "kungfu.kfx.control-suite-plan/v1"},
       {"controllerId", KFX_CONTROL_SUITE_ID},
@@ -711,7 +759,7 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
       {"warrantRoot", mutation_authorization.at("warrantRoot")},
       {"allowed", true},
       {"requiresAuthorization", true},
-      {"authority", "public-kfx-plan-plus-fact-work-settlement"}};
+      {"authority", authority}};
   auto result = identity;
   result["controlPlanRoot"] = root_of(identity);
   result["loadPlan"] = load_plan;
@@ -1273,6 +1321,7 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
       }
       accepted_package["authority"] = {
           {"schema", "kungfu.kfx-package-authority/v1"},
+          {"mode", authorization.at("mode")},
           {"packageRoot", accepted_package.at("packageRoot")},
           {"manifestRoot", accepted_package.at("manifestRoot")},
           {"reportRoot", authorization.at("authorityRoots").at("reportRoot")},
