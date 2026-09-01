@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8937,
+  "generation": 8938,
   "fencingCounter": 855,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:9b382de589ad2d09f4daced76050e3bd525e3bf49625464400d65885d4847445",
@@ -51,8 +51,13 @@
     "issuedAt": "2026-09-01T15:55:11.039Z",
     "expiresAt": "2026-09-01T17:30:41.723Z",
     "fencingToken": "sha256:e3b6b05f6e482c14975afc649b79ca1cbacfdac940d50e71f37d64414d3ca514",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-01T16:00:41.723Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-01T16:00:41.723Z",
+    "nativeProofRoot": "sha256:fdacb240380ee0a89108e1c13447067f6e3ce5a2d24cf8ad9ef5fe3b9c039349",
+    "nativeExecutionReceiptRoot": "sha256:fdb2da1b904ecab09537447c3d90fff0cb58f412ca9a13fdc9e819bd097ddaf3",
+    "nativeProofReuseRoot": "sha256:73a3a224268e51bfb5259ba68955d734928426c28fe7ce95a4371ec31551ac37",
+    "qualificationReceiptRoot": "sha256:56063c05d1e920008bbd41c189d03df5082ead1c7454c6abfa558d35b78b4407",
+    "qualifiedAt": "2026-09-01T16:01:14.616Z"
   },
   "candidates": [
     {
@@ -63640,10 +63645,10 @@
       "sourceWorkflowRunId": 33526903109,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T15:45:05.744Z",
-      "updatedAt": "2026-09-01T16:00:41.723Z",
+      "updatedAt": "2026-09-01T16:01:14.616Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/tui/src/main.tsx",
@@ -63655,6 +63660,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T16:00:41.723Z",
-  "stateRoot": "sha256:62f9cb5942350a66ef25280665decdd226738b36446476dddc8b6e64c1234928"
+  "updatedAt": "2026-09-01T16:01:14.616Z",
+  "stateRoot": "sha256:286ae7440eb42269cbe0058b35a02326474a984f785dbf9765ee2bf2a49329c4"
 }
