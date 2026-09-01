@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "8b5c5bffb86ec902b7878cfcbf2991053dca6e32",
-  "changeRoot": "sha256:f6727284abcf8a22910020952b78323702e4cc8cce6c48a069bba50d18cdd697",
+  "changeRoot": "sha256:02435ed8389f8d098710ef0072faac4dd9ec1f25492f44d4ff9756a52ac5b672",
   "changes": [
     {
       "baseContentRoot": "sha256:9283a652c14d9bc993ded4036a9070251edb1082eb7dfd6e03a327ee5d5b2d84",
@@ -17,19 +17,19 @@
     },
     {
       "baseContentRoot": "sha256:fa62576c64d6e3bafad245e9c5fc1fda678818b5ac8e41efe25a9d990627ac5f",
-      "contentRoot": "sha256:6f1dcfa4cf7e8834d65d4dc8590e4f31516582ef4e8f9b94373bda8c58f8eb07",
+      "contentRoot": "sha256:7c607c66ce34390aa89ca165af836d8c7306d06f1425174fd73b09d1703c2e87",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:d653616d98fb5b65685e2f1d707db90830f90d7d6bf399c90f75089912a3bcea",
-      "contentRoot": "sha256:c9ab341181745d7df1aa4c383c57265d938a8b0beae8b38caf13ac4b01c7485d",
+      "contentRoot": "sha256:a0330dc0f0ef0952938860a977f80dbff5cef32223619a1c03f98199e2ac1037",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:483a8133a23d950ec4012ae5e09faa0d9aa2e7731c30baeb60bf372e1620557d",
-      "contentRoot": "sha256:c3df07023519fc30055f359369b947a78b9ad2704a0ed436cd317193bb53bfae",
+      "contentRoot": "sha256:9c11ab5a64a61b86a86e73454cec1161a9091e36c1793c4842d6b5c123587c9e",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -101,13 +101,13 @@
     },
     {
       "baseContentRoot": "sha256:fa62576c64d6e3bafad245e9c5fc1fda678818b5ac8e41efe25a9d990627ac5f",
-      "contentRoot": "sha256:6f1dcfa4cf7e8834d65d4dc8590e4f31516582ef4e8f9b94373bda8c58f8eb07",
+      "contentRoot": "sha256:7c607c66ce34390aa89ca165af836d8c7306d06f1425174fd73b09d1703c2e87",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:483a8133a23d950ec4012ae5e09faa0d9aa2e7731c30baeb60bf372e1620557d",
-      "contentRoot": "sha256:c3df07023519fc30055f359369b947a78b9ad2704a0ed436cd317193bb53bfae",
+      "contentRoot": "sha256:9c11ab5a64a61b86a86e73454cec1161a9091e36c1793c4842d6b5c123587c9e",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -430,11 +430,11 @@
     "profiles-suites",
     "registry-admission-lifecycle"
   ],
-  "rationale": "Wave 6 remains an internal-only responsibility extraction after rebasing onto the protected hidden-state delivery; public site facets, schemas, and navigation contracts are unchanged.",
+  "rationale": "Wave 6 remains an internal-only responsibility extraction after rebasing and refreshing exact-head KFD evidence; public site facets, schemas, and navigation contracts are unchanged.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:8e749585ecd80c890324efb19d3cf5f0782bf74e6de77cec92edb36e86c778eb"
+  "proofRoot": "sha256:a20c728a8f90a6a44948202654a9f6ccbafed7b5bf275f3bdef080a9c827420d"
 }
