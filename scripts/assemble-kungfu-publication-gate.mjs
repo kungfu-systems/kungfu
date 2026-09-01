@@ -248,6 +248,50 @@ export function resolveGitTreeSha({ repositoryRoot, sourceSha }) {
   return treeSha;
 }
 
+export function resolvePublicationSourceTreeSha({
+  repositoryRoot,
+  evidenceSourceSha,
+  targetSourceSha = '',
+  expectedSourceTreeSha = '',
+}) {
+  if (!/^[0-9a-f]{40}$/.test(evidenceSourceSha))
+    throw new Error('promotion source SHA must be an exact commit SHA');
+  try {
+    return resolveGitTreeSha({
+      repositoryRoot,
+      sourceSha: evidenceSourceSha,
+    });
+  } catch (error) {
+    if (!targetSourceSha) throw error;
+  }
+
+  if (!/^[0-9a-f]{40}$/.test(targetSourceSha))
+    throw new Error(
+      'publication target source SHA must be an exact commit SHA',
+    );
+  if (!/^[0-9a-f]{40}$/.test(expectedSourceTreeSha))
+    throw new Error(
+      'publication evidence source tree must be an exact Git tree SHA',
+    );
+
+  let targetSourceTreeSha;
+  try {
+    targetSourceTreeSha = resolveGitTreeSha({
+      repositoryRoot,
+      sourceSha: targetSourceSha,
+    });
+  } catch {
+    throw new Error(
+      `publication target commit is unavailable in the publication subject: ${targetSourceSha}`,
+    );
+  }
+  if (targetSourceTreeSha !== expectedSourceTreeSha)
+    throw new Error(
+      'publication target source tree does not match the release candidate',
+    );
+  return targetSourceTreeSha;
+}
+
 export function validateKungfuReleaseCandidatePassport({
   candidate,
   passport,
@@ -268,6 +312,8 @@ export async function assembleKungfuPublicationGate({
   evidenceRoot,
   runtimeRoot,
   sourceSha,
+  targetSourceSha = '',
+  evidenceSourceTreeSha = '',
   targetRef,
   outputPath,
 }) {
@@ -344,9 +390,18 @@ export async function assembleKungfuPublicationGate({
     throw new Error(
       `release-candidate passport is invalid: ${passportValidation.errors.join('; ')}`,
     );
-  const promotionTree = resolveGitTreeSha({
+  if (
+    evidenceSourceTreeSha &&
+    evidenceSourceTreeSha !== passport.source.treeHash
+  )
+    throw new Error(
+      'publication evidence source tree does not match the release candidate passport',
+    );
+  const promotionTree = resolvePublicationSourceTreeSha({
     repositoryRoot: subjectRoot,
-    sourceSha,
+    evidenceSourceSha: sourceSha,
+    targetSourceSha,
+    expectedSourceTreeSha: evidenceSourceTreeSha,
   });
 
   const controllerValidation = controllers.validateControllerReceipt(
@@ -500,6 +555,9 @@ async function main() {
     evidenceRoot: process.env.BUILDCHAIN_PUBLICATION_EVIDENCE_ROOT,
     runtimeRoot: process.env.BUILDCHAIN_PUBLICATION_AUTHORITY_RUNTIME_ROOT,
     sourceSha: process.env.BUILDCHAIN_PUBLICATION_SOURCE_SHA,
+    targetSourceSha: process.env.BUILDCHAIN_PUBLICATION_TARGET_SOURCE_SHA || '',
+    evidenceSourceTreeSha:
+      process.env.BUILDCHAIN_PUBLICATION_EVIDENCE_SOURCE_TREE || '',
     targetRef: process.env.BUILDCHAIN_PUBLICATION_TARGET_REF,
     outputPath: process.env.BUILDCHAIN_PUBLICATION_GATE_RESULT_PATH,
   });

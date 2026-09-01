@@ -6,11 +6,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   bindKungfuPublicationGateAggregate,
   createKungfuPublicationGateAggregate,
   resolveGitTreeSha,
+  resolvePublicationSourceTreeSha,
   validateKungfuReleaseCandidatePassport,
 } from './assemble-kungfu-publication-gate.mjs';
 
@@ -92,6 +93,54 @@ function gitTreeFixture() {
     evidenceSourceTreeSha,
     equivalentTargetSourceSha,
     differentTargetSourceSha,
+  };
+}
+
+function shallowPublicationSubjectFixture({ differentTarget = false } = {}) {
+  const repositoryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-publication-source-test-'),
+  );
+  git(repositoryRoot, 'init', '--quiet');
+  git(repositoryRoot, 'config', 'user.name', 'Kungfu Test');
+  git(repositoryRoot, 'config', 'user.email', 'test@kungfu.invalid');
+  fs.writeFileSync(path.join(repositoryRoot, 'candidate.txt'), 'candidate\n');
+  git(repositoryRoot, 'add', 'candidate.txt');
+  git(repositoryRoot, 'commit', '--quiet', '-m', 'candidate');
+  const evidenceSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
+  const evidenceSourceTreeSha = git(repositoryRoot, 'rev-parse', 'HEAD^{tree}');
+
+  if (differentTarget) {
+    fs.writeFileSync(path.join(repositoryRoot, 'candidate.txt'), 'different\n');
+    git(repositoryRoot, 'add', 'candidate.txt');
+    git(repositoryRoot, 'commit', '--quiet', '-m', 'different target');
+  } else {
+    git(repositoryRoot, 'commit', '--quiet', '--allow-empty', '-m', 'target');
+  }
+  const targetSourceSha = git(repositoryRoot, 'rev-parse', 'HEAD');
+  const subjectParent = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-publication-subject-test-'),
+  );
+  const subjectRoot = path.join(subjectParent, 'subject');
+  execFileSync(
+    'git',
+    [
+      'clone',
+      '--quiet',
+      '--depth',
+      '1',
+      pathToFileURL(repositoryRoot).href,
+      subjectRoot,
+    ],
+    { stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+
+  return {
+    repositoryRoot,
+    subjectParent,
+    subjectRoot,
+    evidenceSourceSha,
+    evidenceSourceTreeSha,
+    targetSourceSha,
   };
 }
 
@@ -212,6 +261,71 @@ test('publication Gate aggregate rejects candidate reuse for a different target 
     );
   } finally {
     fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+  }
+});
+
+test('publication source tree uses an exact equivalent target in a depth-1 subject', () => {
+  const fixture = shallowPublicationSubjectFixture();
+  try {
+    const evidenceLookup = spawnSync(
+      'git',
+      ['cat-file', '-e', `${fixture.evidenceSourceSha}^{commit}`],
+      { cwd: fixture.subjectRoot },
+    );
+    assert.notEqual(evidenceLookup.status, 0);
+    assert.equal(
+      resolvePublicationSourceTreeSha({
+        repositoryRoot: fixture.subjectRoot,
+        evidenceSourceSha: fixture.evidenceSourceSha,
+        targetSourceSha: fixture.targetSourceSha,
+        expectedSourceTreeSha: fixture.evidenceSourceTreeSha,
+      }),
+      fixture.evidenceSourceTreeSha,
+    );
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.subjectParent, { recursive: true, force: true });
+  }
+});
+
+test('publication source tree rejects a different depth-1 target tree', () => {
+  const fixture = shallowPublicationSubjectFixture({ differentTarget: true });
+  try {
+    assert.throws(
+      () =>
+        resolvePublicationSourceTreeSha({
+          repositoryRoot: fixture.subjectRoot,
+          evidenceSourceSha: fixture.evidenceSourceSha,
+          targetSourceSha: fixture.targetSourceSha,
+          expectedSourceTreeSha: fixture.evidenceSourceTreeSha,
+        }),
+      /publication target source tree does not match the release candidate/,
+    );
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.subjectParent, { recursive: true, force: true });
+  }
+});
+
+test('publication source tree rejects an unavailable exact target commit', () => {
+  const fixture = shallowPublicationSubjectFixture();
+  try {
+    const unavailableTargetSourceSha = 'f'.repeat(40);
+    assert.throws(
+      () =>
+        resolvePublicationSourceTreeSha({
+          repositoryRoot: fixture.subjectRoot,
+          evidenceSourceSha: fixture.evidenceSourceSha,
+          targetSourceSha: unavailableTargetSourceSha,
+          expectedSourceTreeSha: fixture.evidenceSourceTreeSha,
+        }),
+      new RegExp(
+        `publication target commit is unavailable in the publication subject: ${unavailableTargetSourceSha}`,
+      ),
+    );
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.subjectParent, { recursive: true, force: true });
   }
 });
 
