@@ -47,8 +47,11 @@ mod promote_convergence;
 mod promote_desktop;
 #[path = "promote_desktop_fs.rs"]
 mod promote_desktop_fs;
+#[path = "promote_listing.rs"]
+mod promote_listing;
 use promote_desktop::*;
 use promote_desktop_fs::DesktopCommit;
+pub use promote_listing::run_builds;
 
 struct BuildEntry {
     slot: PathBuf,
@@ -75,11 +78,21 @@ struct BuildEntry {
 }
 
 #[derive(Default)]
-struct ListOptions {
-    verbose: bool,
-    json: bool,
-    no_truncate: bool,
-    verify_current: bool,
+struct PromoteOptions {
+    launch: bool,
+    force: bool,
+    check: bool,
+    rollback: bool,
+    preview: bool,
+    adopt_installed: bool,
+    allow_nonlinear: bool,
+    build_arg: Option<String>,
+}
+
+struct InstalledProduct {
+    sha: String,
+    build_id: String,
+    release_cut_root: String,
 }
 
 fn registry_dir() -> PathBuf {
@@ -452,6 +465,34 @@ fn select_preview_build<'a>(
     entry
 }
 
+/// Select the exact Product built by the current source checkout. This route
+/// deliberately verifies product bytes, not remote delivery state: a developer
+/// must be able to install and exercise their own exact build before it has
+/// been merged or received any external delivery credential.
+fn select_current_source_build<'a>(
+    entries: &'a [BuildEntry],
+    current: &BuildEntry,
+    installed: &str,
+    allow_nonlinear: bool,
+) -> &'a BuildEntry {
+    let entry = select_named_build(entries, &current.name);
+    if !current_payload_valid(entry) {
+        util::die(&format!(
+            "current source build {} failed exact payload verification",
+            entry.name
+        ));
+    }
+    let relation = build_relation(entry, installed, entries.len());
+    if !matches!(relation, GitRelation::Same | GitRelation::Descendant) && !allow_nonlinear {
+        util::die(&format!(
+            "current source build {} is {} and requires --allow-nonlinear after review",
+            entry.name,
+            relation.as_str()
+        ));
+    }
+    entry
+}
+
 fn print_builds_json(entries: &[BuildEntry], payload_verified: bool) {
     let installed = installed_sha();
     println!("{{");
@@ -516,135 +557,245 @@ fn print_builds_json(entries: &[BuildEntry], payload_verified: bool) {
     println!("}}");
 }
 
-pub fn run_builds(root: Option<&Path>, args: &[String]) -> ! {
-    let mut options = ListOptions::default();
-    for arg in args {
-        match arg.as_str() {
-            "--verbose" => options.verbose = true,
-            "--json" => options.json = true,
-            "--no-truncate" => options.no_truncate = true,
-            "--verify-current" => options.verify_current = true,
-            _ => util::die(
-                "usage: shifu builds [--verbose] [--json] [--no-truncate] [--verify-current]",
-            ),
-        }
+fn apply_promote_flag(options: &mut PromoteOptions, arg: &str) -> bool {
+    match arg {
+        "--launch" => options.launch = true,
+        "--force" => options.force = true,
+        "--check" => options.check = true,
+        "--rollback" => options.rollback = true,
+        "--preview" => options.preview = true,
+        "--adopt-installed" => options.adopt_installed = true,
+        "--allow-nonlinear" => options.allow_nonlinear = true,
+        _ => return false,
     }
-    let entries = if options.verify_current {
-        let root =
-            root.unwrap_or_else(|| util::die("--verify-current requires a Kungfu source checkout"));
-        let expected_sha = git_head(root);
-        let entry = current_entry_at(root, &registry_dir(), &expected_sha)
-            .unwrap_or_else(|error| util::die(&error));
-        if !current_payload_valid(&entry) {
-            util::die(&format!(
-                "current registered build {} failed exact payload verification",
-                entry.name
-            ));
-        }
-        vec![entry]
-    } else {
-        entries()
-    };
-    if entries.is_empty() {
-        no_builds_hint();
-    }
-    if options.json {
-        print_builds_json(&entries, options.verify_current);
-        std::process::exit(0);
-    }
-    let installed = installed_sha();
-    println!(
-        "{}",
-        style::cyan(&format!(
-            "Registered dev builds ({}, newest first):",
-            host::os_arch()
-        ))
-    );
-    for (index, entry) in entries.iter().enumerate() {
-        let relation = build_relation(entry, &installed, entries.len());
-        let valid = if options.verify_current {
-            current_payload_valid(entry)
-        } else {
-            build_recorded_valid(entry)
-        };
-        let state = state_for(relation, valid, false);
-        println!(
-            "  {} {:10} {:9} {:34} {:10}",
-            style::bold(&format!("[{index}]")),
-            state.as_str(),
-            short_sha(&entry.sha),
-            compact_branch(&entry.branch, options.no_truncate),
-            relation.as_str(),
-        );
-        if options.verbose {
-            let worktree_state = if Path::new(&entry.worktree).is_dir() {
-                ""
-            } else {
-                " (worktree cleaned; stash still usable)"
-            };
-            println!(
-                "      id={} built={} kind={} digest={}\n      artifact={}\n      repo={}\n      worktree={}{}",
-                entry.name,
-                entry.built_at,
-                entry.kind,
-                if entry.digest.is_empty() {
-                    "unknown"
-                } else {
-                    &entry.digest
-                },
-                entry.slot.join(&entry.artifact).display(),
-                if entry.repo.is_empty() {
-                    "unknown"
-                } else {
-                    &entry.repo
-                },
-                entry.worktree,
-                worktree_state
-            );
-        }
-    }
-    println!(
-        "\n{} shifu promote installs the unique descendant; use --build <id> for manual selection",
-        style::cyan("Next:")
-    );
-    std::process::exit(0)
+    true
 }
 
-pub fn run_promote(args: &[String]) -> ! {
-    let mut launch = false;
-    let mut force = false;
-    let mut check = false;
-    let mut rollback = false;
-    let mut preview = false;
-    let mut adopt_installed = false;
-    let mut allow_nonlinear = false;
-    let mut build_arg: Option<String> = None;
+fn parse_promote_options(args: &[String]) -> PromoteOptions {
+    let mut options = PromoteOptions::default();
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
-        match arg.as_str() {
-            "--launch" => launch = true,
-            "--force" => force = true,
-            "--check" => check = true,
-            "--rollback" => rollback = true,
-            "--preview" => preview = true,
-            "--adopt-installed" => adopt_installed = true,
-            "--allow-nonlinear" => allow_nonlinear = true,
-            "--build" => match iter.next() {
-                Some(value) => build_arg = Some(value.clone()),
-                None => util::die(PROMOTE_USAGE),
-            },
-            _ => util::die(PROMOTE_USAGE),
+        if arg == "--build" {
+            options.build_arg = Some(
+                iter.next()
+                    .unwrap_or_else(|| util::die(PROMOTE_USAGE))
+                    .clone(),
+            );
+        } else if !apply_promote_flag(&mut options, arg) {
+            util::die(PROMOTE_USAGE);
         }
     }
+    options
+}
 
-    if adopt_installed
-        && (build_arg.is_none() || rollback || preview || allow_nonlinear || launch || force)
+fn validate_promote_options(options: &PromoteOptions) {
+    if options.adopt_installed
+        && (options.build_arg.is_none()
+            || options.rollback
+            || options.preview
+            || options.allow_nonlinear
+            || options.launch
+            || options.force)
     {
         util::die(
             "--adopt-installed requires --build <id>; --check is its only optional companion",
         );
     }
-    let mut promotion_lock = if check {
+    if options.rollback
+        && (options.build_arg.is_some()
+            || options.allow_nonlinear
+            || options.preview
+            || options.force)
+    {
+        util::die(
+            "--rollback identifies the exact retained Product; do not combine it with \
+             --build, --preview, --allow-nonlinear, or --force",
+        );
+    }
+}
+
+fn installed_product() -> InstalledProduct {
+    let mut release_cut_root = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    if release_cut_root.is_empty() {
+        release_cut_root = native_update::LEGACY_BOOTSTRAP_ROOT.to_string();
+    }
+    InstalledProduct {
+        sha: installed_sha(),
+        build_id: installed_value("KUNGFU_INSTALLED_BUILD_ID"),
+        release_cut_root,
+    }
+}
+
+fn require_rollback_coordinate(installed: &InstalledProduct) {
+    if !rollback_entry_valid(&registry_dir(), &installed.build_id, &installed.sha) {
+        util::die(
+            "installed Product has no verified rollback coordinate; refusing dogfood promotion",
+        );
+    }
+}
+
+fn select_promotion_entry<'a>(
+    root: Option<&Path>,
+    entries: &'a [BuildEntry],
+    options: &PromoteOptions,
+    installed: &InstalledProduct,
+) -> &'a BuildEntry {
+    if options.preview {
+        require_rollback_coordinate(installed);
+        return select_preview_build(
+            entries,
+            &installed.sha,
+            options.build_arg.as_deref(),
+            options.allow_nonlinear,
+        );
+    }
+    if let Some(root) = root.filter(|root| root.join(CURRENT_REGISTRATION_RELATIVE).is_file()) {
+        let current = current_entry_at(root, &registry_dir(), &git_head(root))
+            .unwrap_or_else(|error| util::die(&error));
+        return select_current_source_build(
+            entries,
+            &current,
+            &installed.sha,
+            options.allow_nonlinear,
+        );
+    }
+    require_rollback_coordinate(installed);
+    select_product_build(
+        entries,
+        &installed.sha,
+        options.build_arg.as_deref(),
+        options.allow_nonlinear,
+    )
+}
+
+fn finish_adopted_install(
+    entries: &[BuildEntry],
+    options: &PromoteOptions,
+    lock: &mut Option<PromotionLock>,
+) -> ! {
+    let build_id = options.build_arg.as_deref().expect("validated build id");
+    let entry = entries
+        .iter()
+        .find(|candidate| candidate.name == build_id)
+        .unwrap_or_else(|| util::die("--adopt-installed build id is not registered"));
+    let result = adopt_installed_product(entry, !options.check)
+        .unwrap_or_else(|error| util::die(&format!("installed Product adoption failed: {error}")));
+    if let Some(lock) = lock.take() {
+        lock.release().unwrap_or_else(|error| util::die(&error));
+    }
+    println!("{result}");
+    std::process::exit(0);
+}
+
+fn promotion_already_finished(
+    entry: &BuildEntry,
+    installed: &InstalledProduct,
+    options: &PromoteOptions,
+    lock: &mut Option<PromotionLock>,
+) -> bool {
+    !options.preview
+        && promote_convergence::try_finish(
+            entry,
+            &registry_dir(),
+            &installed.sha,
+            options.check,
+            options.launch,
+            lock,
+        )
+        .unwrap_or_else(|error| util::die(&error))
+}
+
+fn preflight_native_promotion(
+    entry: &BuildEntry,
+    lock: &mut Option<PromotionLock>,
+) -> native_update::NativeUpdateResult {
+    run_native(entry, false, false).unwrap_or_else(|error| {
+        promote_convergence::release_lock(lock)
+            .unwrap_or_else(|release_error| util::die(&release_error));
+        util::die(&format!("native updater preflight failed: {error}"));
+    })
+}
+
+fn print_promotion_plan(
+    action: &str,
+    entry: &BuildEntry,
+    installed: &InstalledProduct,
+    native_plan: &native_update::NativeUpdateResult,
+) -> ! {
+    println!(
+        "{{\"schema\":\"shifu.local-promotion-plan/v1\",\"ok\":true,\
+         \"action\":\"{}\",\"artifactId\":\"{}\",\"sourceCommit\":\"{}\",\
+         \"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"qualified\":{},\
+         \"integrated\":{},\"currentCommit\":\"{}\",\"currentReleaseCutRoot\":\"{}\",\
+         \"targetReleaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\
+         \"cutTransitionRoot\":\"{}\",\"wouldWrite\":false}}",
+        action,
+        json_escape(&entry.name),
+        json_escape(&entry.sha),
+        json_escape(&entry.mainline_ref),
+        json_escape(&entry.mainline_sha),
+        entry.qualified,
+        entry.integrated,
+        json_escape(&installed.sha),
+        json_escape(&installed.release_cut_root),
+        json_escape(&entry.release_cut_root),
+        json_escape(&entry.platform_slice_root),
+        json_escape(&native_plan.transition_root),
+    );
+    std::process::exit(0);
+}
+
+fn promotion_action_label(options: &PromoteOptions) -> &str {
+    if options.rollback {
+        "rolling back to"
+    } else if options.preview {
+        "previewing"
+    } else {
+        "promoting"
+    }
+}
+
+fn start_promotion_transaction(
+    entries: &[BuildEntry],
+    entry: &BuildEntry,
+    action: &str,
+    installed: InstalledProduct,
+    options: &PromoteOptions,
+    native_plan: native_update::NativeUpdateResult,
+) -> ! {
+    eprintln!(
+        "\u{1f94b} {}",
+        style::bold(&format!(
+            "{} dev build {} ({} @ {})",
+            promotion_action_label(options),
+            entry.name,
+            entry.sha,
+            entry.branch
+        ))
+    );
+    write_pending_transaction(&PendingTransaction {
+        state: "desktop-commit-pending".to_string(),
+        action: action.to_string(),
+        artifact_id: entry.name.clone(),
+        target_release_cut_root: entry.release_cut_root.clone(),
+        cut_transition_root: native_plan.transition_root,
+        native_receipt_root: String::new(),
+        previous_build_id: installed.build_id,
+        previous_sha: installed.sha,
+        previous_release_cut_root: installed.release_cut_root,
+        installed_path: String::new(),
+        desktop_backup_path: String::new(),
+        force: options.force,
+        launch: options.launch,
+    });
+    resume_pending_transaction(entries, false);
+    unreachable!()
+}
+
+pub fn run_promote(root: Option<&Path>, args: &[String]) -> ! {
+    let options = parse_promote_options(args);
+    validate_promote_options(&options);
+    let mut promotion_lock = if options.check {
         None
     } else {
         Some(
@@ -653,137 +804,31 @@ pub fn run_promote(args: &[String]) -> ! {
         )
     };
     let entries = entries();
-    resume_pending_transaction(&entries, check);
-    if rollback {
-        if build_arg.is_some() || allow_nonlinear || preview || force {
-            util::die(
-                "--rollback identifies the exact retained Product; do not combine it with \
-                 --build, --preview, --allow-nonlinear, or --force",
-            );
-        }
-        start_retained_rollback(check, launch);
+    resume_pending_transaction(&entries, options.check);
+    if options.rollback {
+        start_retained_rollback(options.check, options.launch);
     }
     if entries.is_empty() {
         no_builds_hint();
     }
-    if adopt_installed {
-        let build_id = build_arg.as_deref().expect("validated build id");
-        let entry = entries
-            .iter()
-            .find(|candidate| candidate.name == build_id)
-            .unwrap_or_else(|| util::die("--adopt-installed build id is not registered"));
-        let result = adopt_installed_product(entry, !check).unwrap_or_else(|error| {
-            util::die(&format!("installed Product adoption failed: {error}"))
-        });
-        if let Some(lock) = promotion_lock.take() {
-            lock.release().unwrap_or_else(|error| util::die(&error));
-        }
-        println!("{result}");
-        std::process::exit(0);
+    if options.adopt_installed {
+        finish_adopted_install(&entries, &options, &mut promotion_lock);
     }
-    let installed = installed_sha();
-    let previous_build_id = installed_value("KUNGFU_INSTALLED_BUILD_ID");
-    let mut previous_release_cut_root = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
-    if previous_release_cut_root.is_empty() {
-        previous_release_cut_root = native_update::LEGACY_BOOTSTRAP_ROOT.to_string();
-    }
-    let entry = if preview {
-        if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
-            util::die(
-                "installed Product has no verified rollback coordinate; refusing dogfood promotion",
-            );
-        }
-        select_preview_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
+    let installed = installed_product();
+    let entry = select_promotion_entry(root, &entries, &options, &installed);
+    let action = if options.preview {
+        "preview"
     } else {
-        if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
-            util::die(
-                "installed Product has no verified rollback coordinate; refusing dogfood promotion",
-            );
-        }
-        select_product_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
+        "promote"
     };
-    let action = if preview { "preview" } else { "promote" };
-    if !preview
-        && promote_convergence::try_finish(
-            entry,
-            &registry_dir(),
-            &installed,
-            check,
-            launch,
-            &mut promotion_lock,
-        )
-        .unwrap_or_else(|error| util::die(&error))
-    {
+    if promotion_already_finished(entry, &installed, &options, &mut promotion_lock) {
         std::process::exit(0);
     }
-    let native_plan = match run_native(entry, false, false) {
-        Ok(value) => value,
-        Err(error) => {
-            promote_convergence::release_lock(&mut promotion_lock)
-                .unwrap_or_else(|release_error| util::die(&release_error));
-            util::die(&format!("native updater preflight failed: {error}"));
-        }
-    };
-    if check {
-        println!(
-            "{{\"schema\":\"shifu.local-promotion-plan/v1\",\"ok\":true,\
-             \"action\":\"{}\",\
-             \"artifactId\":\"{}\",\"sourceCommit\":\"{}\",\"mainlineRef\":\"{}\",\
-             \"mainlineCommit\":\"{}\",\"qualified\":{},\"integrated\":{},\
-             \"currentCommit\":\"{}\",\"currentReleaseCutRoot\":\"{}\",\
-             \"targetReleaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\
-             \"cutTransitionRoot\":\"{}\",\
-             \"wouldWrite\":false}}",
-            action,
-            json_escape(&entry.name),
-            json_escape(&entry.sha),
-            json_escape(&entry.mainline_ref),
-            json_escape(&entry.mainline_sha),
-            entry.qualified,
-            entry.integrated,
-            json_escape(&installed),
-            json_escape(&previous_release_cut_root),
-            json_escape(&entry.release_cut_root),
-            json_escape(&entry.platform_slice_root),
-            json_escape(&native_plan.transition_root),
-        );
-        std::process::exit(0);
+    let native_plan = preflight_native_promotion(entry, &mut promotion_lock);
+    if options.check {
+        print_promotion_plan(action, entry, &installed, &native_plan);
     }
-    eprintln!(
-        "\u{1f94b} {}",
-        style::bold(&format!(
-            "{} dev build {} ({} @ {})",
-            if rollback {
-                "rolling back to"
-            } else if preview {
-                "previewing"
-            } else {
-                "promoting"
-            },
-            entry.name,
-            entry.sha,
-            entry.branch
-        ))
-    );
-
-    // Persist every phase; keep the desktop backup until both receipts commit.
-    write_pending_transaction(&PendingTransaction {
-        state: "desktop-commit-pending".to_string(),
-        action: action.to_string(),
-        artifact_id: entry.name.clone(),
-        target_release_cut_root: entry.release_cut_root.clone(),
-        cut_transition_root: native_plan.transition_root,
-        native_receipt_root: String::new(),
-        previous_build_id,
-        previous_sha: installed,
-        previous_release_cut_root,
-        installed_path: String::new(),
-        desktop_backup_path: String::new(),
-        force,
-        launch,
-    });
-    resume_pending_transaction(&entries, false);
-    unreachable!()
+    start_promotion_transaction(&entries, entry, action, installed, &options, native_plan)
 }
 
 const PROMOTE_USAGE: &str =

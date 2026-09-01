@@ -1189,6 +1189,39 @@ def test_planned_workspace_verification_rejects_identity_drift(tmp_path):
         fresh_recovery_authority.verify_planned_workspace(plan)
 
 
+def test_planned_workspace_verification_accepts_home_runtime(tmp_path):
+    runtime_dir = tmp_path / ".kungfu" / "runtime"
+    runtime_dir.mkdir(parents=True)
+    semantic = {
+        "schema": "kungfu.workspace.identity-material/v1",
+        "workspaceKind": "home",
+        "workspaceKey": "home",
+    }
+    identity_root = assignment_fresh_recovery._root(semantic)
+    identity_path = runtime_dir.parent / "workspace-identity.json"
+    identity_path.write_text(
+        json.dumps({**semantic, "identityRoot": identity_root}), encoding="utf-8"
+    )
+    plan = {
+        "plannedTarget": {
+            "workspace": {
+                "id": "home",
+                "root": None,
+                "runtimeRoot": str(runtime_dir),
+                "identityRoot": identity_root,
+            }
+        }
+    }
+
+    observed_runtime, observation = fresh_recovery_authority.verify_planned_workspace(
+        plan
+    )
+
+    assert observed_runtime == runtime_dir
+    assert observation["workspaceId"] == "home"
+    assert observation["identityRoot"] == identity_root
+
+
 def test_planned_profile_verification_never_accepts_a_caller_selected_source(
     tmp_path, monkeypatch
 ):

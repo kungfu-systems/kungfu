@@ -3,6 +3,8 @@
 name: Core affected native
 
 on:
+  # Keep GitHub's default opened, synchronize, and reopened PR activities as
+  # the source-qualification recovery signals for an exact candidate head.
   pull_request:
     branches:
       - dev/v*/v*
