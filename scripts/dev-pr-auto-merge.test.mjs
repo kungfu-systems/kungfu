@@ -19,7 +19,7 @@ test('Dev auto-merge admits only explicitly ready reviewed source-bound PRs', ()
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, 'e9df589c67f7caab43abb1a288d45734d33a72f9');
+  assert.equal(reusableRef, '3553236e52ba9daa0b83422aec269d14a6bc65ad');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
@@ -369,7 +369,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     landing,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@e9df589c67f7caab43abb1a288d45734d33a72f9/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad/u,
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
@@ -401,7 +401,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: e9df589c67f7caab43abb1a288d45734d33a72f9/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad/u,
   );
   assert.match(
     workflow,
