@@ -3,15 +3,55 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8919,
-  "fencingCounter": 852,
+  "generation": 8920,
+  "fencingCounter": 853,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:4f3cb031a71798c0de6e2c39f9a9489fb7c34491d0aab5b763cec819f1233b9d",
+    "pullRequestNumber": 3638,
+    "sourceHead": "3da1622169e4cd7a9bb9e4bc2ea20020dc28fd39",
+    "assignmentRoot": "sha256:a943110e8eb5387de07665aa7d9be2caff86c87fc5b01b9a080f8dd8cc6947fb",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:f7bbab24a340acfe0cc448db2d6eede3076325d8e7355de94635e740cb0bf6d0",
+    "sourcePatchRoot": "sha256:e1d71e6031682b01e1d2db0915d186722a31817cbdf0f8686f14431a6bf3804e",
+    "sourceProofRoot": "sha256:3659aa8ec7bb627d4bbab2619cb4e06442190c717c1124eff14e23c228705f14",
+    "planRoot": "sha256:bae6b9e44ed6e14f18c323bd78239ea52fdefbb01a274300d70a1d746d474212",
+    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+    "dependencyRoot": "sha256:54742871523316fb18bbf7a5476ed073149824fdf3b7454e1d376f5935201707",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3638 --expected-head 3da1622169e4cd7a9bb9e4bc2ea20020dc28fd39 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:e6f690c70247092ced126b315f5162f2e3ec6711c73f5aae34be93ade457da73"
+    },
+    "affectedPaths": [
+      "framework/spec/generated/registry.json"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:28fd2df8d2d9bc877919f7f1a5e8be7a26f22f0986bb778a4e479e30cdd8f7e7",
+      "sha256:85240d370074e983b6412d385fc17716f92ee7bc9bb0c0c61b72db18c86a428b"
+    ],
+    "sourceWorkflowRunId": 33517503952,
+    "deliveryClass": "non-native-fast",
+    "priority": "ordinary",
+    "generation": 853,
+    "expectedOldStateRoot": "sha256:2accedc176b5c95fe35bd84e24d7fa5cd5500d76056404c93b6fcdfb38cd141e",
+    "issuedAt": "2026-09-01T14:15:05.976Z",
+    "expiresAt": "2026-09-01T15:45:05.976Z",
+    "fencingToken": "sha256:7fa1763f58e7f9d539a692b341eb8d21750533e4726055f8a3e67bf638330edc",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -63452,10 +63492,10 @@
       "sourceWorkflowRunId": 33517503952,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T14:14:59.194Z",
-      "updatedAt": "2026-09-01T14:14:59.194Z",
+      "updatedAt": "2026-09-01T14:15:05.976Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         "framework/spec/generated/registry.json"
@@ -63466,6 +63506,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T14:14:59.194Z",
-  "stateRoot": "sha256:2accedc176b5c95fe35bd84e24d7fa5cd5500d76056404c93b6fcdfb38cd141e"
+  "updatedAt": "2026-09-01T14:15:05.976Z",
+  "stateRoot": "sha256:ff5ae7c123c390ede4e356862477b1c4e84947f31486d082a9ad067fe25334f8"
 }
