@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8947,
+  "generation": 8948,
   "fencingCounter": 857,
   "policy": {
     "agingSeconds": 900,
@@ -63880,8 +63880,74 @@
         "sha256:3e32874655aae15e232981a73ef400d24d68da1eb37473b2ae11d5e9ccdf8527",
         "sha256:4310c50118e7c6aac4f0e96f4b292c1ad2275e35bb4bd9a91717cee4ff6966eb"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3645,
+      "assignmentRoot": "sha256:ce38a4a55432135bc14d400e66f44fe6a715b835c2c2d94ac5850d60bb65e6d8",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:b165c1bd10e88d3f1a4649a38b29b8c3c836d96c64f3f5f7b7a3f8df07cd02d3",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:1edcf927ac22dc681dd931fc36abea76e89b6e939baece26dbc4ccdc99a01c54",
+      "sourceHead": "02774bc3a71a6a71b34ee906d422fa1eea7063f3",
+      "sourcePatchRoot": "sha256:4b9800eeb900833fc9a76cf74860f743eeac5d026a79a0878f3d47b2dc6e396f",
+      "sourceProofRoot": "sha256:283c83b190373cce2c6a7fa614eee8d2c409569e035ed5f04118f989f42d1655",
+      "planRoot": "sha256:02f51dae2bcda7bb767da940bf992e296c2dd8513fa4d2f64bab161bfd77f715",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:46dc72bc9fdab302e5cd121ac160b1f17d56e066ab7c74b93d22829888907b1b",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "nativeCommandContract": {
+        "schema": "kungfu.buildchain.native-command-contract/v1",
+        "runner": "bash-lc",
+        "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3645 --expected-head 02774bc3a71a6a71b34ee906d422fa1eea7063f3 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+        "commandRoot": "sha256:b29eb77b2d57d1dd27fafb00ee2d66da7ed0f837603f5d6b72591a21bbf54fd9"
+      },
+      "sourceWorkflowRunId": 33536787196,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-09-01T17:26:48.410Z",
+      "updatedAt": "2026-09-01T17:26:48.410Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".buildchain/kfd/support-matrix.json",
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "developer/sdk/kfd/support-matrix.json",
+        "docs/adr/KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be.md",
+        "docs/architecture/adr-map.json",
+        "docs/architecture/adr-map.md",
+        "docs/architecture/overview.md",
+        "framework/README.md",
+        "framework/action/action-loop-contract.test.mjs",
+        "framework/action/index.mjs",
+        "framework/assignment-runtime/README.md",
+        "framework/assignment-runtime/assignment-runtime.test.mjs",
+        "framework/assignment-runtime/index.mjs",
+        "framework/evidence/index.mjs",
+        "framework/evidence/src/evidence-envelope.mjs",
+        "framework/format/project-cut-canonical-json.mjs",
+        "framework/layout.manifest.json",
+        "framework/project-cut/README.md",
+        "framework/project-cut/index.mjs",
+        "framework/project-cut/src/project-cut.mjs",
+        "framework/project-cut/src/receipt-evidence.mjs",
+        "framework/work-design-preflight/work-design-runtime.json",
+        "framework/work-profile-conformance/generate-qualification.mjs",
+        "scripts/check-evidence-envelope.test.mjs",
+        "scripts/check-framework-layout.mjs",
+        "scripts/check-framework-layout.test.mjs",
+        "scripts/documentation-product-pack.test.mjs"
+      ],
+      "shardEvidenceRoots": [
+        "sha256:453e140aba441fdce5c379fe41e029103093659b870965caa23fbeff091c8e4b",
+        "sha256:9ac1921adf8359079b499bdd8a6a849fc1929e9c16aa39303f0b094d1a45c882"
+      ]
     }
   ],
-  "updatedAt": "2026-09-01T17:13:38.412Z",
-  "stateRoot": "sha256:af1aa46b9731ec3aa660c725cbc26bfb1b7007bc4bc6280e6d3cb1aeb5760d9e"
+  "updatedAt": "2026-09-01T17:26:48.410Z",
+  "stateRoot": "sha256:484d796294dab5fb3d2cad5e32eba855b26133adba431d94c654dde66e44f9d6"
 }
