@@ -200,7 +200,7 @@
     {
       "id": "registry-admission-lifecycle",
       "title": "Registry, admission, and lifecycle",
-      "summary": "On the 4.0.0-alpha.4 development line, a pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted package, install, activation, upgrade, rollback, and removal mutation.",
+      "summary": "On the 4.0.0-alpha.4 development line, production package mutations require a pinned Fact cut, Work, Warrant, policy, exact roots, and CAS. A separate developer-only route may bootstrap only the checked-out Control Suite into a same-Git local workspace runtime with the exact kfxControl grant; it cannot publish, update, remove, share-install, or acquire external capabilities.",
       "maturity": "pre-release",
       "status": "staged",
       "sourceIds": ["kfx-domain-profile", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification"],
@@ -227,7 +227,7 @@
     {
       "id": "agent-first-authoring",
       "title": "Installed Agent-first authoring",
-      "summary": "The installed 4.0.0-alpha.4-matched kit supports inert authoring and lifecycle steps from source or a staged public npm package; separately admitted product hosts then adopt Core-owned Runtime Warrant leases without deriving authority from authoring output.",
+      "summary": "The installed 4.0.0-alpha.4-matched kit supports inert authoring and lifecycle steps from source or a staged public npm package. For local debugging, the public native Control Suite command can bootstrap only the checked-out manager into a same-Git workspace runtime with kfxControl; it does not issue a Release Passport, Warrant, publication right, or external capability.",
       "maturity": "pre-release",
       "status": "experimental",
       "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
@@ -263,7 +263,7 @@
     {
       "id": "qualification-status",
       "title": "Current qualification status",
-      "summary": "For the 4.0.0-alpha.4 development line, retained qualification covers existing installed-product and reference-suite boundaries; the staged public npm inventory records intended package closure but is not publication proof, and the product-host Runtime Warrant witness is additional draft KFD-10 adopter evidence only.",
+      "summary": "For the 4.0.0-alpha.4 development line, retained qualification covers installed-product, reference-suite, and confined local-source Control Suite bootstrap boundaries. The staged public npm inventory is not publication proof, and the product-host Runtime Warrant witness is additional draft KFD-10 adopter evidence only.",
       "maturity": "pre-release",
       "status": "qualified",
       "sourceIds": ["kfx-terminal-qualification", "installed-authoring-contract", "github-webhook-qualification", "github-webhook-suite-readme", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
