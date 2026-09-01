@@ -109,6 +109,10 @@ function canonicalJson(value) {
     .join(',')}}`;
 }
 
+function exactPairsMatch(pairs) {
+  return pairs.every(([actual, expected]) => actual === expected);
+}
+
 function protocolRoot(protocol, value) {
   return `sha256:${crypto
     .createHash('sha256')
@@ -302,7 +306,7 @@ export function protectedSourceRetained({
   });
 }
 
-export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
+function admissionValidationContext({ root = ROOT, passport, fixture }) {
   const errors = [];
   const invalid = (message) => errors.push(message);
   const requireExact = (value, fields, label) => {
@@ -321,7 +325,20 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
     const actual = bytesRoot(fs.readFileSync(file));
     if (material.root !== actual) invalid(`${label} byte Root drifted`);
   };
+  return {
+    root,
+    passport,
+    fixture,
+    errors,
+    invalid,
+    requireExact,
+    requireRoot,
+    requireFileRoot,
+  };
+}
 
+function validateFixtureIdentity(context) {
+  const { fixture, passport, requireExact, invalid } = context;
   requireExact(
     fixture,
     ['schema', 'passportId', 'protectedSource', 'materials', 'receipt'],
@@ -331,7 +348,10 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
     invalid('admission fixture schema is invalid');
   if (fixture?.passportId !== passport.id)
     invalid('admission fixture passport id does not match');
+}
 
+function validateProtectedSource(context) {
+  const { root, fixture, requireExact, invalid } = context;
   const protectedSource = fixture?.protectedSource;
   requireExact(
     protectedSource,
@@ -366,7 +386,18 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
     if (!protectedSourceRetained({ root, sourceSha: protectedSource.head }))
       invalid('protected source head is not retained by the candidate');
   }
+}
 
+function validateMaterialInventory(context) {
+  const {
+    root,
+    passport,
+    fixture,
+    requireExact,
+    requireRoot,
+    requireFileRoot,
+    invalid,
+  } = context;
   const materials = fixture?.materials;
   requireExact(
     materials,
@@ -419,7 +450,11 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
     passport.identityProtocol?.vectors?.length !== 1
   )
     invalid('vector material does not match the passport');
+}
 
+function validateHistoryMaterial(context) {
+  const { root, fixture, requireExact, requireRoot, invalid } = context;
+  const materials = fixture?.materials;
   const history = materials?.history;
   requireExact(history, ['schema', 'fixture', 'root'], 'history material');
   if (history?.schema !== HISTORY_EVIDENCE_SCHEMA)
@@ -448,7 +483,12 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
   }
   if (history?.root !== rootedDocumentRoot(history || {}))
     invalid('history no-rewrite Root is invalid');
+}
 
+function validatePlatformMaterial(context) {
+  const { fixture, requireExact, requireRoot, invalid } = context;
+  const materials = fixture?.materials;
+  const protectedSource = fixture?.protectedSource;
   const platform = materials?.platform;
   requireExact(
     platform,
@@ -494,19 +534,28 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
   )
     invalid('merge-group coordinates are invalid');
   if (
-    platform?.repository !== protectedSource?.repository ||
-    canonicalJson(platform?.source) !==
-      canonicalJson({
-        head: protectedSource?.head,
-        tree: protectedSource?.tree,
-      }) ||
-    platform?.delivery?.pullRequest !== protectedSource?.pullRequest ||
-    platform?.delivery?.mergedAt !== protectedSource?.mergedAt
+    !exactPairsMatch([
+      [platform?.repository, protectedSource?.repository],
+      [
+        canonicalJson(platform?.source),
+        canonicalJson({
+          head: protectedSource?.head,
+          tree: protectedSource?.tree,
+        }),
+      ],
+      [platform?.delivery?.pullRequest, protectedSource?.pullRequest],
+      [platform?.delivery?.mergedAt, protectedSource?.mergedAt],
+    ])
   )
     invalid('platform evidence is detached from the protected source');
   if (platform?.root !== rootedDocumentRoot(platform || {}))
     invalid('platform evidence Root is invalid');
+}
 
+function validateReplayMaterial(context) {
+  const { fixture, requireExact, requireRoot, invalid } = context;
+  const materials = fixture?.materials;
+  const protectedSource = fixture?.protectedSource;
   const replay = materials?.replay;
   requireExact(
     replay,
@@ -540,11 +589,13 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
     'native replay capture source',
   );
   if (
-    replayProvenance?.schema !== REPLAY_CAPTURE_PROVENANCE_SCHEMA ||
-    replayProvenance?.captureKind !== 'local-exact-source' ||
-    replayProvenance?.captureMethod !== 'public-c-abi-one-shot-harness' ||
-    replayProvenance?.environment?.operatingSystem !== 'darwin' ||
-    replayProvenance?.environment?.architecture !== 'arm64'
+    !exactPairsMatch([
+      [replayProvenance?.schema, REPLAY_CAPTURE_PROVENANCE_SCHEMA],
+      [replayProvenance?.captureKind, 'local-exact-source'],
+      [replayProvenance?.captureMethod, 'public-c-abi-one-shot-harness'],
+      [replayProvenance?.environment?.operatingSystem, 'darwin'],
+      [replayProvenance?.environment?.architecture, 'arm64'],
+    ])
   )
     invalid('native replay capture provenance is invalid');
   if (replayProvenance?.ciExecution !== null)
@@ -584,10 +635,14 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
   ])
     requireRoot(value, label);
   if (
-    recorded?.schema !==
-      'kungfu.initiative-assignment.native-admission-record/v1' ||
-    recorded?.status !== 'recorded-awaiting-restart-replay' ||
-    recorded?.receiptIssued !== false
+    !exactPairsMatch([
+      [
+        recorded?.schema,
+        'kungfu.initiative-assignment.native-admission-record/v1',
+      ],
+      [recorded?.status, 'recorded-awaiting-restart-replay'],
+      [recorded?.receiptIssued, false],
+    ])
   )
     invalid('native admission record claimed a receipt before replay');
 
@@ -619,10 +674,14 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
   ])
     requireRoot(value, label);
   if (
-    replayEvidence?.schema !== NATIVE_REPLAY_EVIDENCE_SCHEMA ||
-    replayEvidence?.matchedEventCount !== 1 ||
-    replayEvidence?.replayEvidenceRoot !==
-      nativeReplayEvidenceRoot(replayEvidence)
+    !exactPairsMatch([
+      [replayEvidence?.schema, NATIVE_REPLAY_EVIDENCE_SCHEMA],
+      [replayEvidence?.matchedEventCount, 1],
+      [
+        replayEvidence?.replayEvidenceRoot,
+        nativeReplayEvidenceRoot(replayEvidence),
+      ],
+    ])
   )
     invalid('native replay evidence Root is invalid');
   if (
@@ -631,16 +690,27 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
   )
     invalid('native replay provenance time does not match journal genTime');
   if (
-    recorded?.journal?.frameUid !== replayEvidence?.journal?.frameUid ||
-    recorded?.journal?.name !== replayEvidence?.journal?.name ||
-    recorded?.journal?.namespace !== replayEvidence?.journal?.namespace
+    !exactPairsMatch([
+      [recorded?.journal?.frameUid, replayEvidence?.journal?.frameUid],
+      [recorded?.journal?.name, replayEvidence?.journal?.name],
+      [recorded?.journal?.namespace, replayEvidence?.journal?.namespace],
+    ])
   )
     invalid('native replay evidence is detached from the recorded frame');
   if (!Array.isArray(replay?.assertions) || replay.assertions.length < 3)
     invalid('replay evidence assertions are incomplete');
   if (replay?.root !== rootedDocumentRoot(replay || {}))
     invalid('replay evidence Root is invalid');
+}
 
+function validateAdmissionReceipt(context) {
+  const { passport, fixture, requireExact, requireRoot, invalid } = context;
+  const materials = fixture?.materials;
+  const protectedSource = fixture?.protectedSource;
+  const implementations = materials?.implementations;
+  const history = materials?.history;
+  const platform = materials?.platform;
+  const replayEvidence = materials?.replay?.evidence;
   const receipt = fixture?.receipt;
   requireExact(
     receipt,
@@ -709,23 +779,44 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
     (implementations || []).map((entry) => [entry.language, entry.root]),
   );
   if (
-    canonicalJson(receipt?.implementations?.languages) !==
-      canonicalJson(['c++', 'python']) ||
-    receipt?.implementations?.nativeRoot !== byLanguage.get('c++') ||
-    receipt?.implementations?.pythonRoot !== byLanguage.get('python')
+    !exactPairsMatch([
+      [
+        canonicalJson(receipt?.implementations?.languages),
+        canonicalJson(['c++', 'python']),
+      ],
+      [receipt?.implementations?.nativeRoot, byLanguage.get('c++')],
+      [receipt?.implementations?.pythonRoot, byLanguage.get('python')],
+    ])
   )
     invalid('receipt implementation bindings are invalid');
   if (
-    receipt?.historicalNoRewriteRoot !== history?.root ||
-    receipt?.platformEvidenceRoot !== platform?.root ||
-    receipt?.journal?.replayEvidenceRoot !==
-      replayEvidence?.replayEvidenceRoot ||
-    receipt?.rootProtocol?.contractRoot !== materials?.contract?.root ||
-    receipt?.rootProtocol?.vectorRoot !== materials?.vectors?.root ||
-    receipt?.serviceContractRoot !== materials?.serviceContractRoot
+    !exactPairsMatch([
+      [receipt?.historicalNoRewriteRoot, history?.root],
+      [receipt?.platformEvidenceRoot, platform?.root],
+      [
+        receipt?.journal?.replayEvidenceRoot,
+        replayEvidence?.replayEvidenceRoot,
+      ],
+      [receipt?.rootProtocol?.contractRoot, materials?.contract?.root],
+      [receipt?.rootProtocol?.vectorRoot, materials?.vectors?.root],
+      [receipt?.serviceContractRoot, materials?.serviceContractRoot],
+    ])
   )
     invalid('receipt material Roots do not match the admission fixture');
+}
 
+function validateAdmissionVectorBinding(context) {
+  const { root, fixture, invalid } = context;
+  const materials = fixture?.materials;
+  const implementations = materials?.implementations;
+  const history = materials?.history;
+  const platform = materials?.platform;
+  const recorded = materials?.replay?.recorded;
+  const replayEvidence = materials?.replay?.evidence;
+  const receipt = fixture?.receipt;
+  const byLanguage = new Map(
+    (implementations || []).map((entry) => [entry.language, entry.root]),
+  );
   const vectorFile = checkoutFile(root, materials?.vectors?.path);
   if (vectorFile && fs.existsSync(vectorFile)) {
     try {
@@ -761,18 +852,20 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
           computedRoot: vector.expected?.root,
           schema: NATIVE_EVENT_SCHEMA,
         };
+        const eventRoot = protocolRoot(NATIVE_EVENT_SCHEMA, event);
         if (
-          receipt?.journal?.bindingRoot !== bindingRoot ||
-          receipt?.journal?.eventRoot !==
-            protocolRoot(NATIVE_EVENT_SCHEMA, event) ||
-          recorded?.assignmentId !== receipt?.assignmentId ||
-          recorded?.bindingRoot !== bindingRoot ||
-          recorded?.computedRoot !== vector.expected?.root ||
-          recorded?.eventRoot !== protocolRoot(NATIVE_EVENT_SCHEMA, event) ||
-          replayEvidence?.assignmentId !== receipt?.assignmentId ||
-          replayEvidence?.bindingRoot !== bindingRoot ||
-          replayEvidence?.computedRoot !== vector.expected?.root ||
-          replayEvidence?.eventRoot !== protocolRoot(NATIVE_EVENT_SCHEMA, event)
+          !exactPairsMatch([
+            [receipt?.journal?.bindingRoot, bindingRoot],
+            [receipt?.journal?.eventRoot, eventRoot],
+            [recorded?.assignmentId, receipt?.assignmentId],
+            [recorded?.bindingRoot, bindingRoot],
+            [recorded?.computedRoot, vector.expected?.root],
+            [recorded?.eventRoot, eventRoot],
+            [replayEvidence?.assignmentId, receipt?.assignmentId],
+            [replayEvidence?.bindingRoot, bindingRoot],
+            [replayEvidence?.computedRoot, vector.expected?.root],
+            [replayEvidence?.eventRoot, eventRoot],
+          ])
         )
           invalid('native admission or event binding Root is invalid');
       }
@@ -783,7 +876,19 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
 
   if (receipt?.receiptRoot !== rootedDocumentRoot(receipt || {}, 'receiptRoot'))
     invalid('admission receipt Root is invalid');
-  return errors;
+}
+
+export function validateAdmissionFixture(options) {
+  const context = admissionValidationContext(options);
+  validateFixtureIdentity(context);
+  validateProtectedSource(context);
+  validateMaterialInventory(context);
+  validateHistoryMaterial(context);
+  validatePlatformMaterial(context);
+  validateReplayMaterial(context);
+  validateAdmissionReceipt(context);
+  validateAdmissionVectorBinding(context);
+  return context.errors;
 }
 
 function registeredSchemaPaths(authority) {

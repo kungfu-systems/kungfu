@@ -415,14 +415,17 @@ function verdictFor(diagnostics, constraints) {
   return 'compatible';
 }
 
-export function evaluateConformance(declaration) {
-  const validate = schemaValidator(DECLARATION_SCHEMA_PATH);
-  if (!validate(declaration))
-    return resultForInvalid(declaration, schemaDiagnostics(validate.errors));
+function conformanceContext(declaration) {
+  return {
+    declaration,
+    diagnostics: [],
+    checks: [],
+    declarationRoot: contentRoot(declaration),
+  };
+}
 
-  const diagnostics = [];
-  const checks = [];
-  const declarationRoot = contentRoot(declaration);
+function validateAuthorityBindings(context) {
+  const { declaration, diagnostics, checks } = context;
   const expectedActionGeometryRoot = fileRoot(ACTION_GEOMETRY_PATH);
   const geometryMatches =
     declaration.bindings.actionGeometryRoot === expectedActionGeometryRoot;
@@ -513,7 +516,10 @@ export function evaluateConformance(declaration) {
         'The five responsibility roles must retain distinct schema roots.',
       ),
     );
+}
 
+function validateGenericReuse(context) {
+  const { declaration, diagnostics, checks } = context;
   const reuse = declaration.reuse;
   const genericReuse = [
     reuse.factEpisode,
@@ -548,7 +554,10 @@ export function evaluateConformance(declaration) {
         'The scenario declares a parallel service, database, registry, or semantic authority.',
       ),
     );
+}
 
+function validateHumanAuthority(context) {
+  const { declaration, diagnostics, checks } = context;
   for (const [name, judgment] of Object.entries(declaration.humanAuthority)) {
     const expectedAuthorityRoot = contentRoot({
       scenarioId: declaration.scenarioId,
@@ -578,7 +587,10 @@ export function evaluateConformance(declaration) {
         ),
       );
   }
+}
 
+function indexBehaviorEvidence(context) {
+  const { declaration, diagnostics, checks } = context;
   const evidenceByCase = new Map();
   for (const evidence of declaration.behaviorEvidence) {
     if (evidenceByCase.has(evidence.case)) {
@@ -593,109 +605,130 @@ export function evaluateConformance(declaration) {
     }
     evidenceByCase.set(evidence.case, evidence);
   }
-  for (const caseId of BEHAVIOR_CASES) {
-    const evidence = evidenceByCase.get(caseId);
-    checks.push(
-      check(
-        `behavior-${caseId}`,
-        evidence?.status || 'missing',
-        evidence?.evidenceRoot,
+  return evidenceByCase;
+}
+
+function retainBehaviorCase(context, caseId, evidence) {
+  const { diagnostics, checks } = context;
+  checks.push(
+    check(
+      `behavior-${caseId}`,
+      evidence?.status || 'missing',
+      evidence?.evidenceRoot,
+    ),
+  );
+  if (
+    !evidence ||
+    ['missing', 'stale', 'crashed', 'unsupported'].includes(evidence.status)
+  ) {
+    diagnostics.push(
+      diagnostic(
+        `behavior-${caseId}-${evidence?.status || 'missing'}`,
+        UNQUALIFIED,
+        `Retained ${caseId} evidence is not qualified.`,
       ),
     );
-    if (
-      !evidence ||
-      ['missing', 'stale', 'crashed', 'unsupported'].includes(evidence.status)
-    )
-      diagnostics.push(
-        diagnostic(
-          `behavior-${caseId}-${evidence?.status || 'missing'}`,
-          UNQUALIFIED,
-          `Retained ${caseId} evidence is not qualified.`,
-        ),
-      );
-    else if (evidence.status === 'failed')
-      diagnostics.push(
-        diagnostic(
-          `behavior-${caseId}-failed`,
-          INCOMPATIBLE,
-          `The scenario failed the ${caseId} generic-semantics witness.`,
-        ),
-      );
-    else if (!evidence.evidenceRoot)
-      diagnostics.push(
-        diagnostic(
-          `behavior-${caseId}-root-missing`,
-          INVALID,
-          `Passed ${caseId} evidence must retain an exact root.`,
-        ),
-      );
-    else {
-      const retained = retainEvidence(
-        diagnostics,
-        `behavior-${caseId}`,
-        evidence,
-      );
-      if (retained.status !== 'verified' || !retained.value) continue;
-      const kfd = KFD_BEHAVIOR[caseId];
-      let semanticMatch = false;
-      if (kfd) {
-        const passedChecks = new Set(
-          (retained.value.checks || [])
-            .filter(({ status }) => status === 'pass')
-            .map(({ id }) => id),
-        );
-        const revisionMatch =
-          retained.value.sourceSha === declaration.buildchain.sourceRevision;
-        if (!revisionMatch)
-          diagnostics.push(
-            diagnostic(
-              `behavior-${caseId}-buildchain-revision-mismatch`,
-              INVALID,
-              `Retained ${caseId} evidence was produced at ${retained.value.sourceSha || '<missing>'}, not the admitted Buildchain source ${declaration.buildchain.sourceRevision}.`,
-              evidence,
-            ),
-          );
-        semanticMatch =
-          retained.value.contract ===
-            'kungfu-buildchain-kfd-7-evidence-report' &&
-          retained.value.category === kfd.category &&
-          retained.value.outcome === 'pass' &&
-          retained.value.matchedExpectation === true &&
-          revisionMatch &&
-          kfd.checks.every((id) => passedChecks.has(id));
-      } else {
-        semanticMatch =
-          retained.value.schema ===
-            'kungfu.work-profile-runtime-behavior-witness/v1' &&
-          retained.value.case === caseId &&
-          retained.value.status === 'passed' &&
-          canonicalJson(retained.value.actual) ===
-            canonicalJson({
-              ...retained.value.actual,
-              ...retained.value.expected,
-            });
-        for (const coordinate of retained.value.implementation || [])
-          if (
-            retainEvidence(
-              diagnostics,
-              `behavior-${caseId}-implementation`,
-              coordinate,
-            ).status !== 'verified'
-          )
-            semanticMatch = false;
-      }
-      if (!semanticMatch)
-        diagnostics.push(
-          diagnostic(
-            `behavior-${caseId}-evidence-semantic-mismatch`,
-            INVALID,
-            `Retained evidence does not prove the required ${caseId} behavior through the existing runtime authority.`,
-            evidence,
-          ),
-        );
-    }
+    return null;
   }
+  if (evidence.status === 'failed') {
+    diagnostics.push(
+      diagnostic(
+        `behavior-${caseId}-failed`,
+        INCOMPATIBLE,
+        `The scenario failed the ${caseId} generic-semantics witness.`,
+      ),
+    );
+    return null;
+  }
+  if (!evidence.evidenceRoot) {
+    diagnostics.push(
+      diagnostic(
+        `behavior-${caseId}-root-missing`,
+        INVALID,
+        `Passed ${caseId} evidence must retain an exact root.`,
+      ),
+    );
+    return null;
+  }
+  const retained = retainEvidence(diagnostics, `behavior-${caseId}`, evidence);
+  return retained.status === 'verified' ? retained.value : null;
+}
 
+function matchesKfdBehavior(context, caseId, evidence, value, kfd) {
+  const { declaration, diagnostics } = context;
+  const passedChecks = new Set(
+    (value.checks || [])
+      .filter(({ status }) => status === 'pass')
+      .map(({ id }) => id),
+  );
+  const revisionMatch =
+    value.sourceSha === declaration.buildchain.sourceRevision;
+  if (!revisionMatch)
+    diagnostics.push(
+      diagnostic(
+        `behavior-${caseId}-buildchain-revision-mismatch`,
+        INVALID,
+        `Retained ${caseId} evidence was produced at ${value.sourceSha || '<missing>'}, not the admitted Buildchain source ${declaration.buildchain.sourceRevision}.`,
+        evidence,
+      ),
+    );
+  return (
+    value.contract === 'kungfu-buildchain-kfd-7-evidence-report' &&
+    value.category === kfd.category &&
+    value.outcome === 'pass' &&
+    value.matchedExpectation === true &&
+    revisionMatch &&
+    kfd.checks.every((id) => passedChecks.has(id))
+  );
+}
+
+function matchesRuntimeBehavior(context, caseId, value) {
+  const { diagnostics } = context;
+  let semanticMatch =
+    value.schema === 'kungfu.work-profile-runtime-behavior-witness/v1' &&
+    value.case === caseId &&
+    value.status === 'passed' &&
+    canonicalJson(value.actual) ===
+      canonicalJson({ ...value.actual, ...value.expected });
+  for (const coordinate of value.implementation || [])
+    if (
+      retainEvidence(
+        diagnostics,
+        `behavior-${caseId}-implementation`,
+        coordinate,
+      ).status !== 'verified'
+    )
+      semanticMatch = false;
+  return semanticMatch;
+}
+
+function validateBehaviorCase(context, caseId, evidence) {
+  const value = retainBehaviorCase(context, caseId, evidence);
+  if (!value) return;
+  const kfd = KFD_BEHAVIOR[caseId];
+  const semanticMatch = kfd
+    ? matchesKfdBehavior(context, caseId, evidence, value, kfd)
+    : matchesRuntimeBehavior(context, caseId, value);
+  if (!semanticMatch)
+    context.diagnostics.push(
+      diagnostic(
+        `behavior-${caseId}-evidence-semantic-mismatch`,
+        INVALID,
+        `Retained evidence does not prove the required ${caseId} behavior through the existing runtime authority.`,
+        evidence,
+      ),
+    );
+}
+
+function validateBehaviorEvidence(context) {
+  const evidenceByCase = indexBehaviorEvidence(context);
+  for (const caseId of BEHAVIOR_CASES) {
+    validateBehaviorCase(context, caseId, evidenceByCase.get(caseId));
+  }
+}
+
+function validatePlatformAdapters(context) {
+  const { declaration, diagnostics, checks } = context;
   const platformNames = new Set();
   for (const adapter of declaration.platformAdapters) {
     if (platformNames.has(adapter.platform))
@@ -749,7 +782,10 @@ export function evaluateConformance(declaration) {
           `Platform ${platform} must be declared as required or explicitly not relevant.`,
         ),
       );
+}
 
+function validateProfileSurfaces(context) {
+  const { declaration, diagnostics } = context;
   const surfaceNames = new Set();
   for (const surface of declaration.profileSurfaces) {
     if (surfaceNames.has(surface.surface))
@@ -787,26 +823,27 @@ export function evaluateConformance(declaration) {
           `Profile surface ${surface} must be declared as required or explicitly not relevant.`,
         ),
       );
+}
 
-  const buildchain = declaration.buildchain;
+function validateRetainedBuildchain(context, buildchain) {
+  const { declaration, diagnostics, checks } = context;
   checks.push(
     check('buildchain-admission', buildchain.status, buildchain.evidenceRoot),
   );
-  const retainedBuildchain = retainEvidence(
+  const retained = retainEvidence(
     diagnostics,
     'buildchain-admission',
     buildchain,
   );
   if (
-    retainedBuildchain.status === 'verified' &&
-    retainedBuildchain.value &&
-    (retainedBuildchain.value.contract !==
-      'kungfu-buildchain-kfd-product-gate' ||
-      retainedBuildchain.value.standard !== 'kfd-7' ||
-      retainedBuildchain.value.status !== buildchain.status ||
-      retainedBuildchain.value.source?.sha !== buildchain.sourceRevision ||
-      retainedBuildchain.value.gateRoot !== buildchain.gateRoot ||
-      retainedBuildchain.value.selfCertified !== buildchain.selfCertified)
+    retained.status === 'verified' &&
+    retained.value &&
+    (retained.value.contract !== 'kungfu-buildchain-kfd-product-gate' ||
+      retained.value.standard !== 'kfd-7' ||
+      retained.value.status !== buildchain.status ||
+      retained.value.source?.sha !== buildchain.sourceRevision ||
+      retained.value.gateRoot !== buildchain.gateRoot ||
+      retained.value.selfCertified !== buildchain.selfCertified)
   )
     diagnostics.push(
       diagnostic(
@@ -815,9 +852,9 @@ export function evaluateConformance(declaration) {
         'Retained Buildchain evidence does not match the declared admission fields.',
       ),
     );
-  if (retainedBuildchain.status === 'verified' && retainedBuildchain.value) {
+  if (retained.status === 'verified' && retained.value) {
     const admittedEvidence = new Map(
-      (retainedBuildchain.value.evidence || []).map((coordinate) => [
+      (retained.value.evidence || []).map((coordinate) => [
         coordinate.id,
         coordinate.sha256,
       ]),
@@ -838,6 +875,10 @@ export function evaluateConformance(declaration) {
         ),
       );
   }
+}
+
+function validateBuildchainAuthority(context, buildchain) {
+  const { diagnostics } = context;
   const buildchainAuthority = retainEvidence(
     diagnostics,
     'buildchain-authority',
@@ -861,6 +902,10 @@ export function evaluateConformance(declaration) {
         'Buildchain admission requires an exact non-self-certified product gate, authority input, provider, runner, and source revision.',
       ),
     );
+}
+
+function validateBuildchainStatus(context, buildchain) {
+  const { diagnostics } = context;
   if (buildchain.manualAllowlist)
     diagnostics.push(
       diagnostic(
@@ -893,7 +938,17 @@ export function evaluateConformance(declaration) {
         'Buildchain product-gate evidence is absent, stale, or incomplete.',
       ),
     );
+}
 
+function validateBuildchainEvidence(context) {
+  const buildchain = context.declaration.buildchain;
+  validateRetainedBuildchain(context, buildchain);
+  validateBuildchainAuthority(context, buildchain);
+  validateBuildchainStatus(context, buildchain);
+}
+
+function validateWorkOperationModel(context) {
+  const { declaration, diagnostics, checks } = context;
   const operations = declaration.workOperationModel;
   const workApi = readJson(WORK_API_PATH);
   const requiredOperations = workApi.actions.map(({ id }) => id).sort();
@@ -919,7 +974,10 @@ export function evaluateConformance(declaration) {
         'The high-level operation model must bind the existing Work API contract exactly and cannot close through a separate Assignment.',
       ),
     );
+}
 
+function buildConformanceResult(context) {
+  const { declaration, diagnostics, checks, declarationRoot } = context;
   for (const constraint of declaration.constraints)
     diagnostics.push(
       diagnostic(
@@ -964,6 +1022,22 @@ export function evaluateConformance(declaration) {
       .sort(([left], [right]) => left.localeCompare(right)),
   );
   return { ...stable, conformanceRoot, surfaceRoots };
+}
+
+export function evaluateConformance(declaration) {
+  const validate = schemaValidator(DECLARATION_SCHEMA_PATH);
+  if (!validate(declaration))
+    return resultForInvalid(declaration, schemaDiagnostics(validate.errors));
+  const context = conformanceContext(declaration);
+  validateAuthorityBindings(context);
+  validateGenericReuse(context);
+  validateHumanAuthority(context);
+  validateBehaviorEvidence(context);
+  validatePlatformAdapters(context);
+  validateProfileSurfaces(context);
+  validateBuildchainEvidence(context);
+  validateWorkOperationModel(context);
+  return buildConformanceResult(context);
 }
 
 export function validateResult(result) {

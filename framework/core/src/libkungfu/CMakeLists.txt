@@ -252,7 +252,7 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_compile_features(kungfu_bounded_sql_parser_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_bounded_sql_parser_tests COMMAND kungfu_bounded_sql_parser_tests)
 
-  add_executable(kungfu_native_kfx_contract_tests tests/native_kfx_contract_tests.cpp tests/native_kfx_service_host_tests.cpp)
+  add_executable(kungfu_native_kfx_contract_tests tests/native_kfx_contract_tests.cpp tests/native_kfx_development_bootstrap_tests.cpp tests/native_kfx_service_host_tests.cpp)
   target_link_libraries(kungfu_native_kfx_contract_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
   target_compile_features(kungfu_native_kfx_contract_tests PRIVATE cxx_std_20)
   target_compile_definitions(kungfu_native_kfx_contract_tests PRIVATE

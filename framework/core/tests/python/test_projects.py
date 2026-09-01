@@ -2,8 +2,10 @@
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import json
 
 import pytest
+from click.testing import CliRunner
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu import profile_composition, profile_sdk, projects
@@ -137,6 +139,24 @@ def test_project_cli_first_layer_uses_new_and_open_language():
         if parameter.name == "template_id"
     )
     assert template.default == BLANK_TEMPLATE_ID
+
+
+def test_project_discovery_json_option_matches_default_output(tmp_path):
+    project = tmp_path / "ordinary-project"
+    project.mkdir()
+    runner = CliRunner()
+
+    default_works = runner.invoke(project_commands.project, ["works", str(project)])
+    explicit_works = runner.invoke(
+        project_commands.project, ["works", "--json", str(project)]
+    )
+
+    assert default_works.exit_code == 0, default_works.output
+    assert explicit_works.exit_code == 0, explicit_works.output
+    assert json.loads(explicit_works.output) == json.loads(default_works.output)
+    assert json.loads(explicit_works.output)["schema"] == (
+        "kungfu.project-work.inventory/v1"
+    )
 
 
 def test_import_plan_is_read_only_and_import_changes_only_registry(tmp_path):

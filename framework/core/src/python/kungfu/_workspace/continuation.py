@@ -54,6 +54,91 @@ def ensure_workspace_data_home(
     return workspace.ensure_workspace_data_home(identity, reason)
 
 
+def _read_episode_shadow(manifest_path: Path) -> str:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    semantic_root = str(manifest.get("semanticRoot") or "")
+    provider_root = str(manifest.get("providerRoot") or "")
+    if (
+        manifest.get("schema") != "kungfu.episode.git-workspace-manifest/v1"
+        or manifest.get("authority") != "shadow-of-yijinjing-journal"
+        or not _ROOT.fullmatch(semantic_root)
+        or not _ROOT.fullmatch(provider_root)
+    ):
+        raise ValueError("manifest contract mismatch")
+    provider_root_value = manifest.pop("providerRoot")
+    if _semantic_root(manifest) != provider_root_value:
+        raise ValueError("Episode provider root mismatch")
+    return semantic_root
+
+
+def _inspect_episode_shadows(data_home: str) -> tuple[list[str], list[dict[str, str]]]:
+    episode_root = Path(data_home) / "episodes" / "sealed"
+    roots: list[str] = []
+    issues: list[dict[str, str]] = []
+    if not episode_root.is_dir():
+        return roots, issues
+    for manifest_path in sorted(episode_root.rglob("manifest.json")):
+        try:
+            roots.append(_read_episode_shadow(manifest_path))
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            issues.append(
+                {
+                    "code": "episode-shadow-invalid",
+                    "path": str(manifest_path.relative_to(data_home)),
+                    "message": str(error),
+                }
+            )
+    return roots, issues
+
+
+def _read_project_cut(cut_path: Path) -> str:
+    cut = json.loads(cut_path.read_text(encoding="utf-8"))
+    cut_root_value = str(cut.get("cutRoot") or "")
+    if cut.get("schema") != "project.cut/v1" or not _ROOT.fullmatch(cut_root_value):
+        raise ValueError("Project Cut contract mismatch")
+    root_input = {
+        "schema": "project.cut.root-input/v1",
+        **{field: cut[field] for field in _PROJECT_CUT_ROOT_FIELDS},
+    }
+    if _semantic_root(root_input) != cut_root_value:
+        raise ValueError("Project Cut root mismatch")
+    return cut_root_value
+
+
+def _inspect_project_cuts(data_home: str) -> tuple[list[str], list[dict[str, str]]]:
+    project_cut_root = Path(data_home) / "project-cuts"
+    roots: list[str] = []
+    issues: list[dict[str, str]] = []
+    if not project_cut_root.is_dir():
+        return roots, issues
+    for cut_path in sorted(project_cut_root.rglob("*.json")):
+        if cut_path.name == "receipt.json" or cut_path.name.endswith(".receipt.json"):
+            continue
+        try:
+            roots.append(_read_project_cut(cut_path))
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            issues.append(
+                {
+                    "code": "project-cut-invalid",
+                    "path": str(cut_path.relative_to(data_home)),
+                    "message": str(error),
+                }
+            )
+    return roots, issues
+
+
+def _continuation_state(
+    *, runtime_present: bool, shadow_present: bool, issues: list[dict[str, str]]
+) -> tuple[str, str]:
+    if issues:
+        return "evidence-degraded", "degraded"
+    if runtime_present:
+        return "live-runtime", "live-local"
+    if shadow_present:
+        return "shadow-only", "settled-review"
+    return "uninitialized", "none"
+
+
 def inspect_workspace_continuation(identity: WorkspaceIdentityView) -> dict[str, Any]:
     """Inspect settled Git material without creating or repairing local state.
 
@@ -65,66 +150,9 @@ def inspect_workspace_continuation(identity: WorkspaceIdentityView) -> dict[str,
 
     runtime_dir = Path(identity.data_home) / "runtime"
     runtime_present = runtime_dir.is_dir()
-    episode_root = Path(identity.data_home) / "episodes" / "sealed"
-    cut_root = Path(identity.data_home) / "project-cuts"
-    issues: list[dict[str, str]] = []
-    episode_roots: list[str] = []
-    cut_roots: list[str] = []
-
-    if episode_root.is_dir():
-        for manifest_path in sorted(episode_root.rglob("manifest.json")):
-            try:
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                semantic_root = str(manifest.get("semanticRoot") or "")
-                provider_root = str(manifest.get("providerRoot") or "")
-                if (
-                    manifest.get("schema") != "kungfu.episode.git-workspace-manifest/v1"
-                    or manifest.get("authority") != "shadow-of-yijinjing-journal"
-                    or not _ROOT.fullmatch(semantic_root)
-                    or not _ROOT.fullmatch(provider_root)
-                ):
-                    raise ValueError("manifest contract mismatch")
-                provider_root_value = manifest.pop("providerRoot")
-                if _semantic_root(manifest) != provider_root_value:
-                    raise ValueError("Episode provider root mismatch")
-                episode_roots.append(semantic_root)
-            except (OSError, ValueError, json.JSONDecodeError) as error:
-                issues.append(
-                    {
-                        "code": "episode-shadow-invalid",
-                        "path": str(manifest_path.relative_to(identity.data_home)),
-                        "message": str(error),
-                    }
-                )
-
-    if cut_root.is_dir():
-        for cut_path in sorted(cut_root.rglob("*.json")):
-            if cut_path.name == "receipt.json" or cut_path.name.endswith(
-                ".receipt.json"
-            ):
-                continue
-            try:
-                cut = json.loads(cut_path.read_text(encoding="utf-8"))
-                cut_root_value = str(cut.get("cutRoot") or "")
-                if cut.get("schema") != "project.cut/v1" or not _ROOT.fullmatch(
-                    cut_root_value
-                ):
-                    raise ValueError("Project Cut contract mismatch")
-                root_input = {
-                    "schema": "project.cut.root-input/v1",
-                    **{field: cut[field] for field in _PROJECT_CUT_ROOT_FIELDS},
-                }
-                if _semantic_root(root_input) != cut_root_value:
-                    raise ValueError("Project Cut root mismatch")
-                cut_roots.append(cut_root_value)
-            except (OSError, ValueError, json.JSONDecodeError) as error:
-                issues.append(
-                    {
-                        "code": "project-cut-invalid",
-                        "path": str(cut_path.relative_to(identity.data_home)),
-                        "message": str(error),
-                    }
-                )
+    episode_roots, episode_issues = _inspect_episode_shadows(identity.data_home)
+    cut_roots, cut_issues = _inspect_project_cuts(identity.data_home)
+    issues = [*episode_issues, *cut_issues]
 
     full_evidence_roots, full_evidence_issues = _full_evidence_receipts(
         identity.data_home, identity.workspace_id, episode_roots
@@ -133,18 +161,11 @@ def inspect_workspace_continuation(identity: WorkspaceIdentityView) -> dict[str,
     historical_evidence_complete = bool(episode_roots) and set(episode_roots).issubset(
         full_evidence_roots
     )
-    if issues:
-        state = "evidence-degraded"
-        evidence_level = "degraded"
-    elif runtime_present:
-        state = "live-runtime"
-        evidence_level = "live-local"
-    elif shadow_present:
-        state = "shadow-only"
-        evidence_level = "settled-review"
-    else:
-        state = "uninitialized"
-        evidence_level = "none"
+    state, evidence_level = _continuation_state(
+        runtime_present=runtime_present,
+        shadow_present=shadow_present,
+        issues=issues,
+    )
 
     return {
         "schema": CONTINUATION_STATUS_SCHEMA,

@@ -114,18 +114,8 @@ public:
   static page_ptr load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id,
                        page_open_policy policy);
 
-  [[deprecated("kungfu-deprecation:core.yijinjing.page-open-policy-adapters#page-load-bool-policy; use page::load with "
-               "an explicit page_open_policy")]] static page_ptr
-  load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id, bool is_writing,
-       bool lazy, bool pre_open = false, bool allow_create = false);
-
   static page_ptr load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id,
                                                    uint32_t page_id, page_open_policy policy);
-
-  [[deprecated("kungfu-deprecation:core.yijinjing.page-open-policy-adapters#page-header-probe-bool-policy; use an "
-               "explicit header-probe page_open_policy")]] static page_ptr
-  load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
-                                   bool is_writing, bool lazy);
 
   static std::string get_page_path(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id);
 

@@ -96,7 +96,7 @@
       "protocol_id": "kungfu.kfx.manifest/v1",
       "source": "config/kungfu-kfx.contract.json",
       "source_role": "KFX-identity-neutral-package-declaration-schema",
-      "source_root": "sha256:4c17dddae597d19eb9ead4d3767669e3f8343a3b41cc9deb42c8eb5ff08a514d",
+      "source_root": "sha256:4c20da5f646edb823beca845e4010570ba8c30f478644cbdd730cebc60b53a00",
       "version_axis": "KFX package manifest schema version"
     },
     {
@@ -157,7 +157,7 @@
       },
       {
         "path": "config/kungfu-kfx.contract.json",
-        "root": "sha256:4c17dddae597d19eb9ead4d3767669e3f8343a3b41cc9deb42c8eb5ff08a514d"
+        "root": "sha256:4c20da5f646edb823beca845e4010570ba8c30f478644cbdd730cebc60b53a00"
       },
       {
         "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/common.h",

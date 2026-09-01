@@ -131,30 +131,6 @@ function windowsTreeKillInvocation(pid) {
   };
 }
 
-function nativeFixtureRemovalOptions(platform = process.platform) {
-  return {
-    recursive: true,
-    force: true,
-    maxRetries: platform === 'win32' ? 50 : 0,
-    retryDelay: 100,
-  };
-}
-
-test('native fixture removal retries only while Windows handles close', () => {
-  assert.deepEqual(nativeFixtureRemovalOptions('win32'), {
-    recursive: true,
-    force: true,
-    maxRetries: 50,
-    retryDelay: 100,
-  });
-  assert.deepEqual(nativeFixtureRemovalOptions('linux'), {
-    recursive: true,
-    force: true,
-    maxRetries: 0,
-    retryDelay: 100,
-  });
-});
-
 function posixProcessGroupAlive(pid) {
   try {
     process.kill(-pid, 0);
@@ -307,9 +283,7 @@ test(
         [...peers, coordinator].map((child) => stopChild(child)),
       );
       fs.closeSync(output);
-      // Windows can observe process exit before the coordinator's log handle
-      // finishes closing. Keep cleanup bounded while that handle drains.
-      fs.rmSync(home, nativeFixtureRemovalOptions());
+      fs.rmSync(home, { recursive: true, force: true });
       const failures = cleanup
         .filter((result) => result.status === 'rejected')
         .map((result) => result.reason);

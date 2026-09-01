@@ -185,6 +185,94 @@ def _by_id(rows: list[dict[str, Any]], label: str) -> dict[str, dict[str, Any]]:
     return dict(zip(ids, rows, strict=True))
 
 
+def _validate_provider(provider_id, provider, contract, surfaces, capabilities):
+    if provider.get("surfaceClass") not in surfaces:
+        _fail(
+            "runtime-surface-provider-class",
+            f"provider {provider_id} declares an unknown surface class",
+            "kungfu contract show runtime-surface --json",
+        )
+    surface = provider["surfaceClass"]
+    if provider.get("owner") != contract["surfaceClasses"][surface].get("owner"):
+        _fail(
+            "runtime-surface-provider-owner",
+            f"provider {provider_id} does not match its surface owner",
+            "kungfu contract show runtime-surface --json",
+        )
+    missing = set(provider.get("capabilities") or []) - capabilities
+    if missing:
+        _fail(
+            "runtime-surface-capability-unknown",
+            f"provider {provider_id} declares unknown capabilities: {sorted(missing)}",
+            "kungfu contract show runtime-surface --json",
+        )
+
+
+def _validate_operation_selection(operation_id, operation, capabilities):
+    allowed = set(operation.get("allowedSurfaces") or [])
+    required = set(operation.get("requiredCapabilities") or [])
+    if not allowed <= CONCRETE_SURFACES or required - capabilities:
+        _fail(
+            "runtime-surface-operation-invalid",
+            f"operation {operation_id} has unknown surfaces or capabilities",
+            "kungfu contract show runtime-surface --json",
+        )
+    mode = operation.get("selectionMode")
+    if mode == "exact" and len(allowed) != 1:
+        _fail(
+            "runtime-surface-selection-ambiguous",
+            f"exact operation {operation_id} must own one surface",
+            "kungfu contract show runtime-surface --json",
+        )
+    if mode == "capability-negotiated" and len(allowed) < 2:
+        _fail(
+            "runtime-surface-selection-ambiguous",
+            f"negotiated operation {operation_id} needs multiple surfaces",
+            "kungfu contract show runtime-surface --json",
+        )
+    return allowed, required
+
+
+def _validate_operation_owners(operation_id, allowed, required, preference, providers):
+    if len(preference) != len(set(preference)) or any(
+        provider_id not in providers for provider_id in preference
+    ):
+        _fail(
+            "runtime-surface-provider-preference",
+            f"operation {operation_id} has an invalid provider preference",
+            "kungfu contract show runtime-surface --json",
+        )
+    owners: dict[str, list[str]] = {surface: [] for surface in allowed}
+    for provider_id in preference:
+        provider = providers[provider_id]
+        surface = str(provider.get("surfaceClass") or "")
+        if surface in allowed and required <= set(provider.get("capabilities") or []):
+            owners[surface].append(provider_id)
+    ambiguous = {surface: rows for surface, rows in owners.items() if len(rows) != 1}
+    if ambiguous:
+        _fail(
+            "runtime-surface-duplicate-ownership",
+            f"operation {operation_id} does not have exactly one capable provider per surface: {ambiguous}",
+            "kungfu contract show runtime-surface --json",
+        )
+
+
+def _validate_operation(operation_id, operation, providers, capabilities):
+    allowed, required = _validate_operation_selection(
+        operation_id, operation, capabilities
+    )
+    preference = list(operation.get("providerPreference") or [])
+    _validate_operation_owners(operation_id, allowed, required, preference, providers)
+    fallback = operation.get("fallback") or {}
+    targets = set(fallback.get("targets") or [])
+    if not targets <= allowed or (fallback.get("mode") == "forbidden" and targets):
+        _fail(
+            "runtime-surface-fallback-ambiguous",
+            f"operation {operation_id} has contradictory fallback targets",
+            "kungfu contract show runtime-surface --json",
+        )
+
+
 def validate_contract(contract: dict[str, Any]) -> None:
     if contract.get("schema") != "kungfu.runtime-surface.contract/v1":
         _fail(
@@ -216,85 +304,9 @@ def validate_contract(contract: dict[str, Any]) -> None:
     providers = _by_id(list(contract.get("providers") or []), "provider")
     operations = _by_id(list(contract.get("operations") or []), "operation")
     for provider_id, provider in providers.items():
-        if provider.get("surfaceClass") not in surfaces:
-            _fail(
-                "runtime-surface-provider-class",
-                f"provider {provider_id} declares an unknown surface class",
-                "kungfu contract show runtime-surface --json",
-            )
-        if provider.get("owner") != contract["surfaceClasses"][
-            provider["surfaceClass"]
-        ].get("owner"):
-            _fail(
-                "runtime-surface-provider-owner",
-                f"provider {provider_id} does not match its surface owner",
-                "kungfu contract show runtime-surface --json",
-            )
-        missing = set(provider.get("capabilities") or []) - capabilities
-        if missing:
-            _fail(
-                "runtime-surface-capability-unknown",
-                f"provider {provider_id} declares unknown capabilities: {sorted(missing)}",
-                "kungfu contract show runtime-surface --json",
-            )
+        _validate_provider(provider_id, provider, contract, surfaces, capabilities)
     for operation_id, operation in operations.items():
-        allowed = set(operation.get("allowedSurfaces") or [])
-        required = set(operation.get("requiredCapabilities") or [])
-        preference = list(operation.get("providerPreference") or [])
-        if not allowed <= CONCRETE_SURFACES or required - capabilities:
-            _fail(
-                "runtime-surface-operation-invalid",
-                f"operation {operation_id} has unknown surfaces or capabilities",
-                "kungfu contract show runtime-surface --json",
-            )
-        if operation.get("selectionMode") == "exact" and len(allowed) != 1:
-            _fail(
-                "runtime-surface-selection-ambiguous",
-                f"exact operation {operation_id} must own one surface",
-                "kungfu contract show runtime-surface --json",
-            )
-        if (
-            operation.get("selectionMode") == "capability-negotiated"
-            and len(allowed) < 2
-        ):
-            _fail(
-                "runtime-surface-selection-ambiguous",
-                f"negotiated operation {operation_id} needs multiple surfaces",
-                "kungfu contract show runtime-surface --json",
-            )
-        if len(preference) != len(set(preference)) or any(
-            provider_id not in providers for provider_id in preference
-        ):
-            _fail(
-                "runtime-surface-provider-preference",
-                f"operation {operation_id} has an invalid provider preference",
-                "kungfu contract show runtime-surface --json",
-            )
-        owners: dict[str, list[str]] = {surface: [] for surface in allowed}
-        for provider_id in preference:
-            provider = providers[provider_id]
-            surface = str(provider.get("surfaceClass") or "")
-            if surface in allowed and required <= set(
-                provider.get("capabilities") or []
-            ):
-                owners[surface].append(provider_id)
-        ambiguous = {
-            surface: rows for surface, rows in owners.items() if len(rows) != 1
-        }
-        if ambiguous:
-            _fail(
-                "runtime-surface-duplicate-ownership",
-                f"operation {operation_id} does not have exactly one capable provider per surface: {ambiguous}",
-                "kungfu contract show runtime-surface --json",
-            )
-        fallback = operation.get("fallback") or {}
-        targets = set(fallback.get("targets") or [])
-        if not targets <= allowed or (fallback.get("mode") == "forbidden" and targets):
-            _fail(
-                "runtime-surface-fallback-ambiguous",
-                f"operation {operation_id} has contradictory fallback targets",
-                "kungfu contract show runtime-surface --json",
-            )
+        _validate_operation(operation_id, operation, providers, capabilities)
 
 
 def _normalize_candidate(

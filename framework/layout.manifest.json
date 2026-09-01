@@ -1,0 +1,477 @@
+{
+  "schema": "kungfu.framework-layout-manifest/v1",
+  "frameworkRoot": "framework",
+  "releaseRegistry": "framework/release/npm-package-registry.json",
+  "categoryDefinitions": {
+    "distribution": {
+      "npm-package": "A workspace package with package.json whose public release identity is owned by the npm release registry.",
+      "source-only": "Repository source, contracts, or tooling with no independent npm package identity."
+    },
+    "role": {
+      "runtime-package": "A build-on package or reference runtime surface distributed through npm.",
+      "contract-root": "Schemas, contracts, fixtures, vectors, or adjacent validators consumed from repository source.",
+      "internal-library": "Reusable repository source imported by other repository components without an independent package boundary.",
+      "repository-tool": "Development, governance, qualification, or release automation invoked inside this repository."
+    },
+    "boundaryReview": {
+      "candidate": "Non-binding evidence queue for a later public-boundary decision; it does not authorize packaging or publication.",
+      "none": "No public-boundary review is proposed by this manifest."
+    }
+  },
+  "entries": [
+    {
+      "path": "framework/action",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "candidate",
+      "dependencies": []
+    },
+    {
+      "path": "framework/agent-patrol",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/agent-repository-work",
+        "framework/dogfood"
+      ]
+    },
+    {
+      "path": "framework/agent-repository-work",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/agent-session",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/agent-session",
+      "dependencies": []
+    },
+    {
+      "path": "framework/agent-work",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/api",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/api",
+      "dependencies": [
+        "framework/agent-session",
+        "framework/core",
+        "framework/gui",
+        "framework/tui"
+      ]
+    },
+    {
+      "path": "framework/assignment-capture",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut",
+        "framework/release"
+      ]
+    },
+    {
+      "path": "framework/assignment-runtime",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "candidate",
+      "dependencies": []
+    },
+    {
+      "path": "framework/config",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/contract",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/core",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/core",
+      "dependencies": [
+        "framework/agent-session",
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/cut",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/data-protection",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/deprecation",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/dev-delivery",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/dev-gate-latency-patrol",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/dogfood"
+      ]
+    },
+    {
+      "path": "framework/dogfood",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/episode",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/episode-admission",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/episode-provider",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/evidence",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "candidate",
+      "dependencies": [
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/exit",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/fact",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/format",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/gui",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/gui",
+      "dependencies": [
+        "framework/kfx",
+        "framework/product",
+        "framework/upgrade"
+      ]
+    },
+    {
+      "path": "framework/hub-starter",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/incubation",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/initiative-assignment",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/invariant",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/kfx",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/kfx",
+      "dependencies": []
+    },
+    {
+      "path": "framework/maintainability",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/core",
+        "framework/project-cut",
+        "framework/terminal-evidence"
+      ]
+    },
+    {
+      "path": "framework/primitive",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/product",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/production-graph",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/profile",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/project-cut",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "candidate",
+      "dependencies": [
+        "framework/episode-provider",
+        "framework/evidence"
+      ]
+    },
+    {
+      "path": "framework/registry",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/release",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/assignment-capture",
+        "framework/version-line"
+      ]
+    },
+    {
+      "path": "framework/report-projection",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/runtime",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/site",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/site",
+      "dependencies": []
+    },
+    {
+      "path": "framework/skill",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/skill",
+      "dependencies": []
+    },
+    {
+      "path": "framework/spec",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/spec",
+      "dependencies": []
+    },
+    {
+      "path": "framework/storage",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/storage",
+      "dependencies": []
+    },
+    {
+      "path": "framework/terminal-evidence",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/tui",
+      "distribution": "npm-package",
+      "role": "runtime-package",
+      "boundaryReview": "none",
+      "packageName": "@kungfu-tech/tui",
+      "dependencies": [
+        "framework/agent-session"
+      ]
+    },
+    {
+      "path": "framework/upgrade",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/version-line",
+      "distribution": "source-only",
+      "role": "repository-tool",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/work-design-advisor",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/work-design-policy-replay",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/work-design-preflight",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut",
+        "framework/work-design-advisor",
+        "framework/work-history-selector"
+      ]
+    },
+    {
+      "path": "framework/work-history-selector",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/project-cut"
+      ]
+    },
+    {
+      "path": "framework/work-lifecycle",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/work-loop",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    },
+    {
+      "path": "framework/work-profile-conformance",
+      "distribution": "source-only",
+      "role": "internal-library",
+      "boundaryReview": "none",
+      "dependencies": [
+        "framework/action"
+      ]
+    },
+    {
+      "path": "framework/workspace-federation",
+      "distribution": "source-only",
+      "role": "contract-root",
+      "boundaryReview": "none",
+      "dependencies": []
+    }
+  ]
+}

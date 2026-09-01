@@ -1190,7 +1190,8 @@ void episode_manifest_store::for_each_typed_record(const episode_manifest_record
   if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
     return;
   }
-  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
+  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(kungfu::yijinjing::journal::reader_policy::peer(),
+                                                                     false, std::make_shared<bus>(false));
   reader->join(location, location::PUBLIC, 0);
   while (reader->data_available()) {
     const auto frame = reader->current_frame();
@@ -1304,6 +1305,105 @@ episode_inspect_result episode_manifest_store::inspect_typed(uint64_t episode_id
           static_cast<uint64_t>(fold.unknown_record_count)};
 }
 
+episode_fsck_issue episode_issue(std::string code, uint64_t episode_id) {
+  episode_fsck_issue issue{};
+  issue.code = std::move(code);
+  issue.episode_id = episode_id;
+  return issue;
+}
+
+void check_episode_lifecycle(const episode_current_view &view, uint64_t episode_id, episode_fsck_result &result) {
+  if (!view.opened)
+    result.errors.push_back(episode_issue("episode_open_missing", episode_id));
+  for (size_t occurrence = 0; occurrence < view.missing_frame_uid_count; ++occurrence)
+    result.errors.push_back(episode_issue("episode_frame_uid_missing", episode_id));
+  for (const auto frame_uid : view.duplicate_frame_uids) {
+    auto issue = episode_issue("episode_frame_duplicate", episode_id);
+    issue.frame_uid = frame_uid;
+    result.warnings.push_back(std::move(issue));
+  }
+  if (view.open_count > 1) {
+    auto issue = episode_issue("episode_open_duplicate", episode_id);
+    issue.count = static_cast<uint64_t>(view.open_count);
+    result.errors.push_back(std::move(issue));
+  }
+  if (view.close_count > 1) {
+    bool extra_closes_are_tombstones = view.close.status == EpisodeStatus::Tombstoned;
+    for (size_t index = 1; extra_closes_are_tombstones && index < view.close_statuses.size(); ++index)
+      extra_closes_are_tombstones = view.close_statuses[index] == EpisodeStatus::Tombstoned;
+    auto issue =
+        episode_issue(extra_closes_are_tombstones ? "episode_tombstoned" : "episode_closed_duplicate", episode_id);
+    issue.count = static_cast<uint64_t>(view.close_count);
+    result.warnings.push_back(std::move(issue));
+  }
+}
+
+void check_episode_seal(const episode_current_view &view, uint64_t episode_id, episode_fsck_result &result) {
+  if (!view.closed)
+    return;
+  const auto close_status = view.close.status;
+  const bool status_valid = close_status == EpisodeStatus::Ended || close_status == EpisodeStatus::Aborted ||
+                            close_status == EpisodeStatus::Tombstoned;
+  if (!status_valid) {
+    auto issue = episode_issue("episode_close_status_invalid", episode_id);
+    issue.status = static_cast<int32_t>(close_status);
+    result.errors.push_back(std::move(issue));
+  }
+  if (close_status != EpisodeStatus::Ended)
+    return;
+  if (view.close.frame_count != view.unique_frame_count) {
+    auto issue = episode_issue("episode_seal_frame_count_mismatch", episode_id);
+    issue.claimed = view.close.frame_count;
+    issue.actual = static_cast<uint64_t>(view.unique_frame_count);
+    result.errors.push_back(std::move(issue));
+  }
+  if (view.close.last_frame_uid == 0)
+    return;
+  bool claimed_last_present = false;
+  for (size_t position = 0; !claimed_last_present && position < view.frame_indices.size(); ++position)
+    claimed_last_present = view.frame_at(position).frame_uid == view.close.last_frame_uid;
+  if (!claimed_last_present) {
+    auto issue = episode_issue("episode_seal_last_frame_missing", episode_id);
+    issue.frame_uid = view.close.last_frame_uid;
+    result.errors.push_back(std::move(issue));
+  }
+}
+
+void check_episode_root(const episode_current_view &view, uint64_t episode_id, size_t unknown_record_count,
+                        episode_fsck_result &result) {
+  if (view.root_seen && !view.closed)
+    result.errors.push_back(episode_issue("episode_root_without_seal", episode_id));
+  if (view.root_count > 1) {
+    auto issue = episode_issue("episode_root_duplicate", episode_id);
+    issue.count = static_cast<uint64_t>(view.root_count);
+    result.warnings.push_back(std::move(issue));
+  }
+  if (!view.root_seen || !view.closed)
+    return;
+  const auto recorded_algorithm = fixed_string(view.root.algorithm);
+  if (unknown_record_count > 0) {
+    auto issue = episode_issue("episode_root_unverifiable", episode_id);
+    issue.reason = "unknown_records_present";
+    result.warnings.push_back(std::move(issue));
+  } else if (recorded_algorithm != CONTENT_HASH_ALGORITHM_SHA256) {
+    auto issue = episode_issue("episode_root_unverifiable", episode_id);
+    issue.reason = "unsupported_algorithm";
+    issue.algorithm = recorded_algorithm;
+    result.warnings.push_back(std::move(issue));
+  } else {
+    const auto root = compute_episode_content_root(view);
+    const auto recorded_value = fixed_string(view.root.root_value);
+    if (recorded_value != root.value || view.root.covered_record_count != root.covered_record_count) {
+      auto issue = episode_issue("episode_root_mismatch", episode_id);
+      issue.recorded = recorded_value;
+      issue.computed = root.value;
+      issue.recorded_covered_record_count = view.root.covered_record_count;
+      issue.computed_covered_record_count = root.covered_record_count;
+      result.errors.push_back(std::move(issue));
+    }
+  }
+}
+
 episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) const {
   const auto fold = fold_typed_records();
   const file_content_store default_content_store((fs::path(runtime_dir_) / "storage").string());
@@ -1313,12 +1413,6 @@ episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) cons
   result.episode_manifest_records = static_cast<uint64_t>(fold.total_record_count);
   result.unknown_records = static_cast<uint64_t>(fold.unknown_record_count);
   result.unfolded_records = static_cast<uint64_t>(fold.unfolded_record_count);
-  const auto issue_for = [](std::string code, uint64_t current_episode_id) {
-    episode_fsck_issue issue{};
-    issue.code = std::move(code);
-    issue.episode_id = current_episode_id;
-    return issue;
-  };
   for (const auto &[current_episode_id, view] : fold.episodes) {
     if (episode_id != 0 && current_episode_id != episode_id) {
       continue;
@@ -1327,101 +1421,14 @@ episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) cons
     if (episode_id != 0) {
       result.episode = view;
     }
-    if (!view.opened) {
-      result.errors.push_back(issue_for("episode_open_missing", current_episode_id));
-    }
-    for (size_t occurrence = 0; occurrence < view.missing_frame_uid_count; ++occurrence) {
-      result.errors.push_back(issue_for("episode_frame_uid_missing", current_episode_id));
-    }
-    for (const auto frame_uid : view.duplicate_frame_uids) {
-      auto issue = issue_for("episode_frame_duplicate", current_episode_id);
-      issue.frame_uid = frame_uid;
-      result.warnings.push_back(std::move(issue));
-    }
-    if (view.open_count > 1) {
-      auto issue = issue_for("episode_open_duplicate", current_episode_id);
-      issue.count = static_cast<uint64_t>(view.open_count);
-      result.errors.push_back(std::move(issue));
-    }
-    if (view.close_count > 1) {
-      // The append-only tombstone path (a Tombstoned close after the seal) is
-      // intentional, not a duplicate-close anomaly.
-      bool extra_closes_are_tombstones = view.close.status == EpisodeStatus::Tombstoned;
-      for (size_t index = 1; extra_closes_are_tombstones && index < view.close_statuses.size(); ++index) {
-        extra_closes_are_tombstones = view.close_statuses[index] == EpisodeStatus::Tombstoned;
-      }
-      auto issue = issue_for(extra_closes_are_tombstones ? "episode_tombstoned" : "episode_closed_duplicate",
-                             current_episode_id);
-      issue.count = static_cast<uint64_t>(view.close_count);
-      result.warnings.push_back(std::move(issue));
-    }
-    if (view.closed) {
-      const auto close_status = view.close.status;
-      const bool status_valid = close_status == EpisodeStatus::Ended || close_status == EpisodeStatus::Aborted ||
-                                close_status == EpisodeStatus::Tombstoned;
-      if (!status_valid) {
-        auto issue = issue_for("episode_close_status_invalid", current_episode_id);
-        issue.status = static_cast<int32_t>(close_status);
-        result.errors.push_back(std::move(issue));
-      }
-      // A seal is a claim about the Episode's content; the fold is the actual.
-      if (close_status == EpisodeStatus::Ended) {
-        if (view.close.frame_count != view.unique_frame_count) {
-          auto issue = issue_for("episode_seal_frame_count_mismatch", current_episode_id);
-          issue.claimed = view.close.frame_count;
-          issue.actual = static_cast<uint64_t>(view.unique_frame_count);
-          result.errors.push_back(std::move(issue));
-        }
-        if (view.close.last_frame_uid != 0) {
-          bool claimed_last_present = false;
-          for (size_t position = 0; !claimed_last_present && position < view.frame_indices.size(); ++position) {
-            claimed_last_present = view.frame_at(position).frame_uid == view.close.last_frame_uid;
-          }
-          if (!claimed_last_present) {
-            auto issue = issue_for("episode_seal_last_frame_missing", current_episode_id);
-            issue.frame_uid = view.close.last_frame_uid;
-            result.errors.push_back(std::move(issue));
-          }
-        }
-      }
-    }
+    check_episode_lifecycle(view, current_episode_id, result);
+    check_episode_seal(view, current_episode_id, result);
     // KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9: the recorded content root is a claim about the whole covered
     // sequence; fsck recomputes it from the fold and verifies. Unknown
     // records make the recomputation unverifiable (this reader cannot
     // canonicalize records a newer writer may have covered), reported
     // honestly instead of guessed.
-    if (view.root_seen && !view.closed) {
-      result.errors.push_back(issue_for("episode_root_without_seal", current_episode_id));
-    }
-    if (view.root_count > 1) {
-      auto issue = issue_for("episode_root_duplicate", current_episode_id);
-      issue.count = static_cast<uint64_t>(view.root_count);
-      result.warnings.push_back(std::move(issue));
-    }
-    if (view.root_seen && view.closed) {
-      const auto recorded_algorithm = fixed_string(view.root.algorithm);
-      if (fold.unknown_record_count > 0) {
-        auto issue = issue_for("episode_root_unverifiable", current_episode_id);
-        issue.reason = "unknown_records_present";
-        result.warnings.push_back(std::move(issue));
-      } else if (recorded_algorithm != CONTENT_HASH_ALGORITHM_SHA256) {
-        auto issue = issue_for("episode_root_unverifiable", current_episode_id);
-        issue.reason = "unsupported_algorithm";
-        issue.algorithm = recorded_algorithm;
-        result.warnings.push_back(std::move(issue));
-      } else {
-        const auto root = compute_episode_content_root(view);
-        const auto recorded_value = fixed_string(view.root.root_value);
-        if (recorded_value != root.value || view.root.covered_record_count != root.covered_record_count) {
-          auto issue = issue_for("episode_root_mismatch", current_episode_id);
-          issue.recorded = recorded_value;
-          issue.computed = root.value;
-          issue.recorded_covered_record_count = view.root.covered_record_count;
-          issue.computed_covered_record_count = root.covered_record_count;
-          result.errors.push_back(std::move(issue));
-        }
-      }
-    }
+    check_episode_root(view, current_episode_id, fold.unknown_record_count, result);
     const auto graph = build_causal_graph(refs, current_episode_id, view, fold.episodes);
     result.degraded = result.degraded || graph.degraded;
     for (const auto &error : graph.errors) {
@@ -1445,7 +1452,7 @@ episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) cons
     result.warnings.push_back(std::move(issue));
   }
   if (episode_id != 0 && result.episodes == 0) {
-    result.errors.push_back(issue_for("episode_missing", episode_id));
+    result.errors.push_back(episode_issue("episode_missing", episode_id));
   }
   result.ok = result.errors.empty();
   result.status = !result.ok ? "failed" : (result.degraded ? "degraded" : "ok");

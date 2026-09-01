@@ -4,13 +4,17 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { restoreKfdPrebuiltLayerArtifact } from '../framework/release/kfd-candidate-evidence.mjs';
 import { runShifuWithCache } from './run-shifu-lifecycle.mjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const REPORT_ROOT = path.join(ROOT, 'product', 'release', 'qualification');
 
-export function layerArtifactStages(layer) {
+export function layerArtifactStages(
+  layer,
+  { usePrebuiltArtifacts = false } = {},
+) {
   const definitions = {
     format: [
       ['pack:spec'],
@@ -42,7 +46,9 @@ export function layerArtifactStages(layer) {
   };
   if (!definitions[layer])
     throw new Error(`unknown layer artifact Gate '${layer}'`);
-  return definitions[layer];
+  return usePrebuiltArtifacts
+    ? definitions[layer].slice(1)
+    : definitions[layer];
 }
 
 function reportFile(layer) {
@@ -52,9 +58,16 @@ function reportFile(layer) {
 
 export function runLayerArtifactGate(
   layer,
-  { run = runShifuWithCache, env = process.env } = {},
+  {
+    run = runShifuWithCache,
+    env = process.env,
+    restore = restoreKfdPrebuiltLayerArtifact,
+  } = {},
 ) {
-  for (const args of layerArtifactStages(layer)) {
+  const usePrebuiltArtifacts =
+    env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS === '1';
+  if (usePrebuiltArtifacts) restore({ root: ROOT, layer });
+  for (const args of layerArtifactStages(layer, { usePrebuiltArtifacts })) {
     const status = run(args, { env });
     if (status !== 0) return status;
   }

@@ -262,8 +262,7 @@ function tomlProjectName(source, expected) {
  * @param {Record<string, unknown>} contract
  * @param {Record<string, string>} surfaces
  */
-export function validateTrademarkPublicUse(contract, surfaces) {
-  const issues = [];
+function validateTrademarkContract(contract, issues) {
   const brand = object(contract.brand);
   const state = object(contract.currentState);
   const gate = object(contract.firstPublicReleaseGate);
@@ -273,8 +272,6 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   const acquisitionGate = object(gate.acquisitionSurface);
   const productGate = object(gate.productSurface);
   const evidenceGate = object(gate.evidence);
-  const class9Gate = object(gate.class9FilingReadiness);
-  const class9EvidenceGate = object(class9Gate.evidence);
 
   if (contract.schema !== 'kungfu.trademark-public-use/v1')
     issues.push('schema must remain v1');
@@ -338,6 +335,12 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   ) {
     issues.push('public evidence coordinates are incomplete');
   }
+  validateClass9Contract(gate, issues);
+}
+
+function validateClass9Contract(gate, issues) {
+  const class9Gate = object(gate.class9FilingReadiness);
+  const class9EvidenceGate = object(class9Gate.evidence);
   if (
     class9Gate.jurisdiction !== 'US' ||
     class9Gate.internationalClass !== '009' ||
@@ -370,7 +373,9 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   ) {
     issues.push('Class 9 per-identification evidence policy is incomplete');
   }
+}
 
+function validateTrademarkDocumentationSurfaces(surfaces, issues) {
   const firstScreen = (surfaces['README.md'] || '').slice(0, 2400);
   if (
     !firstScreen.includes(EXACT_MARK) ||
@@ -397,6 +402,10 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   ) {
     issues.push('Why Kungfu must preserve the exact mark and product boundary');
   }
+}
+
+function validateTrademarkRuntimeSurfaces(contract, surfaces, issues) {
+  const brand = object(contract.brand);
   const nativeIdentity = surfaces['crates/trunk/src/product_identity.rs'] || '';
   const pythonIdentity =
     surfaces['framework/core/src/python/kungfu/product_identity.py'] || '';
@@ -453,6 +462,9 @@ export function validateTrademarkPublicUse(contract, surfaces) {
       'installed-product qualification must require the signature after the compatible version line',
     );
   }
+}
+
+function validateTrademarkPackageSurfaces(surfaces, issues) {
   const rootPackage = JSON.parse(surfaces['package.json'] || '{}');
   const productPackage = JSON.parse(surfaces['product/package.json'] || '{}');
   const corePackage = JSON.parse(
@@ -505,7 +517,9 @@ export function validateTrademarkPublicUse(contract, surfaces) {
       'canonical repository, domain, KFD, Buildchain, or libkungfu identity changed',
     );
   }
+}
 
+function validateTrademarkClaims(surfaces, issues) {
   for (const [surfacePath, source] of Object.entries(surfaces)) {
     if (source.includes('®'))
       issues.push(`${surfacePath} uses the registered symbol`);
@@ -513,7 +527,16 @@ export function validateTrademarkPublicUse(contract, surfaces) {
       issues.push(`${surfacePath} makes an unsupported registration claim`);
     }
   }
+}
 
+function releasedTrademarkContext(contract, issues) {
+  const state = object(contract.currentState);
+  const gate = object(contract.firstPublicReleaseGate);
+  const acquisitionGate = object(gate.acquisitionSurface);
+  const productGate = object(gate.productSurface);
+  const evidenceGate = object(gate.evidence);
+  const class9Gate = object(gate.class9FilingReadiness);
+  const class9EvidenceGate = object(class9Gate.evidence);
   const releasedClaim = state.releasedSoftwareUseClaim === true;
   const releaseAvailable = state.publicReleaseArtifactsAvailable === true;
   const class9Evidence = array(state.class9GoodsEvidence).map(object);
@@ -527,146 +550,180 @@ export function validateTrademarkPublicUse(contract, surfaces) {
       'pre-release state must not carry speculative Class 9 goods evidence',
     );
   }
-  if (releasedClaim) {
-    const acquisitions = array(state.acquisitionSurfaces).map(object);
-    const products = array(state.productSurfaces).map(object);
-    const evidence = array(state.evidenceRecords).map(object);
-    const allowedAcquisitionKinds = new Set(
-      array(acquisitionGate.allowedKinds),
-    );
-    const allowedProductKinds = new Set(array(productGate.allowedKinds));
-    const disallowedEvidenceKinds = new Set(
-      array(evidenceGate.disallowedKinds),
-    );
+  if (!releasedClaim) return null;
+  return {
+    state,
+    acquisitionGate,
+    productGate,
+    evidenceGate,
+    class9EvidenceGate,
+    class9Evidence,
+  };
+}
 
-    const qualifyingAcquisitions = acquisitions.filter(
-      (item) =>
-        typeof item.id === 'string' &&
-        item.id.length > 0 &&
-        allowedAcquisitionKinds.has(item.kind) &&
-        item.exactMark === EXACT_MARK &&
-        publicUrl(item.publicUrl) &&
-        !preparatoryUrl(item.publicUrl) &&
-        typeof item.deploymentOrReleaseCoordinate === 'string' &&
-        item.deploymentOrReleaseCoordinate.length > 0 &&
-        !disallowedEvidenceKinds.has(item.evidenceKind),
+function qualifyingReleaseSurfaces(context, issues) {
+  const acquisitions = array(context.state.acquisitionSurfaces).map(object);
+  const products = array(context.state.productSurfaces).map(object);
+  const allowedAcquisitionKinds = new Set(
+    array(context.acquisitionGate.allowedKinds),
+  );
+  const allowedProductKinds = new Set(array(context.productGate.allowedKinds));
+  const disallowedEvidenceKinds = new Set(
+    array(context.evidenceGate.disallowedKinds),
+  );
+  const qualifyingAcquisitions = acquisitions.filter(
+    (item) =>
+      typeof item.id === 'string' &&
+      item.id.length > 0 &&
+      allowedAcquisitionKinds.has(item.kind) &&
+      item.exactMark === EXACT_MARK &&
+      publicUrl(item.publicUrl) &&
+      !preparatoryUrl(item.publicUrl) &&
+      typeof item.deploymentOrReleaseCoordinate === 'string' &&
+      item.deploymentOrReleaseCoordinate.length > 0 &&
+      !disallowedEvidenceKinds.has(item.evidenceKind),
+  );
+  if (qualifyingAcquisitions.length === 0)
+    issues.push(
+      'released use requires an exact-mark real public acquisition surface',
     );
-    if (qualifyingAcquisitions.length === 0) {
-      issues.push(
-        'released use requires an exact-mark real public acquisition surface',
-      );
-    }
-    const qualifyingProducts = products.filter(
-      (item) =>
-        typeof item.id === 'string' &&
-        item.id.length > 0 &&
-        allowedProductKinds.has(item.kind) &&
-        item.exactMark === EXACT_MARK &&
-        typeof item.deploymentOrReleaseCoordinate === 'string' &&
-        item.deploymentOrReleaseCoordinate.length > 0,
-    );
-    if (qualifyingProducts.length === 0) {
-      issues.push('released use requires an exact-mark stable product surface');
-    }
-    const completeEvidence = evidence.filter((item) => {
-      if (
-        !REQUIRED_EVIDENCE_FIELDS.every(
-          (field) => typeof item[field] === 'string' && item[field].length > 0,
-        ) ||
-        !publicUrl(item.publicUrl) ||
-        !publicUrl(item.renderedEvidence) ||
-        preparatoryUrl(item.publicUrl) ||
-        preparatoryUrl(item.renderedEvidence) ||
-        !dateOnly(item.accessedAt) ||
-        item.sourceRepository !== SOURCE_REPOSITORY ||
-        !/^[0-9a-f]{40}$/u.test(String(item.sourceCommit)) ||
-        disallowedEvidenceKinds.has(item.kind)
-      ) {
-        return false;
-      }
-      const acquisition = qualifyingAcquisitions.find(
-        (surface) => surface.id === item.acquisitionSurfaceId,
-      );
-      const product = qualifyingProducts.find(
-        (surface) => surface.id === item.productSurfaceId,
-      );
-      return (
-        acquisition?.publicUrl === item.publicUrl &&
-        acquisition?.deploymentOrReleaseCoordinate ===
-          item.deploymentOrReleaseCoordinate &&
-        product?.deploymentOrReleaseCoordinate ===
-          item.deploymentOrReleaseCoordinate
-      );
-    });
-    if (completeEvidence.length === 0) {
-      issues.push(
-        'released use requires one complete public-safe evidence record bound to the acquisition and product surfaces',
-      );
-    }
+  const qualifyingProducts = products.filter(
+    (item) =>
+      typeof item.id === 'string' &&
+      item.id.length > 0 &&
+      allowedProductKinds.has(item.kind) &&
+      item.exactMark === EXACT_MARK &&
+      typeof item.deploymentOrReleaseCoordinate === 'string' &&
+      item.deploymentOrReleaseCoordinate.length > 0,
+  );
+  if (qualifyingProducts.length === 0)
+    issues.push('released use requires an exact-mark stable product surface');
+  return {
+    qualifyingAcquisitions,
+    qualifyingProducts,
+    disallowedEvidenceKinds,
+  };
+}
 
-    const plans = [
-      ...CLASS9_CORE_IDENTIFICATIONS,
-      ...CLASS9_CONDITIONAL_IDENTIFICATIONS,
-    ];
-    const planById = new Map(plans.map((plan) => [plan.planId, plan]));
-    const allowedClass9EvidenceKinds = new Set(
-      array(class9EvidenceGate.allowedCapabilityEvidenceKinds),
-    );
-    const disallowedClass9EvidenceKinds = new Set(
-      array(class9EvidenceGate.disallowedCapabilityEvidenceKinds),
-    );
-    const seenPlanIds = new Set();
-    const qualifyingClass9Evidence = class9Evidence.filter((item) => {
-      const plan = planById.get(String(item.planId));
-      const complete = REQUIRED_CLASS9_EVIDENCE_FIELDS.every(
+function validateReleaseRecords(context, surfaces, issues) {
+  const evidence = array(context.state.evidenceRecords).map(object);
+  const completeEvidence = evidence.filter((item) => {
+    if (
+      !REQUIRED_EVIDENCE_FIELDS.every(
         (field) => typeof item[field] === 'string' && item[field].length > 0,
-      );
-      if (!plan || !complete || seenPlanIds.has(String(item.planId))) {
-        return false;
-      }
-      seenPlanIds.add(String(item.planId));
-      const acquisition = qualifyingAcquisitions.find(
-        (surface) => surface.id === item.acquisitionSurfaceId,
-      );
-      const product = qualifyingProducts.find(
-        (surface) => surface.id === item.productSurfaceId,
-      );
-      return (
-        item.termId === plan.termId &&
-        item.identification === plan.identification &&
-        item.status === 'released' &&
-        allowedClass9EvidenceKinds.has(item.capabilityEvidenceKind) &&
-        !disallowedClass9EvidenceKinds.has(item.capabilityEvidenceKind) &&
-        publicUrl(item.publicUrl) &&
-        publicUrl(item.renderedEvidence) &&
-        !preparatoryUrl(item.publicUrl) &&
-        !preparatoryUrl(item.renderedEvidence) &&
-        dateOnly(item.accessedAt) &&
-        item.sourceRepository === SOURCE_REPOSITORY &&
-        /^[0-9a-f]{40}$/u.test(String(item.sourceCommit)) &&
-        acquisition?.deploymentOrReleaseCoordinate ===
-          item.deploymentOrReleaseCoordinate &&
-        product?.deploymentOrReleaseCoordinate ===
-          item.deploymentOrReleaseCoordinate
-      );
-    });
-    const qualifyingPlanIds = new Set(
-      qualifyingClass9Evidence.map((item) => item.planId),
+      ) ||
+      !publicUrl(item.publicUrl) ||
+      !publicUrl(item.renderedEvidence) ||
+      preparatoryUrl(item.publicUrl) ||
+      preparatoryUrl(item.renderedEvidence) ||
+      !dateOnly(item.accessedAt) ||
+      item.sourceRepository !== SOURCE_REPOSITORY ||
+      !/^[0-9a-f]{40}$/u.test(String(item.sourceCommit)) ||
+      surfaces.disallowedEvidenceKinds.has(item.kind)
+    )
+      return false;
+    const acquisition = surfaces.qualifyingAcquisitions.find(
+      (surface) => surface.id === item.acquisitionSurfaceId,
     );
-    const missingCorePlans = CLASS9_CORE_IDENTIFICATIONS.filter(
-      (plan) => !qualifyingPlanIds.has(plan.planId),
-    ).map((plan) => plan.planId);
-    if (missingCorePlans.length > 0) {
-      issues.push(
-        `released use requires public capability evidence for every core Class 9 identification: ${missingCorePlans.join(', ')}`,
-      );
-    }
-    if (qualifyingClass9Evidence.length !== class9Evidence.length) {
-      issues.push(
-        'every selected Class 9 identification must carry complete released-product evidence for the exact release',
-      );
-    }
-  }
+    const product = surfaces.qualifyingProducts.find(
+      (surface) => surface.id === item.productSurfaceId,
+    );
+    return (
+      acquisition?.publicUrl === item.publicUrl &&
+      acquisition?.deploymentOrReleaseCoordinate ===
+        item.deploymentOrReleaseCoordinate &&
+      product?.deploymentOrReleaseCoordinate ===
+        item.deploymentOrReleaseCoordinate
+    );
+  });
+  if (completeEvidence.length === 0)
+    issues.push(
+      'released use requires one complete public-safe evidence record bound to the acquisition and product surfaces',
+    );
+}
+
+function validClass9Evidence(item, plan, context, surfaces, policy) {
+  const acquisition = surfaces.qualifyingAcquisitions.find(
+    (surface) => surface.id === item.acquisitionSurfaceId,
+  );
+  const product = surfaces.qualifyingProducts.find(
+    (surface) => surface.id === item.productSurfaceId,
+  );
+  return (
+    item.termId === plan.termId &&
+    item.identification === plan.identification &&
+    item.status === 'released' &&
+    policy.allowed.has(item.capabilityEvidenceKind) &&
+    !policy.disallowed.has(item.capabilityEvidenceKind) &&
+    publicUrl(item.publicUrl) &&
+    publicUrl(item.renderedEvidence) &&
+    !preparatoryUrl(item.publicUrl) &&
+    !preparatoryUrl(item.renderedEvidence) &&
+    dateOnly(item.accessedAt) &&
+    item.sourceRepository === SOURCE_REPOSITORY &&
+    /^[0-9a-f]{40}$/u.test(String(item.sourceCommit)) &&
+    acquisition?.deploymentOrReleaseCoordinate ===
+      item.deploymentOrReleaseCoordinate &&
+    product?.deploymentOrReleaseCoordinate ===
+      item.deploymentOrReleaseCoordinate
+  );
+}
+
+function validateClass9ReleaseEvidence(context, surfaces, issues) {
+  const plans = [
+    ...CLASS9_CORE_IDENTIFICATIONS,
+    ...CLASS9_CONDITIONAL_IDENTIFICATIONS,
+  ];
+  const planById = new Map(plans.map((plan) => [plan.planId, plan]));
+  const policy = {
+    allowed: new Set(
+      array(context.class9EvidenceGate.allowedCapabilityEvidenceKinds),
+    ),
+    disallowed: new Set(
+      array(context.class9EvidenceGate.disallowedCapabilityEvidenceKinds),
+    ),
+  };
+  const seenPlanIds = new Set();
+  const qualifying = context.class9Evidence.filter((item) => {
+    const plan = planById.get(String(item.planId));
+    const complete = REQUIRED_CLASS9_EVIDENCE_FIELDS.every(
+      (field) => typeof item[field] === 'string' && item[field].length > 0,
+    );
+    if (!plan || !complete || seenPlanIds.has(String(item.planId)))
+      return false;
+    seenPlanIds.add(String(item.planId));
+    return validClass9Evidence(item, plan, context, surfaces, policy);
+  });
+  const qualifyingPlanIds = new Set(qualifying.map((item) => item.planId));
+  const missingCorePlans = CLASS9_CORE_IDENTIFICATIONS.filter(
+    (plan) => !qualifyingPlanIds.has(plan.planId),
+  ).map((plan) => plan.planId);
+  if (missingCorePlans.length > 0)
+    issues.push(
+      `released use requires public capability evidence for every core Class 9 identification: ${missingCorePlans.join(', ')}`,
+    );
+  if (qualifying.length !== context.class9Evidence.length)
+    issues.push(
+      'every selected Class 9 identification must carry complete released-product evidence for the exact release',
+    );
+}
+
+function validateReleasedTrademarkEvidence(contract, issues) {
+  const context = releasedTrademarkContext(contract, issues);
+  if (!context) return;
+  const surfaces = qualifyingReleaseSurfaces(context, issues);
+  validateReleaseRecords(context, surfaces, issues);
+  validateClass9ReleaseEvidence(context, surfaces, issues);
+}
+
+export function validateTrademarkPublicUse(contract, surfaces) {
+  const issues = [];
+  validateTrademarkContract(contract, issues);
+  validateTrademarkDocumentationSurfaces(surfaces, issues);
+  validateTrademarkRuntimeSurfaces(contract, surfaces, issues);
+  validateTrademarkPackageSurfaces(surfaces, issues);
+  validateTrademarkClaims(surfaces, issues);
+  validateReleasedTrademarkEvidence(contract, issues);
   return issues;
 }
 

@@ -218,64 +218,112 @@ enum OperationRoute {
     Maintenance(u32),
 }
 
-fn operation_route(operation: &str) -> Option<OperationRoute> {
-    let ledger = match operation {
-        "fact_kernel" => 1,
-        "fact_query" => 2,
-        "fact_contract" => 3,
-        "fact_declare_world" => 4,
-        "fact_declare_surface" => 5,
-        "fact_observe" => 6,
-        "fact_state" => 7,
-        "fact_library_contract" => 8,
-        "fact_type_create" => 9,
-        "fact_type_list" => 10,
-        "fact_material_put" => 11,
-        "fact_material_list" => 12,
-        "fact_library_export" => 13,
-        "fact_library_import" => 14,
-        "episode_begin" => 16,
-        "episode_heartbeat" => 17,
-        "episode_end" => 18,
-        "episode_abort" => 19,
-        "episode_attach_frame" => 20,
-        "episode_attach_ref" => 21,
-        "episode_list" => 22,
-        "episode_inspect" => 23,
-        "episode_recover" => 24,
-        "episode_recovery_plan" => 25,
-        "episode_recovery_execute" => 26,
-        "authority_export" => 32,
-        "authority_import" => 33,
-        "assessment_contract" => 40,
-        "assessment_request" => 41,
-        "assessment_execute" => 42,
-        "assessment_status" => 43,
-        "trust_require" => 44,
-        "assessment_list" => 45,
-        "assessment_invalidate" => 46,
-        _ => 0,
-    };
-    if ledger != 0 {
-        return Some(OperationRoute::Ledger(ledger));
+fn fact_contract_operation_id(operation: &str) -> Option<u32> {
+    match operation {
+        "fact_kernel" => Some(1),
+        "fact_query" => Some(2),
+        "fact_contract" => Some(3),
+        "fact_declare_world" => Some(4),
+        "fact_declare_surface" => Some(5),
+        "fact_observe" => Some(6),
+        "fact_state" => Some(7),
+        "fact_library_contract" => Some(8),
+        _ => None,
     }
-    let maintenance = match operation {
-        "status" => 1,
-        "fsck" => 2,
-        "repair_plan" => 3,
-        "repair_apply" => 4,
-        "gc_plan" => 5,
-        "compact_plan" => 6,
-        "export_bundle" => 7,
-        "import_bundle" => 8,
-        "rebuild_index" => 9,
-        "backend_status" => 10,
-        "backend_switch" => 11,
-        "backend_rollback" => 12,
-        "episode_projection_rebuild" => 13,
-        _ => return None,
-    };
-    Some(OperationRoute::Maintenance(maintenance))
+}
+
+fn fact_material_operation_id(operation: &str) -> Option<u32> {
+    match operation {
+        "fact_type_create" => Some(9),
+        "fact_type_list" => Some(10),
+        "fact_material_put" => Some(11),
+        "fact_material_list" => Some(12),
+        "fact_library_export" => Some(13),
+        "fact_library_import" => Some(14),
+        _ => None,
+    }
+}
+
+fn episode_lifecycle_operation_id(operation: &str) -> Option<u32> {
+    match operation {
+        "episode_begin" => Some(16),
+        "episode_heartbeat" => Some(17),
+        "episode_end" => Some(18),
+        "episode_abort" => Some(19),
+        "episode_attach_frame" => Some(20),
+        "episode_attach_ref" => Some(21),
+        _ => None,
+    }
+}
+
+fn episode_recovery_operation_id(operation: &str) -> Option<u32> {
+    match operation {
+        "episode_list" => Some(22),
+        "episode_inspect" => Some(23),
+        "episode_recover" => Some(24),
+        "episode_recovery_plan" => Some(25),
+        "episode_recovery_execute" => Some(26),
+        _ => None,
+    }
+}
+
+fn authority_operation_id(operation: &str) -> Option<u32> {
+    match operation {
+        "authority_export" => Some(32),
+        "authority_import" => Some(33),
+        "assessment_contract" => Some(40),
+        "assessment_request" => Some(41),
+        "assessment_execute" => Some(42),
+        "assessment_status" => Some(43),
+        "trust_require" => Some(44),
+        "assessment_list" => Some(45),
+        "assessment_invalidate" => Some(46),
+        _ => None,
+    }
+}
+
+fn ledger_operation_id(operation: &str) -> Option<u32> {
+    fact_contract_operation_id(operation)
+        .or_else(|| fact_material_operation_id(operation))
+        .or_else(|| episode_lifecycle_operation_id(operation))
+        .or_else(|| episode_recovery_operation_id(operation))
+        .or_else(|| authority_operation_id(operation))
+}
+
+fn maintenance_repair_operation_id(operation: &str) -> Option<u32> {
+    match operation {
+        "status" => Some(1),
+        "fsck" => Some(2),
+        "repair_plan" => Some(3),
+        "repair_apply" => Some(4),
+        "gc_plan" => Some(5),
+        "compact_plan" => Some(6),
+        _ => None,
+    }
+}
+
+fn maintenance_transfer_operation_id(operation: &str) -> Option<u32> {
+    match operation {
+        "export_bundle" => Some(7),
+        "import_bundle" => Some(8),
+        "rebuild_index" => Some(9),
+        "backend_status" => Some(10),
+        "backend_switch" => Some(11),
+        "backend_rollback" => Some(12),
+        "episode_projection_rebuild" => Some(13),
+        _ => None,
+    }
+}
+
+fn maintenance_operation_id(operation: &str) -> Option<u32> {
+    maintenance_repair_operation_id(operation)
+        .or_else(|| maintenance_transfer_operation_id(operation))
+}
+
+fn operation_route(operation: &str) -> Option<OperationRoute> {
+    ledger_operation_id(operation)
+        .map(OperationRoute::Ledger)
+        .or_else(|| maintenance_operation_id(operation).map(OperationRoute::Maintenance))
 }
 
 impl NativeStorage {

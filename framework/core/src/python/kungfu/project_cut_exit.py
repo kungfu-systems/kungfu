@@ -351,6 +351,122 @@ def _project_cut_parse_material(value: Any, field: str) -> dict[str, Any]:
     return parsed
 
 
+def _project_cut_verify_bundle_member(row: Mapping[str, Any]) -> dict[str, Any]:
+    manifest_bytes = _project_cut_decode(row.get("manifestBase64"), "manifestBase64")
+    receipt_bytes = _project_cut_decode(row.get("receiptBase64"), "receiptBase64")
+    manifest = _project_cut_parse_material(row.get("manifestBase64"), "manifestBase64")
+    receipt = _project_cut_parse_material(row.get("receiptBase64"), "receiptBase64")
+    if row.get("manifest") != manifest or row.get("receipt") != receipt:
+        raise ProjectCutExitError(
+            "project-cut-material-mismatch", "decoded Project Cut objects differ"
+        )
+    verified_roots = _project_cut_verify_receipt(
+        receipt, _project_cut_verify_cut(manifest, manifest_bytes)
+    )
+    if (
+        row.get("roots") != verified_roots
+        or row.get("cutRoot") != verified_roots["cutRoot"]
+    ):
+        raise ProjectCutExitError(
+            "project-cut-member-root-mismatch", "Project Cut roots differ"
+        )
+    if row.get("parentCutRoots") != list(manifest.get("parentCutRoots") or []):
+        raise ProjectCutExitError(
+            "project-cut-relation-mismatch", "Project Cut parents differ"
+        )
+    if receipt_bytes != canonical_json_bytes(receipt) + b"\n":
+        raise ProjectCutExitError(
+            "project-cut-receipt-bytes-noncanonical",
+            "Project Cut receipt bytes are not canonical",
+        )
+    return dict(row)
+
+
+def _project_cut_verify_relationships(bundle, verified, primary_root, roots):
+    if primary_root not in verified or verified[primary_root]["roots"] != roots:
+        raise ProjectCutExitError(
+            "project-cut-primary-missing", "primary Project Cut material is absent"
+        )
+    primary = verified[primary_root]
+    if bundle.get("predecessorCutRoots") != primary["parentCutRoots"]:
+        raise ProjectCutExitError(
+            "project-cut-relation-mismatch", "predecessor inventory differs"
+        )
+    declared_successors = list(bundle.get("successorCutRoots") or [])
+    if declared_successors != sorted(root for root in verified if root != primary_root):
+        raise ProjectCutExitError(
+            "project-cut-relation-mismatch", "successor inventory differs"
+        )
+    for successor_root in declared_successors:
+        row = verified.get(successor_root)
+        if row is None or primary_root not in row.get("parentCutRoots", []):
+            raise ProjectCutExitError(
+                "project-cut-successor-mismatch", "successor relation differs"
+            )
+    for field in ("omissions", "conflicts", "unknowns"):
+        if bundle.get(field) != list(primary["manifest"].get(field) or []):
+            raise ProjectCutExitError(
+                "project-cut-loss-mismatch", f"{field} inventory differs"
+            )
+
+
+def _project_cut_publication_identity(row):
+    manifest = _project_cut_parse_material(
+        row.get("manifestBase64"), "publicationBase64"
+    )
+    if row.get("manifest") != manifest:
+        raise ProjectCutExitError(
+            "project-cut-publication-mismatch", "publication bytes differ"
+        )
+    preimage = dict(manifest)
+    manifest_root = preimage.pop("manifestRoot", None)
+    batch_root = _project_cut_require_root(manifest.get("batchRoot"), "batchRoot")
+    return manifest, preimage, manifest_root, batch_root
+
+
+def _project_cut_publication_valid(row, manifest, preimage, roots, verified):
+    manifest_root, batch_root = roots
+    batch_input = manifest.get("batchInput")
+    if not isinstance(batch_input, Mapping):
+        return False
+    selected = {
+        str(entry.get("cutRoot") or "")
+        for entry in (manifest.get("selection") or {}).get("projectCuts") or []
+        if isinstance(entry, Mapping)
+    }
+    return all(
+        (
+            manifest.get("schema") == _PROJECT_CUT_PUBLICATION_SCHEMA,
+            manifest_root == row.get("manifestRoot"),
+            _project_cut_semantic_root(preimage) == manifest_root,
+            row.get("batchRoot") == batch_root,
+            _project_cut_semantic_root(batch_input) == batch_root,
+            bool(selected.intersection(verified)),
+            manifest.get("authority") == "projection-of-kungfu-native-settlement",
+            manifest.get("generatedBy") == "kungfu-settlement-publication/v1",
+            (manifest.get("runtimeContinuation") or {}).get("publicationIsAuthority")
+            is False,
+        )
+    )
+
+
+def _project_cut_verify_publications(publications, verified):
+    publication_roots = []
+    for row in publications:
+        manifest, preimage, manifest_root, batch_root = (
+            _project_cut_publication_identity(row)
+        )
+        if not _project_cut_publication_valid(
+            row, manifest, preimage, (manifest_root, batch_root), verified
+        ):
+            raise ProjectCutExitError(
+                "project-cut-publication-root-mismatch",
+                "publication manifest root differs",
+            )
+        publication_roots.append(manifest_root)
+    return publication_roots
+
+
 def verify_bundle(bundle: Mapping[str, Any]) -> dict[str, Any]:
     """Verify the member using Project Cut-owned root rules."""
 
@@ -403,103 +519,16 @@ def verify_bundle(bundle: Mapping[str, Any]) -> dict[str, Any]:
         )
     verified: dict[str, dict[str, Any]] = {}
     for row in cuts:
-        manifest_bytes = _project_cut_decode(
-            row.get("manifestBase64"), "manifestBase64"
-        )
-        receipt_bytes = _project_cut_decode(row.get("receiptBase64"), "receiptBase64")
-        manifest = _project_cut_parse_material(
-            row.get("manifestBase64"), "manifestBase64"
-        )
-        receipt = _project_cut_parse_material(row.get("receiptBase64"), "receiptBase64")
-        if row.get("manifest") != manifest or row.get("receipt") != receipt:
-            raise ProjectCutExitError(
-                "project-cut-material-mismatch", "decoded Project Cut objects differ"
-            )
-        verified_roots = _project_cut_verify_receipt(
-            receipt, _project_cut_verify_cut(manifest, manifest_bytes)
-        )
-        if row.get("roots") != verified_roots:
-            raise ProjectCutExitError(
-                "project-cut-member-root-mismatch", "Project Cut roots differ"
-            )
-        if row.get("cutRoot") != verified_roots["cutRoot"]:
-            raise ProjectCutExitError(
-                "project-cut-member-root-mismatch", "Project Cut identity differs"
-            )
-        if row.get("parentCutRoots") != list(manifest.get("parentCutRoots") or []):
-            raise ProjectCutExitError(
-                "project-cut-relation-mismatch", "Project Cut parents differ"
-            )
-        if receipt_bytes != canonical_json_bytes(receipt) + b"\n":
-            raise ProjectCutExitError(
-                "project-cut-receipt-bytes-noncanonical",
-                "Project Cut receipt bytes are not canonical",
-            )
-        if row["cutRoot"] in verified:
+        member = _project_cut_verify_bundle_member(row)
+        if member["cutRoot"] in verified:
             raise ProjectCutExitError(
                 "project-cut-duplicate-identity", "Project Cut identity is duplicated"
             )
-        verified[row["cutRoot"]] = row
-    if primary_root not in verified or verified[primary_root]["roots"] != roots:
-        raise ProjectCutExitError(
-            "project-cut-primary-missing", "primary Project Cut material is absent"
-        )
-    primary = verified[primary_root]
-    if bundle.get("predecessorCutRoots") != primary["parentCutRoots"]:
-        raise ProjectCutExitError(
-            "project-cut-relation-mismatch", "predecessor inventory differs"
-        )
-    declared_successors = list(bundle.get("successorCutRoots") or [])
-    if declared_successors != sorted(root for root in verified if root != primary_root):
-        raise ProjectCutExitError(
-            "project-cut-relation-mismatch", "successor inventory differs"
-        )
-    for successor_root in declared_successors:
-        row = verified.get(successor_root)
-        if row is None or primary_root not in row.get("parentCutRoots", []):
-            raise ProjectCutExitError(
-                "project-cut-successor-mismatch", "successor relation differs"
-            )
-    for field in ("omissions", "conflicts", "unknowns"):
-        if bundle.get(field) != list(primary["manifest"].get(field) or []):
-            raise ProjectCutExitError(
-                "project-cut-loss-mismatch", f"{field} inventory differs"
-            )
-    publication_roots = []
-    for row in bundle.get("publications") or []:
-        manifest = _project_cut_parse_material(
-            row.get("manifestBase64"), "publicationBase64"
-        )
-        if row.get("manifest") != manifest:
-            raise ProjectCutExitError(
-                "project-cut-publication-mismatch", "publication bytes differ"
-            )
-        preimage = dict(manifest)
-        manifest_root = preimage.pop("manifestRoot", None)
-        batch_root = _project_cut_require_root(manifest.get("batchRoot"), "batchRoot")
-        selected = {
-            str(entry.get("cutRoot") or "")
-            for entry in (manifest.get("selection") or {}).get("projectCuts") or []
-            if isinstance(entry, Mapping)
-        }
-        if (
-            manifest.get("schema") != _PROJECT_CUT_PUBLICATION_SCHEMA
-            or manifest_root != row.get("manifestRoot")
-            or _project_cut_semantic_root(preimage) != manifest_root
-            or row.get("batchRoot") != batch_root
-            or not isinstance(manifest.get("batchInput"), Mapping)
-            or _project_cut_semantic_root(manifest["batchInput"]) != batch_root
-            or not selected.intersection(verified)
-            or manifest.get("authority") != "projection-of-kungfu-native-settlement"
-            or manifest.get("generatedBy") != "kungfu-settlement-publication/v1"
-            or (manifest.get("runtimeContinuation") or {}).get("publicationIsAuthority")
-            is not False
-        ):
-            raise ProjectCutExitError(
-                "project-cut-publication-root-mismatch",
-                "publication manifest root differs",
-            )
-        publication_roots.append(manifest_root)
+        verified[member["cutRoot"]] = member
+    _project_cut_verify_relationships(bundle, verified, primary_root, roots)
+    publication_roots = _project_cut_verify_publications(
+        bundle.get("publications") or [], verified
+    )
     settlement = bundle.get("settlement") or {}
     expected_state = "published" if publication_roots else "settled-unpublished"
     if settlement != {

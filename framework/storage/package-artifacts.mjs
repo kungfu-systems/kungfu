@@ -11,6 +11,10 @@ import {
   platformCommand,
   platformCommandOptions,
 } from '../../scripts/platform-command.mjs';
+import {
+  SDK_PACKAGE_PLATFORMS,
+  sdkPackagePlatformDescriptor,
+} from './package-platforms.mjs';
 
 const SDK = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SDK, '..', '..');
@@ -44,12 +48,6 @@ const SEMANTIC_FIXTURE = path.join(
   'sdk',
   'semantic-fixture-v1.json',
 );
-const PLATFORMS = [
-  { key: 'darwin-arm64', os: ['darwin'], cpu: ['arm64'] },
-  { key: 'linux-x64', os: ['linux'], cpu: ['x64'] },
-  { key: 'win32-x64', os: ['win32'], cpu: ['x64'] },
-];
-
 function fail(message) {
   throw new Error(message);
 }
@@ -67,7 +65,7 @@ function run(command, args, cwd) {
 
 function currentPlatform() {
   const key = `${process.platform}-${process.arch}`;
-  const descriptor = PLATFORMS.find((item) => item.key === key);
+  const descriptor = sdkPackagePlatformDescriptor(key);
   if (!descriptor) fail(`unsupported SDK package target: ${key}`);
   return descriptor;
 }
@@ -172,7 +170,10 @@ function packNode() {
       ...source,
       scripts: undefined,
       optionalDependencies: Object.fromEntries(
-        PLATFORMS.map((item) => [`@kungfu-tech/storage-${item.key}`, VERSION]),
+        SDK_PACKAGE_PLATFORMS.map((item) => [
+          `@kungfu-tech/storage-${item.key}`,
+          VERSION,
+        ]),
       ),
     });
     packNpm(mainRoot, npmStage);

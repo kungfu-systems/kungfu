@@ -110,17 +110,23 @@ async function main() {
       'usage: verify-layer-publication.mjs --evidence DIR --manifest FILE --npm-registry FILE --repo OWNER/REPO --tag TAG --version VERSION --report FILE',
     );
   const stagedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
+  const expectedNpmCount = npmRegistry.releaseInventory?.expectedPackageCount;
+  const expectedArtifactCount = expectedNpmCount + 10;
   if (
     stagedManifest.schema !== 'kungfu.layer-publication.staging-manifest/v1' ||
-    stagedManifest.artifacts?.length !== 39
+    stagedManifest.artifacts?.length !== expectedArtifactCount
   )
-    fail('publication staging manifest is not the exact 39-artifact set');
-  const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
+    fail(
+      `publication staging manifest is not the exact ${expectedArtifactCount}-artifact set`,
+    );
   if (
     npmRegistry.schema !== 'kungfu.npm-release-package-registry/v1' ||
-    npmRegistry.packages?.length !== 29
+    npmRegistry.packages?.length !== expectedNpmCount
   )
-    fail('npm package registry is not the exact 29-package Release inventory');
+    fail(
+      `npm package registry is not the exact ${expectedNpmCount}-package Release inventory`,
+    );
   const stagedNpmArtifacts = validateStagedNpmArtifacts(
     stagedManifest,
     npmRegistry,
@@ -368,7 +374,7 @@ async function main() {
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(output, null, 2)}\n`);
   console.log(
-    `[layer-publication] verified seven public rows, Core platform distribution, and 29 npm packages for ${version}`,
+    `[layer-publication] verified seven public rows, Core platform distribution, and ${expectedNpmCount} npm packages for ${version}`,
   );
 }
 

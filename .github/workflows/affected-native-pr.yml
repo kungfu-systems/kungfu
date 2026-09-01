@@ -106,6 +106,56 @@ jobs:
           gh api --method POST
           "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/cancel"
 
+  wake_warrant_bootstrap:
+    name: Wake exact Delivery Warrant bootstrap
+    needs:
+      - dco
+      - source_acceptance
+    if: >-
+      ${{
+        github.event_name == 'pull_request' &&
+        github.run_attempt == 1 &&
+        needs.dco.result == 'success' &&
+        needs.source_acceptance.result == 'success'
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Dispatch the exact source-qualified candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pull_request="$(jq -er '.pull_request.number' "$GITHUB_EVENT_PATH")"
+          source_head="$(jq -er '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+          protected_base="$(jq -er '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
+          # pull_request runs use refs/pull/<number>/merge for GITHUB_REF_NAME;
+          # only GITHUB_BASE_REF is the event's protected target branch.
+          test "$protected_base" = "$GITHUB_BASE_REF"
+          case "$pull_request" in
+            *[!0-9]*|0) echo "invalid exact pull request number" >&2; exit 1 ;;
+          esac
+          if [ "${#source_head}" -ne 40 ]; then
+            echo "invalid exact source head length" >&2
+            exit 1
+          fi
+          case "$source_head" in
+            *[!0-9a-f]*)
+              echo "invalid exact source head" >&2
+              exit 1
+              ;;
+          esac
+          payload="$(jq -cn \
+            --arg targetBranch "$protected_base" \
+            --argjson pullRequestNumber "$pull_request" \
+            --arg sourceHead "$source_head" \
+            '{event_type:"buildchain-dev-delivery-wake",client_payload:{candidate:{targetBranch:$targetBranch,pullRequestNumber:$pullRequestNumber,sourceHead:$sourceHead}}}')"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/dispatches" --input - <<<"$payload"
+          echo "Exact Warrant bootstrap wake dispatched for PR #$pull_request at $source_head."
+
   candidate_buildchain_config:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -294,7 +344,8 @@ jobs:
               gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number" > "$RUNNER_TEMP/family-pr.json"
               pr_head="$(jq -r '.head.sha' "$RUNNER_TEMP/family-pr.json")"
               jq -r '.body // ""' "$RUNNER_TEMP/family-pr.json" > "$RUNNER_TEMP/family-pr-body.txt"
-              gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/status" > "$RUNNER_TEMP/family-status.json"
+              gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/statuses?per_page=100" |
+                jq '{statuses: .}' > "$RUNNER_TEMP/family-status.json"
               base_branch="$(jq -r '.base.ref' "$RUNNER_TEMP/family-pr.json")"
               ;;
             *)
@@ -490,9 +541,9 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          # Use the protected v4 read-only compatibility runtime while the
-          # mutating dev-pr-auto-merge scheduler retains its v3 authority.
-          ref: 0f4004d0d2b2474c2135a3e88d29d9c85bc37834
+          # Read the floating-v3 qualified Warrant through the protected
+          # compatibility runtime locked by dev-queue-admission.contract.json.
+          ref: 98a4e38bd8423569e500dbbcad3667842171ab8f
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -1025,9 +1076,9 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          # Read the scheduler's legacy v3 queue through the protected v4
-          # compatibility path without moving mutation authority.
-          ref: 0f4004d0d2b2474c2135a3e88d29d9c85bc37834
+          # Read the floating-v3 qualified Warrant without moving mutation
+          # authority out of the protected scheduler.
+          ref: 98a4e38bd8423569e500dbbcad3667842171ab8f
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0

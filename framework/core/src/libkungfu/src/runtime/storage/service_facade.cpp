@@ -85,6 +85,59 @@ storage_repair_plan_request parse_storage_repair_plan_request(const storage_serv
           fsck.source_id,   fsck.episode_id, fsck.verify_frames,          options.dry_run};
 }
 
+nlohmann::json render_manifest_catalog_issue(const yy_storage::manifest_catalog_fsck_issue &detail) {
+  nlohmann::json row = {{"code", detail.code}};
+  if (detail.source_id.has_value())
+    row["source_id"] = *detail.source_id;
+  if (detail.manifest_id.has_value())
+    row["manifest_id"] = *detail.manifest_id;
+  if (detail.error.has_value())
+    row["error"] = *detail.error;
+  if (detail.subject.has_value())
+    row["subject"] = *detail.subject;
+  if (detail.payload_hash.has_value())
+    row["payload_hash"] = *detail.payload_hash;
+  if (detail.state.has_value())
+    row["state"] = *detail.state;
+  if (detail.kind.has_value())
+    row["kind"] = *detail.kind;
+  if (detail.entry_source_id.has_value())
+    row["entry_source_id"] = *detail.entry_source_id;
+  if (detail.manifest_uid.has_value())
+    row["manifest_uid"] = *detail.manifest_uid;
+  if (detail.entry_index.has_value())
+    row["entry_index"] = *detail.entry_index;
+  if (detail.expected.has_value())
+    row["expected"] = *detail.expected;
+  if (detail.actual.has_value())
+    row["actual"] = *detail.actual;
+  if (detail.expected_text.has_value())
+    row["expected"] = *detail.expected_text;
+  if (detail.actual_text.has_value())
+    row["actual"] = *detail.actual_text;
+  if (detail.intentional.has_value())
+    row["intentional"] = *detail.intentional;
+  return row;
+}
+
+nlohmann::json render_projection_issue(const storage_fsck_issue &issue, const storage_projection_status_view &detail) {
+  nlohmann::json row = {{"code", issue.code}, {"projection", detail.name}, {"path", detail.path}};
+  if (issue.code == "projection_absent") {
+    row["reason"] = "projection is derived and can be rebuilt";
+    return row;
+  }
+  row["drift"] = nlohmann::json::array();
+  for (const auto &drift : detail.verification.drift) {
+    row["drift"].push_back({{"table", drift.table},
+                            {"projection_rows", drift.projection_rows},
+                            {"journal_distinct", drift.journal_distinct},
+                            {"reason", drift.reason},
+                            {"projection_digest", drift.projection_digest},
+                            {"journal_digest", drift.journal_digest}});
+  }
+  return row;
+}
+
 nlohmann::json render_storage_fsck_issue(const storage_fsck_issue &issue, storage_fsck_scope scope) {
   auto rendered = std::visit(
       [&issue, scope](const auto &detail) {
@@ -114,38 +167,7 @@ nlohmann::json render_storage_fsck_issue(const storage_fsck_issue &issue, storag
             row["count"] = *detail.count;
           return row;
         } else if constexpr (std::is_same_v<detail_t, yy_storage::manifest_catalog_fsck_issue>) {
-          nlohmann::json row = {{"code", detail.code}};
-          if (detail.source_id.has_value())
-            row["source_id"] = *detail.source_id;
-          if (detail.manifest_id.has_value())
-            row["manifest_id"] = *detail.manifest_id;
-          if (detail.error.has_value())
-            row["error"] = *detail.error;
-          if (detail.subject.has_value())
-            row["subject"] = *detail.subject;
-          if (detail.payload_hash.has_value())
-            row["payload_hash"] = *detail.payload_hash;
-          if (detail.state.has_value())
-            row["state"] = *detail.state;
-          if (detail.kind.has_value())
-            row["kind"] = *detail.kind;
-          if (detail.entry_source_id.has_value())
-            row["entry_source_id"] = *detail.entry_source_id;
-          if (detail.manifest_uid.has_value())
-            row["manifest_uid"] = *detail.manifest_uid;
-          if (detail.entry_index.has_value())
-            row["entry_index"] = *detail.entry_index;
-          if (detail.expected.has_value())
-            row["expected"] = *detail.expected;
-          if (detail.actual.has_value())
-            row["actual"] = *detail.actual;
-          if (detail.expected_text.has_value())
-            row["expected"] = *detail.expected_text;
-          if (detail.actual_text.has_value())
-            row["actual"] = *detail.actual_text;
-          if (detail.intentional.has_value())
-            row["intentional"] = *detail.intentional;
-          return row;
+          return render_manifest_catalog_issue(detail);
         } else if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
           auto row = yy_storage::render_episode_fsck_issue(detail);
           if (scope != storage_fsck_scope::Episode)
@@ -154,21 +176,7 @@ nlohmann::json render_storage_fsck_issue(const storage_fsck_issue &issue, storag
         } else if constexpr (std::is_same_v<detail_t, episode_frame_verification_issue>) {
           return render_episode_frame_verification_issue(detail);
         } else {
-          nlohmann::json row = {{"code", issue.code}, {"projection", detail.name}, {"path", detail.path}};
-          if (issue.code == "projection_absent") {
-            row["reason"] = "projection is derived and can be rebuilt";
-          } else {
-            row["drift"] = nlohmann::json::array();
-            for (const auto &drift : detail.verification.drift) {
-              row["drift"].push_back({{"table", drift.table},
-                                      {"projection_rows", drift.projection_rows},
-                                      {"journal_distinct", drift.journal_distinct},
-                                      {"reason", drift.reason},
-                                      {"projection_digest", drift.projection_digest},
-                                      {"journal_digest", drift.journal_digest}});
-            }
-          }
-          return row;
+          return render_projection_issue(issue, detail);
         }
       },
       issue.detail);

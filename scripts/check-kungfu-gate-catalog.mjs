@@ -755,58 +755,13 @@ function replaceGeneratedMeasurements(text, measurements) {
   return `${text.slice(0, start + MEASUREMENT_BEGIN.length)}\n${measurements}\n${text.slice(finish)}`;
 }
 
-export function checkKungfuGateCatalog(root = ROOT, options = {}) {
-  const issues = [];
-  const registry = readJson(root, 'shifu.gates.json');
-  const validation = validateGateRegistry(registry);
-  for (const issue of validation) {
-    issues.push(`[registry] ${issue.path}: ${issue.message}`);
-  }
-  if (validation.length) return { issues, registry };
-
-  const authorityValidation = validateWorkflowAuthority(root);
-  issues.push(...authorityValidation.issues);
-  const authorityDocPath = path.join(root, WORKFLOW_AUTHORITY_DOC);
-  const authorityDoc = fs.readFileSync(authorityDocPath, 'utf8');
-  if (
-    authorityDoc !==
-    replaceWorkflowAuthorityMatrix(authorityDoc, authorityValidation.document)
-  )
-    issues.push(
-      `[workflow-authority] ${WORKFLOW_AUTHORITY_DOC} differs from the authority manifest`,
-    );
-  try {
-    validateKungfuReleaseAdmissionPolicy(root);
-  } catch (error) {
-    issues.push(`[release-admission] ${error.message}`);
-  }
-
-  const measurementValidation = validateMeasurementCoverage(
-    root,
-    registry,
-    options,
-  );
-  issues.push(...measurementValidation.issues);
-  if (!measurementValidation.issues.length) {
-    const measurementReportPath = path.join(root, MEASUREMENT_REPORT);
-    const measurementReportText = fs.readFileSync(
-      measurementReportPath,
-      'utf8',
-    );
-    const expectedMeasurementReport = replaceGeneratedMeasurements(
-      measurementReportText,
-      renderMeasurementCoverage(registry, measurementValidation.document),
-    );
-    if (measurementReportText !== expectedMeasurementReport)
-      issues.push(
-        `[measurement] ${MEASUREMENT_REPORT} differs from registered measurements`,
-      );
-  }
-
-  const bindingDocument = readJson(root, BINDINGS);
-  const executionValidation = validateExecutionProfiles(root, bindingDocument);
-  issues.push(...executionValidation.issues);
-  const bindings = bindingDocument.bindings || [];
+function validateGateDocumentation(
+  root,
+  registry,
+  bindings,
+  executionDocument,
+  issues,
+) {
   const packageScripts = readJson(root, 'package.json').scripts || {};
   for (const gate of registry.gates) {
     if (gate.action.kind === 'task' && !packageScripts[gate.action.task]) {
@@ -852,9 +807,8 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
     }
     const block = text.slice(start, finish);
     for (const field of REQUIRED_DOC_FIELDS) {
-      if (!block.includes(`- **${field}:**`)) {
+      if (!block.includes(`- **${field}:**`))
         issues.push(`[doc] ${gate.id}: missing '${field}' field`);
-      }
     }
     const expectedFacts = [
       `- **Problem:** ${gate.summary}`,
@@ -865,9 +819,8 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
       gateCurrentSourceLine(gate, bindings),
     ];
     for (const fact of expectedFacts) {
-      if (!block.includes(fact)) {
+      if (!block.includes(fact))
         issues.push(`[doc-fact] ${gate.id}: expected '${fact}'`);
-      }
     }
   }
 
@@ -875,96 +828,93 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
   const matrixText = fs.readFileSync(matrixPath, 'utf8');
   const expected = replaceGeneratedMatrix(
     matrixText,
-    renderPolicyMatrix(registry, executionValidation.document),
+    renderPolicyMatrix(registry, executionDocument),
   );
-  if (matrixText !== expected) {
+  if (matrixText !== expected)
     issues.push(`[matrix] ${MATRIX} differs from shifu.gates.json`);
-  }
+}
 
-  if (bindingDocument.schema !== 'kungfu.gate-workflow-bindings/v2') {
-    issues.push('[workflow] unsupported binding schema');
-  }
-  if (bindingDocument.registry !== 'shifu.gates.json') {
-    issues.push('[workflow] binding registry must be shifu.gates.json');
-  }
+function validateBindingInvocation(binding, issues) {
+  if (!binding.job || !binding.activation)
+    issues.push(`[workflow] ${binding.id}: job and activation are required`);
+  if (
+    Object.hasOwn(binding, 'currentSource') &&
+    typeof binding.currentSource !== 'boolean'
+  )
+    issues.push(`[workflow] ${binding.id}: currentSource must be boolean`);
+  if (Object.hasOwn(binding, 'requiredSnippets'))
+    issues.push(
+      `[workflow] ${binding.id}: requiredSnippets is not an execution proof in schema v2`,
+    );
+  if (!['gate', 'profile', 'controller'].includes(binding.execution))
+    issues.push(
+      `[workflow] ${binding.id}: execution must be 'gate', 'profile', or 'controller'`,
+    );
+  if (
+    binding.execution === 'gate' &&
+    (!binding.invocation ||
+      !Array.isArray(binding.invocation.args) ||
+      binding.invocation.args.some((item) => typeof item !== 'string'))
+  )
+    issues.push(
+      `[workflow] ${binding.id}: gate invocation.args must be a string array`,
+    );
+  if (
+    binding.execution === 'profile' &&
+    (typeof binding.invocation?.uses !== 'string' ||
+      binding.invocation.uses.includes('${{') ||
+      !binding.invocation?.with ||
+      typeof binding.invocation.with !== 'object' ||
+      Array.isArray(binding.invocation.with))
+  )
+    issues.push(
+      `[workflow] ${binding.id}: profile invocation requires static uses and with object`,
+    );
+  if (!binding.profiles?.length || !binding.gates?.length)
+    issues.push(
+      `[workflow] ${binding.id}: profiles and gates must be non-empty`,
+    );
+}
+
+function validateBindingCoverage(binding, registry, covered, issues) {
   const gateIds = new Set(registry.gates.map((gate) => gate.id));
   const profileIds = new Set(registry.profiles.map((profile) => profile.id));
-  const covered = new Set();
-  const bindingIds = new Set();
-  for (const binding of bindings) {
-    if (bindingIds.has(binding.id)) {
-      issues.push(`[workflow] duplicate binding id '${binding.id}'`);
-    }
-    bindingIds.add(binding.id);
-    if (!binding.job || !binding.activation) {
-      issues.push(`[workflow] ${binding.id}: job and activation are required`);
-    }
-    if (
-      Object.hasOwn(binding, 'currentSource') &&
-      typeof binding.currentSource !== 'boolean'
-    ) {
-      issues.push(`[workflow] ${binding.id}: currentSource must be boolean`);
-    }
-    if (Object.hasOwn(binding, 'requiredSnippets')) {
-      issues.push(
-        `[workflow] ${binding.id}: requiredSnippets is not an execution proof in schema v2`,
-      );
-    }
-    if (!['gate', 'profile', 'controller'].includes(binding.execution)) {
-      issues.push(
-        `[workflow] ${binding.id}: execution must be 'gate', 'profile', or 'controller'`,
-      );
-    }
-    if (binding.execution === 'gate') {
-      if (
-        !binding.invocation ||
-        !Array.isArray(binding.invocation.args) ||
-        binding.invocation.args.some((item) => typeof item !== 'string')
-      ) {
-        issues.push(
-          `[workflow] ${binding.id}: gate invocation.args must be a string array`,
-        );
-      }
-    }
-    if (binding.execution === 'profile') {
-      if (
-        typeof binding.invocation?.uses !== 'string' ||
-        binding.invocation.uses.includes('${{') ||
-        !binding.invocation?.with ||
-        typeof binding.invocation.with !== 'object' ||
-        Array.isArray(binding.invocation.with)
-      ) {
-        issues.push(
-          `[workflow] ${binding.id}: profile invocation requires static uses and with object`,
-        );
-      }
-    }
-    if (!binding.profiles?.length || !binding.gates?.length) {
-      issues.push(
-        `[workflow] ${binding.id}: profiles and gates must be non-empty`,
-      );
-    }
-    for (const profile of binding.profiles || []) {
-      if (!profileIds.has(profile)) {
-        issues.push(`[workflow] ${binding.id}: unknown profile '${profile}'`);
-      }
-      const profilePolicy = registry.profiles.find(
-        (item) => item.id === profile,
-      );
-      for (const gate of binding.gates || []) {
-        covered.add(`${profile}:${gate}`);
-        if (profilePolicy?.decisions[gate]?.mode === 'off') {
-          issues.push(
-            `[workflow] ${binding.id}: ${profile}:${gate} is bound but policy is off`,
-          );
-        }
-      }
-    }
+  for (const profile of binding.profiles || []) {
+    if (!profileIds.has(profile))
+      issues.push(`[workflow] ${binding.id}: unknown profile '${profile}'`);
+    const profilePolicy = registry.profiles.find((item) => item.id === profile);
     for (const gate of binding.gates || []) {
-      if (!gateIds.has(gate)) {
-        issues.push(`[workflow] ${binding.id}: unknown gate '${gate}'`);
-      }
+      covered.add(`${profile}:${gate}`);
+      if (profilePolicy?.decisions[gate]?.mode === 'off')
+        issues.push(
+          `[workflow] ${binding.id}: ${profile}:${gate} is bound but policy is off`,
+        );
     }
+  }
+  for (const gate of binding.gates || []) {
+    if (!gateIds.has(gate))
+      issues.push(`[workflow] ${binding.id}: unknown gate '${gate}'`);
+  }
+}
+
+function validateWorkflowBinding(binding, registry, covered, issues) {
+  validateBindingInvocation(binding, issues);
+  validateBindingCoverage(binding, registry, covered, issues);
+}
+
+function validateWorkflowBindings(root, registry, bindingDocument, issues) {
+  if (bindingDocument.schema !== 'kungfu.gate-workflow-bindings/v2')
+    issues.push('[workflow] unsupported binding schema');
+  if (bindingDocument.registry !== 'shifu.gates.json')
+    issues.push('[workflow] binding registry must be shifu.gates.json');
+  const bindings = bindingDocument.bindings || [];
+  const bindingIds = new Set();
+  const covered = new Set();
+  for (const binding of bindings) {
+    if (bindingIds.has(binding.id))
+      issues.push(`[workflow] duplicate binding id '${binding.id}'`);
+    bindingIds.add(binding.id);
+    validateWorkflowBinding(binding, registry, covered, issues);
     const workflowRelative = binding.workflow || '';
     if (
       !workflowRelative.startsWith('.github/workflows/') ||
@@ -975,136 +925,155 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
       issues.push(`[workflow] ${binding.id}: unsafe workflow path`);
       continue;
     }
-    const workflow = path.join(root, workflowRelative);
-    if (!fs.existsSync(workflow)) {
+    if (!fs.existsSync(path.join(root, workflowRelative)))
       issues.push(`[workflow] ${binding.id}: missing ${binding.workflow}`);
-    }
   }
+  return { bindings, covered };
+}
 
+function transitiveGateDependencies(registry, gateIds) {
+  const dependencyIds = new Set();
+  const collect = (gateId) => {
+    const gate = registry.gates.find((candidate) => candidate.id === gateId);
+    for (const dependency of gate?.dependencies || []) {
+      if (dependencyIds.has(dependency)) continue;
+      dependencyIds.add(dependency);
+      collect(dependency);
+    }
+  };
+  for (const gateId of gateIds || []) collect(gateId);
+  return dependencyIds;
+}
+
+function validateOmittedDependency(context) {
+  const { binding, bindings, dependencyIds, issues, omitted, registry } =
+    context;
+  if (!dependencyIds.has(omitted))
+    issues.push(
+      `[workflow-omission] ${binding.id}: ${omitted} is not a dependency of the bound Gate closure`,
+    );
+  for (const profileId of binding.profiles || []) {
+    const profile = registry.profiles.find(({ id }) => id === profileId);
+    if (profile?.decisions?.[omitted]?.mode !== 'required')
+      issues.push(
+        `[workflow-omission] ${binding.id}: ${profileId}:${omitted} must remain required`,
+      );
+    const externalBinding = bindings.find(
+      (candidate) =>
+        candidate.id !== binding.id &&
+        candidate.workflow !== binding.workflow &&
+        candidate.profiles?.includes(profileId) &&
+        candidate.gates?.includes(omitted),
+    );
+    if (!externalBinding)
+      issues.push(
+        `[workflow-omission] ${binding.id}: ${profileId}:${omitted} has no distinct workflow binding`,
+      );
+  }
+}
+
+function validateWorkflowOmissions(registry, bindings, issues) {
   for (const binding of bindings.filter(
     (candidate) => candidate.execution === 'gate',
   )) {
     const omission = omittedDependencyArgs(binding);
-    if (omission.malformed) {
+    if (omission.malformed)
       issues.push(
         `[workflow-omission] ${binding.id}: --omit-dependency requires a static Gate id`,
       );
-    }
     if (!omission.ids.length) continue;
-    const dependencyIds = new Set();
-    const collectDependencies = (gateId) => {
-      const gate = registry.gates.find((candidate) => candidate.id === gateId);
-      for (const dependency of gate?.dependencies || []) {
-        if (dependencyIds.has(dependency)) continue;
-        dependencyIds.add(dependency);
-        collectDependencies(dependency);
-      }
-    };
-    for (const gate of binding.gates || []) collectDependencies(gate);
-    for (const omitted of omission.ids) {
-      if (!dependencyIds.has(omitted)) {
+    const dependencyIds = transitiveGateDependencies(registry, binding.gates);
+    for (const omitted of omission.ids)
+      validateOmittedDependency({
+        binding,
+        bindings,
+        dependencyIds,
+        issues,
+        omitted,
+        registry,
+      });
+  }
+}
+
+function workflowFactMatches(fact, binding) {
+  if (fact.execution === 'gate')
+    return (
+      binding.gates?.includes(fact.gates[0]) &&
+      invocationDrift(fact, binding).length === 0
+    );
+  if (fact.execution === 'controller')
+    return controllerAdapterMismatches(fact, binding).length === 0;
+  return (
+    binding.profiles?.length === 1 &&
+    binding.profiles[0] === fact.profile &&
+    [...(binding.gates || [])].sort().join('\0') === fact.gates.join('\0') &&
+    invocationDrift(fact, binding).length === 0
+  );
+}
+
+function reportUnmatchedWorkflowFact(fact, locationBindings, label, issues) {
+  if (fact.execution === 'gate' || fact.execution === 'profile') {
+    for (const binding of locationBindings) {
+      const drift = invocationDrift(fact, binding);
+      if (drift.length)
         issues.push(
-          `[workflow-omission] ${binding.id}: ${omitted} is not a dependency of the bound Gate closure`,
+          `[workflow-${fact.execution}] ${binding.id}: invocation drift at ${drift.join(', ')}`,
         );
-      }
-      for (const profileId of binding.profiles || []) {
-        const profile = registry.profiles.find(({ id }) => id === profileId);
-        if (profile?.decisions?.[omitted]?.mode !== 'required') {
-          issues.push(
-            `[workflow-omission] ${binding.id}: ${profileId}:${omitted} must remain required`,
-          );
-        }
-        const externalBinding = bindings.find(
-          (candidate) =>
-            candidate.id !== binding.id &&
-            candidate.workflow !== binding.workflow &&
-            candidate.profiles?.includes(profileId) &&
-            candidate.gates?.includes(omitted),
-        );
-        if (!externalBinding) {
-          issues.push(
-            `[workflow-omission] ${binding.id}: ${profileId}:${omitted} has no distinct workflow binding`,
-          );
-        }
-      }
     }
   }
+  if (fact.execution === 'controller') {
+    for (const binding of locationBindings) {
+      const drift = controllerAdapterMismatches(fact, binding);
+      if (drift.length)
+        issues.push(
+          `[workflow-controller] ${binding.id}: adapter input drift at ${drift.join(', ')}`,
+        );
+    }
+  }
+  issues.push(`[workflow-fact] ${label}: invocation has no matching binding`);
+}
 
-  issues.push(...validateControllerAdapters(bindings));
-  const workflowScan = scanWorkflowInvocations(root, registry, bindings);
-  issues.push(...workflowScan.issues);
-  const structuredBindings = bindings.filter((binding) =>
-    ['gate', 'profile', 'controller'].includes(binding.execution),
-  );
+function indexWorkflowFacts(workflowFacts, structuredBindings, issues) {
   const factsByBinding = new Map(
     structuredBindings.map((binding) => [binding.id, []]),
   );
-  for (const fact of workflowScan.facts) {
+  for (const fact of workflowFacts) {
     const locationBindings = structuredBindings.filter(
       (binding) =>
         binding.workflow === fact.workflow &&
         binding.job === fact.job &&
         binding.execution === fact.execution,
     );
-    const matches = locationBindings.filter((binding) => {
-      if (fact.execution === 'gate') {
-        return (
-          binding.gates?.includes(fact.gates[0]) &&
-          invocationDrift(fact, binding).length === 0
-        );
-      }
-      if (fact.execution === 'controller') {
-        return controllerAdapterMismatches(fact, binding).length === 0;
-      }
-      return (
-        binding.profiles?.length === 1 &&
-        binding.profiles[0] === fact.profile &&
-        [...(binding.gates || [])].sort().join('\0') ===
-          fact.gates.join('\0') &&
-        invocationDrift(fact, binding).length === 0
-      );
-    });
+    const matches = locationBindings.filter((binding) =>
+      workflowFactMatches(fact, binding),
+    );
     const invocation =
       fact.profile ||
       fact.gates[0] ||
       `${fact.controller?.kind}:${fact.controller?.identity}`;
     const label = `${fact.workflow}#${fact.job}:${invocation}`;
     if (matches.length === 0) {
-      if (fact.execution === 'gate' || fact.execution === 'profile') {
-        for (const binding of locationBindings) {
-          const drift = invocationDrift(fact, binding);
-          if (drift.length) {
-            issues.push(
-              `[workflow-${fact.execution}] ${binding.id}: invocation drift at ${drift.join(', ')}`,
-            );
-          }
-        }
-      }
-      if (fact.execution === 'controller') {
-        for (const binding of locationBindings) {
-          const drift = controllerAdapterMismatches(fact, binding);
-          if (drift.length) {
-            issues.push(
-              `[workflow-controller] ${binding.id}: adapter input drift at ${drift.join(', ')}`,
-            );
-          }
-        }
-      }
-      issues.push(
-        `[workflow-fact] ${label}: invocation has no matching binding`,
-      );
+      reportUnmatchedWorkflowFact(fact, locationBindings, label, issues);
     } else if (matches.length > 1) {
       issues.push(
         `[workflow-fact] ${label}: invocation matches multiple bindings (${matches.map((binding) => binding.id).join(', ')})`,
       );
     } else {
-      if (fact.execution === 'controller') {
+      if (fact.execution === 'controller')
         fact.gates = [...(matches[0].gates || [])].sort();
-      }
       factsByBinding.get(matches[0].id).push(fact);
     }
   }
-  for (const binding of structuredBindings) {
+  return factsByBinding;
+}
+
+function validateIndexedWorkflowFacts(
+  registry,
+  bindings,
+  factsByBinding,
+  issues,
+) {
+  for (const binding of bindings) {
     const facts = factsByBinding.get(binding.id) || [];
     if (!facts.length) {
       issues.push(
@@ -1114,47 +1083,132 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
     }
     if (binding.execution === 'gate') {
       const actual = [...new Set(facts.flatMap((fact) => fact.gates))].sort();
-      const dependencyIds = new Set();
-      const collectDependencies = (gateId) => {
-        const gate = registry.gates.find((item) => item.id === gateId);
-        for (const dependency of gate?.dependencies || []) {
-          if (dependencyIds.has(dependency)) continue;
-          dependencyIds.add(dependency);
-          collectDependencies(dependency);
-        }
-      };
-      for (const gate of binding.gates || []) collectDependencies(gate);
+      const dependencyIds = transitiveGateDependencies(registry, binding.gates);
       const expected = (binding.gates || [])
         .filter((gate) => !dependencyIds.has(gate))
         .sort();
-      if (actual.join('\0') !== expected.join('\0')) {
+      if (actual.join('\0') !== expected.join('\0'))
         issues.push(
           `[workflow-fact] ${binding.id}: direct Gate entries are [${actual.join(', ')}], expected [${expected.join(', ')}]`,
         );
-      }
     } else if (binding.execution === 'controller' && facts.length !== 1) {
       issues.push(
         `[workflow-controller] ${binding.id}: expected one controller invocation, found ${facts.length}`,
       );
     }
   }
+}
+
+function validateWorkflowFacts(root, registry, bindings, issues) {
+  issues.push(...validateControllerAdapters(bindings));
+  const workflowScan = scanWorkflowInvocations(root, registry, bindings);
+  issues.push(...workflowScan.issues);
+  const structuredBindings = bindings.filter((binding) =>
+    ['gate', 'profile', 'controller'].includes(binding.execution),
+  );
+  const factsByBinding = indexWorkflowFacts(
+    workflowScan.facts,
+    structuredBindings,
+    issues,
+  );
+  validateIndexedWorkflowFacts(
+    registry,
+    structuredBindings,
+    factsByBinding,
+    issues,
+  );
+  return workflowScan.facts;
+}
+
+function validateWorkflowCoverage(registry, covered, issues) {
   for (const profile of registry.profiles) {
     for (const [gate, decision] of Object.entries(profile.decisions)) {
-      if (decision.mode !== 'off' && !covered.has(`${profile.id}:${gate}`)) {
+      if (decision.mode !== 'off' && !covered.has(`${profile.id}:${gate}`))
         issues.push(
           `[coverage] ${profile.id}:${gate} is ${decision.mode} without a workflow binding`,
         );
-      }
     }
   }
+}
+
+export function checkKungfuGateCatalog(root = ROOT, options = {}) {
+  const issues = [];
+  const registry = readJson(root, 'shifu.gates.json');
+  const validation = validateGateRegistry(registry);
+  for (const issue of validation)
+    issues.push(`[registry] ${issue.path}: ${issue.message}`);
+  if (validation.length) return { issues, registry };
+
+  const authorityValidation = validateWorkflowAuthority(root);
+  issues.push(...authorityValidation.issues);
+  const authorityDocPath = path.join(root, WORKFLOW_AUTHORITY_DOC);
+  const authorityDoc = fs.readFileSync(authorityDocPath, 'utf8');
+  if (
+    authorityDoc !==
+    replaceWorkflowAuthorityMatrix(authorityDoc, authorityValidation.document)
+  )
+    issues.push(
+      `[workflow-authority] ${WORKFLOW_AUTHORITY_DOC} differs from the authority manifest`,
+    );
+  try {
+    validateKungfuReleaseAdmissionPolicy(root);
+  } catch (error) {
+    issues.push(`[release-admission] ${error.message}`);
+  }
+
+  const measurementValidation = validateMeasurementCoverage(
+    root,
+    registry,
+    options,
+  );
+  issues.push(...measurementValidation.issues);
+  if (!measurementValidation.issues.length) {
+    const measurementReportPath = path.join(root, MEASUREMENT_REPORT);
+    const measurementReportText = fs.readFileSync(
+      measurementReportPath,
+      'utf8',
+    );
+    const expectedMeasurementReport = replaceGeneratedMeasurements(
+      measurementReportText,
+      renderMeasurementCoverage(registry, measurementValidation.document),
+    );
+    if (measurementReportText !== expectedMeasurementReport)
+      issues.push(
+        `[measurement] ${MEASUREMENT_REPORT} differs from registered measurements`,
+      );
+  }
+
+  const bindingDocument = readJson(root, BINDINGS);
+  const executionValidation = validateExecutionProfiles(root, bindingDocument);
+  issues.push(...executionValidation.issues);
+  const workflow = validateWorkflowBindings(
+    root,
+    registry,
+    bindingDocument,
+    issues,
+  );
+  validateGateDocumentation(
+    root,
+    registry,
+    workflow.bindings,
+    executionValidation.document,
+    issues,
+  );
+  validateWorkflowOmissions(registry, workflow.bindings, issues);
+  const workflowFacts = validateWorkflowFacts(
+    root,
+    registry,
+    workflow.bindings,
+    issues,
+  );
+  validateWorkflowCoverage(registry, workflow.covered, issues);
   return {
     issues,
     registry,
-    workflowFacts: workflowScan.facts,
+    workflowFacts,
     workflowAuthority: authorityValidation.document,
   };
 }
-
 export function writePolicyMatrix(root = ROOT) {
   const registry = readJson(root, 'shifu.gates.json');
   const executionDocument = readJson(root, EXECUTION_PROFILES);
