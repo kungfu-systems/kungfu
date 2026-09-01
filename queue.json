@@ -3,15 +3,58 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8853,
-  "fencingCounter": 844,
+  "generation": 8854,
+  "fencingCounter": 845,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:65edb2e6bf94d7cbbecffb2248cbc7bfc910caa421b1815517f80ec1908a87a5",
+    "pullRequestNumber": 3629,
+    "sourceHead": "6f57374e49cc34a12d232cfb610075cc164f78a6",
+    "assignmentRoot": "sha256:0d88b503e544bc079e58ebcbfd1300ae9c06c0f5c6aa676fea540187ff6639b9",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:3a7d5adc84490623f7c7d9b09b160cbee031cfa7f06f33d92d40a3443c4d916e",
+    "sourcePatchRoot": "sha256:bd281d6dc440fb869187317f3a5022d43b5ba12d887b3d01c3fc1f148dc8cd14",
+    "sourceProofRoot": "sha256:40ed421d6ce6f18bd8a5b841d4d88a9677c0d845b4bb7e45c0c4b32d94b4ff96",
+    "planRoot": "sha256:5c8beed794bf548e6c9d30bf6e46721fdfc39be1f15ed6df35c188505777b0d2",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:ce8b6e9d33fe8c96a88a17f16626aa7c0f793728dd83f89fb53c34173acfc50b",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3629 --expected-head 6f57374e49cc34a12d232cfb610075cc164f78a6 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:603e82672052d437ebe8c0f447bfe4e10b068e837ad4e8a9bfd866b304a361d9"
+    },
+    "affectedPaths": [
+      "framework/core/src/python/kungfu/_profile_composition/support.py",
+      "framework/core/src/python/kungfu/assignment_runtime/profile_lifecycle.py",
+      "framework/core/tests/python/test_profile_composition.py",
+      "framework/core/tests/python/test_work_authority_surface.py"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:95d9b0ed8d9a6cdbd61585e3cbad7608b7d07dbffe1cb9960740773df7077c7a",
+      "sha256:bc6300131480d4b30acd8e9a82216d7a6854315dc6e9d3630484d52a20333a8d"
+    ],
+    "sourceWorkflowRunId": 33487522211,
+    "deliveryClass": "native-proof-required",
+    "priority": "ordinary",
+    "generation": 845,
+    "expectedOldStateRoot": "sha256:4e7d370f1de012fd1bf4455ff756d1f7ca6886ffb75932581cf28c348a9c01c0",
+    "issuedAt": "2026-09-01T08:39:28.061Z",
+    "expiresAt": "2026-09-01T10:09:28.061Z",
+    "fencingToken": "sha256:06d5262b78b8b8fa743f9dab6d1069bb6da34ee3c16db11a2bb93a62384a9574",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -62742,10 +62785,10 @@
       "sourceWorkflowRunId": 33487522211,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T08:39:23.462Z",
-      "updatedAt": "2026-09-01T08:39:23.462Z",
+      "updatedAt": "2026-09-01T08:39:28.061Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         "framework/core/src/python/kungfu/_profile_composition/support.py",
@@ -62759,6 +62802,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T08:39:23.462Z",
-  "stateRoot": "sha256:4e7d370f1de012fd1bf4455ff756d1f7ca6886ffb75932581cf28c348a9c01c0"
+  "updatedAt": "2026-09-01T08:39:28.061Z",
+  "stateRoot": "sha256:62a84a1c772a4ef63ba583c4eb4eb267316063f09e456a66d770b117156462de"
 }
