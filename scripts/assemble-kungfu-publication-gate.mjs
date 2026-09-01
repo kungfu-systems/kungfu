@@ -547,20 +547,38 @@ export async function assembleKungfuPublicationGate({
   }
 }
 
-async function main() {
-  const aggregate = await assembleKungfuPublicationGate({
+function publicationGateBaseOptionsFromEnvironment() {
+  return {
     subjectRoot: path.resolve(
       process.env.BUILDCHAIN_PUBLICATION_SUBJECT_ROOT || ROOT,
     ),
     evidenceRoot: process.env.BUILDCHAIN_PUBLICATION_EVIDENCE_ROOT,
     runtimeRoot: process.env.BUILDCHAIN_PUBLICATION_AUTHORITY_RUNTIME_ROOT,
     sourceSha: process.env.BUILDCHAIN_PUBLICATION_SOURCE_SHA,
-    targetSourceSha: process.env.BUILDCHAIN_PUBLICATION_TARGET_SOURCE_SHA || '',
-    evidenceSourceTreeSha:
-      process.env.BUILDCHAIN_PUBLICATION_EVIDENCE_SOURCE_TREE || '',
     targetRef: process.env.BUILDCHAIN_PUBLICATION_TARGET_REF,
     outputPath: process.env.BUILDCHAIN_PUBLICATION_GATE_RESULT_PATH,
-  });
+  };
+}
+
+function publicationGateRecoveryOptionsFromEnvironment() {
+  return {
+    targetSourceSha: process.env.BUILDCHAIN_PUBLICATION_TARGET_SOURCE_SHA,
+    evidenceSourceTreeSha:
+      process.env.BUILDCHAIN_PUBLICATION_EVIDENCE_SOURCE_TREE,
+  };
+}
+
+function publicationGateOptionsFromEnvironment() {
+  return Object.assign(
+    publicationGateBaseOptionsFromEnvironment(),
+    publicationGateRecoveryOptionsFromEnvironment(),
+  );
+}
+
+async function main() {
+  const aggregate = await assembleKungfuPublicationGate(
+    publicationGateOptionsFromEnvironment(),
+  );
   process.stdout.write(
     `${JSON.stringify({ status: aggregate.status, qualifying: aggregate.qualifying, digest: aggregate.digest })}\n`,
   );
