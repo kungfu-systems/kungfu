@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8910,
+  "generation": 8911,
   "fencingCounter": 851,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:c1ddb978d1ce64248caca3a4bb25c0ca6cbce2e3178c70264f1c36882dad70bf",
@@ -79,8 +79,13 @@
     "issuedAt": "2026-09-01T12:29:59.610Z",
     "expiresAt": "2026-09-01T14:33:14.261Z",
     "fencingToken": "sha256:a0853da9c2dc7260e4078f8154e4ee0b389958982843a55514eb167516f009c2",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-01T13:03:14.261Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-01T13:03:14.261Z",
+    "nativeProofRoot": "sha256:03da458dc99a0f42895f86fef235384ac052aeea96a357aba3277b1be2016abd",
+    "nativeExecutionReceiptRoot": "sha256:18ed4fe069c4b34709fa93dc04c55a63c57fef3d289371e275317bc7c992cd65",
+    "nativeProofReuseRoot": "sha256:a4cd47d9b145141136017739b70e22c09ed074fa48859019357f473db69c5db4",
+    "qualificationReceiptRoot": "sha256:550517dc39bce6fc375f3d342db8429202ca731470ecd107ef93b5c11f915781",
+    "qualifiedAt": "2026-09-01T13:03:39.050Z"
   },
   "candidates": [
     {
@@ -63361,10 +63366,10 @@
       "sourceWorkflowRunId": 33506412189,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T12:20:06.745Z",
-      "updatedAt": "2026-09-01T13:03:14.261Z",
+      "updatedAt": "2026-09-01T13:03:39.050Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-1/contract-world.witness.json",
@@ -63445,6 +63450,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T13:03:14.261Z",
-  "stateRoot": "sha256:d124f0513bfa828e3519e8a8f12a5fb7ebc4cd39dffeb7a2556ab9de3130f833"
+  "updatedAt": "2026-09-01T13:03:39.050Z",
+  "stateRoot": "sha256:cbdd41cd450b856f146005b5d446c4390411b7d396d932493e29993c938f2b42"
 }
