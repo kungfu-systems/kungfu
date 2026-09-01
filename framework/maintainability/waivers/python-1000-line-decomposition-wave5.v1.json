@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.code-complexity-budget-waiver/v3",
-  "issue_root": "sha256:b8a9ea2d2eefb768e356722f3f972e2ac5ac3e37471e392e61075fe5f8fe19aa",
+  "issue_root": "sha256:be07339ec5d49928367e65a73a04c6986fe7ff05191666e9a4924f5922aae920",
   "issue_kind": "new-helper-proliferation",
   "paths_or_scope": [
     "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
@@ -8,10 +8,7 @@
     "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
     "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
     "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
-    "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
-    "framework/core/src/python/kungfu/storage/_service_backend.py",
-    "framework/core/src/python/kungfu/storage/_service_episode.py",
-    "framework/core/src/python/kungfu/storage/_service_fact.py"
+    "framework/core/src/python/kungfu/cli/commands/_agent/work.py"
   ],
   "budget_classes": [
     "first-party-handwritten-implementation:python"
@@ -65,36 +62,12 @@
       "owner": "core/package",
       "lines": 202,
       "contentRoot": "sha256:0b2aa3e2565a69557c38741d3b2dda16d334e2a4d2a390be9866d32f3ee9e2b5"
-    },
-    {
-      "path": "framework/core/src/python/kungfu/storage/_service_backend.py",
-      "class": "first-party-handwritten-implementation",
-      "language": "python",
-      "owner": "core/package",
-      "lines": 390,
-      "contentRoot": "sha256:c44008503a9eccda284aeeafd01b24362f5a93c5567fe8c50de9748a1a3972ce"
-    },
-    {
-      "path": "framework/core/src/python/kungfu/storage/_service_episode.py",
-      "class": "first-party-handwritten-implementation",
-      "language": "python",
-      "owner": "core/package",
-      "lines": 382,
-      "contentRoot": "sha256:46b1bb07dcea443ab4174680eee0defeade8ee8a79c4d5c5780d379931aef4e7"
-    },
-    {
-      "path": "framework/core/src/python/kungfu/storage/_service_fact.py",
-      "class": "first-party-handwritten-implementation",
-      "language": "python",
-      "owner": "core/package",
-      "lines": 630,
-      "contentRoot": "sha256:d3c597ed03663e6371db1475e8e9fb2b90770e312f5e14425646eaa945da606b"
     }
   ],
-  "allowed_delta": 2731,
+  "allowed_delta": 1329,
   "owner": "core/package",
-  "responsibility_boundary": "Wave 5 decomposes the protected Agent CLI megamodule into explicit shared base, console, Hub, provider, runtime, and Work command owners while renewing the still-live Wave 4 storage backend, Episode, and Fact owners behind stable facades.",
-  "cohesion_rationale": "The six Agent CLI files are the minimum cohesive owner set needed to separate independently changing command responsibilities below 1000 physical lines; the exact scope also retains the three Wave 4 storage capability owners required by the owner-wide issue root.",
+  "responsibility_boundary": "Wave 5 decomposes the protected Agent CLI megamodule into explicit shared base, console, Hub, provider, runtime, and Work command owners behind a stable facade.",
+  "cohesion_rationale": "The six Agent CLI files are the minimum cohesive owner set needed to separate independently changing command responsibilities below 1000 physical lines.",
   "rejected_split_alternatives": [
     "Keeping no more than three Agent CLI helper files would recombine unrelated console, Hub, provider, runtime, and Work command responsibilities.",
     "Combining storage capability owners with Agent CLI domains would couple unrelated persistence and command responsibilities.",
