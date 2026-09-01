@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8926,
+  "generation": 8927,
   "fencingCounter": 853,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:4f3cb031a71798c0de6e2c39f9a9489fb7c34491d0aab5b763cec819f1233b9d",
@@ -50,8 +50,13 @@
     "issuedAt": "2026-09-01T14:15:05.976Z",
     "expiresAt": "2026-09-01T16:11:10.635Z",
     "fencingToken": "sha256:7fa1763f58e7f9d539a692b341eb8d21750533e4726055f8a3e67bf638330edc",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-01T14:41:10.635Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-01T14:41:10.635Z",
+    "nativeProofRoot": "sha256:ba51cf556c3228115049652607b8c426fbd03b8d2cb3bb7f52bab6ea05c5efc2",
+    "nativeExecutionReceiptRoot": "sha256:7a6c31ff3fa2af5a3b19f5469f1d821f91fea19dc8042caf9adaa533a25e6eb9",
+    "nativeProofReuseRoot": "sha256:cb89cb232c0864f0fcf8f9fb548eff7af97139de53f02701b9907533e4349f07",
+    "qualificationReceiptRoot": "sha256:a5c9f36fed671c070f785a2a04de0e8d8a1f7141fef6384d446edff1a5137229",
+    "qualifiedAt": "2026-09-01T14:41:41.678Z"
   },
   "candidates": [
     {
@@ -63493,10 +63498,10 @@
       "sourceWorkflowRunId": 33517503952,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T14:14:59.194Z",
-      "updatedAt": "2026-09-01T14:41:10.635Z",
+      "updatedAt": "2026-09-01T14:41:41.678Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "framework/spec/generated/registry.json"
@@ -63507,6 +63512,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T14:41:10.635Z",
-  "stateRoot": "sha256:0773247abae423067c73330ff431a1b214bb64fe14980e6975917e4159088f4f"
+  "updatedAt": "2026-09-01T14:41:41.678Z",
+  "stateRoot": "sha256:5477d39f360656d7e67dfe09c44f10ff3237f4c97440c5582f9eade783c252dc"
 }
