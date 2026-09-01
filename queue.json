@@ -3,15 +3,55 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8891,
-  "fencingCounter": 848,
+  "generation": 8892,
+  "fencingCounter": 849,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:818b802656409b951f777fd321bc1970593eb95eed93fdc221e162bf3d201b2e",
+    "pullRequestNumber": 3634,
+    "sourceHead": "78c7473cfd47ba4ee370a3f393b0117505d1c995",
+    "assignmentRoot": "sha256:6cd6b8e51b04e4a39291ddb658d18caa7b19bca7cb6143160c4f0acd8f0ee8ff",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:9554328e198d23b32b0387a171355330ef8fa7747117e1d44def1848055a794a",
+    "sourcePatchRoot": "sha256:138da703e71e7846e5da0bde0136c48c7182c1873d59955275fd34ac969f361c",
+    "sourceProofRoot": "sha256:cd757ca00878d80acbca923b9e78b07c3263103cbb72abb020feddea235c2335",
+    "planRoot": "sha256:fd60fe68032312cd21a8dfb16f47a9d14b0f5863b682f2849526585ad6cde4a9",
+    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+    "dependencyRoot": "sha256:1e378c2f1febb0ea69bcc4553dd23d70a424fd0bd612e9eb118badce56effb02",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3634 --expected-head 78c7473cfd47ba4ee370a3f393b0117505d1c995 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:060d9ca62a1e3e80513dc41656d2bc4bda11572c33014ad33c4339be3a9e2101"
+    },
+    "affectedPaths": [
+      "framework/agent-session/tests/capsule-transport-runtime.test.mjs"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:360f624a1209acf7a61f9177e7615547b4cf82191c8d8734f5ac39916365d4e0",
+      "sha256:5882541810da6801cdeb84d204055d503a33cb64566ccda80c9910e048609930"
+    ],
+    "sourceWorkflowRunId": 33501651686,
+    "deliveryClass": "non-native-fast",
+    "priority": "ordinary",
+    "generation": 849,
+    "expectedOldStateRoot": "sha256:8d79969040c79b3adf683982a20d25b05c041ccf364eb9d811f3e3259f43042e",
+    "issuedAt": "2026-09-01T12:01:40.151Z",
+    "expiresAt": "2026-09-01T13:31:40.151Z",
+    "fencingToken": "sha256:02812b0f7c9bb7f87023b4393ffe9dbc191b7e6a8351a85fd50cfa035b031465",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -63043,10 +63083,10 @@
       "sourceWorkflowRunId": 33501651686,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T11:25:21.770Z",
-      "updatedAt": "2026-09-01T12:01:34.697Z",
+      "updatedAt": "2026-09-01T12:01:40.151Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         "framework/agent-session/tests/capsule-transport-runtime.test.mjs"
@@ -63125,6 +63165,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T12:01:34.697Z",
-  "stateRoot": "sha256:8d79969040c79b3adf683982a20d25b05c041ccf364eb9d811f3e3259f43042e"
+  "updatedAt": "2026-09-01T12:01:40.151Z",
+  "stateRoot": "sha256:37d75eb9b9b5671cad54f73a9bf367836444fd73915f6123a1030c3277e3b17e"
 }
