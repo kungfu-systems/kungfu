@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 import {
   createEvidenceEnvelope,
   verifyEvidenceEnvelope,
-} from '../framework/evidence/src/evidence-envelope.mjs';
-import { semanticRoot } from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/evidence/index.mjs';
+import { semanticRoot } from '../framework/project-cut/index.mjs';
 import {
   compositionReceiptEvidence,
   projectCutReceiptEvidence,

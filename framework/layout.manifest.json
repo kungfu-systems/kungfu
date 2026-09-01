@@ -15,7 +15,12 @@
     },
     "boundaryReview": {
       "candidate": "Non-binding evidence queue for a later public-boundary decision; it does not authorize packaging or publication.",
+      "complete": "A machine-checked source boundary with stable repository entrypoints and no independent npm identity.",
       "none": "No public-boundary review is proposed by this manifest."
+    },
+    "boundaryDisposition": {
+      "embedded-public-protocol": "A public protocol delivered through existing runtime packages and products, not as an independently versioned package.",
+      "repository-stable": "A stable checked-in source seam for repository consumers, versioned and released with the repository rather than through npm."
     }
   },
   "entries": [
@@ -23,7 +28,18 @@
       "path": "framework/action",
       "distribution": "source-only",
       "role": "internal-library",
-      "boundaryReview": "candidate",
+      "boundaryReview": "complete",
+      "boundary": {
+        "disposition": "repository-stable",
+        "stableEntrypoints": [
+          "framework/action/index.mjs"
+        ],
+        "consumers": [
+          "framework/work-profile-conformance"
+        ],
+        "deepImportPolicy": "stable-entrypoints-with-exact-legacy-ratchet",
+        "legacyDeepImports": []
+      },
       "dependencies": []
     },
     {
@@ -85,7 +101,23 @@
       "path": "framework/assignment-runtime",
       "distribution": "source-only",
       "role": "internal-library",
-      "boundaryReview": "candidate",
+      "boundaryReview": "complete",
+      "boundary": {
+        "disposition": "embedded-public-protocol",
+        "stableEntrypoints": [
+          "framework/assignment-runtime/assignment-runtime.contract.json",
+          "framework/assignment-runtime/index.mjs",
+          "framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json"
+        ],
+        "consumers": [
+          "extensions/work-dashboard",
+          "framework/api",
+          "framework/core",
+          "framework/gui"
+        ],
+        "deepImportPolicy": "stable-entrypoints-with-exact-legacy-ratchet",
+        "legacyDeepImports": []
+      },
       "dependencies": []
     },
     {
@@ -186,9 +218,22 @@
       "path": "framework/evidence",
       "distribution": "source-only",
       "role": "internal-library",
-      "boundaryReview": "candidate",
+      "boundaryReview": "complete",
+      "boundary": {
+        "disposition": "repository-stable",
+        "stableEntrypoints": [
+          "framework/evidence/index.mjs",
+          "framework/evidence/schema/evidence-envelope-v1.schema.json"
+        ],
+        "consumers": [
+          "framework/project-cut",
+          "scripts"
+        ],
+        "deepImportPolicy": "stable-entrypoints-with-exact-legacy-ratchet",
+        "legacyDeepImports": []
+      },
       "dependencies": [
-        "framework/project-cut"
+        "framework/format"
       ]
     },
     {
@@ -303,10 +348,257 @@
       "path": "framework/project-cut",
       "distribution": "source-only",
       "role": "internal-library",
-      "boundaryReview": "candidate",
+      "boundaryReview": "complete",
+      "boundary": {
+        "disposition": "repository-stable",
+        "stableEntrypoints": [
+          "framework/project-cut/index.mjs"
+        ],
+        "consumers": [
+          "framework/assignment-capture",
+          "framework/core",
+          "framework/cut",
+          "framework/episode-provider",
+          "framework/maintainability",
+          "framework/terminal-evidence",
+          "framework/work-design-advisor",
+          "framework/work-design-policy-replay",
+          "framework/work-design-preflight",
+          "framework/work-history-selector",
+          "scripts"
+        ],
+        "deepImportPolicy": "stable-entrypoints-with-exact-legacy-ratchet",
+        "legacyDeepImports": [
+          {
+            "importer": "framework/assignment-capture/assignment-capture.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/assignment-capture/assignment-capture.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/core/tests/qualification/runtime-activation/product_smoke.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/cut/src/project-cut-migration.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/episode-provider/src/git-workspace-episode-provider.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/maintainability/terminal-evidence-matrix.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/maintainability/terminal-evidence.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/terminal-evidence/live-observations.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-design-advisor/src/work-design-advisor.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-design-advisor/tooling/work-design-advisor-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-design-policy-replay/src/index.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-design-policy-replay/src/work-design-policy-replay.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-design-preflight/src/work-design-preflight.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-design-preflight/tooling/check-work-design-preflight.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-history-selector/src/work-history-selector.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "framework/work-history-selector/tooling/work-history-selector-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/backfill-legacy-atlas-roots.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/backfill-legacy-atlas-roots.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/build-documentation-material-bundle.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/buildchain-documentation-witness.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/buildchain-documentation-witness.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-core-cut.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-evidence-envelope.test.mjs",
+            "target": "framework/project-cut/src/receipt-evidence.mjs"
+          },
+          {
+            "importer": "scripts/check-git-episode-provider.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-native-loop-qualification.test.mjs",
+            "target": "framework/project-cut/src/native-loop-qualification.mjs"
+          },
+          {
+            "importer": "scripts/check-native-loop-qualification.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-native-loop-qualification.test.mjs",
+            "target": "framework/project-cut/src/publication.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-composition-gate.mjs",
+            "target": "framework/project-cut/src/composition.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-composition.test.mjs",
+            "target": "framework/project-cut/src/composition.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-composition.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-composition.test.mjs",
+            "target": "framework/project-cut/src/settlement.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-contract.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-history.test.mjs",
+            "target": "framework/project-cut/src/history.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-history.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-publication.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-publication.test.mjs",
+            "target": "framework/project-cut/src/publication.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-settlement-integration.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-settlement-integration.test.mjs",
+            "target": "framework/project-cut/src/settlement.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-settlement.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-project-cut-settlement.test.mjs",
+            "target": "framework/project-cut/src/settlement.mjs"
+          },
+          {
+            "importer": "scripts/check-work-design-advisor.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-work-design-policy-replay.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-work-design-preflight.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/check-work-history-selector.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/episode-admission-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-composition-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-history-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-merge-queue-admission.mjs",
+            "target": "framework/project-cut/src/composition.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-merge-queue-admission.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-merge-queue-admission.test.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-merge-queue-admission.test.mjs",
+            "target": "framework/project-cut/src/settlement.mjs"
+          },
+          {
+            "importer": "scripts/project-cut-settlement-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/run-agent-opencode-continuity.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          },
+          {
+            "importer": "scripts/workspace-continuation-contract.mjs",
+            "target": "framework/project-cut/src/project-cut.mjs"
+          }
+        ]
+      },
       "dependencies": [
         "framework/episode-provider",
-        "framework/evidence"
+        "framework/evidence",
+        "framework/format"
       ]
     },
     {

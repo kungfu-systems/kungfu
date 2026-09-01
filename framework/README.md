@@ -51,31 +51,32 @@ single-literal relative paths in checked-in JavaScript and TypeScript source.
 This is a lexical repository-coupling map across production code, tests and
 tooling. It is not by itself a public API graph or proof of runtime coupling.
 
-## Public-boundary review candidates
+## Completed public-boundary decisions
 
-Four source-only roots are queued for a later, explicit boundary decision. The
-`candidate` marker is non-binding: it does not create a package, authorize
-publication or promise API stability.
+Wave 1 completed the four queued decisions. All remain `source-only`: a stable
+repository entrypoint is not an npm identity, and compatibility follows the
+repository train unless an explicit future package decision proves otherwise.
 
-| Candidate | Why review it | Evidence required before a package decision |
-| --- | --- | --- |
-| `action` | Owns action and loop contracts consumed by work-profile conformance | Identify external consumers, stabilize the contract and prove release independence |
-| `assignment-runtime` | Freezes a protocol shared by GUI, CLI, Agent and KFX clients | Prove that callers need a separately versioned artifact rather than repository-shared schemas |
-| `evidence` | Provides a reusable evidence-envelope implementation consumed by Project Cut | Resolve its reciprocal source coupling with Project Cut and define a minimal stable export surface |
-| `project-cut` | Has broad internal reuse across settlement, history, evidence and work-design tooling | Separate protocol API from repository orchestration, then prove isolated tests and compatible versioning |
+| Boundary | Disposition | Stable seam | Declared consumers | Migration boundary |
+| --- | --- | --- | --- | --- |
+| `action` | `repository-stable` | `action/index.mjs` | `work-profile-conformance` | The sole cross-directory code consumer now uses the index; other Action artifacts remain contract/package data rather than npm exports. |
+| `assignment-runtime` | `embedded-public-protocol` | `assignment-runtime/index.mjs`, the v1 contract and envelope schema | Core CLI/Agent, API, GUI and Work Dashboard | The protocol stays public through existing runtime products; no separate package, writer or transport is created. |
+| `evidence` | `repository-stable` | `evidence/index.mjs` and its envelope schema | Project Cut and source qualification | New code uses the index; envelope identity is unchanged and no independent release is introduced. |
+| `project-cut` | `repository-stable` | `project-cut/index.mjs` for the frozen core protocol | Assignment Capture, Core, Cut, Episode Provider, maintainability/work-design tooling and scripts | Existing specialized `src/*` imports are an exact non-growing ratchet; new consumers must use the stable core index or first make a new boundary decision. |
 
-A follow-up boundary card must evaluate, for each candidate:
+The Evidence/Project Cut source cycle is removed by keeping the one canonical
+JSON/root implementation in
+[`format/project-cut-canonical-json.mjs`](format/project-cut-canonical-json.mjs).
+Project Cut re-exports those functions for compatibility and still owns the
+root protocol and preimages. Evidence and Project Cut depend on the neutral
+format implementation; only Project Cut depends on Evidence for receipt
+envelopes. Golden root and receipt fixtures guard byte compatibility.
 
-1. real consumers and whether any live outside this repository;
-2. a minimal stable import/export contract and explicit ownership;
-3. dependency direction, including cycle removal where a package boundary would
-   otherwise reproduce repository coupling;
-4. independent semantic versioning, release need and compatibility policy; and
-5. isolated build, test and package-artifact verification.
-
-Until that evidence is accepted, all four remain source-only. This classification
-does not move directories, change runtime behavior, alter a public API or add a
-release artifact.
+For every completed boundary, the manifest declares its stable entrypoints,
+consumer scopes and exact legacy deep imports. The layout gate fails closed for
+a missing entrypoint or consumer, a completed-boundary dependency cycle, a new
+private import, a stale or duplicate ratchet entry, or accidental package and
+release-registry drift.
 
 ## Verification
 

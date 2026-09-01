@@ -264,7 +264,7 @@ test('KFD evidence checks the committed witness binding under an exact CI source
   );
 });
 
-test('KFD tree-equivalence lookup stays first-parent and bounded', () => {
+test('KFD tree-equivalence lookup searches the reachable graph and stays bounded', () => {
   const sourceSha = 'a'.repeat(40);
   const headSha = 'b'.repeat(40);
   const replayedSha = 'c'.repeat(40);
@@ -282,7 +282,7 @@ test('KFD tree-equivalence lookup stays first-parent and bounded', () => {
   assert.deepEqual(calls, [
     ['cat-file', '-t', sourceSha],
     ['rev-parse', `${sourceSha}^{tree}`],
-    ['log', '--first-parent', '--max-count=4096', '--format=%H %T', headSha],
+    ['log', '--max-count=4096', '--format=%H %T', headSha],
   ]);
 });
 
@@ -299,27 +299,18 @@ test('KFD tree-equivalence admits an unchanged GitHub PR merge candidate parent'
     findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
       calls.push(args);
       if (args[0] === 'cat-file') return 'commit';
-      if (args[0] === 'rev-list')
-        return `${headSha} ${baseParent} ${candidateParent}`;
       if (args[0] === 'rev-parse') {
         if (args[1] === `${sourceSha}^{tree}`) return sourceTree;
         return checkedTree;
       }
-      if (args.at(-1) === candidateParent)
-        return `${candidateParent} ${checkedTree}\n${replayedSha} ${sourceTree}`;
-      return `${headSha} ${checkedTree}\n${baseParent} ${'3'.repeat(40)}`;
+      return `${headSha} ${checkedTree}\n${baseParent} ${'3'.repeat(40)}\n${candidateParent} ${checkedTree}\n${replayedSha} ${sourceTree}`;
     }),
     replayedSha,
   );
-  assert.deepEqual(calls.slice(-2), [
-    ['rev-parse', `${candidateParent}^{tree}`],
-    [
-      'log',
-      '--first-parent',
-      '--max-count=4096',
-      '--format=%H %T',
-      candidateParent,
-    ],
+  assert.deepEqual(calls, [
+    ['cat-file', '-t', sourceSha],
+    ['rev-parse', `${sourceSha}^{tree}`],
+    ['log', '--max-count=4096', '--format=%H %T', headSha],
   ]);
 });
 

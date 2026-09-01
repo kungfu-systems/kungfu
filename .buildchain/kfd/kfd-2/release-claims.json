@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.4",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.4",
-    "sourceSha": "731ae3c60aa09cceafbbb1447578355832082b2d"
+    "sourceSha": "6cae0bf16026dbd5f9d4914768762277949dd1f6"
   },
   "claims": [
     {
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "742b8aaefb474bf067a504d026245bb47f14483639bbac85a2f59109509c4f3d"
+            "sha256": "895f6400ffa6345eebea444e8b66ee4722f3b6c44ca1006e371e10f9de292cc9"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -83,7 +83,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/verify-agent-pack.mjs",
-            "sha256": "7c234331b93fe3f082560ea125d5ae55a6f54068a376aea72fc55e95a2553b46"
+            "sha256": "e0011a1f89886ad4d4712dda95b6108bc060ed48627782c694e0ff2d9504e8a4"
           },
           "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
         },
@@ -189,7 +189,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "7bf5eefedf2d5d41a20934374bb11051aaa076e782461015244eb823ec59f316"
+            "sha256": "0a2a20c053d1fcca6c82519aff49b6e53f8e764a9c0a35deaa681c508d926c1a"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }

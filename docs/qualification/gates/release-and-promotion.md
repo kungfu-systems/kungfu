@@ -96,6 +96,23 @@ their protected credential authority, while finalization, publication, and
 activation independently verify the returned source-bound receipts. Moving
 the functional matrix does not move credentials or collapse those authorities.
 
+### One product-owned Alpha qualification boundary
+
+After a platform build, `./shifu alpha:qualify` is the single Kungfu product
+qualification authority. The GitHub matrix invokes that exact package task;
+developers can reproduce the same platform verdict locally after `./shifu
+dist`. It owns runtime activation, ABI and schema checks, Episode qualification,
+KFD generated-artifact consistency, layer admission, invariant checks, and one
+source-bound `platform-qualification-manifest.json`.
+
+Buildchain owns matrix scheduling, artifact transport and integrity, detached
+signing, notarization, publication, and readback. It does not reinterpret
+Kungfu's qualification summary or recursively validate an internal receipt.
+The post-matrix job checks only that all four platform manifests exist and bind
+the same source. KFD source equivalence is an exact content/tree claim over the
+bounded reachable graph; Project Cut parent count, parent order, and synthetic
+merge shape are not Alpha qualification inputs.
+
 The exact-source Dev Verify that Candidate Patrol consumes uses the same fresh
 hosted Linux x64, macOS ARM64, and Windows x64 boundary, so an offline
 self-hosted diagnostic runner cannot prevent creation of the next Alpha

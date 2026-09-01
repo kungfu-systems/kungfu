@@ -376,7 +376,16 @@ const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
 async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
-  bindMockAgentEnvironment(cli, paths);
+  const { mockPath } = resolveTuiAgentSessionPaths({
+    env: process.env,
+    argvEntry: process.argv[1],
+    modulePath: fileURLToPath(import.meta.url),
+  });
+  cli.env = bindTuiMockAgentEnvironment({
+    env: cli.env,
+    packagedBin: paths.packagedBin,
+    mockPath,
+  });
   if (projectTour) {
     const endpoint = await ensureTuiAgentSession(paths.runtimeDir);
     cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint;

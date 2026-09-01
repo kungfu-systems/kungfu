@@ -160,7 +160,7 @@ test('early source contracts bypass the platform-specific Shifu bootstrap', () =
   );
 });
 
-test('Alpha build lanes reuse one exact-tree source receipt and emit verify substages', () => {
+test('Alpha build lanes reuse one exact-tree source receipt in the product-owned qualifier', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
     'utf8',
@@ -175,12 +175,9 @@ test('Alpha build lanes reuse one exact-tree source receipt and emit verify subs
   );
   assert.match(
     workflow,
-    /cache-apply-command node scripts\/run-release-qualification\.mjs[\s\S]*--source-only-receipt-root \$\{\{ needs\.preflight\.outputs\.receipt-root \}\}[\s\S]*--source-only-source-tree \$\{\{ needs\.preflight\.outputs\.source-tree \}\}/u,
+    /cache-apply[^\n]+alpha:qualify[^\n]+--source-only-receipt-root \$\{\{ needs\.preflight\.outputs\.receipt-root \}\}[^\n]+--source-only-source-tree \$\{\{ needs\.preflight\.outputs\.source-tree \}\}/u,
   );
-  assert.match(
-    workflow,
-    /verify-substage-evidence-path: product\/release\/qualification\/layer-qualification-summary\.json/u,
-  );
+  assert.doesNotMatch(workflow, /verify-substage-evidence-path/u);
 });
 
 test('automatic hosted preflight does not inherit a private Cargo mirror', () => {
