@@ -1,3 +1,18 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: protocol-guide
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-09-01
+theme: project-cut-public-boundary
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-09-01
+ai_provenance: GPT-5 via Codex on 2026-09-01; updated from checked-in protocol code and golden fixtures, with no access to invisible model internals
+---
+
 # Project Cut protocol contract
 
 `framework/project-cut` is the build-free, content-addressed protocol layer that
@@ -38,7 +53,7 @@ raw payloads, and `.kungfu/project-cuts` protocol output. Paths are NFC POSIX
 relative paths. This prevents a generated Project Cut from feeding its own
 source root without broadly hiding user-declared authority material.
 
-The zero-dependency API is in [`src/project-cut.mjs`](src/project-cut.mjs):
+The repository-stable core API is [`index.mjs`](index.mjs):
 
 ```js
 import {
@@ -48,8 +63,15 @@ import {
   verifyProjectCut,
   verifyProjectCutReceipt,
   verifySourceProjection,
-} from './framework/project-cut/src/project-cut.mjs';
+} from './framework/project-cut/index.mjs';
 ```
+
+The canonical JSON and semantic-root implementation is shared from
+[`../format/project-cut-canonical-json.mjs`](../format/project-cut-canonical-json.mjs)
+and re-exported by this entrypoint. Project Cut continues to own the algorithm
+label, admitted preimages and golden roots. Existing specialized `src/*`
+consumers remain compatibility-ratcheted, but new consumers cannot add another
+private import without changing the checked boundary decision.
 
 The object, composition, and settlement receipts retain their independent
 payload schemas. Consumers that need a common evidence transport can wrap

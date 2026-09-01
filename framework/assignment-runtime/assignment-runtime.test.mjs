@@ -7,11 +7,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import {
-  contract,
-  validateContract,
-  validateEnvelope,
-} from './validate-contract.mjs';
+import { contract, validateContract, validateEnvelope } from './index.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = JSON.parse(
