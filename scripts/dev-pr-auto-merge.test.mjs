@@ -295,7 +295,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.doesNotMatch(bridge, /checks: write/u);
   assert.match(
     bridge,
-    /name: buildchain-dev-delivery-control-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
+    /pattern: buildchain-dev-delivery-warrant-\*-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}[\s\S]*merge-multiple: true/u,
   );
   assert.match(
     bridge,
