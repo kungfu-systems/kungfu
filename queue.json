@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8850,
+  "generation": 8851,
   "fencingCounter": 844,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:0cbeb213c84d1367c20f1f08b5cc336899ebbe1d6d6ae6c97b80f4d729a65331",
@@ -53,8 +53,13 @@
     "issuedAt": "2026-09-01T06:54:50.940Z",
     "expiresAt": "2026-09-01T08:45:35.626Z",
     "fencingToken": "sha256:61aeee4ed5af925b3c827b0766af23752b4d5aeb8a32eba0471c536f0b716571",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-01T07:15:35.626Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-01T07:15:35.626Z",
+    "nativeProofRoot": "sha256:b31218ed0cf9add2749cfac391186e5bb1c209fa8a8cbdc8038086510c5ae17e",
+    "nativeExecutionReceiptRoot": "sha256:1679f44d0575ff53cf48ad42690f5b58a28e4fdf9b61972b0736984ce1a2dd4b",
+    "nativeProofReuseRoot": "sha256:fbedc1a7b4a833cf71cda1606bbca1c1a83848064b878a4699e6319d6260212b",
+    "qualificationReceiptRoot": "sha256:c922c7efdebcfca556fcf347c53f0a4bd84faa2b5ff54335047454e2f361c117",
+    "qualifiedAt": "2026-09-01T07:16:05.731Z"
   },
   "candidates": [
     {
@@ -62734,10 +62739,10 @@
       "sourceWorkflowRunId": 33478406344,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T06:44:30.016Z",
-      "updatedAt": "2026-09-01T07:15:35.626Z",
+      "updatedAt": "2026-09-01T07:16:05.731Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".github/workflows/dev-pr-auto-merge.yml",
@@ -62751,6 +62756,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T07:15:35.626Z",
-  "stateRoot": "sha256:c85c4b760db9e4d811fe48bac94050a5ab19f9a1ec1e68d6656fa913746efdb0"
+  "updatedAt": "2026-09-01T07:16:05.731Z",
+  "stateRoot": "sha256:68a00430e6bdc1387e32a4091200ba60e488d4798d8b3f0194bd4751f3ceaed8"
 }
