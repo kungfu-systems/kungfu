@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8822,
+  "generation": 8823,
   "fencingCounter": 841,
   "policy": {
     "agingSeconds": 900,
@@ -62477,8 +62477,68 @@
         "sha256:2fd881004e417b514804dd69975acdd535638d22161205594ba9d857b571c981",
         "sha256:ea97dd73c17ec52994cc4ca1a8259d0e91166ad59ac082620813107b84ce5bec"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3626,
+      "assignmentRoot": "sha256:292a5af8aece74f0984d778f7312a80eaf3bcc2cb62844668c10162c7c5966ae",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:b9b0eba445c2ae9b6221321b905d5540007775787e1084b6af49960ee8a6cca9",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:2a2db162544d26084676045cecefab4f03500937ed52a187321121e6b72fdb18",
+      "sourceHead": "ac01fd813bb84eeb1eb9724345e897e0a2aca3c6",
+      "sourcePatchRoot": "sha256:0c29a927291dca9937ffbb43b1f3ddc99e7b0f12a1e727d1201fe1af3ca0dd56",
+      "sourceProofRoot": "sha256:72db4cb0a6e5f819855c30f9df7c78ecd34bd9bbe83666afa5e67adc266ef3f7",
+      "planRoot": "sha256:cc3c717c6eb1f5a366c0e244b979ede9eaa4fd01d39ab4d1f87a16f9bf9f4ff7",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:f5c3d154cb0e779d574809037852edba2430f42df4762664c0aa4dd6d89c9f1b",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "nativeCommandContract": {
+        "schema": "kungfu.buildchain.native-command-contract/v1",
+        "runner": "bash-lc",
+        "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3626 --expected-head ac01fd813bb84eeb1eb9724345e897e0a2aca3c6 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+        "commandRoot": "sha256:328db009f59cc2c4c1f823dd2a0bef3aedd4d16f74987ad4e17a44c6d91006db"
+      },
+      "sourceWorkflowRunId": 33472924587,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-09-01T05:25:46.794Z",
+      "updatedAt": "2026-09-01T05:25:46.794Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
+        ".buildchain/kfd/kfd-2/claims/remote-fact-boundary.json",
+        ".buildchain/kfd/kfd-2/release-claims.json",
+        ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+        ".buildchain/kfd/support-matrix.json",
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "developer/sdk/kfd/kfd-2/claims/agent-onboarding-pack.json",
+        "developer/sdk/kfd/kfd-2/claims/remote-fact-boundary.json",
+        "developer/sdk/kfd/kfd-2/release-claims.json",
+        "developer/sdk/kfd/support-matrix.json",
+        "framework/core/src/python/kungfu/cli/commands/_agent/__init__.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+        "framework/core/src/python/kungfu/cli/commands/agent.py",
+        "framework/maintainability/agent-python-responsibility-map.json",
+        "framework/maintainability/waivers/python-1000-line-decomposition-wave5.v1.json",
+        "scripts/verify-agent-pack.mjs"
+      ],
+      "shardEvidenceRoots": [
+        "sha256:2c7ee004b3853c03da708cd9e64368939ec5abca18e594c28eba72b026d96581",
+        "sha256:ff94c9d588e4895216874d9ad36fa7592b7c3f9852dcc59f217afdff9a69caea"
+      ]
     }
   ],
-  "updatedAt": "2026-09-01T05:21:03.706Z",
-  "stateRoot": "sha256:0a614adfe4f4738cea22db6b874eac05d233367fca9b0b700f563adc002a75ff"
+  "updatedAt": "2026-09-01T05:25:46.794Z",
+  "stateRoot": "sha256:ecab3269fbb63991c93d6b1b6e4afc8db1bbfe2b3623e7e3c58516dde01d7e92"
 }
