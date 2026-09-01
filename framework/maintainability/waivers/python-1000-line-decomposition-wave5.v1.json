@@ -1,0 +1,84 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:be07339ec5d49928367e65a73a04c6986fe7ff05191666e9a4924f5922aae920",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/work.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 82,
+      "contentRoot": "sha256:2ed0310826b7cc99381bf8dcab023eb7cd5d7247af00f60de6e412a3dded52be"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 230,
+      "contentRoot": "sha256:702157bd0006bfe7c3bfad52983e8824c7ecf4b87af4f9fe05991f0eb0b05495"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 230,
+      "contentRoot": "sha256:bc528e65020ac6d8917b593db5a8bd67de6c3c1c8512677480799aee71e9d237"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 343,
+      "contentRoot": "sha256:2cb0a75d1a7465a10fb864ef289d222f513151809629c4d02f02e2b71c3c377c"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 242,
+      "contentRoot": "sha256:382b88523ac77efc45f36c13da1f9044f24fbaec2f12dd21612ec5c86673ac27"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 202,
+      "contentRoot": "sha256:0b2aa3e2565a69557c38741d3b2dda16d334e2a4d2a390be9866d32f3ee9e2b5"
+    }
+  ],
+  "allowed_delta": 1329,
+  "owner": "core/package",
+  "responsibility_boundary": "Wave 5 decomposes the protected Agent CLI megamodule into explicit shared base, console, Hub, provider, runtime, and Work command owners while retaining the stable Click group and import facade.",
+  "cohesion_rationale": "The six files are the minimum cohesive owner set needed to separate independently changing Agent CLI responsibilities below 1000 physical lines without duplicating command policy, hiding handwritten behavior, or changing the supported command surface.",
+  "rejected_split_alternatives": [
+    "Keeping no more than three helper files would recombine unrelated console, Hub, provider, runtime, and Work command responsibilities.",
+    "Relabeling the files as generated, vendored, test, or artificial architecture owners would launder handwritten production responsibility.",
+    "Removing the stable facade or splitting individual Click commands across arbitrary size buckets would break imports, registration order, monkeypatch seams, or domain cohesion."
+  ],
+  "affected_tests_and_qualification": [
+    "focused Agent CLI and provider command pytest suites",
+    "./shifu check:python-structure",
+    "./shifu maintainability:amplification --json",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-wave5"
+}
