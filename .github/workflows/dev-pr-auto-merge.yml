@@ -158,6 +158,7 @@ jobs:
       pull-requests: read
     outputs:
       target-branch: ${{ steps.target.outputs.target-branch }}
+      target-branch-artifact: ${{ steps.target.outputs.target-branch-artifact }}
       expected-pr-number: ${{ steps.target.outputs.expected-pr-number }}
       expected-head-sha: ${{ steps.target.outputs.expected-head-sha }}
       source-workflow-run-id: ${{ steps.target.outputs.source-workflow-run-id }}
@@ -300,6 +301,7 @@ jobs:
 
           {
             echo "target-branch=$DEFAULT_BRANCH"
+            echo "target-branch-artifact=${DEFAULT_BRANCH//\//-}"
             echo "expected-pr-number=$expected_pr_number"
             echo "expected-head-sha=$expected_head_sha"
             echo "source-workflow-run-id=$source_workflow_run_id"
@@ -752,7 +754,7 @@ jobs:
       - name: Download exact qualified Warrant evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: buildchain-dev-delivery-control-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.resolve-target.outputs.expected-pr-number }}
+          name: buildchain-dev-delivery-warrant-${{ needs.resolve-target.outputs.target-branch-artifact }}-${{ needs.resolve-target.outputs.expected-pr-number }}
           path: .buildchain/native-check-bridge/warrant
 
       - name: Re-run failed source jobs under the qualified Warrant

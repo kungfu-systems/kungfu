@@ -671,20 +671,20 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:252fcb7fc9c2707dca015efa8d10471c08789d0b08cc2922c40c5f4646108b06",
+          "definitionDigest": "sha256:3065ef9639370a425e7c1cbc889a1483ca3abc79acff42b48cce5512d57b341c",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Download exact qualified Warrant evidence","authority":"evidence-publication","definitionDigest":"sha256:6f64d2b75f97c3db57fd605a6e4615dbba96ae8dc715c676cb42534e18f2e719"},{"index":2,"label":"id:publish","authority":"evidence-publication","definitionDigest":"sha256:2134b4b8c40cb21295524c5d27e0de267513178872a697b329760d24c8529c78"},{"index":3,"label":"name:Upload exact native CheckRun bridge receipt","authority":"evidence-publication","definitionDigest":"sha256:0738c87b720b7aca17c51a18e36864e6329e7fb64d75cd89549be39e5fa4c0e4"}]
+          "steps": [{"index":1,"label":"name:Download exact qualified Warrant evidence","authority":"evidence-publication","definitionDigest":"sha256:e871e4464224124d6559e96cfc4370fe3b95dede278203ffb94b3c52c0744bce"},{"index":2,"label":"id:publish","authority":"evidence-publication","definitionDigest":"sha256:2134b4b8c40cb21295524c5d27e0de267513178872a697b329760d24c8529c78"},{"index":3,"label":"name:Upload exact native CheckRun bridge receipt","authority":"evidence-publication","definitionDigest":"sha256:0738c87b720b7aca17c51a18e36864e6329e7fb64d75cd89549be39e5fa4c0e4"}]
         },
         {
           "id": "resolve-target",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c94eace16fe8e761dd5a712f132318447e575e0266460e5d029ba8f621c49b00",
+          "definitionDigest": "sha256:4ce6168620a06472651505c60c3f38739c7592ee50171757d829fc7842438a6c",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:6915c23c055bd9a869a624d3d16e81833b68943b37caf13c7b3d1f145606c758"}]
+          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:550d58e749a32b61d7e313ed4f94b08b49e7c702ed4aad3df5728e7afcf9c589"}]
         }
       ]
     },

@@ -295,7 +295,11 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.doesNotMatch(bridge, /checks: write/u);
   assert.match(
     bridge,
-    /name: buildchain-dev-delivery-control-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
+    /name: buildchain-dev-delivery-warrant-\$\{\{ needs\.resolve-target\.outputs\.target-branch-artifact \}\}-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /target-branch-artifact: \$\{\{ steps\.target\.outputs\.target-branch-artifact \}\}[\s\S]*echo "target-branch-artifact=\$\{DEFAULT_BRANCH\/\/\\\/\/-\}"/u,
   );
   assert.match(
     bridge,
