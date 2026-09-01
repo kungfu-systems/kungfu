@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8831,
+  "generation": 8832,
   "fencingCounter": 842,
   "policy": {
     "agingSeconds": 900,
@@ -62332,6 +62332,36 @@
             "scripts/dev-pr-auto-merge.test.mjs"
           ],
           "sourceWorkflowRunId": 33465189557
+        },
+        "integrationEvidenceCorrection": {
+          "schema": "kungfu.buildchain.dev-delivery-terminal-evidence-correction/v1",
+          "candidateId": "sha256:21825f5596e56062daa0829c10c3f9c3050cacbeb89dafdcf748f7b5dc67aae7",
+          "pullRequestNumber": 3625,
+          "sourceHead": "466977de43d3e0f72d7fce681cdfff35360f76d8",
+          "outcome": "merged",
+          "priorEvidenceRoot": "sha256:844686c4a96e23609bb09e03fbe7291952b64ce48825ac1db52cb630d8e2e0e8",
+          "integrationProof": {
+            "schema": "kungfu.buildchain.integration-delivery-proof/v1",
+            "repository": "kungfu-systems/kungfu",
+            "protectedBase": "dev/v4/v4.0",
+            "sourceProofRoot": "sha256:a28fd4e0c108324222553f13bad9d6ee3636b47127c1589564adc7e870208abd",
+            "currentBase": "159329d8b2aa68bcb4618c4d3e13ce9b198efac4",
+            "replayTree": "5aa9fb4f905b36009580c5d4e3816339362511a9",
+            "mergeGroupHead": "159329d8b2aa68bcb4618c4d3e13ce9b198efac4",
+            "mergeGroupTree": "5aa9fb4f905b36009580c5d4e3816339362511a9",
+            "warrantCandidateId": "sha256:21825f5596e56062daa0829c10c3f9c3050cacbeb89dafdcf748f7b5dc67aae7",
+            "warrantFencingToken": "sha256:8aee63301117a1c6c8382323dee77a4a1d5b073c53cfb3514b98dc3588ff2205",
+            "warrantGeneration": 841,
+            "requiredContextRoots": [
+              "sha256:8513308a25acab3637a4fc381112db4cd39d14a4a075aadf4b12f70e10c25e5d"
+            ],
+            "verifiedAt": "2026-09-01T06:01:03.000Z",
+            "finalAuthority": "exact-github-merge-group",
+            "proofRoot": "sha256:724dd652f6a9c49a9fee9e7a169d415e44d47bff87307285dd166132253e524d"
+          },
+          "correctedAt": "2026-09-01T06:02:46.994Z",
+          "reason": "Recover protected merge evidence after terminal writer CAS race for 159329d8b2aa68bcb4618c4d3e13ce9b198efac4",
+          "correctionRoot": "sha256:e907b095f2360356986fa185f0437c37d43a2cad2bb4a3151aa652f78397e1ff"
         }
       },
       "affectedPaths": [
@@ -62517,6 +62547,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T06:00:30.510Z",
-  "stateRoot": "sha256:7d651606dc45ce1c82a3005899d15c755e6aadff52742928599f356b275f45cc"
+  "updatedAt": "2026-09-01T06:02:46.994Z",
+  "stateRoot": "sha256:7f5155aef3fd408d1db6b765d8f1776faa01e890dc8fe5b827ba0e8d193d1fb0"
 }
