@@ -10,88 +10,70 @@ from __future__ import annotations
 
 import hashlib
 import json
-import multiprocessing
 import os
 import platform
-import re
-import shutil
 import subprocess
 import tempfile
 import threading
 import uuid
 from collections.abc import Callable
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any, Mapping
 
 import kungfu
-from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import runtime_profiles
 from kungfu.agent.work_projection import STARTUP_SCHEMA, inspect_startup
-from kungfu.initiative_family import canonical as assignment_canonical
 from kungfu.agent_work_lab_evidence import (
+    AGENT_PLAN_SCHEMA,
+    AGENT_REPORT_SCHEMA,
+    ANSI_ESCAPE,
+    CATALOG_SCHEMA,
+    CONTENT_ROOT as CONTENT_ROOT,
+    DEFAULT_TEMPLATE_ID as DEFAULT_TEMPLATE_ID,
+    DEMO_AGENT_IDENTITY as DEMO_AGENT_IDENTITY,
+    DEMO_PLAN_SCHEMA,
+    DEMO_REPORT_SCHEMA,
+    FIXTURE_ID,
+    FORBIDDEN_TEMPLATE_ROOTS as FORBIDDEN_TEMPLATE_ROOTS,
+    PLAN_SCHEMA,
+    PUBLIC_ACTIVITY_SCHEMA,
+    PUBLIC_OUTPUT_MESSAGES,
+    PUBLIC_OUTPUT_SCHEMA,
+    PUBLIC_PROGRESS_MESSAGES,
+    RECEIPT_SCHEMA,
+    SUITE_ID,
+    TEMPLATE_SCHEMA as TEMPLATE_SCHEMA,
+    AgentWorkLabEventSink,
     close_episode as _close_session_episode,
+    content_root,
     load_suite_catalog as _load_suite_catalog,
     open_episode as _open_session_episode,
     publish_event as _publish_event,
     work_reference as _work_ref,
 )
-from kungfu.workspace import resolve_workspace_target
-
-
-CATALOG_SCHEMA = "kungfu.agent-work-lab.catalog/v1"
-DEMO_PLAN_SCHEMA = "kungfu.agent-work-lab.demo-plan/v1"
-DEMO_REPORT_SCHEMA = "kungfu.agent-work-lab.report/v1"
-AGENT_PLAN_SCHEMA = "kungfu.agent-work-lab.agent-plan/v1"
-AGENT_REPORT_SCHEMA = "kungfu.agent-work-lab.agent-report/v1"
-PUBLIC_ACTIVITY_SCHEMA = "kungfu.agent-work-lab.public-activity/v1"
-PUBLIC_OUTPUT_SCHEMA = "kungfu.agent-work-lab.public-output/v1"
-TEMPLATE_SCHEMA = "kungfu.project-template/v1"
-PLAN_SCHEMA = "kungfu.project-template.plan/v1"
-RECEIPT_SCHEMA = "kungfu.project-template.creation-receipt/v1"
-DEFAULT_TEMPLATE_ID = "kungfu.agent-work-starter"
-FORBIDDEN_TEMPLATE_ROOTS = {".git", ".kungfu"}
-
-
-def content_root(value: Any) -> str:
-    encoded = json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    ).encode("utf-8")
-    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+from kungfu.agent_work_lab_demo import (
+    _atomic_json,
+    _demo_worker as _demo_worker,
+    _semantic_attempt as _semantic_attempt,
+    demo_plan as demo_plan,
+    run_demo as run_demo,
+)
+from kungfu.agent_work_lab_template import (
+    ProjectTemplateError as ProjectTemplateError,
+    _assignment_request as _assignment_request,
+    _file_plan as _file_plan,
+    _safe_relative_path as _safe_relative_path,
+    _template_candidates as _template_candidates,
+    _verify_created_files as _verify_created_files,
+    create_project_template as create_project_template,
+    default_project_destination as default_project_destination,
+    load_project_template as load_project_template,
+    plan_project_template as plan_project_template,
+)
 
 
 human_agent_catalog = runtime_profiles.human_agent_catalog
 resolve_agent_selector = runtime_profiles.resolve_human_selector
-
-
-SUITE_ID = "kungfu.agent-work-lab"
-FIXTURE_ID = "partial-claim-fresh-session"
-CONTENT_ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
-ANSI_ESCAPE = re.compile(r"\x1b(?:[@-_][0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
-PUBLIC_OUTPUT_MESSAGES = {
-    1: "Recorded the bounded partial result and stopped.",
-    2: "Found the prior governed state and completed only the remaining step.",
-}
-PUBLIC_PROGRESS_MESSAGES = {
-    1: (
-        "I’m starting fresh, so I’ll inspect the governed task state first.",
-        "I found an unstarted task. I’ll record only the bounded first step.",
-    ),
-    2: (
-        "I’m starting fresh, so I’ll recover the governed task state before acting.",
-        "I found Session 1’s partial result and the same Work identity.",
-    ),
-}
-DEMO_AGENT_IDENTITY = {
-    "provider": "kungfu-demo-agent",
-    "executableDigest": "sha256:" + hashlib.sha256(b"kungfu-demo-agent/v1").hexdigest(),
-    "version": "1",
-    "model": "deterministic-state-machine",
-    "runtimeProfileRoot": "sha256:"
-    + hashlib.sha256(b"kungfu-demo-agent-profile/v1").hexdigest(),
-    "argv": ["bundled", "agent-work-lab-demo"],
-}
-
-AgentWorkLabEventSink = Callable[[Mapping[str, Any]], None]
 
 
 def catalog(
@@ -135,7 +117,9 @@ def catalog(
             },
             {
                 "id": "agent-work-lab.try.create",
-                "mutation": "new-reviewed-project-and-captured-work-after-explicit-confirmation",
+                "mutation": (
+                    "new-reviewed-project-and-captured-work-after-explicit-confirmation"
+                ),
                 "resultSchema": RECEIPT_SCHEMA,
             },
             {
@@ -195,7 +179,10 @@ def catalog(
             },
             {
                 "id": "agent-work-lab.starter-project.create",
-                "mutation": "new-project-files-and-captured-work-request-after-explicit-confirmation",
+                "mutation": (
+                    "new-project-files-and-captured-work-request-after-"
+                    "explicit-confirmation"
+                ),
                 "resultSchema": "kungfu.project-template.creation-receipt/v1",
             },
             {
@@ -218,308 +205,6 @@ def catalog(
             "stale",
         ],
     }
-
-
-def demo_plan() -> dict[str, Any]:
-    semantic = {
-        "suite": SUITE_ID,
-        "fixture": FIXTURE_ID,
-        "sessions": [
-            {
-                "index": 1,
-                "freshProcess": True,
-                "action": "record-partial-claim-and-end",
-            },
-            {
-                "index": 2,
-                "freshProcess": True,
-                "priorTranscript": False,
-                "humanExplanation": False,
-                "action": "recognize-state-and-continue",
-            },
-        ],
-        "oracle": "partial-first-attempt-recognized-and-fixture-completed",
-        "isolation": "new-discardable-temporary-directory",
-    }
-    return {
-        "schema": DEMO_PLAN_SCHEMA,
-        **semantic,
-        "planRoot": content_root(semantic),
-        "writeOccurred": False,
-    }
-
-
-def _atomic_json(path: Path, value: Mapping[str, Any]) -> None:
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    temporary.write_text(
-        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    os.replace(temporary, path)
-
-
-def _demo_worker(
-    state_path_value: str, attempt_index: int, work_ref: Mapping[str, Any]
-) -> None:
-    state_path = Path(state_path_value)
-    if attempt_index == 1:
-        if state_path.exists():
-            raise RuntimeError("first demo session requires a new fixture")
-        state = {
-            "schema": "kungfu.agent-work-lab.fixture-state/v1",
-            "suite": SUITE_ID,
-            "fixture": FIXTURE_ID,
-            "workRef": dict(work_ref),
-            "steps": ["claim-recorded"],
-            "status": "partial",
-            "attempts": [
-                {
-                    "schema": "kungfu.session-attempt/v1",
-                    "sessionAttemptId": "agent-work-lab-attempt-1",
-                    "processId": os.getpid(),
-                    "freshProcess": True,
-                    "priorTranscriptIncluded": False,
-                    "humanExplanationIncluded": False,
-                    "observedState": "verified-empty-fixture",
-                    "action": "record-partial-claim-and-end",
-                    "status": "ended-partial",
-                }
-            ],
-        }
-        _atomic_json(state_path, state)
-        return
-    state = json.loads(state_path.read_text(encoding="utf-8"))
-    if (
-        state.get("schema") != "kungfu.agent-work-lab.fixture-state/v1"
-        or state.get("suite") != SUITE_ID
-        or state.get("fixture") != FIXTURE_ID
-        or state.get("steps") != ["claim-recorded"]
-        or state.get("status") != "partial"
-        or len(state.get("attempts", [])) != 1
-    ):
-        raise RuntimeError(
-            "second demo session did not observe the exact partial state"
-        )
-    state["attempts"].append(
-        {
-            "schema": "kungfu.session-attempt/v1",
-            "sessionAttemptId": "agent-work-lab-attempt-2",
-            "processId": os.getpid(),
-            "freshProcess": True,
-            "priorTranscriptIncluded": False,
-            "humanExplanationIncluded": False,
-            "observedState": "partial-first-attempt",
-            "action": "continue-remaining-step",
-            "status": "ended-complete",
-        }
-    )
-    state["steps"].append("continuation-completed")
-    state["status"] = "complete"
-    _atomic_json(state_path, state)
-
-
-def _semantic_attempt(attempt: Mapping[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in attempt.items() if key not in {"processId"}}
-
-
-def run_demo(
-    output_dir: str | Path | None = None,
-    *,
-    on_event: AgentWorkLabEventSink | None = None,
-) -> dict[str, Any]:
-    suite_catalog, _, _ = _load_suite_catalog()
-    """Run the real two-process deterministic fixture in a discardable root."""
-
-    plan = demo_plan()
-    if output_dir is None:
-        root = Path(tempfile.mkdtemp(prefix="kungfu-agent-work-lab-"))
-    else:
-        root = Path(output_dir).expanduser().absolute()
-        root.mkdir(parents=True, exist_ok=False)
-    state_path = root / "fixture-state.json"
-    runtime_dir = root / "runtime"
-    work_ref = _work_ref(plan["planRoot"])
-    process_ids: list[int] = []
-    session_attempts: list[dict[str, Any]] = []
-    events: list[dict[str, Any]] = []
-    _publish_event(
-        events,
-        {
-            "schema": "kungfu.agent-work-lab.event/v1",
-            "step": "plan",
-            "status": "ready",
-            "root": plan["planRoot"],
-        },
-        on_event,
-    )
-    for attempt_index in (1, 2):
-        _publish_event(
-            events,
-            {
-                "schema": "kungfu.agent-work-lab.event/v1",
-                "step": f"session-{attempt_index}-start",
-                "status": "running",
-                "root": plan["planRoot"],
-            },
-            on_event,
-        )
-        episode = _open_session_episode(
-            runtime_dir, attempt_index, str(DEMO_AGENT_IDENTITY["provider"])
-        )
-        process = multiprocessing.get_context("spawn").Process(
-            target=_demo_worker,
-            args=(str(state_path), attempt_index, work_ref),
-        )
-        process.start()
-        process_ids.append(process.pid or 0)
-        process.join(30)
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
-            _close_session_episode(
-                episode,
-                runtime_dir,
-                root,
-                attempt_index,
-                {
-                    "workRef": work_ref,
-                    "processId": process.pid or 0,
-                    "status": "timed-out",
-                },
-                ok=False,
-            )
-            raise RuntimeError(f"demo session {attempt_index} timed out")
-        if process.exitcode != 0:
-            _close_session_episode(
-                episode,
-                runtime_dir,
-                root,
-                attempt_index,
-                {
-                    "workRef": work_ref,
-                    "processId": process.pid or 0,
-                    "status": "failed",
-                    "exitCode": process.exitcode,
-                },
-                ok=False,
-            )
-            raise RuntimeError(
-                f"demo session {attempt_index} exited {process.exitcode}"
-            )
-        observed = json.loads(state_path.read_text(encoding="utf-8"))
-        observed_attempt = observed["attempts"][-1]
-        episode_receipt = _close_session_episode(
-            episode,
-            runtime_dir,
-            root,
-            attempt_index,
-            {
-                "workRef": work_ref,
-                "processId": process.pid or 0,
-                "status": str(observed_attempt["status"]),
-                "stateRoot": content_root(observed),
-                "priorTranscriptIncluded": False,
-            },
-            ok=True,
-        )
-        admitted_attempt = {**observed_attempt, **episode_receipt}
-        session_attempts.append(admitted_attempt)
-        _publish_event(
-            events,
-            {
-                "schema": "kungfu.agent-work-lab.event/v1",
-                "step": f"session-{attempt_index}",
-                "status": str(observed_attempt["status"]),
-                "root": content_root(_semantic_attempt(admitted_attempt)),
-            },
-            on_event,
-        )
-    state = json.loads(state_path.read_text(encoding="utf-8"))
-    attempts = state.get("attempts", [])
-    oracle_checks = [
-        {
-            "id": "distinct-fresh-processes",
-            "passed": len(set(process_ids)) == 2 and all(process_ids),
-        },
-        {
-            "id": "first-attempt-ended-partial",
-            "passed": len(attempts) == 2
-            and attempts[0].get("status") == "ended-partial",
-        },
-        {
-            "id": "second-attempt-no-transcript-or-explanation",
-            "passed": len(attempts) == 2
-            and attempts[1].get("priorTranscriptIncluded") is False
-            and attempts[1].get("humanExplanationIncluded") is False,
-        },
-        {
-            "id": "second-attempt-recognized-partial-state",
-            "passed": len(attempts) == 2
-            and attempts[1].get("observedState") == "partial-first-attempt",
-        },
-        {
-            "id": "fixture-completed",
-            "passed": state.get("status") == "complete"
-            and state.get("steps") == ["claim-recorded", "continuation-completed"],
-        },
-    ]
-    passed = all(row["passed"] for row in oracle_checks)
-    semantic_state = {
-        **state,
-        "attempts": [_semantic_attempt(attempt) for attempt in attempts],
-    }
-    identity_root = content_root(DEMO_AGENT_IDENTITY)
-    assessment = {
-        "schema": "kungfu.agent-work-lab.assessment/v1",
-        "status": "qualified" if passed else "failed",
-        "suite": SUITE_ID,
-        "fixture": FIXTURE_ID,
-        "planRoot": plan["planRoot"],
-        "identityRoot": identity_root,
-        "oracleChecks": oracle_checks,
-        "fixtureRoot": content_root(semantic_state),
-        "receiptRoots": [attempt["receiptRoot"] for attempt in session_attempts],
-        "episodeRoots": [attempt["episodeRoot"] for attempt in session_attempts],
-    }
-    assessment["assessmentRoot"] = content_root(assessment)
-    _publish_event(
-        events,
-        {
-            "schema": "kungfu.agent-work-lab.event/v1",
-            "step": "assessment",
-            "status": assessment["status"],
-            "root": assessment["assessmentRoot"],
-        },
-        on_event,
-    )
-    report_semantic = {
-        "schema": DEMO_REPORT_SCHEMA,
-        "status": assessment["status"],
-        "suite": SUITE_ID,
-        "fixture": FIXTURE_ID,
-        "planRoot": plan["planRoot"],
-        "workRef": state["workRef"],
-        "sessionAttempts": [_semantic_attempt(attempt) for attempt in session_attempts],
-        "identity": DEMO_AGENT_IDENTITY,
-        "identityRoot": identity_root,
-        "assessment": assessment,
-        "events": events,
-        "meaning": "The deterministic continuity mechanism recognized and continued governed state across fresh sessions.",
-        "nonClaims": list(suite_catalog["nonClaims"]),
-        "receiptDependencies": [
-            root_value
-            for attempt in session_attempts
-            for root_value in (attempt["episodeRoot"], attempt["receiptRoot"])
-        ],
-        "recoveryGuidance": suite_catalog["recoveryGuidance"],
-    }
-    report = {
-        **report_semantic,
-        "reportRoot": content_root(report_semantic),
-        "evidenceDirectory": str(root),
-        "writeOccurred": True,
-    }
-    _atomic_json(root / "report.json", report)
-    return report
 
 
 def _file_digest(path: Path) -> str:
@@ -1106,7 +791,10 @@ def run_agent(
         "identityRoot": plan["identityRoot"],
         "assessment": assessment,
         "events": events,
-        "meaning": "The selected identity recognized and continued exact governed state across two fresh local agent processes.",
+        "meaning": (
+            "The selected identity recognized and continued exact governed state "
+            "across two fresh local agent processes."
+        ),
         "runMode": ("cross-provider-migration" if migration else "self-continuity"),
         "nonClaims": list(suite_catalog["nonClaims"]),
         "receiptRoots": [attempt["receiptRoot"] for attempt in attempts],
@@ -1177,7 +865,8 @@ def load_report(
         if not candidates:
             raise ValueError(
                 "no retained Agent Work Lab result is available; run "
-                "`kungfu agent-work-lab test --execute` first, or pass an exact report path"
+                "`kungfu agent-work-lab test --execute` first, or pass an exact "
+                "report path"
             )
         report_path = max(candidates, key=lambda path: path.stat().st_mtime_ns)
     else:
@@ -1208,316 +897,25 @@ def load_report(
     return {**report, "reportPath": str(report_path), "writeOccurred": False}
 
 
-class ProjectTemplateError(ValueError):
-    """A fail-closed project-template diagnosis."""
+for _symbol in (
+    "content_root",
+    "demo_plan",
+    "_atomic_json",
+    "_demo_worker",
+    "_semantic_attempt",
+    "run_demo",
+    "_template_candidates",
+    "_safe_relative_path",
+    "load_project_template",
+    "_file_plan",
+    "default_project_destination",
+    "plan_project_template",
+    "_assignment_request",
+    "_verify_created_files",
+    "create_project_template",
+):
+    globals()[_symbol].__module__ = __name__
+    globals()[_symbol].__qualname__ = _symbol
 
-
-def _template_candidates() -> list[Path]:
-    candidates: list[Path] = []
-    roots = [
-        value
-        for value in (
-            os.environ.get("KF_BUNDLED_EXTENSION_ROOT"),
-            *os.environ.get("KF_EXTENSION_PATH", "").split(os.pathsep),
-        )
-        if value
-    ]
-    for root in roots:
-        candidates.append(
-            Path(root).expanduser()
-            / "agent-work-lab"
-            / "experience"
-            / "starter-project.json"
-        )
-    candidates.append(
-        Path(__file__).resolve().parents[5]
-        / "extensions"
-        / "agent-work-lab"
-        / "experience"
-        / "starter-project.json"
-    )
-    return candidates
-
-
-def _safe_relative_path(value: Any) -> PurePosixPath:
-    if not isinstance(value, str) or not value:
-        raise ProjectTemplateError("template file path must be a non-empty string")
-    path = PurePosixPath(value)
-    if (
-        path.is_absolute()
-        or value != path.as_posix()
-        or any(part in {"", ".", ".."} for part in path.parts)
-        or any(part in FORBIDDEN_TEMPLATE_ROOTS for part in path.parts)
-    ):
-        raise ProjectTemplateError(f"unsafe template file path: {value}")
-    return path
-
-
-def load_project_template(
-    template_id: str = DEFAULT_TEMPLATE_ID,
-    *,
-    template_path: Path | None = None,
-) -> tuple[dict[str, Any], Path, str]:
-    candidates = [template_path] if template_path else _template_candidates()
-    for candidate in candidates:
-        if candidate is None or not candidate.is_file():
-            continue
-        try:
-            payload = json.loads(candidate.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise ProjectTemplateError(
-                f"invalid project template JSON: {candidate}"
-            ) from error
-        if payload.get("schema") != TEMPLATE_SCHEMA:
-            raise ProjectTemplateError(f"invalid project template schema: {candidate}")
-        if payload.get("id") != template_id:
-            if template_path:
-                raise ProjectTemplateError(
-                    f"project template id mismatch: expected {template_id}"
-                )
-            continue
-        files = payload.get("files")
-        if not isinstance(files, list) or not files:
-            raise ProjectTemplateError("project template requires at least one file")
-        seen: set[str] = set()
-        for row in files:
-            if not isinstance(row, dict):
-                raise ProjectTemplateError("project template file must be an object")
-            relative = _safe_relative_path(row.get("path"))
-            if relative.as_posix() in seen:
-                raise ProjectTemplateError(
-                    f"duplicate template file path: {relative.as_posix()}"
-                )
-            seen.add(relative.as_posix())
-            if not isinstance(row.get("content"), str):
-                raise ProjectTemplateError(
-                    f"template file content must be text: {relative.as_posix()}"
-                )
-        initial_work = payload.get("initialWork")
-        required_work = {
-            "initiativeId",
-            "assignmentId",
-            "title",
-            "objective",
-            "acceptanceChecks",
-        }
-        if not isinstance(initial_work, dict) or not required_work.issubset(
-            initial_work
-        ):
-            raise ProjectTemplateError("project template initialWork is incomplete")
-        if not all(
-            isinstance(initial_work[field], str) and initial_work[field]
-            for field in required_work - {"acceptanceChecks"}
-        ):
-            raise ProjectTemplateError("project template Work identities are invalid")
-        checks = initial_work["acceptanceChecks"]
-        if not isinstance(checks, list) or not all(
-            isinstance(check, str) and check for check in checks
-        ):
-            raise ProjectTemplateError(
-                "project template acceptanceChecks must be non-empty strings"
-            )
-        return payload, candidate.resolve(), assignment_canonical.semantic_root(payload)
-    raise ProjectTemplateError(
-        f"project template is unavailable: {template_id}; install its KFX Suite"
-    )
-
-
-def _file_plan(payload: dict[str, Any]) -> list[dict[str, str]]:
-    return [
-        {
-            "path": _safe_relative_path(row["path"]).as_posix(),
-            "contentRoot": "sha256:"
-            + hashlib.sha256(row["content"].encode("utf-8")).hexdigest(),
-        }
-        for row in payload["files"]
-    ]
-
-
-def default_project_destination(
-    payload: dict[str, Any],
-    *,
-    parent: str | Path | None = None,
-) -> Path:
-    root = (
-        Path(parent).expanduser()
-        if parent is not None
-        else Path.home() / "Kungfu Projects"
-    ).resolve()
-    name = str(payload.get("suggestedDirectoryName") or "kungfu-project")
-    candidate = root / name
-    index = 2
-    while candidate.exists():
-        candidate = root / f"{name}-{index}"
-        index += 1
-    return candidate
-
-
-def plan_project_template(
-    template_id: str,
-    destination: str | Path | None = None,
-    *,
-    parent: str | Path | None = None,
-    template_path: Path | None = None,
-) -> dict[str, Any]:
-    payload, source_path, template_root = load_project_template(
-        template_id, template_path=template_path
-    )
-    target = (
-        Path(destination).expanduser().resolve()
-        if destination is not None
-        else default_project_destination(payload, parent=parent)
-    )
-    if target.exists():
-        raise ProjectTemplateError(f"destination already exists: {target}")
-    if target == target.parent:
-        raise ProjectTemplateError("destination cannot be a filesystem root")
-    preimage = {
-        "schema": PLAN_SCHEMA,
-        "templateId": template_id,
-        "templateVersion": payload["version"],
-        "templateRoot": template_root,
-        "templateSource": str(source_path),
-        "destination": str(target),
-        "files": _file_plan(payload),
-        "initialWork": {
-            "state": "capture-pending",
-            "initiativeId": payload["initialWork"]["initiativeId"],
-            "assignmentId": payload["initialWork"]["assignmentId"],
-            "title": payload["initialWork"]["title"],
-            "acceptanceChecks": payload["initialWork"]["acceptanceChecks"],
-        },
-        "effects": [
-            f"Create {len(payload['files'])} project files under {target}",
-            "Capture one content-addressed initial Work request under the project workspace",
-        ],
-        "skippedEffects": [
-            "No existing path will be overwritten",
-            "No Work is admitted, assigned, executed, or completed",
-            "No Git repository, ignore rule, commit, remote, push, or publication is created",
-        ],
-        "confirmationRequired": True,
-        "writeOccurred": False,
-    }
-    return {**preimage, "planRoot": assignment_canonical.semantic_root(preimage)}
-
-
-def _assignment_request(payload: dict[str, Any], template_root: str) -> dict[str, Any]:
-    work = payload["initialWork"]
-    return {
-        "schema": "kungfu.assignment-request/v1",
-        "source": {
-            "kind": "kungfu-project-template",
-            "templateId": payload["id"],
-            "templateRoot": template_root,
-        },
-        "retention": {
-            "policy": "explicit-expiry-retain-bytes-v1",
-            "expiresAt": None,
-        },
-        "workDefinition": {
-            "goal_id": work["assignmentId"],
-            "mission_id": work["initiativeId"],
-            "title": work["title"],
-            "objective": work["objective"],
-            "acceptance_criteria": work["acceptanceChecks"],
-            "project_template_id": payload["id"],
-            "project_template_root": template_root,
-        },
-    }
-
-
-def _verify_created_files(
-    destination: Path, files: list[dict[str, str]]
-) -> dict[str, Any]:
-    checks = []
-    for row in files:
-        candidate = destination.joinpath(*PurePosixPath(row["path"]).parts)
-        observed = (
-            "sha256:" + hashlib.sha256(candidate.read_bytes()).hexdigest()
-            if candidate.is_file()
-            else None
-        )
-        checks.append(
-            {
-                "path": row["path"],
-                "expectedRoot": row["contentRoot"],
-                "observedRoot": observed,
-                "passed": observed == row["contentRoot"],
-            }
-        )
-    return {"ok": all(row["passed"] for row in checks), "checks": checks}
-
-
-def create_project_template(
-    template_id: str,
-    destination: str | Path,
-    *,
-    expected_plan_root: str,
-    actor: str,
-    template_path: Path | None = None,
-) -> dict[str, Any]:
-    if not actor.strip():
-        raise ProjectTemplateError("actor is required")
-    plan = plan_project_template(template_id, destination, template_path=template_path)
-    if plan["planRoot"] != expected_plan_root:
-        raise ProjectTemplateError("project template plan is stale or mismatched")
-    payload, _, template_root = load_project_template(
-        template_id, template_path=template_path
-    )
-    target = Path(plan["destination"])
-    created = False
-    try:
-        target.mkdir(parents=True, exist_ok=False)
-        created = True
-        for row in payload["files"]:
-            relative = _safe_relative_path(row["path"])
-            output = target.joinpath(*relative.parts)
-            output.parent.mkdir(parents=True, exist_ok=True)
-            with output.open("x", encoding="utf-8", newline="") as stream:
-                stream.write(row["content"])
-        verification = _verify_created_files(target, plan["files"])
-        if not verification["ok"]:
-            raise ProjectTemplateError(
-                "created project files failed exact verification"
-            )
-        workspace_target = resolve_workspace_target(
-            "capture-only",
-            str(target),
-            cwd=str(target),
-        )
-        capture = orchestration.capture_assignment_request(
-            _assignment_request(payload, template_root), workspace_target
-        )
-        if capture.get("status") not in {"captured", "already-present"}:
-            raise ProjectTemplateError("initial Work request capture failed")
-    except Exception:
-        if created and target.exists():
-            shutil.rmtree(target)
-        raise
-    receipt_preimage = {
-        "schema": RECEIPT_SCHEMA,
-        "status": "created",
-        "templateId": template_id,
-        "templateRoot": template_root,
-        "planRoot": plan["planRoot"],
-        "destination": str(target),
-        "actor": actor,
-        "files": plan["files"],
-        "verification": verification,
-        "initialWork": {
-            "state": "captured-pending-admission",
-            "initiativeId": payload["initialWork"]["initiativeId"],
-            "assignmentId": payload["initialWork"]["assignmentId"],
-            "requestRoot": capture["requestRoot"],
-            "receiptRoot": capture["receiptRoot"],
-            "requestPath": capture["requestPath"],
-        },
-        "openAction": payload["openAction"],
-        "nonClaims": payload["nonClaims"],
-        "writeOccurred": True,
-    }
-    return {
-        **receipt_preimage,
-        "receiptRoot": assignment_canonical.semantic_root(receipt_preimage),
-    }
+ProjectTemplateError.__module__ = __name__
+ProjectTemplateError.__qualname__ = "ProjectTemplateError"

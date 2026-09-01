@@ -59,28 +59,44 @@
         "functionRisk": { "functions": 38, "total": 472, "maximum": 63 }
       },
       "current": {
-        "physicalLines": 1523,
-        "responsibilities": 36,
-        "functionRisk": { "functions": 31, "total": 318, "maximum": 53 }
+        "physicalLines": 921,
+        "responsibilities": 19,
+        "functionRisk": { "functions": 16, "total": 193, "maximum": 53 }
       },
       "ownerFiles": [
-        "framework/core/src/python/kungfu/agent_work_lab_evidence.py"
+        "framework/core/src/python/kungfu/agent_work_lab_evidence.py",
+        "framework/core/src/python/kungfu/agent_work_lab_demo.py",
+        "framework/core/src/python/kungfu/agent_work_lab_template.py"
       ],
       "ownedDefinitions": [
+        "content_root",
         "load_suite_catalog",
         "work_reference",
         "open_episode",
         "close_episode",
-        "publish_event"
+        "publish_event",
+        "demo_plan",
+        "run_demo",
+        "ProjectTemplateError",
+        "load_project_template",
+        "plan_project_template",
+        "create_project_template"
       ],
       "facadeSymbols": [
+        "content_root",
         "_load_suite_catalog",
         "_work_ref",
         "_open_session_episode",
         "_close_session_episode",
-        "_publish_event"
+        "_publish_event",
+        "demo_plan",
+        "run_demo",
+        "ProjectTemplateError",
+        "load_project_template",
+        "plan_project_template",
+        "create_project_template"
       ],
-      "responsibility": "Work Lab commands and projections remain here; Suite discovery and exact Episode evidence are owned by kungfu.agent_work_lab_evidence."
+      "responsibility": "Agent process execution and report verification remain on the public facade; shared schemas and immutable Episode evidence, deterministic demo execution, and fail-closed project templates are owned by the evidence, demo, and template modules."
     },
     {
       "sourcePath": "framework/core/src/python/kungfu/assignment_orchestration.py",
