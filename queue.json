@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8957,
+  "generation": 8958,
   "fencingCounter": 858,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:9603c0788f63254aec9b1e5f1aa42afc5bc3764b14990bdd0a0fcf8f421af254",
@@ -69,8 +69,13 @@
     "issuedAt": "2026-09-01T17:33:48.129Z",
     "expiresAt": "2026-09-01T19:24:36.038Z",
     "fencingToken": "sha256:17642d76b2aa76583e6c5ec5c90cd7d6995e6859d108710e35f110df43f52538",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-01T17:54:36.038Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-01T17:54:36.038Z",
+    "nativeProofRoot": "sha256:661d4ab0b79707939c2ac1d20ac46fa227ba7b323c2551a99e87f7a640815ffd",
+    "nativeExecutionReceiptRoot": "sha256:256de1ff0bb45b44fef50937f9671e244a6811000705862ed1edbf1698622144",
+    "nativeProofReuseRoot": "sha256:b234731b10b66c84b58d0943d049daf8f4c3b3adb42fb95dc90885eed46260dd",
+    "qualificationReceiptRoot": "sha256:7ec9156174f1fc02f881b8608aca47d110202975f092e5ef1b203cdbdd30468b",
+    "qualifiedAt": "2026-09-01T17:55:07.212Z"
   },
   "candidates": [
     {
@@ -63902,10 +63907,10 @@
       "sourceWorkflowRunId": 33535204563,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T17:07:13.033Z",
-      "updatedAt": "2026-09-01T17:54:36.038Z",
+      "updatedAt": "2026-09-01T17:55:07.212Z",
       "attempts": 4,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".github/workflows/build.yml",
@@ -64066,6 +64071,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T17:54:36.038Z",
-  "stateRoot": "sha256:04b8c8ee9018bcfbce941833f71379c0d1b8d9a847efb1fef34dbab8afaea40d"
+  "updatedAt": "2026-09-01T17:55:07.212Z",
+  "stateRoot": "sha256:edc5124c5e6bd121fef65fd10df4bf80717706f5650ba9e6fd17999cedc6f53c"
 }
