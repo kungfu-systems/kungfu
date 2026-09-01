@@ -18,15 +18,15 @@
   "sourceRoots": [
     {
       "path": "framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp",
-      "sha256": "sha256:3ba0633dafd0a8113e124e241002013d1db03a499cb690eaccf975131435da9e"
+      "sha256": "sha256:1ec2839a5785035ef0300aeaebf50aed5d2ec54327d13aab45f53803de5ece26"
     },
     {
       "path": "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
-      "sha256": "sha256:770736ddabb3ecce4c9ecf6220d6f0b307a009ba8aeeaad881fd392e7e68307d"
+      "sha256": "sha256:9bd18c48b58af7df541fbf24c46a01a27bedb853f33c7a30c764bd24c5fd9c17"
     },
     {
       "path": "framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp",
-      "sha256": "sha256:0f352824850318ddddbc30d8ac5c32ac750100d89c8c31af3a26fb5184fd429d"
+      "sha256": "sha256:d21c6a3f569a354bf16175c79c215165b4eacba21d33c38039a97b90bb3d971b"
     },
     {
       "path": "framework/core/src/libkungfu/tests/native_kfx_service_host_tests.cpp",
