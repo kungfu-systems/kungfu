@@ -760,7 +760,7 @@ jobs:
         id: publish
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
           EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
           EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
           SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
