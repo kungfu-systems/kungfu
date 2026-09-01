@@ -50,6 +50,7 @@ test('Project Work awaits the shared Agent Session before rendering', () => {
   );
   const lab = source.slice(
     source.indexOf('async function openTuiAgentWorkLab'),
+    source.indexOf('function openTuiProjects'),
   );
   assert.match(
     lab,
