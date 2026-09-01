@@ -504,6 +504,10 @@ test('delivery workflows preserve exact attempt and cache-promotion bindings', (
     affectedNative,
     /Capture exact family delivery binding[\s\S]*rules\/branches\/\$encoded_branch[\s\S]*bind-delivery/,
   );
+  assert.match(
+    affectedNative,
+    /commits\/\$pr_head\/statuses\?per_page=100[\s\S]*jq '\{statuses: \.\}'/u,
+  );
   assert.match(affectedNative, /--delivery-binding/);
   assert.match(
     affectedNative,

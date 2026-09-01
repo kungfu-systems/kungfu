@@ -16,6 +16,7 @@ import {
 } from './readonly-source-toolchain.mjs';
 import {
   assertKfdEvidenceSourceBinding,
+  assertTrackedXinfaBaselinesAreWitnessOnly,
   findGitTreeEquivalentAncestor,
   githubMergeGroupCoordinates,
   isLocalQualificationRuntime,
@@ -30,6 +31,26 @@ import {
 } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('tracked Xinfa baselines contain witnesses only', () => {
+  assert.doesNotThrow(() =>
+    assertTrackedXinfaBaselinesAreWitnessOnly([
+      '.xinfa/baselines/sha256/example/manifest.json',
+      '.xinfa/baselines/sha256/example/receipt.json',
+      '.xinfa/baselines/sha256/example/compatibility/context-pack-v1/manifest.json',
+      '.xinfa/baselines/sha256/example/compatibility/context-pack-v1/receipt.json',
+      '.xinfa/material-bundles/sha256/example/atlas.json.gz',
+    ]),
+  );
+  assert.throws(
+    () =>
+      assertTrackedXinfaBaselinesAreWitnessOnly([
+        '.xinfa/baselines/sha256/example/atlas.json',
+        '.xinfa/baselines/sha256/example/views/agent.json',
+      ]),
+    /Xinfa baseline material must remain outside Git[\s\S]*atlas\.json[\s\S]*views\/agent\.json/u,
+  );
+});
 
 test('source acceptance owns one external runtime for every writable tool surface', (t) => {
   const runtime = prepareSourceAcceptanceRuntime(ROOT);
@@ -751,6 +772,7 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('Python type baseline'));
   assert.ok(labels.includes('changed C/C++ format'));
   assert.ok(labels.includes('documentation contracts'));
+  assert.ok(labels.includes('framework layout boundary'));
   assert.ok(labels.includes('core architecture contract'));
   assert.ok(labels.includes('core architecture negative fixtures'));
   assert.ok(labels.includes('core affected-native negative fixtures'));
@@ -832,6 +854,9 @@ test('source plan covers representative source-only checks', () => {
   ]);
   assert.ok(
     contractTests.args.includes('scripts/check-upgrade-contract.test.mjs'),
+  );
+  assert.ok(
+    contractTests.args.includes('scripts/check-framework-layout.test.mjs'),
   );
   assert.ok(
     contractTests.args.includes('scripts/affected-native-proof.test.mjs'),

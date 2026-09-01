@@ -19,6 +19,14 @@ expansion is limited to `{skill_file}`, `{skill_dir}`, `{skills_root}`,
 JSON-quoted inside one argument. Generated files stay under Kungfu runtime
 state. Kungfu does not edit the provider's home or capture terminal bytes.
 
+Provider-owned diagnostic files under each native attempt are bounded before a
+new attempt starts. Kungfu preserves every unfinalized attempt, then removes
+files from finalized attempts when they are older than seven days or when the
+finalized-log pool exceeds 256 MiB, oldest first. The materialized adapter
+reports a `providerLogRetention` receipt with before/after bytes, removed file
+count, and the number of unfinalized files protected. The built-in Codex adapter
+also defaults `RUST_LOG` to `warn`; a caller may still override it explicitly.
+
 ## Register an adapter
 
 The example below uses a fictional `termagent` CLI:

@@ -160,129 +160,135 @@ function nextContent(lines, startIndex) {
   return index;
 }
 
-function parseYaml(text) {
-  const lines = normalizedLines(text);
-
-  function block(startIndex, indent) {
-    let index = nextContent(lines, startIndex);
-    if (index >= lines.length) return { value: null, index };
-    if (lines[index].indent < indent) return { value: null, index };
-    const sequence = lines[index].content.startsWith('- ');
-    const value = sequence ? [] : {};
-    while (index < lines.length) {
-      index = nextContent(lines, index);
-      if (index >= lines.length || lines[index].indent < indent) break;
-      const row = lines[index];
-      if (row.indent !== indent)
-        throw new Error(`unexpected YAML indentation at line ${row.line}`);
-      if (sequence !== row.content.startsWith('- '))
-        throw new Error(`mixed YAML collection at line ${row.line}`);
-      if (sequence) {
-        const rest = row.content.slice(2).trim();
-        if (!rest) {
-          const child = block(index + 1, indent + 2);
-          value.push(child.value);
-          index = child.index;
-          continue;
-        }
-        const separator = mappingSeparator(rest);
-        if (separator < 0) {
-          value.push(scalar(rest));
-          index += 1;
-          continue;
-        }
-        const item = {};
-        const firstKey = key(rest.slice(0, separator));
-        const firstRest = rest.slice(separator + 1).trim();
-        if (firstRest) item[firstKey] = scalar(firstRest);
-        else {
-          const child = block(index + 1, indent + 4);
-          item[firstKey] = child.value;
-          index = child.index;
-        }
-        if (index === row.line - 1) index += 1;
-        const continuation = nextContent(lines, index);
-        if (
-          continuation < lines.length &&
-          lines[continuation].indent === indent + 2 &&
-          !lines[continuation].content.startsWith('- ')
-        ) {
-          const tail = block(continuation, indent + 2);
-          Object.assign(item, tail.value);
-          index = tail.index;
-        } else index = continuation;
-        value.push(item);
-        continue;
-      }
-      const separator = mappingSeparator(row.content);
-      if (separator < 0)
-        throw new Error(`invalid YAML mapping at line ${row.line}`);
-      const name = key(row.content.slice(0, separator));
-      if (Object.hasOwn(value, name))
-        throw new Error(`duplicate YAML key '${name}' at line ${row.line}`);
-      const rest = row.content.slice(separator + 1).trim();
-      if (/^[>|][-+]?$/u.test(rest)) {
-        const blockRows = [];
-        let cursor = index + 1;
-        while (
-          cursor < lines.length &&
-          (!lines[cursor].raw.trim() || lines[cursor].indent > indent)
-        ) {
-          blockRows.push(lines[cursor]);
-          cursor += 1;
-        }
-        const blockIndent = Math.min(
-          ...blockRows
-            .filter((item) => item.raw.trim())
-            .map((item) => item.indent),
-        );
-        const chunks = blockRows.map((item) =>
-          item.raw.trim() ? item.raw.slice(blockIndent) : '',
-        );
-        const folded = rest.startsWith('>');
-        let blockValue = '';
-        for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
-          blockValue += chunks[chunkIndex];
-          if (chunkIndex + 1 >= chunks.length) continue;
-          const current = blockRows[chunkIndex];
-          const next = blockRows[chunkIndex + 1];
-          blockValue +=
-            folded &&
-            chunks[chunkIndex] &&
-            chunks[chunkIndex + 1] &&
-            current.indent === blockIndent &&
-            next.indent === blockIndent
-              ? ' '
-              : '\n';
-        }
-        blockValue = blockValue.replace(/\n+$/u, '');
-        if (!rest.endsWith('-')) blockValue += '\n';
-        value[name] = blockValue;
-        index = cursor;
-      } else if (rest) {
-        value[name] = scalar(rest);
-        index += 1;
-      } else {
-        const childIndex = nextContent(lines, index + 1);
-        if (childIndex >= lines.length || lines[childIndex].indent <= indent) {
-          value[name] = null;
-          index = childIndex;
-        } else if (/^[{[]/u.test(lines[childIndex].content.trim())) {
-          value[name] = scalar(lines[childIndex].content);
-          index = childIndex + 1;
-        } else {
-          const child = block(childIndex, lines[childIndex].indent);
-          value[name] = child.value;
-          index = child.index;
-        }
-      }
-    }
-    return { value, index };
+function parseYamlSequenceItem(lines, row, index, indent) {
+  const rest = row.content.slice(2).trim();
+  if (!rest) {
+    const child = parseYamlBlock(lines, index + 1, indent + 2);
+    return { item: child.value, index: child.index };
   }
+  const separator = mappingSeparator(rest);
+  if (separator < 0) return { item: scalar(rest), index: index + 1 };
 
-  return block(0, 0).value;
+  const item = {};
+  let cursor = index;
+  const firstKey = key(rest.slice(0, separator));
+  const firstRest = rest.slice(separator + 1).trim();
+  if (firstRest) item[firstKey] = scalar(firstRest);
+  else {
+    const child = parseYamlBlock(lines, index + 1, indent + 4);
+    item[firstKey] = child.value;
+    cursor = child.index;
+  }
+  if (cursor === row.line - 1) cursor += 1;
+  const continuation = nextContent(lines, cursor);
+  if (
+    continuation < lines.length &&
+    lines[continuation].indent === indent + 2 &&
+    !lines[continuation].content.startsWith('- ')
+  ) {
+    const tail = parseYamlBlock(lines, continuation, indent + 2);
+    Object.assign(item, tail.value);
+    cursor = tail.index;
+  } else cursor = continuation;
+  return { item, index: cursor };
 }
 
+function parseYamlBlockScalar(lines, index, indent, rest) {
+  const blockRows = [];
+  let cursor = index + 1;
+  while (
+    cursor < lines.length &&
+    (!lines[cursor].raw.trim() || lines[cursor].indent > indent)
+  ) {
+    blockRows.push(lines[cursor]);
+    cursor += 1;
+  }
+  const blockIndent = Math.min(
+    ...blockRows.filter((item) => item.raw.trim()).map((item) => item.indent),
+  );
+  const chunks = blockRows.map((item) =>
+    item.raw.trim() ? item.raw.slice(blockIndent) : '',
+  );
+  const folded = rest.startsWith('>');
+  let value = '';
+  for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+    value += chunks[chunkIndex];
+    if (chunkIndex + 1 >= chunks.length) continue;
+    const current = blockRows[chunkIndex];
+    const next = blockRows[chunkIndex + 1];
+    value +=
+      folded &&
+      chunks[chunkIndex] &&
+      chunks[chunkIndex + 1] &&
+      current.indent === blockIndent &&
+      next.indent === blockIndent
+        ? ' '
+        : '\n';
+  }
+  value = value.replace(/\n+$/u, '');
+  if (!rest.endsWith('-')) value += '\n';
+  return { value, index: cursor };
+}
+
+function parseYamlMappingItem(lines, row, index, indent, value) {
+  const separator = mappingSeparator(row.content);
+  if (separator < 0)
+    throw new Error(`invalid YAML mapping at line ${row.line}`);
+  const name = key(row.content.slice(0, separator));
+  if (Object.hasOwn(value, name))
+    throw new Error(`duplicate YAML key '${name}' at line ${row.line}`);
+  const rest = row.content.slice(separator + 1).trim();
+  if (/^[>|][-+]?$/u.test(rest)) {
+    const block = parseYamlBlockScalar(lines, index, indent, rest);
+    value[name] = block.value;
+    return block.index;
+  }
+  if (rest) {
+    value[name] = scalar(rest);
+    return index + 1;
+  }
+  const childIndex = nextContent(lines, index + 1);
+  if (childIndex >= lines.length || lines[childIndex].indent <= indent) {
+    value[name] = null;
+    return childIndex;
+  }
+  if (/^[{[]/u.test(lines[childIndex].content.trim())) {
+    value[name] = scalar(lines[childIndex].content);
+    return childIndex + 1;
+  }
+  const child = parseYamlBlock(lines, childIndex, lines[childIndex].indent);
+  value[name] = child.value;
+  return child.index;
+}
+
+function parseYamlBlock(lines, startIndex, indent) {
+  let index = nextContent(lines, startIndex);
+  if (index >= lines.length) return { value: null, index };
+  if (lines[index].indent < indent) return { value: null, index };
+  const sequence = lines[index].content.startsWith('- ');
+  const value = sequence ? [] : {};
+  while (index < lines.length) {
+    index = nextContent(lines, index);
+    if (index >= lines.length || lines[index].indent < indent) break;
+    const row = lines[index];
+    if (row.indent !== indent)
+      throw new Error(`unexpected YAML indentation at line ${row.line}`);
+    if (sequence !== row.content.startsWith('- '))
+      throw new Error(`mixed YAML collection at line ${row.line}`);
+    if (sequence) {
+      const parsed = parseYamlSequenceItem(lines, row, index, indent);
+      value.push(parsed.item);
+      index = parsed.index;
+    } else {
+      index = parseYamlMappingItem(lines, row, index, indent, value);
+    }
+  }
+  return { value, index };
+}
+
+function parseYaml(text) {
+  return parseYamlBlock(normalizedLines(text), 0, 0).value;
+}
 export function parse(text) {
   return parseYaml(text);
 }

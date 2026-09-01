@@ -1844,6 +1844,7 @@ def test_current_native_console_uses_project_runtime_when_cli_context_is_home(
     monkeypatch, tmp_path
 ):
     requests = []
+    observed_endpoints = []
     observed_runtime_dirs = []
     project = tmp_path / "project"
     project_runtime = project / ".kungfu" / "runtime"
@@ -1892,6 +1893,7 @@ def test_current_native_console_uses_project_runtime_when_cli_context_is_home(
 
     def invoke(request, **_kwargs):
         requests.append(request)
+        observed_endpoints.append(_kwargs.get("endpoint"))
         if request["operation"] == "plan-native-bind-work":
             return {
                 "operation": "native-bind-work",
@@ -1914,6 +1916,10 @@ def test_current_native_console_uses_project_runtime_when_cli_context_is_home(
     assert [request["operation"] for request in requests] == [
         "plan-native-bind-work",
         "bind-native-work",
+    ]
+    assert observed_endpoints == [
+        run_agent.session_surface.endpoint_for_runtime(project_runtime),
+        run_agent.session_surface.endpoint_for_runtime(project_runtime),
     ]
     assert requests[1]["expectedPlanRoot"] == ROOT_HASH
 

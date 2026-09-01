@@ -14,13 +14,38 @@ from __future__ import annotations
 
 import base64
 import copy
+import inspect
+import pickle
 from pathlib import Path
 
-from kungfu.storage import service
+from kungfu.storage import _service_backend, _service_episode, _service_fact, service
 from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 from kungfu.storage.transfer import StorageTransfer
 
 EPISODE_BUNDLE_SCHEMA = "kungfu.storage.episode-bundle/v1"
+
+
+def test_extracted_owners_preserve_public_callable_identity_and_metadata():
+    exported = {}
+    for owner in (_service_backend, _service_episode, _service_fact):
+        owner_file = Path(owner.__file__).resolve()
+        for name, value in vars(owner).items():
+            if not inspect.isfunction(value):
+                continue
+            if Path(value.__code__.co_filename).resolve() != owner_file:
+                continue
+            if getattr(service, name, None) is value:
+                exported[name] = value
+
+    assert len(exported) == 78
+    for name, private_value in exported.items():
+        public_value = getattr(service, name)
+        assert public_value is private_value
+        assert public_value.__name__ == name
+        assert public_value.__qualname__ == name
+        assert public_value.__module__ == service.__name__
+        assert inspect.signature(public_value) == inspect.signature(private_value)
+        assert pickle.loads(pickle.dumps(public_value)) is public_value
 
 
 def test_transfer_owner_preserves_public_facade_and_jsonl_format(tmp_path):

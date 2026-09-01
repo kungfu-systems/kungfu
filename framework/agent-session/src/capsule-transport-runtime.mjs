@@ -13,6 +13,43 @@ export class CapsuleTransportUnavailableError extends Error {
   }
 }
 
+export function capsuleNodePtyCandidates({
+  modulePath,
+  registryPath,
+  bundleDirectory = path.dirname(fileURLToPath(import.meta.url)),
+} = {}) {
+  return [
+    modulePath ? path.resolve(modulePath) : null,
+    registryPath
+      ? path.join(
+          path.dirname(path.dirname(path.resolve(registryPath))),
+          'agent-session-support',
+          'node-pty',
+          'lib',
+          'index.js',
+        )
+      : null,
+    path.join(bundleDirectory, 'node_modules', 'node-pty', 'lib', 'index.js'),
+    path.join(
+      bundleDirectory,
+      '..',
+      'node_modules',
+      'node-pty',
+      'lib',
+      'index.js',
+    ),
+    path.join(
+      bundleDirectory,
+      '..',
+      'app',
+      'node_modules',
+      'node-pty',
+      'lib',
+      'index.js',
+    ),
+  ];
+}
+
 export function createCapsuleNodePtyLoader({
   modulePath = process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE,
   registryPath = process.env.KUNGFU_AGENT_SESSION_REGISTRY,
@@ -21,33 +58,7 @@ export function createCapsuleNodePtyLoader({
   let loaded = null;
   return () => {
     if (loaded) return loaded;
-    const candidates = [
-      modulePath ? path.resolve(modulePath) : null,
-      registryPath
-        ? path.join(
-            path.dirname(path.dirname(path.resolve(registryPath))),
-            'agent-session-support',
-            'node-pty',
-            'lib',
-            'index.js',
-          )
-        : null,
-      path.join(
-        path.dirname(fileURLToPath(import.meta.url)),
-        'node_modules',
-        'node-pty',
-        'lib',
-        'index.js',
-      ),
-      path.join(
-        path.dirname(fileURLToPath(import.meta.url)),
-        '..',
-        'node_modules',
-        'node-pty',
-        'lib',
-        'index.js',
-      ),
-    ];
+    const candidates = capsuleNodePtyCandidates({ modulePath, registryPath });
     try {
       candidates.push(moduleRequire.resolve('node-pty/lib/index.js'));
     } catch {}

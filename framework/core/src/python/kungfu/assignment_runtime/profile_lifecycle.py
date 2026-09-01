@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, NoReturn, overload
@@ -65,13 +66,38 @@ def _retained_profile_source(runtime_dir: str | Path, state: dict[str, Any]) -> 
     closure = dict((state.get("latest_event") or {}).get("closure") or {})
     profile_path = Path(str(closure.get("profile_path") or "")).expanduser()
     if not profile_path.is_file():
-        _missing_profile(
+        return _relocated_profile_source(
             runtime_dir,
-            "Qualified Work Control Profile retained source is unavailable",
-            code="work-control-profile-source-unavailable",
-            profilePath=str(profile_path),
+            profile_path,
         )
     return profile_path.resolve().parent
+
+
+def _relocated_profile_source(
+    runtime_dir: str | Path,
+    profile_path: Path,
+) -> Path:
+    """Find only the current bundled copy of one missing retained source."""
+
+    bundled_root = os.environ.get("KF_BUNDLED_EXTENSION_ROOT", "")
+    if bundled_root:
+        try:
+            discovered = profile_sdk.discover_source(
+                WORK_CONTROL_PROFILE_ID,
+                runtime_dir,
+                search_roots=[bundled_root],
+            )
+            return Path(discovered["source"]).expanduser().resolve()
+        except (KeyError, profile_sdk.ProfileSdkError):
+            pass
+
+    _missing_profile(
+        runtime_dir,
+        "Qualified Work Control Profile retained source is unavailable",
+        code="work-control-profile-source-unavailable",
+        profilePath=str(profile_path),
+        bundledExtensionRoot=bundled_root or None,
+    )
 
 
 @overload
@@ -110,33 +136,39 @@ def resolve_qualified_work_profile(
     if state is None:
         return None
     retained_source = _retained_profile_source(runtime_dir, state)
-    if source is not None and Path(source).expanduser().resolve() != retained_source:
-        raise profile_sdk.ProfileSdkError(
-            "work-control-profile-source-drift",
-            "Explicit Work Control Profile source does not match the qualified retained source",
-            profileId=WORK_CONTROL_PROFILE_ID,
-            retainedSource=str(retained_source),
-            observedSource=str(Path(source).expanduser().resolve()),
-        )
-    validated = profile_sdk.validate_source(retained_source, runtime_dir)
+    retained_root = str(state.get("profile_suite_root", ""))
+    resolved_source = (
+        Path(source).expanduser().resolve() if source is not None else retained_source
+    )
+    validated = profile_sdk.validate_source(resolved_source, runtime_dir)
     inspection = validated["inspection"]
-    profile_id = str((inspection.get("profile") or {}).get("id") or "")
-    profile_root = str(inspection.get("profile_suite_root") or "")
-    retained_root = str(state.get("profile_suite_root") or "")
-    if profile_id != WORK_CONTROL_PROFILE_ID or profile_root != retained_root:
-        raise profile_sdk.ProfileSdkError(
+    profile_id = str(inspection.get("profile", {}).get("id", ""))
+    profile_root = str(inspection.get("profile_suite_root", ""))
+    diagnosis = {
+        False: (
             "work-control-profile-source-root-drift",
             "Qualified Work Control Profile retained source no longer matches its exact root",
+        ),
+        True: (
+            "work-control-profile-source-drift",
+            "Explicit Work Control Profile source does not match the qualified retained root",
+        ),
+    }[resolved_source != retained_source]
+    if profile_id != WORK_CONTROL_PROFILE_ID or profile_root != retained_root:
+        raise profile_sdk.ProfileSdkError(
+            diagnosis[0],
+            diagnosis[1],
             profileId=WORK_CONTROL_PROFILE_ID,
+            retainedSource=str(retained_source),
             retainedRoot=retained_root,
+            observedSource=str(resolved_source),
             observedProfileId=profile_id,
             observedRoot=profile_root,
-            source=str(retained_source),
         )
     return {
         "id": WORK_CONTROL_PROFILE_ID,
         "root": retained_root,
-        "source": str(retained_source),
+        "source": str(resolved_source),
     }
 
 

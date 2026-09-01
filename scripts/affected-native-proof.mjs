@@ -440,6 +440,14 @@ function latestStatus(combinedStatus, context) {
   );
 }
 
+function latestTerminalStatus(combinedStatus, context) {
+  return (combinedStatus?.statuses || []).find(
+    (status) =>
+      status?.context === context &&
+      ['error', 'failure', 'success'].includes(status?.state),
+  );
+}
+
 export function createDeliveryBinding({
   event,
   pullRequest,
@@ -491,7 +499,11 @@ export function createDeliveryBinding({
     candidateTree,
     'delivery candidate tree',
   );
-  const queueStatus = latestStatus(combinedStatus, queueContext);
+  // GitHub returns commit statuses newest first. Warrant heartbeats may publish
+  // `pending` while an admitted merge group still owns the most recent
+  // terminal queue lease. A pending observation must not revoke that lease;
+  // an explicit later failure still does.
+  const queueStatus = latestTerminalStatus(combinedStatus, queueContext);
   if (queueStatus?.state !== 'success') {
     throw new Error('queue admission lease is not successful');
   }

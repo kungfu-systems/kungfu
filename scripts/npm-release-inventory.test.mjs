@@ -69,11 +69,11 @@ async function writePackedFixture(file, manifest, body = 'same') {
   await write;
 }
 
-test('all 29 packages are public and exactly 19 use portable workspace packing', () => {
+test('all 33 packages are public and exactly 23 use portable workspace packing', () => {
   assert.deepEqual(collectPublishabilityIssues({ root, registry }), []);
-  assert.equal(registry.packages.length, 29);
-  assert.equal(bulkWorkspaceEntries(registry).length, 19);
-  assert.equal(registry.trustedPublishing.exactArtifactPackages.length, 29);
+  assert.equal(registry.packages.length, 33);
+  assert.equal(bulkWorkspaceEntries(registry).length, 23);
+  assert.equal(registry.trustedPublishing.exactArtifactPackages.length, 33);
 });
 
 test('private and non-public workspace packages fail closed', (t) => {
@@ -118,12 +118,12 @@ test('the staged npm set must contain one exact archive for every package', () =
   }));
   assert.equal(
     validateStagedNpmArtifacts({ artifacts }, registry, version).size,
-    29,
+    33,
   );
   artifacts.pop();
   assert.throws(
     () => validateStagedNpmArtifacts({ artifacts }, registry, version),
-    /expected 29 npm artifacts, found 28/u,
+    /expected 33 npm artifacts, found 32/u,
   );
 });
 

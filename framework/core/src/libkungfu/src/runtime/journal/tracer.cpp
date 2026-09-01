@@ -13,9 +13,11 @@ using namespace kungfu::yijinjing::data;
 
 namespace kungfu::runtime::journal {
 
+constexpr auto PEER_POLICY = reader_policy::peer();
+
 tracer::tracer(const location_ptr location, bool in, bool out, int64_t begin, int64_t end)
-    : home_(location), reader_(std::make_shared<reader>(true, false, std::make_shared<bus>(false))),
-      reader_for_in_(std::make_shared<reader>(true, false, std::make_shared<bus>(false))), in_(in), out_(out),
+    : home_(location), reader_(std::make_shared<reader>(PEER_POLICY, false, std::make_shared<bus>(false))),
+      reader_for_in_(std::make_shared<reader>(PEER_POLICY, false, std::make_shared<bus>(false))), in_(in), out_(out),
       begin_time_(begin), end_time_(end == 0 ? INT64_MAX : end) {
   auto coordinator_home_location = location::make_shared(
       mode::LIVE, location_role::SYSTEM, live::COORDINATOR_WIRE_NAMESPACE, live::COORDINATOR_WIRE_NAME, get_locator());

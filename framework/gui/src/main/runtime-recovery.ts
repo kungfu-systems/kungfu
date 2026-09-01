@@ -146,90 +146,105 @@ function hostError(value: HostError): Error {
   return error;
 }
 
-export function createAssignmentRuntimeHost(deps: AssignmentRuntimeHostDeps) {
-  let child: HostChild | null = null;
-  let ready: AssignmentRuntimeHostReady | null = null;
-  let connecting: Promise<AssignmentRuntimeHostReady> | null = null;
-  let resolveReady: ((value: AssignmentRuntimeHostReady) => void) | null = null;
-  let rejectReady: ((reason: Error) => void) | null = null;
-  let stdout = '';
-  let stderr = '';
-  let handshakeTimer: ReturnType<typeof setTimeout> | null = null;
-  const pending = new Map<
+type RuntimeHostState = {
+  child: HostChild | null;
+  ready: AssignmentRuntimeHostReady | null;
+  connecting: Promise<AssignmentRuntimeHostReady> | null;
+  resolveReady: ((value: AssignmentRuntimeHostReady) => void) | null;
+  rejectReady: ((reason: Error) => void) | null;
+  stdout: string;
+  stderr: string;
+  handshakeTimer: ReturnType<typeof setTimeout> | null;
+  pending: Map<
     string,
     {
       resolve: (value: AssignmentRuntimeResponse) => void;
       reject: (reason: Error) => void;
     }
-  >();
+  >;
+};
 
-  const fail = (reason: Error) => {
-    if (handshakeTimer) clearTimeout(handshakeTimer);
-    handshakeTimer = null;
-    rejectReady?.(reason);
-    resolveReady = null;
-    rejectReady = null;
-    connecting = null;
-    ready = null;
-    for (const request of pending.values()) request.reject(reason);
-    pending.clear();
-  };
+function failRuntimeHost(state: RuntimeHostState, reason: Error): void {
+  if (state.handshakeTimer) clearTimeout(state.handshakeTimer);
+  state.handshakeTimer = null;
+  state.rejectReady?.(reason);
+  state.resolveReady = null;
+  state.rejectReady = null;
+  state.connecting = null;
+  state.ready = null;
+  for (const request of state.pending.values()) request.reject(reason);
+  state.pending.clear();
+}
 
-  const receive = (line: string) => {
-    let value: unknown;
-    try {
-      value = JSON.parse(line);
-    } catch {
-      fail(new Error('Assignment Runtime host emitted invalid JSON'));
-      child?.kill('SIGTERM');
+function receiveRuntimeHostLine(state: RuntimeHostState, line: string): void {
+  let value: unknown;
+  try {
+    value = JSON.parse(line);
+  } catch {
+    failRuntimeHost(
+      state,
+      new Error('Assignment Runtime host emitted invalid JSON'),
+    );
+    state.child?.kill('SIGTERM');
+    return;
+  }
+  const host = value as AssignmentRuntimeHostReady | HostError;
+  if (host.schema === 'kungfu.gui.assignment-runtime-host/v1') {
+    if (host.status === 'error') {
+      failRuntimeHost(state, hostError(host));
+      state.child?.kill('SIGTERM');
       return;
     }
-    const host = value as AssignmentRuntimeHostReady | HostError;
-    if (host.schema === 'kungfu.gui.assignment-runtime-host/v1') {
-      if (host.status === 'error') {
-        fail(hostError(host));
-        child?.kill('SIGTERM');
-        return;
-      }
-      if (
-        host.protocol !== 'kungfu.assignment-runtime/v1' ||
-        host.profile?.id !== 'kungfu.assignment-runtime.local'
-      ) {
-        fail(
-          new Error('Assignment Runtime host advertised an invalid profile'),
-        );
-        child?.kill('SIGTERM');
-        return;
-      }
-      ready = host;
-      if (handshakeTimer) clearTimeout(handshakeTimer);
-      handshakeTimer = null;
-      resolveReady?.(host);
-      resolveReady = null;
-      rejectReady = null;
+    if (
+      host.protocol !== 'kungfu.assignment-runtime/v1' ||
+      host.profile?.id !== 'kungfu.assignment-runtime.local'
+    ) {
+      failRuntimeHost(
+        state,
+        new Error('Assignment Runtime host advertised an invalid profile'),
+      );
+      state.child?.kill('SIGTERM');
       return;
     }
-    const response = value as AssignmentRuntimeResponse;
-    if (response.schema !== 'kungfu.assignment-runtime.response/v1') {
-      fail(new Error('Assignment Runtime host emitted an unknown envelope'));
-      child?.kill('SIGTERM');
-      return;
-    }
-    const request = pending.get(response.requestId);
-    if (!request) {
-      fail(new Error('Assignment Runtime host emitted an unrelated response'));
-      child?.kill('SIGTERM');
-      return;
-    }
-    pending.delete(response.requestId);
-    request.resolve(response);
-  };
+    state.ready = host;
+    if (state.handshakeTimer) clearTimeout(state.handshakeTimer);
+    state.handshakeTimer = null;
+    state.resolveReady?.(host);
+    state.resolveReady = null;
+    state.rejectReady = null;
+    return;
+  }
+  const response = value as AssignmentRuntimeResponse;
+  if (response.schema !== 'kungfu.assignment-runtime.response/v1') {
+    failRuntimeHost(
+      state,
+      new Error('Assignment Runtime host emitted an unknown envelope'),
+    );
+    state.child?.kill('SIGTERM');
+    return;
+  }
+  const request = state.pending.get(response.requestId);
+  if (!request) {
+    failRuntimeHost(
+      state,
+      new Error('Assignment Runtime host emitted an unrelated response'),
+    );
+    state.child?.kill('SIGTERM');
+    return;
+  }
+  state.pending.delete(response.requestId);
+  request.resolve(response);
+}
 
-  const start = () => {
-    if (connecting) return connecting;
-    connecting = new Promise<AssignmentRuntimeHostReady>((resolve, reject) => {
-      resolveReady = resolve;
-      rejectReady = reject;
+function startRuntimeHost(
+  deps: AssignmentRuntimeHostDeps,
+  state: RuntimeHostState,
+): Promise<AssignmentRuntimeHostReady> {
+  if (state.connecting) return state.connecting;
+  state.connecting = new Promise<AssignmentRuntimeHostReady>(
+    (resolve, reject) => {
+      state.resolveReady = resolve;
+      state.rejectReady = reject;
       const args = [
         ...(deps.argsPrefix ?? []),
         'work',
@@ -242,73 +257,90 @@ export function createAssignmentRuntimeHost(deps: AssignmentRuntimeHostDeps) {
         env: { ...deps.env },
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      child = launched;
-      stdout = '';
-      stderr = '';
+      state.child = launched;
+      state.stdout = '';
+      state.stderr = '';
       launched.stdout.on('data', (chunk: Buffer | string) => {
-        stdout += chunk.toString();
+        state.stdout += chunk.toString();
         for (;;) {
-          const newline = stdout.indexOf('\n');
+          const newline = state.stdout.indexOf('\n');
           if (newline < 0) break;
-          const line = stdout.slice(0, newline).trim();
-          stdout = stdout.slice(newline + 1);
-          if (line) receive(line);
+          const line = state.stdout.slice(0, newline).trim();
+          state.stdout = state.stdout.slice(newline + 1);
+          if (line) receiveRuntimeHostLine(state, line);
         }
       });
       launched.stderr.on('data', (chunk: Buffer | string) => {
-        stderr = `${stderr}${chunk.toString()}`.slice(-8192);
+        state.stderr = `${state.stderr}${chunk.toString()}`.slice(-8192);
       });
-      launched.on('error', (error: Error) => fail(error));
+      launched.on('error', (error: Error) => failRuntimeHost(state, error));
       launched.on(
         'exit',
         (code: number | null, signal: NodeJS.Signals | null) => {
-          if (child !== launched) return;
-          child = null;
-          fail(
+          if (state.child !== launched) return;
+          state.child = null;
+          failRuntimeHost(
+            state,
             new Error(
-              stderr.trim() ||
+              state.stderr.trim() ||
                 `Assignment Runtime host exited ${code ?? signal ?? 'unknown'}`,
             ),
           );
         },
       );
-      handshakeTimer = setTimeout(() => {
+      state.handshakeTimer = setTimeout(() => {
         const error = new Error(
           'Assignment Runtime host did not establish writer readiness in time',
         ) as Error & { code?: string };
         error.code = 'assignment-runtime-host-startup-timeout';
-        fail(error);
+        failRuntimeHost(state, error);
         launched.kill('SIGTERM');
       }, deps.handshakeTimeoutMs ?? 30_000);
-    });
-    return connecting;
+    },
+  );
+  return state.connecting;
+}
+
+export function createAssignmentRuntimeHost(deps: AssignmentRuntimeHostDeps) {
+  const state: RuntimeHostState = {
+    child: null,
+    ready: null,
+    connecting: null,
+    resolveReady: null,
+    rejectReady: null,
+    stdout: '',
+    stderr: '',
+    handshakeTimer: null,
+    pending: new Map(),
   };
 
   return {
-    connect: async () => ready ?? (await start()),
+    connect: async () => state.ready ?? (await startRuntimeHost(deps, state)),
     invoke: async (request: AssignmentRuntimeRequest) => {
-      await (ready ? Promise.resolve(ready) : start());
-      if (!child || !ready) {
+      await (state.ready
+        ? Promise.resolve(state.ready)
+        : startRuntimeHost(deps, state));
+      if (!state.child || !state.ready) {
         throw new Error('Assignment Runtime host is unavailable');
       }
-      if (pending.has(request.requestId)) {
+      if (state.pending.has(request.requestId)) {
         throw new Error(
           'Assignment Runtime request identity is already pending',
         );
       }
       return await new Promise<AssignmentRuntimeResponse>((resolve, reject) => {
-        pending.set(request.requestId, { resolve, reject });
-        child?.stdin.write(`${JSON.stringify(request)}\n`, (error) => {
+        state.pending.set(request.requestId, { resolve, reject });
+        state.child?.stdin.write(`${JSON.stringify(request)}\n`, (error) => {
           if (!error) return;
-          pending.delete(request.requestId);
+          state.pending.delete(request.requestId);
           reject(error);
         });
       });
     },
     dispose() {
-      const active = child;
-      child = null;
-      fail(new Error('Assignment Runtime host was disposed'));
+      const active = state.child;
+      state.child = null;
+      failRuntimeHost(state, new Error('Assignment Runtime host was disposed'));
       active?.kill('SIGTERM');
     },
   };

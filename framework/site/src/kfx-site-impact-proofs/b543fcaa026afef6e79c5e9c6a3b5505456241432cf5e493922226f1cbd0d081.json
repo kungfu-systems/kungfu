@@ -1,0 +1,79 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "d6052cf2a1724d1955a84b33e51b385c38f6ee27",
+  "changeRoot": "sha256:3f6fdbe0c4bf56b83b787037309393e8988945e655580f7783904ba8d7923270",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:3d74530d56d7a8aca81ea0898985ab270e114c11e7d9db8740fd19b315397975",
+      "contentRoot": "sha256:bdc091e9d48f03adb5c7c5d0e5802bb58e492f755245567f06ebe13dfd8841ed",
+      "path": "crates/xinfa/engine/manifest.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:17daae339c58ce2e6c3fee5b9553348e21acdf7d590b2af0ee9f32f4730c42d1",
+      "contentRoot": "sha256:9649ae2c3e44d4d9032dd629f8f32d8829333f7628fbfc29cf1fc283283fbb3a",
+      "path": "crates/xinfa/engine/xinfa.wasm",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:65dd66497a96519b804c9f9a6b7599e4f0fa7a8a5d83f26f20405f143a34f66c",
+      "contentRoot": "sha256:de2bf7bf9ae866928802f5a8af18ae86bb70170bba2a6d4362aa87dcd436ea6b",
+      "path": "crates/xinfa/src/project_validation.rs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:648635de647fe89db218b1cdc0f2c8d8eac4d9e6a477c7e14bb003fb2532fcf5",
+      "contentRoot": "sha256:97c7f8bee332ed9d5d9d8607ac3ebc9981a32b2ae0ab67279e7c20711625229d",
+      "path": "docs/qualification/evidence/durable-provenance-authority/v1/report.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:474250aa5e5c054b50662fafe06cc05827c26de39dac20168cf0b58e14aa56e3",
+      "contentRoot": "sha256:057f1b1c7bc2fadba6c8232625beeaf9926eb1bc39eadd70982eef9ab657ed64",
+      "path": "extensions/dogfood/dogfood-actions/adapter.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3d41550617bd51f4203c886a35ca24b08d4722dcce14460ee50b51bd54ac7541",
+      "contentRoot": "sha256:fa06a02f14e617da85538d19245d3a563aa621225c786775b897dc1d41ba16f4",
+      "path": "framework/core/src/python/kungfu/_distribution_update/cli.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:81e6c4dff9ba881e48089988951d74f5477c10daa2ba22b41b5d244008139bf9",
+      "contentRoot": "sha256:db8fd228bbef46d8e95fb9fbd9fef01fd6ea8e1441b495fe40867a89680667d3",
+      "path": "framework/core/src/python/kungfu/_workspace/continuation.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:00a1d3c3bb65d5eb3b3760c05d03b792d1fc0f8db76916f5fa0bda66ccf601ed",
+      "contentRoot": "sha256:b1688671babd80562a1a4626c89adf79002770b12786f648b9e2ef7e1a0132b8",
+      "path": "framework/core/src/python/kungfu/project_cut_read_model.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8fb9d8c314c802c7f873647c57eea25122f70368197dc160962b8e18d9c49bf8",
+      "contentRoot": "sha256:08f455cd432823945ce72c1b5914d191454227799748f0d54b4e4029c5f82b89",
+      "path": "framework/core/src/python/kungfu/storage/fact_kernel_integrity.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:525d1fbc17474e8ab79aff730b3e0f483d96d4fdda8c19d21ae6438acaad93cd",
+      "contentRoot": "sha256:4ee8cca795fbb369a6ade41d426b4c4cfbfb85a607c22697fdb8224f8f6e689e",
+      "path": "framework/core/src/python/kungfu/workspace_federation.py",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Runtime complexity decomposition preserves public KFX site bundle inputs and only splits internal Python and Rust control flow without changing KFX-facing contracts.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:b543fcaa026afef6e79c5e9c6a3b5505456241432cf5e493922226f1cbd0d081"
+}

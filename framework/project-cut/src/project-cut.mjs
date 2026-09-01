@@ -413,6 +413,142 @@ function validatePolicy(policy, diagnostics, at = '$.policy') {
   }
 }
 
+function validateProjectionEntry(entry, index, policy, diagnostics) {
+  const at = `$.entries[${index}]`;
+  if (
+    !exactKeys(
+      entry,
+      ['path', 'kind', 'visibility', 'digest', 'size'],
+      ['path', 'kind', 'visibility', 'digest', 'size'],
+      at,
+      diagnostics,
+    )
+  )
+    return;
+  if (validatePath(entry.path, `${at}.path`, diagnostics)) {
+    for (const prefix of policy?.privacyDenyPrefixes ?? []) {
+      if (matchesPrefix(entry.path, prefix))
+        diagnostics.push(
+          diagnostic(
+            'privacy-denied',
+            `${at}.path`,
+            'private path cannot be projected',
+          ),
+        );
+    }
+    for (const prefix of policy?.protocolOutputPrefixes ?? []) {
+      if (matchesPrefix(entry.path, prefix))
+        diagnostics.push(
+          diagnostic(
+            'generated-feedback',
+            `${at}.path`,
+            'Project Cut output cannot feed the same source projection',
+          ),
+        );
+    }
+    for (const prefix of policy?.excludePrefixes ?? []) {
+      if (matchesPrefix(entry.path, prefix))
+        diagnostics.push(
+          diagnostic(
+            'excluded-path',
+            `${at}.path`,
+            'path is excluded by policy',
+          ),
+        );
+    }
+  }
+  if (!['source', 'authority'].includes(entry.kind))
+    diagnostics.push(
+      diagnostic('invalid-value', `${at}.kind`, 'unknown entry kind'),
+    );
+  if (!VISIBILITIES.has(entry.visibility))
+    diagnostics.push(
+      diagnostic('invalid-value', `${at}.visibility`, 'unknown visibility'),
+    );
+  requireRoot(entry.digest, `${at}.digest`, diagnostics);
+  if (!Number.isSafeInteger(entry.size) || entry.size < 0)
+    diagnostics.push(
+      diagnostic(
+        'non-canonical-number',
+        `${at}.size`,
+        'size must be a safe integer',
+      ),
+    );
+}
+
+function validateProjectionEntries(entries, policy, diagnostics) {
+  if (!Array.isArray(entries)) {
+    diagnostics.push(
+      diagnostic('invalid-type', '$.entries', 'expected an array'),
+    );
+    return;
+  }
+  entries.forEach((entry, index) =>
+    validateProjectionEntry(entry, index, policy, diagnostics),
+  );
+  requireSortedUnique(entries, '$.entries', diagnostics, (entry) =>
+    String(entry?.path),
+  );
+}
+
+function validateProjectionOmission(entry, index, diagnostics) {
+  const at = `$.omissions[${index}]`;
+  if (
+    !exactKeys(
+      entry,
+      ['path', 'reason', 'visibility'],
+      ['path', 'reason', 'visibility'],
+      at,
+      diagnostics,
+    )
+  )
+    return;
+  validatePath(entry.path, `${at}.path`, diagnostics);
+  requireString(entry.reason, `${at}.reason`, diagnostics);
+  if (!VISIBILITIES.has(entry.visibility))
+    diagnostics.push(
+      diagnostic('invalid-value', `${at}.visibility`, 'unknown visibility'),
+    );
+}
+
+function validateProjectionOmissions(omissions, diagnostics) {
+  if (!Array.isArray(omissions)) {
+    diagnostics.push(
+      diagnostic('invalid-type', '$.omissions', 'expected an array'),
+    );
+    return;
+  }
+  omissions.forEach((entry, index) =>
+    validateProjectionOmission(entry, index, diagnostics),
+  );
+  requireSortedUnique(
+    omissions,
+    '$.omissions',
+    diagnostics,
+    (entry) => `${entry?.path}\0${entry?.reason}`,
+  );
+}
+
+function validateProjectionRoot(projection, diagnostics) {
+  requireRoot(projection.root, '$.root', diagnostics);
+  if (!isObject(projection)) return;
+  const { root, ...preimage } = projection;
+  try {
+    if (ROOT.test(String(root)) && semanticRoot(preimage) !== root)
+      diagnostics.push(
+        diagnostic('root-mismatch', '$.root', 'projection root does not match'),
+      );
+  } catch (error) {
+    diagnostics.push(
+      diagnostic(
+        error?.code ?? 'canonicalization-failed',
+        error?.path ?? '$',
+        String(error.message),
+      ),
+    );
+  }
+}
+
 export function verifySourceProjection(projection, policy) {
   /** @type {Diagnostic[]} */
   const diagnostics = [];
@@ -445,130 +581,9 @@ export function verifySourceProjection(projection, policy) {
         'projection policy root differs',
       ),
     );
-  if (!Array.isArray(projection.entries)) {
-    diagnostics.push(
-      diagnostic('invalid-type', '$.entries', 'expected an array'),
-    );
-  } else {
-    projection.entries.forEach((entry, index) => {
-      const at = `$.entries[${index}]`;
-      if (
-        !exactKeys(
-          entry,
-          ['path', 'kind', 'visibility', 'digest', 'size'],
-          ['path', 'kind', 'visibility', 'digest', 'size'],
-          at,
-          diagnostics,
-        )
-      )
-        return;
-      if (validatePath(entry.path, `${at}.path`, diagnostics)) {
-        for (const prefix of policy?.privacyDenyPrefixes ?? []) {
-          if (matchesPrefix(entry.path, prefix))
-            diagnostics.push(
-              diagnostic(
-                'privacy-denied',
-                `${at}.path`,
-                'private path cannot be projected',
-              ),
-            );
-        }
-        for (const prefix of policy?.protocolOutputPrefixes ?? []) {
-          if (matchesPrefix(entry.path, prefix))
-            diagnostics.push(
-              diagnostic(
-                'generated-feedback',
-                `${at}.path`,
-                'Project Cut output cannot feed the same source projection',
-              ),
-            );
-        }
-        for (const prefix of policy?.excludePrefixes ?? []) {
-          if (matchesPrefix(entry.path, prefix))
-            diagnostics.push(
-              diagnostic(
-                'excluded-path',
-                `${at}.path`,
-                'path is excluded by policy',
-              ),
-            );
-        }
-      }
-      if (!['source', 'authority'].includes(entry.kind))
-        diagnostics.push(
-          diagnostic('invalid-value', `${at}.kind`, 'unknown entry kind'),
-        );
-      if (!VISIBILITIES.has(entry.visibility))
-        diagnostics.push(
-          diagnostic('invalid-value', `${at}.visibility`, 'unknown visibility'),
-        );
-      requireRoot(entry.digest, `${at}.digest`, diagnostics);
-      if (!Number.isSafeInteger(entry.size) || entry.size < 0)
-        diagnostics.push(
-          diagnostic(
-            'non-canonical-number',
-            `${at}.size`,
-            'size must be a safe integer',
-          ),
-        );
-    });
-    requireSortedUnique(projection.entries, '$.entries', diagnostics, (entry) =>
-      String(entry?.path),
-    );
-  }
-  if (!Array.isArray(projection.omissions)) {
-    diagnostics.push(
-      diagnostic('invalid-type', '$.omissions', 'expected an array'),
-    );
-  } else {
-    projection.omissions.forEach((entry, index) => {
-      const at = `$.omissions[${index}]`;
-      if (
-        !exactKeys(
-          entry,
-          ['path', 'reason', 'visibility'],
-          ['path', 'reason', 'visibility'],
-          at,
-          diagnostics,
-        )
-      )
-        return;
-      validatePath(entry.path, `${at}.path`, diagnostics);
-      requireString(entry.reason, `${at}.reason`, diagnostics);
-      if (!VISIBILITIES.has(entry.visibility))
-        diagnostics.push(
-          diagnostic('invalid-value', `${at}.visibility`, 'unknown visibility'),
-        );
-    });
-    requireSortedUnique(
-      projection.omissions,
-      '$.omissions',
-      diagnostics,
-      (entry) => `${entry?.path}\0${entry?.reason}`,
-    );
-  }
-  requireRoot(projection.root, '$.root', diagnostics);
-  if (isObject(projection)) {
-    const { root, ...preimage } = projection;
-    try {
-      if (ROOT.test(String(root)) && semanticRoot(preimage) !== root)
-        diagnostics.push(
-          diagnostic(
-            'root-mismatch',
-            '$.root',
-            'projection root does not match',
-          ),
-        );
-    } catch (error) {
-      diagnostics.push(
-        diagnostic(
-          error?.code ?? 'canonicalization-failed',
-          error?.path ?? '$',
-          String(error.message),
-        ),
-      );
-    }
-  }
+  validateProjectionEntries(projection.entries, policy, diagnostics);
+  validateProjectionOmissions(projection.omissions, diagnostics);
+  validateProjectionRoot(projection, diagnostics);
   return {
     valid: diagnostics.length === 0,
     diagnostics: sortedDiagnostics(diagnostics),
@@ -640,6 +655,182 @@ function projectCutRootInput(cut) {
   };
 }
 
+function validateProjectCutParents(cut, options, diagnostics) {
+  requireRootArray(cut.parentCutRoots, '$.parentCutRoots', diagnostics);
+  if (
+    Array.isArray(cut.parentCutRoots) &&
+    cut.parentCutRoots.includes(cut.cutRoot)
+  )
+    diagnostics.push(
+      diagnostic(
+        'cycle',
+        '$.parentCutRoots',
+        'a Project Cut cannot be its own parent',
+      ),
+    );
+  if (!options.availableParentRoots || !Array.isArray(cut.parentCutRoots)) {
+    return;
+  }
+  const available = new Set(options.availableParentRoots);
+  cut.parentCutRoots.forEach((root, index) => {
+    if (!available.has(root))
+      diagnostics.push(
+        diagnostic(
+          'parent-mismatch',
+          `$.parentCutRoots[${index}]`,
+          'parent cut is not available in the declared settlement scope',
+        ),
+      );
+  });
+}
+
+function validateProjectCutReferences(cut, diagnostics) {
+  for (const [key, schema] of [
+    ['sourceProjection', 'project.source-projection-ref/v1'],
+    ['atlas', 'xinfa.atlas-ref/v1'],
+  ]) {
+    const value = cut[key];
+    if (
+      !exactKeys(
+        value,
+        key === 'sourceProjection'
+          ? ['schema', 'root', 'policyRoot']
+          : ['schema', 'root', 'compilerRoot'],
+        key === 'sourceProjection'
+          ? ['schema', 'root', 'policyRoot']
+          : ['schema', 'root', 'compilerRoot'],
+        `$.${key}`,
+        diagnostics,
+      )
+    )
+      continue;
+    if (value.schema !== schema)
+      diagnostics.push(
+        diagnostic('unknown-version', `$.${key}.schema`, `expected ${schema}`),
+      );
+    requireRoot(value.root, `$.${key}.root`, diagnostics);
+    requireRoot(
+      key === 'sourceProjection' ? value.policyRoot : value.compilerRoot,
+      `$.${key}.${key === 'sourceProjection' ? 'policyRoot' : 'compilerRoot'}`,
+      diagnostics,
+    );
+  }
+}
+
+function validateEpisodeProviderRoot(entry, index, options, diagnostics) {
+  const at = `$.episodeDelta.nativeRoots[${index}]`;
+  if (
+    !exactKeys(
+      entry,
+      ['provider', 'root'],
+      ['provider', 'root'],
+      at,
+      diagnostics,
+    )
+  )
+    return;
+  requireString(entry.provider, `${at}.provider`, diagnostics, PROJECT_ID);
+  requireRoot(entry.root, `${at}.root`, diagnostics);
+  if (
+    options.expectedProviderRoots?.[entry.provider] &&
+    options.expectedProviderRoots[entry.provider] !== entry.root
+  )
+    diagnostics.push(
+      diagnostic(
+        'provider-drift',
+        `${at}.root`,
+        'provider root differs from evidence',
+      ),
+    );
+}
+
+function validateEpisodeDelta(cut, options, diagnostics) {
+  if (
+    !exactKeys(
+      cut.episodeDelta,
+      [
+        'schema',
+        'empty',
+        'nativeRoots',
+        'semanticRoot',
+        'equivalenceProfileRoot',
+      ],
+      [
+        'schema',
+        'empty',
+        'nativeRoots',
+        'semanticRoot',
+        'equivalenceProfileRoot',
+      ],
+      '$.episodeDelta',
+      diagnostics,
+    )
+  )
+    return;
+  if (cut.episodeDelta.schema !== 'kungfu.episode-delta-ref/v1')
+    diagnostics.push(
+      diagnostic(
+        'unknown-version',
+        '$.episodeDelta.schema',
+        'unsupported Episode delta schema',
+      ),
+    );
+  if (typeof cut.episodeDelta.empty !== 'boolean')
+    diagnostics.push(
+      diagnostic('invalid-type', '$.episodeDelta.empty', 'expected a boolean'),
+    );
+  if (!Array.isArray(cut.episodeDelta.nativeRoots)) {
+    diagnostics.push(
+      diagnostic(
+        'invalid-type',
+        '$.episodeDelta.nativeRoots',
+        'expected an array',
+      ),
+    );
+  } else {
+    cut.episodeDelta.nativeRoots.forEach((entry, index) =>
+      validateEpisodeProviderRoot(entry, index, options, diagnostics),
+    );
+    requireSortedUnique(
+      cut.episodeDelta.nativeRoots,
+      '$.episodeDelta.nativeRoots',
+      diagnostics,
+      (entry) => String(entry?.provider),
+    );
+    if (cut.episodeDelta.empty && cut.episodeDelta.nativeRoots.length !== 0)
+      diagnostics.push(
+        diagnostic(
+          'invalid-empty-delta',
+          '$.episodeDelta.nativeRoots',
+          'empty delta cannot contain provider roots',
+        ),
+      );
+    if (!cut.episodeDelta.empty && cut.episodeDelta.nativeRoots.length === 0)
+      diagnostics.push(
+        diagnostic(
+          'missing-root',
+          '$.episodeDelta.nativeRoots',
+          'non-empty delta requires a provider-native root',
+        ),
+      );
+  }
+  for (const key of ['semanticRoot', 'equivalenceProfileRoot']) {
+    if (cut.episodeDelta[key] !== null)
+      requireRoot(cut.episodeDelta[key], `$.episodeDelta.${key}`, diagnostics);
+  }
+  if (
+    (cut.episodeDelta.semanticRoot === null) !==
+    (cut.episodeDelta.equivalenceProfileRoot === null)
+  )
+    diagnostics.push(
+      diagnostic(
+        'unqualified-equivalence',
+        '$.episodeDelta',
+        'semantic root and equivalence profile root must appear together',
+      ),
+    );
+}
+
 export function verifyProjectCut(cut, options = {}) {
   /** @type {Diagnostic[]} */
   const diagnostics = [];
@@ -706,187 +897,9 @@ export function verifyProjectCut(cut, options = {}) {
       diagnostics,
     );
   }
-  requireRootArray(cut.parentCutRoots, '$.parentCutRoots', diagnostics);
-  if (
-    Array.isArray(cut.parentCutRoots) &&
-    cut.parentCutRoots.includes(cut.cutRoot)
-  )
-    diagnostics.push(
-      diagnostic(
-        'cycle',
-        '$.parentCutRoots',
-        'a Project Cut cannot be its own parent',
-      ),
-    );
-  if (options.availableParentRoots && Array.isArray(cut.parentCutRoots)) {
-    const available = new Set(options.availableParentRoots);
-    cut.parentCutRoots.forEach((root, index) => {
-      if (!available.has(root))
-        diagnostics.push(
-          diagnostic(
-            'parent-mismatch',
-            `$.parentCutRoots[${index}]`,
-            'parent cut is not available in the declared settlement scope',
-          ),
-        );
-    });
-  }
-
-  for (const [key, schema] of [
-    ['sourceProjection', 'project.source-projection-ref/v1'],
-    ['atlas', 'xinfa.atlas-ref/v1'],
-  ]) {
-    const value = cut[key];
-    if (
-      exactKeys(
-        value,
-        key === 'sourceProjection'
-          ? ['schema', 'root', 'policyRoot']
-          : ['schema', 'root', 'compilerRoot'],
-        key === 'sourceProjection'
-          ? ['schema', 'root', 'policyRoot']
-          : ['schema', 'root', 'compilerRoot'],
-        `$.${key}`,
-        diagnostics,
-      )
-    ) {
-      if (value.schema !== schema)
-        diagnostics.push(
-          diagnostic(
-            'unknown-version',
-            `$.${key}.schema`,
-            `expected ${schema}`,
-          ),
-        );
-      requireRoot(value.root, `$.${key}.root`, diagnostics);
-      requireRoot(
-        key === 'sourceProjection' ? value.policyRoot : value.compilerRoot,
-        `$.${key}.${key === 'sourceProjection' ? 'policyRoot' : 'compilerRoot'}`,
-        diagnostics,
-      );
-    }
-  }
-
-  if (
-    exactKeys(
-      cut.episodeDelta,
-      [
-        'schema',
-        'empty',
-        'nativeRoots',
-        'semanticRoot',
-        'equivalenceProfileRoot',
-      ],
-      [
-        'schema',
-        'empty',
-        'nativeRoots',
-        'semanticRoot',
-        'equivalenceProfileRoot',
-      ],
-      '$.episodeDelta',
-      diagnostics,
-    )
-  ) {
-    if (cut.episodeDelta.schema !== 'kungfu.episode-delta-ref/v1')
-      diagnostics.push(
-        diagnostic(
-          'unknown-version',
-          '$.episodeDelta.schema',
-          'unsupported Episode delta schema',
-        ),
-      );
-    if (typeof cut.episodeDelta.empty !== 'boolean')
-      diagnostics.push(
-        diagnostic(
-          'invalid-type',
-          '$.episodeDelta.empty',
-          'expected a boolean',
-        ),
-      );
-    if (!Array.isArray(cut.episodeDelta.nativeRoots)) {
-      diagnostics.push(
-        diagnostic(
-          'invalid-type',
-          '$.episodeDelta.nativeRoots',
-          'expected an array',
-        ),
-      );
-    } else {
-      cut.episodeDelta.nativeRoots.forEach((entry, index) => {
-        const at = `$.episodeDelta.nativeRoots[${index}]`;
-        if (
-          !exactKeys(
-            entry,
-            ['provider', 'root'],
-            ['provider', 'root'],
-            at,
-            diagnostics,
-          )
-        )
-          return;
-        requireString(
-          entry.provider,
-          `${at}.provider`,
-          diagnostics,
-          PROJECT_ID,
-        );
-        requireRoot(entry.root, `${at}.root`, diagnostics);
-        if (
-          options.expectedProviderRoots?.[entry.provider] &&
-          options.expectedProviderRoots[entry.provider] !== entry.root
-        )
-          diagnostics.push(
-            diagnostic(
-              'provider-drift',
-              `${at}.root`,
-              'provider root differs from evidence',
-            ),
-          );
-      });
-      requireSortedUnique(
-        cut.episodeDelta.nativeRoots,
-        '$.episodeDelta.nativeRoots',
-        diagnostics,
-        (entry) => String(entry?.provider),
-      );
-      if (cut.episodeDelta.empty && cut.episodeDelta.nativeRoots.length !== 0)
-        diagnostics.push(
-          diagnostic(
-            'invalid-empty-delta',
-            '$.episodeDelta.nativeRoots',
-            'empty delta cannot contain provider roots',
-          ),
-        );
-      if (!cut.episodeDelta.empty && cut.episodeDelta.nativeRoots.length === 0)
-        diagnostics.push(
-          diagnostic(
-            'missing-root',
-            '$.episodeDelta.nativeRoots',
-            'non-empty delta requires a provider-native root',
-          ),
-        );
-    }
-    for (const key of ['semanticRoot', 'equivalenceProfileRoot']) {
-      if (cut.episodeDelta[key] !== null)
-        requireRoot(
-          cut.episodeDelta[key],
-          `$.episodeDelta.${key}`,
-          diagnostics,
-        );
-    }
-    if (
-      (cut.episodeDelta.semanticRoot === null) !==
-      (cut.episodeDelta.equivalenceProfileRoot === null)
-    )
-      diagnostics.push(
-        diagnostic(
-          'unqualified-equivalence',
-          '$.episodeDelta',
-          'semantic root and equivalence profile root must appear together',
-        ),
-      );
-  }
+  validateProjectCutParents(cut, options, diagnostics);
+  validateProjectCutReferences(cut, diagnostics);
+  validateEpisodeDelta(cut, options, diagnostics);
 
   if (
     exactKeys(

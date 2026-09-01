@@ -240,23 +240,40 @@ def _active_work_profiles(work_ref):
     return [{"id": work_ref["profileId"], "root": work_ref["profileRoot"]}]
 
 
-def _qualified_active_work_profiles(runtime_dir, work_ref):
+def _project_active_work_profiles(runtime_dir, work_ref):
+    """Project the bound Work authority or this Console's unbound discovery."""
+
+    if work_ref is not None:
+        validated = session_contract.validate_work_ref(work_ref)
+        return _active_work_profiles(validated)
+
     from kungfu.assignment_runtime import profile_lifecycle
 
     profile = profile_lifecycle.resolve_qualified_work_profile(
         runtime_dir, required=False
     )
-    if work_ref is not None and (
-        profile is None
-        or work_ref.get("profileId") != profile["id"]
-        or work_ref.get("profileRoot") != profile["root"]
-    ):
-        raise ValueError(
-            "native Agent WorkRef does not match the exact qualified Work Control Profile root"
-        )
     return (
         [{"id": profile["id"], "root": profile["root"]}] if profile is not None else []
     )
+
+
+def _console_envelope_work_projection(envelope, *, enabled):
+    if enabled:
+        return envelope
+    body = {
+        **{key: value for key, value in envelope.items() if key != "envelopeRoot"},
+        "activeProfiles": [],
+        "workRef": None,
+    }
+    return session_contract.validate_agent_console_envelope(
+        {**body, "envelopeRoot": semantic_root(body)}
+    )
+
+
+def _console_work_projection(runtime_dir, work_ref, *, enabled):
+    if not enabled:
+        return [], None
+    return _project_active_work_profiles(runtime_dir, work_ref), work_ref
 
 
 class ReturnCodeResult(Protocol):
@@ -286,29 +303,36 @@ def endpoint_for_runtime(runtime_dir):
     return str(socket_root / f"{scope}.sock")
 
 
-def invoke_for_project(request, *, fallback_runtime_dir, endpoint=None, cwd=None):
+def invoke_for_project(
+    request,
+    *,
+    fallback_runtime_dir,
+    endpoint=None,
+    cwd=None,
+    environ=None,
+):
     """Invoke the project surface and revive its detached host when needed."""
 
-    environment_endpoint = os.environ.get("KUNGFU_AGENT_SESSION_ENDPOINT")
+    environment_endpoint = (environ or os.environ).get("KUNGFU_AGENT_SESSION_ENDPOINT")
     endpoint_is_explicit = endpoint is not None or environment_endpoint is not None
     resolved_endpoint = endpoint or environment_endpoint
-    runtime_dir = None
+    runtime_dir = fallback_runtime_dir
     if not resolved_endpoint:
         try:
             runtime_dir = str(
                 resolve_workspace_target(
-                    "read-only", cwd=cwd or os.getcwd()
+                    "read-only", cwd=cwd or os.getcwd(), env=environ
                 ).runtime_dir
             )
         except WorkspaceTargetRequired:
-            runtime_dir = str(fallback_runtime_dir)
+            pass
         resolved_endpoint = endpoint_for_runtime(runtime_dir)
     try:
         return invoke(request, endpoint=resolved_endpoint)
     except OSError:
         if endpoint_is_explicit:
             raise
-        resolved_endpoint = ensure(runtime_dir or str(fallback_runtime_dir))
+        resolved_endpoint = ensure(runtime_dir)
         return invoke(request, endpoint=resolved_endpoint)
 
 
@@ -586,6 +610,7 @@ def current_native_console(
     runtime_dir: str,
     *,
     adopt: bool = False,
+    project_work_binding: bool = True,
     cwd: str | None = None,
     environ: Mapping[str, str] | None = None,
     process_identity: Mapping[str, Any] | None = None,
@@ -597,6 +622,9 @@ def current_native_console(
     raw = str(current.get("KUNGFU_AGENT_CONSOLE_ENVELOPE") or "").strip()
     if raw:
         envelope = session_contract.validate_agent_console_envelope(json.loads(raw))
+        envelope = _console_envelope_work_projection(
+            envelope, enabled=project_work_binding
+        )
         return {
             "source": "injected-native-console",
             "envelope": envelope,
@@ -732,6 +760,9 @@ def current_native_console(
     cli_bin = str(
         current.get("KUNGFU_CLI_BIN") or shutil.which("kungfu") or sys.argv[0]
     )
+    active_profiles, projected_work_ref = _console_work_projection(
+        target.runtime_dir, work_ref, enabled=project_work_binding
+    )
     body = {
         "schema": "kungfu.agent-console-envelope/v1",
         "workspaceId": workspace_id,
@@ -739,8 +770,8 @@ def current_native_console(
         "attemptId": session["sessionAttemptId"],
         "runtimeProfileId": "kungfu.agent-runtime.codex.ambient",
         "provider": "codex",
-        "activeProfiles": _qualified_active_work_profiles(target.runtime_dir, work_ref),
-        "workRef": work_ref,
+        "activeProfiles": active_profiles,
+        "workRef": projected_work_ref,
         "entrypoints": {
             "context": [cli_bin, "agent", "context", "--json"],
             "capabilities": [cli_bin, "agent", "capabilities", "--json"],

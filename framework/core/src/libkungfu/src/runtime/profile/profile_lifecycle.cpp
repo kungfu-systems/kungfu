@@ -122,6 +122,63 @@ const nlohmann::json &resolve_schema_ref(const nlohmann::json &root, const std::
 }
 
 void validate_schema_value(const nlohmann::json &value, const nlohmann::json &rule, const nlohmann::json &root,
+                           const std::string &path);
+
+void validate_schema_object(const nlohmann::json &value, const nlohmann::json &rule, const nlohmann::json &root,
+                            const std::string &path) {
+  if (!value.is_object())
+    throw std::invalid_argument(path + " must be an object");
+  if (rule.contains("required")) {
+    for (const auto &field : rule.at("required")) {
+      if (!value.contains(field.get<std::string>()))
+        throw std::invalid_argument(path + " is missing " + field.get<std::string>());
+    }
+  }
+  const auto properties = rule.value("properties", nlohmann::json::object());
+  if (rule.value("additionalProperties", true) == false) {
+    for (const auto &[field, ignored] : value.items()) {
+      (void)ignored;
+      if (!properties.contains(field))
+        throw std::invalid_argument(path + " contains unknown field " + field);
+    }
+  }
+  for (const auto &[field, child] : properties.items()) {
+    if (value.contains(field))
+      validate_schema_value(value.at(field), child, root, path + "." + field);
+  }
+}
+
+void validate_schema_array(const nlohmann::json &value, const nlohmann::json &rule, const nlohmann::json &root,
+                           const std::string &path) {
+  if (!value.is_array())
+    throw std::invalid_argument(path + " must be an array");
+  if (rule.contains("minItems") && value.size() < rule.at("minItems").get<size_t>())
+    throw std::invalid_argument(path + " has too few items");
+  if (rule.value("uniqueItems", false)) {
+    std::set<std::string> identities;
+    for (const auto &item : value) {
+      if (!identities.insert(item.dump()).second)
+        throw std::invalid_argument(path + " contains duplicate items");
+    }
+  }
+  if (rule.contains("items")) {
+    size_t index = 0;
+    for (const auto &item : value)
+      validate_schema_value(item, rule.at("items"), root, path + "[" + std::to_string(index++) + "]");
+  }
+}
+
+void validate_schema_string(const nlohmann::json &value, const nlohmann::json &rule, const std::string &path) {
+  if (!value.is_string())
+    throw std::invalid_argument(path + " must be a string");
+  const auto text = value.get<std::string>();
+  if (rule.contains("minLength") && text.size() < rule.at("minLength").get<size_t>())
+    throw std::invalid_argument(path + " is too short");
+  if (rule.contains("pattern") && !std::regex_match(text, std::regex(rule.at("pattern").get<std::string>())))
+    throw std::invalid_argument(path + " does not match the KFX contract pattern");
+}
+
+void validate_schema_value(const nlohmann::json &value, const nlohmann::json &rule, const nlohmann::json &root,
                            const std::string &path) {
   if (rule.contains("$ref")) {
     validate_schema_value(value, resolve_schema_ref(root, required_text(rule, "$ref")), root, path);
@@ -132,56 +189,11 @@ void validate_schema_value(const nlohmann::json &value, const nlohmann::json &ru
   }
   const auto type = text_or(rule, "type");
   if (type == "object") {
-    if (!value.is_object())
-      throw std::invalid_argument(path + " must be an object");
-    if (rule.contains("required")) {
-      for (const auto &field : rule.at("required")) {
-        if (!value.contains(field.get<std::string>())) {
-          throw std::invalid_argument(path + " is missing " + field.get<std::string>());
-        }
-      }
-    }
-    const auto properties = rule.value("properties", nlohmann::json::object());
-    if (rule.value("additionalProperties", true) == false) {
-      for (const auto &[field, ignored] : value.items()) {
-        (void)ignored;
-        if (!properties.contains(field))
-          throw std::invalid_argument(path + " contains unknown field " + field);
-      }
-    }
-    for (const auto &[field, child] : properties.items()) {
-      if (value.contains(field))
-        validate_schema_value(value.at(field), child, root, path + "." + field);
-    }
+    validate_schema_object(value, rule, root, path);
   } else if (type == "array") {
-    if (!value.is_array())
-      throw std::invalid_argument(path + " must be an array");
-    if (rule.contains("minItems") && value.size() < rule.at("minItems").get<size_t>()) {
-      throw std::invalid_argument(path + " has too few items");
-    }
-    if (rule.value("uniqueItems", false)) {
-      std::set<std::string> identities;
-      for (const auto &item : value) {
-        if (!identities.insert(item.dump()).second)
-          throw std::invalid_argument(path + " contains duplicate items");
-      }
-    }
-    if (rule.contains("items")) {
-      size_t index = 0;
-      for (const auto &item : value) {
-        validate_schema_value(item, rule.at("items"), root, path + "[" + std::to_string(index++) + "]");
-      }
-    }
+    validate_schema_array(value, rule, root, path);
   } else if (type == "string") {
-    if (!value.is_string())
-      throw std::invalid_argument(path + " must be a string");
-    const auto text = value.get<std::string>();
-    if (rule.contains("minLength") && text.size() < rule.at("minLength").get<size_t>()) {
-      throw std::invalid_argument(path + " is too short");
-    }
-    if (rule.contains("pattern") && !std::regex_match(text, std::regex(rule.at("pattern").get<std::string>()))) {
-      throw std::invalid_argument(path + " does not match the KFX contract pattern");
-    }
+    validate_schema_string(value, rule, path);
   } else if (!type.empty()) {
     throw std::invalid_argument("Profile schema uses an unsupported JSON type: " + type);
   }
@@ -1100,6 +1112,96 @@ nlohmann::json inspect_profile(const std::string &profile_path_text, const nlohm
   return inspection;
 }
 
+bool lifecycle_uses_profile_document(const std::string &action_name) {
+  return action_name == "install" || action_name == "qualify" || action_name == "activate" ||
+         action_name == "upgrade" || action_name == "kfd3-qualify";
+}
+
+std::string prepare_lifecycle_subject(const nlohmann::json &request, const std::string &action_name,
+                                      nlohmann::json &normalized_request, nlohmann::json &inspection) {
+  if (!lifecycle_uses_profile_document(action_name)) {
+    const auto profile_id = required_text(request, "profile_id");
+    validate_profile_id(profile_id);
+    normalized_request["profile_id"] = profile_id;
+    return profile_id;
+  }
+  if (!request.contains("member_roots"))
+    throw std::invalid_argument("member_roots is required");
+  inspection = inspect_profile(required_text(request, "profile_path"), request.at("member_roots"));
+  normalized_request["profile_path"] = inspection.at("profile_path");
+  normalized_request["member_roots"] = inspection.at("member_roots");
+  if ((action_name == "qualify" || action_name == "activate") && work_capable_profile(inspection)) {
+    if (!request.contains("work_conformance"))
+      throw std::invalid_argument("Work-capable Profile lifecycle requires a conformance result");
+    const auto *surface = action_name == "qualify" ? "qualify" : "installed-runtime";
+    normalized_request["work_conformance"] =
+        require_work_conformance(inspection, request.at("work_conformance"), surface);
+  }
+  return inspection.at("profile").at("id").get<std::string>();
+}
+
+void plan_activation(const nlohmann::json &request, const profile_state &state, const std::string &current_root,
+                     const nlohmann::json &inspection, nlohmann::json &normalized_request, nlohmann::json &permissions,
+                     nlohmann::json &effects) {
+  if (state.removed || current_root != inspection.at("profile_suite_root").get<std::string>())
+    throw std::invalid_argument("activation requires the exact current Profile root");
+  const auto root_found = state.roots.find(current_root);
+  if (root_found == state.roots.end() || !root_found->second.qualified)
+    throw std::invalid_argument("activation requires a qualified Profile root");
+  if (work_capable_profile(inspection) && text_or(root_found->second.qualification, "work_conformance_root") !=
+                                              required_text(request.at("work_conformance"), "conformanceRoot"))
+    throw std::invalid_argument("activation Work conformance root differs from the qualified root");
+  const auto requested = request.contains("granted_permissions")
+                             ? normalize_tokens(request.at("granted_permissions"), "granted_permissions", false)
+                             : std::vector<std::string>{};
+  const auto declared = declared_permissions(inspection);
+  for (const auto &permission : requested) {
+    if (!std::binary_search(declared.begin(), declared.end(), permission))
+      throw std::invalid_argument("activation requests undeclared permission: " + permission);
+  }
+  permissions = requested;
+  normalized_request["granted_permissions"] = permissions;
+  effects.push_back(
+      {{"kind", "Activated"}, {"profile_suite_root", current_root}, {"granted_permissions", permissions}});
+}
+
+void plan_kfd3_qualification(const nlohmann::json &request, const profile_state &state, const std::string &profile_id,
+                             const std::string &current_root, const nlohmann::json &inspection,
+                             nlohmann::json &normalized_request, nlohmann::json &qualification,
+                             nlohmann::json &effects) {
+  if (state.removed || current_root != inspection.at("profile_suite_root").get<std::string>())
+    throw std::invalid_argument("KFD-3 qualification requires the exact current Profile root");
+  const auto root_found = state.roots.find(current_root);
+  if (root_found == state.roots.end() || !root_found->second.activated)
+    throw std::invalid_argument("KFD-3 qualification requires an active Profile root");
+  if (!request.contains("qualification") || !request.at("qualification").is_object())
+    throw std::invalid_argument("KFD-3 qualification receipt is required");
+  qualification = request.at("qualification");
+  if (text_or(qualification, "schema") != "kungfu.profile-kfd3-qualification-receipt/v1" ||
+      !qualification.value("qualified", false) || text_or(qualification, "profileId") != profile_id ||
+      text_or(qualification, "profileSuiteRoot") != current_root)
+    throw std::invalid_argument("KFD-3 qualification receipt does not bind the exact Profile root");
+  normalized_request["qualification"] = qualification;
+  effects.push_back({{"kind", "Kfd3Qualified"}, {"profile_suite_root", current_root}});
+}
+
+void plan_rollback(const nlohmann::json &request, const profile_state &state, const std::string &current_root,
+                   nlohmann::json &normalized_request, nlohmann::json &inspection, nlohmann::json &permissions,
+                   nlohmann::json &effects) {
+  if (state.removed)
+    throw std::invalid_argument("rollback requires an installed Profile");
+  const auto target_root = required_text(request, "target_root");
+  const auto target = state.roots.find(target_root);
+  if (target == state.roots.end() || !target->second.installed || !target->second.qualified)
+    throw std::invalid_argument("rollback target must be a historically installed and qualified root");
+  if (target_root == current_root)
+    throw std::invalid_argument("rollback target is already current");
+  inspection = inspection_for_root(state, target_root);
+  permissions = target->second.granted_permissions;
+  normalized_request["target_root"] = target_root;
+  effects.push_back({{"kind", "RolledBack"}, {"profile_suite_root", target_root}, {"from_root", current_root}});
+}
+
 nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nlohmann::json &request) {
   if (!request.is_object())
     throw std::invalid_argument("Profile lifecycle request must be an object");
@@ -1112,28 +1214,7 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
   const auto states = fold_profiles(read_events(runtime_dir));
   nlohmann::json normalized_request = {{"action", action_name}};
   nlohmann::json inspection;
-  std::string profile_id;
-  if (action_name == "install" || action_name == "qualify" || action_name == "activate" || action_name == "upgrade" ||
-      action_name == "kfd3-qualify") {
-    if (!request.contains("member_roots"))
-      throw std::invalid_argument("member_roots is required");
-    inspection = inspect_profile(required_text(request, "profile_path"), request.at("member_roots"));
-    normalized_request["profile_path"] = inspection.at("profile_path");
-    normalized_request["member_roots"] = inspection.at("member_roots");
-    profile_id = inspection.at("profile").at("id").get<std::string>();
-    if ((action_name == "qualify" || action_name == "activate") && work_capable_profile(inspection)) {
-      if (!request.contains("work_conformance")) {
-        throw std::invalid_argument("Work-capable Profile lifecycle requires a conformance result");
-      }
-      const auto *surface = action_name == "qualify" ? "qualify" : "installed-runtime";
-      normalized_request["work_conformance"] =
-          require_work_conformance(inspection, request.at("work_conformance"), surface);
-    }
-  } else {
-    profile_id = required_text(request, "profile_id");
-    validate_profile_id(profile_id);
-    normalized_request["profile_id"] = profile_id;
-  }
+  const auto profile_id = prepare_lifecycle_subject(request, action_name, normalized_request, inspection);
   const auto found = states.find(profile_id);
   const auto exists = found != states.end();
   const auto current_root = exists ? found->second.current_root : std::string{};
@@ -1158,49 +1239,14 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
     qualification = qualify_inspection(inspection, request.value("work_conformance", nlohmann::json::object()));
     effects.push_back({{"kind", "Qualified"}, {"profile_suite_root", current_root}});
   } else if (action_name == "activate") {
-    if (!exists || found->second.removed || current_root != inspection.at("profile_suite_root").get<std::string>()) {
+    if (!exists)
       throw std::invalid_argument("activation requires the exact current Profile root");
-    }
-    const auto root_found = found->second.roots.find(current_root);
-    if (root_found == found->second.roots.end() || !root_found->second.qualified) {
-      throw std::invalid_argument("activation requires a qualified Profile root");
-    }
-    if (work_capable_profile(inspection) && text_or(root_found->second.qualification, "work_conformance_root") !=
-                                                required_text(request.at("work_conformance"), "conformanceRoot")) {
-      throw std::invalid_argument("activation Work conformance root differs from the qualified root");
-    }
-    const auto requested = request.contains("granted_permissions")
-                               ? normalize_tokens(request.at("granted_permissions"), "granted_permissions", false)
-                               : std::vector<std::string>{};
-    const auto declared = declared_permissions(inspection);
-    for (const auto &permission : requested) {
-      if (!std::binary_search(declared.begin(), declared.end(), permission)) {
-        throw std::invalid_argument("activation requests undeclared permission: " + permission);
-      }
-    }
-    permissions = requested;
-    normalized_request["granted_permissions"] = permissions;
-    effects.push_back(
-        {{"kind", "Activated"}, {"profile_suite_root", current_root}, {"granted_permissions", permissions}});
+    plan_activation(request, found->second, current_root, inspection, normalized_request, permissions, effects);
   } else if (action_name == "kfd3-qualify") {
-    if (!exists || found->second.removed || current_root != inspection.at("profile_suite_root").get<std::string>()) {
+    if (!exists)
       throw std::invalid_argument("KFD-3 qualification requires the exact current Profile root");
-    }
-    const auto root_found = found->second.roots.find(current_root);
-    if (root_found == found->second.roots.end() || !root_found->second.activated) {
-      throw std::invalid_argument("KFD-3 qualification requires an active Profile root");
-    }
-    if (!request.contains("qualification") || !request.at("qualification").is_object()) {
-      throw std::invalid_argument("KFD-3 qualification receipt is required");
-    }
-    qualification = request.at("qualification");
-    if (text_or(qualification, "schema") != "kungfu.profile-kfd3-qualification-receipt/v1" ||
-        !qualification.value("qualified", false) || text_or(qualification, "profileId") != profile_id ||
-        text_or(qualification, "profileSuiteRoot") != current_root) {
-      throw std::invalid_argument("KFD-3 qualification receipt does not bind the exact Profile root");
-    }
-    normalized_request["qualification"] = qualification;
-    effects.push_back({{"kind", "Kfd3Qualified"}, {"profile_suite_root", current_root}});
+    plan_kfd3_qualification(request, found->second, profile_id, current_root, inspection, normalized_request,
+                            qualification, effects);
   } else if (action_name == "upgrade") {
     if (!exists || found->second.removed)
       throw std::invalid_argument("upgrade requires an installed Profile");
@@ -1210,19 +1256,9 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
     effects.push_back({{"kind", "Superseded"}, {"profile_suite_root", current_root}});
     effects.push_back({{"kind", "Installed"}, {"profile_suite_root", inspection.at("profile_suite_root")}});
   } else if (action_name == "rollback") {
-    if (!exists || found->second.removed)
+    if (!exists)
       throw std::invalid_argument("rollback requires an installed Profile");
-    const auto target_root = required_text(request, "target_root");
-    const auto target = found->second.roots.find(target_root);
-    if (target == found->second.roots.end() || !target->second.installed || !target->second.qualified) {
-      throw std::invalid_argument("rollback target must be a historically installed and qualified root");
-    }
-    if (target_root == current_root)
-      throw std::invalid_argument("rollback target is already current");
-    inspection = inspection_for_root(found->second, target_root);
-    permissions = target->second.granted_permissions;
-    normalized_request["target_root"] = target_root;
-    effects.push_back({{"kind", "RolledBack"}, {"profile_suite_root", target_root}, {"from_root", current_root}});
+    plan_rollback(request, found->second, current_root, normalized_request, inspection, permissions, effects);
   } else if (action_name == "remove") {
     if (!exists || found->second.removed)
       throw std::invalid_argument("Profile is not installed");

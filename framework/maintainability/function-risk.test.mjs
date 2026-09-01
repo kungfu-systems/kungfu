@@ -181,6 +181,82 @@ test('source-analysis tables preserve classification, ownership, and lexical bou
   assert.equal(stripStringsAndComments('"x"', 'unknown'), '   ');
 });
 
+test('JavaScript lexical masking distinguishes regex literals, division, and template expressions', () => {
+  const source = [
+    'export function first(value) {',
+    '  const pattern = /\\{(?:if|case|\\}|[/?])+\\}/gu;',
+    '  const ratio = "value" / value;',
+    '  const rendered = `prefix ${value ? "yes" : "no"} suffix`;',
+    '  if (pattern.test(rendered)) return ratio;',
+    '}',
+    'export function second() { return 2; }',
+    '',
+  ].join('\n');
+  const functions = extractKernelFunctions(
+    { path: 'scripts/lexical.mjs', bytes: Buffer.from(source) },
+    layers,
+    ownership,
+  );
+  assert.deepEqual(
+    functions.map(({ symbol, startLine, endLine }) => ({
+      symbol,
+      startLine,
+      endLine,
+    })),
+    [
+      { symbol: 'first', startLine: 1, endLine: 6 },
+      { symbol: 'second', startLine: 7, endLine: 7 },
+    ],
+  );
+  assert.equal(functions[0].cyclomatic, 3);
+  assert.equal(functions[0].cognitive, 2);
+  assert.match(
+    stripStringsAndComments(
+      'return /[{}\\/](?:if|case)?/gu;',
+      'javascript-typescript',
+    ),
+    /^return\s+;$/u,
+  );
+});
+
+test('repository regex literals cannot extend known function boundaries', () => {
+  const fixtures = [
+    {
+      path: 'crates/xinfa/tooling/check-boundary.mjs',
+      symbol: 'scanPureCore',
+      startLine: 45,
+      endLine: 58,
+    },
+    {
+      path: 'scripts/readonly-source-toolchain.mjs',
+      symbol: 'parseYamlBlockScalar',
+      startLine: 196,
+      endLine: 231,
+    },
+  ];
+  for (const expected of fixtures) {
+    const functions = extractKernelFunctions(
+      { path: expected.path, bytes: fs.readFileSync(expected.path) },
+      layers,
+      ownership,
+    );
+    const actual = functions.find(({ symbol }) => symbol === expected.symbol);
+    assert.ok(actual, expected.symbol);
+    assert.deepEqual(
+      {
+        symbol: actual.symbol,
+        startLine: actual.startLine,
+        endLine: actual.endLine,
+      },
+      {
+        symbol: expected.symbol,
+        startLine: expected.startLine,
+        endLine: expected.endLine,
+      },
+    );
+  }
+});
+
 test('python multiline v2 follows the closing signature into the indented body', () => {
   const file = {
     path: 'framework/a.py',
@@ -239,7 +315,7 @@ test('python multiline v2 normalizes class indentation for stable moved bodies',
   assert.equal(second.cognitive, first.cognitive);
 });
 
-test('shared kernel shadows the legacy exact-repository analysis', () => {
+test('shared kernel preserves file facts and non-JavaScript legacy analysis while correcting JavaScript', () => {
   const policy = readJson(
     'framework/maintainability/function-risk-policy.json',
   );
@@ -274,20 +350,29 @@ test('shared kernel shadows the legacy exact-repository analysis', () => {
     repositoryLayers,
     repositoryOwnership,
   );
-  assert.deepEqual(successorBaseline, legacyBaseline);
-  assert.deepEqual(successorCurrent, legacyCurrent);
-  const legacyTransition = analyzeTransition(
-    legacyCurrent.functions,
-    legacyBaseline.functions,
-    legacyCurrent.files,
-    legacyBaseline.files,
-    policy,
-    {
-      movementScope: 'same-owner',
-      movementIdentity: 'body-root',
-      sourceFiles: legacyCurrentInputs,
-    },
-  );
+  assert.deepEqual(successorBaseline.files, legacyBaseline.files);
+  assert.deepEqual(successorCurrent.files, legacyCurrent.files);
+  for (const [successor, legacy] of [
+    [successorBaseline, legacyBaseline],
+    [successorCurrent, legacyCurrent],
+  ]) {
+    assert.deepEqual(
+      successor.functions.filter(
+        ({ language }) => language !== 'javascript-typescript',
+      ),
+      legacy.functions.filter(
+        ({ language }) => language !== 'javascript-typescript',
+      ),
+    );
+    assert.ok(
+      successor.functions.filter(
+        ({ language }) => language === 'javascript-typescript',
+      ).length >=
+        legacy.functions.filter(
+          ({ language }) => language === 'javascript-typescript',
+        ).length,
+    );
+  }
   const successorTransition = analyzeTransition(
     successorCurrent.functions,
     successorBaseline.functions,
@@ -300,7 +385,6 @@ test('shared kernel shadows the legacy exact-repository analysis', () => {
       sourceFiles: legacyCurrentInputs,
     },
   );
-  assert.deepEqual(successorTransition, legacyTransition);
   assert.equal(successorCurrent.sourceRoot, report.sourceRoot);
   assert.equal(successorBaseline.sourceRoot, report.baseline.sourceRoot);
   assert.deepEqual(successorTransition.functions, report.functions);

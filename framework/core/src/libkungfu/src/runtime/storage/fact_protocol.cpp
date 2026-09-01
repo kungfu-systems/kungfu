@@ -387,6 +387,105 @@ void append_text_value(std::string &output, const std::string &raw) {
   output.append(raw);
 }
 
+std::string portable_typed_value(const nlohmann::json &value);
+
+std::string portable_sequence_value(const nlohmann::json &value, const std::string &type) {
+  if (!value.contains("items") || !value.at("items").is_array()) {
+    canonical_fail("canonical-invalid-descriptor", type + " items must be an array");
+  }
+  std::vector<std::string> items;
+  for (const auto &item : value.at("items"))
+    items.push_back(portable_typed_value(item));
+  if (type == "set") {
+    std::sort(items.begin(), items.end());
+    if (std::adjacent_find(items.begin(), items.end()) != items.end())
+      canonical_fail("canonical-duplicate-item", "set contains equal canonical items");
+  }
+  std::string output;
+  output.push_back(static_cast<char>(type == "array" ? 0x30 : 0x31));
+  append_u64(output, items.size());
+  for (const auto &item : items)
+    output.append(item);
+  return output;
+}
+
+std::string portable_map_value(const nlohmann::json &value) {
+  if (!value.contains("entries") || !value.at("entries").is_array())
+    canonical_fail("canonical-invalid-descriptor", "map entries must be an array");
+  std::vector<std::pair<std::string, std::string>> entries;
+  for (const auto &entry : value.at("entries")) {
+    if (!entry.is_object() || entry.size() != 2 || !entry.contains("key") || !entry.contains("value") ||
+        !entry.at("key").is_object() || entry.at("key").value("type", std::string{}) != "text")
+      canonical_fail("canonical-invalid-descriptor", "map entry requires one text key and one value");
+    entries.emplace_back(portable_typed_value(entry.at("key")), portable_typed_value(entry.at("value")));
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](const auto &left, const auto &right) { return left.first < right.first; });
+  if (std::adjacent_find(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+        return left.first == right.first;
+      }) != entries.end())
+    canonical_fail("canonical-duplicate-key", "map contains equal canonical keys");
+  std::string output;
+  output.push_back(static_cast<char>(0x32));
+  append_u64(output, entries.size());
+  for (const auto &[key, child] : entries) {
+    output.append(key);
+    output.append(child);
+  }
+  return output;
+}
+
+std::vector<std::pair<uint64_t, std::string>>
+collect_portable_record_fields(const nlohmann::json &value, const std::vector<portable_record_field> &schema_fields) {
+  if (!value.contains("fields") || !value.at("fields").is_array())
+    canonical_fail("canonical-invalid-descriptor", "record fields must be an array");
+  std::vector<std::pair<uint64_t, std::string>> fields;
+  for (const auto &field : value.at("fields")) {
+    if (!field.is_object() || field.size() != 2 || !field.contains("id") || !field.contains("value"))
+      canonical_fail("canonical-invalid-descriptor", "record field requires id and value");
+    const auto field_id = parse_canonical_u64(required_descriptor_text(field, "id"));
+    const auto registered_field = std::find_if(schema_fields.begin(), schema_fields.end(),
+                                               [field_id](const auto &candidate) { return candidate.id == field_id; });
+    if (registered_field == schema_fields.end())
+      canonical_fail("canonical-unknown-field", "record field is not registered");
+    fields.emplace_back(field_id, portable_typed_value(field.at("value")));
+  }
+  std::sort(fields.begin(), fields.end(), [](const auto &left, const auto &right) { return left.first < right.first; });
+  if (std::adjacent_find(fields.begin(), fields.end(),
+                         [](const auto &left, const auto &right) { return left.first == right.first; }) != fields.end())
+    canonical_fail("canonical-duplicate-field", "record contains a duplicate field id");
+  return fields;
+}
+
+void validate_required_record_fields(const std::vector<std::pair<uint64_t, std::string>> &fields,
+                                     const std::vector<portable_record_field> &schema_fields) {
+  for (const auto &registered_field : schema_fields) {
+    const auto is_present = std::any_of(fields.begin(), fields.end(), [&registered_field](const auto &field) {
+      return field.first == registered_field.id;
+    });
+    if (!registered_field.optional && !is_present)
+      canonical_fail("canonical-missing-field", "record is missing a required field");
+  }
+}
+
+std::string portable_record_value(const nlohmann::json &value) {
+  const auto schema = required_descriptor_text(value, "schema");
+  const auto known_schema = PORTABLE_RECORD_SCHEMAS.find(schema);
+  if (known_schema == PORTABLE_RECORD_SCHEMAS.end())
+    canonical_fail("canonical-unknown-schema", "record schema is not registered");
+  const auto fields = collect_portable_record_fields(value, known_schema->second);
+  validate_required_record_fields(fields, known_schema->second);
+  std::string output;
+  output.push_back(static_cast<char>(0x40));
+  append_text_value(output, schema);
+  append_u64(output, fields.size());
+  for (const auto &[field_id, child] : fields) {
+    append_u64(output, field_id);
+    output.append(child);
+  }
+  return output;
+}
+
 std::string portable_typed_value(const nlohmann::json &value) {
   if (!value.is_object() || !value.contains("type") || !value.at("type").is_string()) {
     canonical_fail("canonical-invalid-descriptor", "typed value requires a type");
@@ -445,98 +544,13 @@ std::string portable_typed_value(const nlohmann::json &value) {
     return output;
   }
   if (type == "array" || type == "set") {
-    if (!value.contains("items") || !value.at("items").is_array()) {
-      canonical_fail("canonical-invalid-descriptor", type + " items must be an array");
-    }
-    std::vector<std::string> items;
-    for (const auto &item : value.at("items")) {
-      items.push_back(portable_typed_value(item));
-    }
-    if (type == "set") {
-      std::sort(items.begin(), items.end());
-      if (std::adjacent_find(items.begin(), items.end()) != items.end()) {
-        canonical_fail("canonical-duplicate-item", "set contains equal canonical items");
-      }
-    }
-    output.push_back(static_cast<char>(type == "array" ? 0x30 : 0x31));
-    append_u64(output, items.size());
-    for (const auto &item : items) {
-      output.append(item);
-    }
-    return output;
+    return portable_sequence_value(value, type);
   }
   if (type == "map") {
-    if (!value.contains("entries") || !value.at("entries").is_array()) {
-      canonical_fail("canonical-invalid-descriptor", "map entries must be an array");
-    }
-    std::vector<std::pair<std::string, std::string>> entries;
-    for (const auto &entry : value.at("entries")) {
-      if (!entry.is_object() || entry.size() != 2 || !entry.contains("key") || !entry.contains("value") ||
-          !entry.at("key").is_object() || entry.at("key").value("type", std::string{}) != "text") {
-        canonical_fail("canonical-invalid-descriptor", "map entry requires one text key and one value");
-      }
-      entries.emplace_back(portable_typed_value(entry.at("key")), portable_typed_value(entry.at("value")));
-    }
-    std::sort(entries.begin(), entries.end(),
-              [](const auto &left, const auto &right) { return left.first < right.first; });
-    if (std::adjacent_find(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-          return left.first == right.first;
-        }) != entries.end()) {
-      canonical_fail("canonical-duplicate-key", "map contains equal canonical keys");
-    }
-    output.push_back(static_cast<char>(0x32));
-    append_u64(output, entries.size());
-    for (const auto &[key, child] : entries) {
-      output.append(key);
-      output.append(child);
-    }
-    return output;
+    return portable_map_value(value);
   }
   if (type == "record") {
-    const auto schema = required_descriptor_text(value, "schema");
-    const auto known_schema = PORTABLE_RECORD_SCHEMAS.find(schema);
-    if (known_schema == PORTABLE_RECORD_SCHEMAS.end()) {
-      canonical_fail("canonical-unknown-schema", "record schema is not registered");
-    }
-    if (!value.contains("fields") || !value.at("fields").is_array()) {
-      canonical_fail("canonical-invalid-descriptor", "record fields must be an array");
-    }
-    std::vector<std::pair<uint64_t, std::string>> fields;
-    for (const auto &field : value.at("fields")) {
-      if (!field.is_object() || field.size() != 2 || !field.contains("id") || !field.contains("value")) {
-        canonical_fail("canonical-invalid-descriptor", "record field requires id and value");
-      }
-      const auto field_id = parse_canonical_u64(required_descriptor_text(field, "id"));
-      const auto registered_field = std::find_if(known_schema->second.begin(), known_schema->second.end(),
-                                                 [field_id](const auto &field) { return field.id == field_id; });
-      if (registered_field == known_schema->second.end()) {
-        canonical_fail("canonical-unknown-field", "record field is not registered");
-      }
-      fields.emplace_back(field_id, portable_typed_value(field.at("value")));
-    }
-    std::sort(fields.begin(), fields.end(),
-              [](const auto &left, const auto &right) { return left.first < right.first; });
-    if (std::adjacent_find(fields.begin(), fields.end(), [](const auto &left, const auto &right) {
-          return left.first == right.first;
-        }) != fields.end()) {
-      canonical_fail("canonical-duplicate-field", "record contains a duplicate field id");
-    }
-    for (const auto &registered_field : known_schema->second) {
-      const auto is_present = std::any_of(fields.begin(), fields.end(), [&registered_field](const auto &field) {
-        return field.first == registered_field.id;
-      });
-      if (!registered_field.optional && !is_present) {
-        canonical_fail("canonical-missing-field", "record is missing a required field");
-      }
-    }
-    output.push_back(static_cast<char>(0x40));
-    append_text_value(output, schema);
-    append_u64(output, fields.size());
-    for (const auto &[field_id, child] : fields) {
-      append_u64(output, field_id);
-      output.append(child);
-    }
-    return output;
+    return portable_record_value(value);
   }
   canonical_fail("canonical-unsupported-type", "unsupported canonical type: " + type);
 }

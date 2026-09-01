@@ -18,6 +18,7 @@ import {
   defaultOutputDir,
   evaluateQualification,
   executeQualificationSuites,
+  productDistributionCommand,
   qualificationPlan,
   retainQualificationArtifacts,
   suiteEnvironment,
@@ -222,6 +223,31 @@ test('source qualification uv runs preserve the exact tracked lockfile', () => {
   for (const suite of uvSuites) {
     assert.ok(suite.command.includes('--frozen'), suite.id);
   }
+});
+
+test('sealed release qualification verifies the prebuilt product without rebuilding it', () => {
+  const root = `sha256:${'a'.repeat(64)}`;
+  const command = productDistributionCommand({
+    KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
+    KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT: root,
+  });
+  assert.equal(command.includes('dist'), false);
+  assert.deepEqual(command.slice(-3), [
+    'artifact-root-check',
+    '--expected-root',
+    root,
+  ]);
+  assert.deepEqual(productDistributionCommand({}), [
+    process.platform === 'win32' ? 'shifu.cmd' : './shifu',
+    'dist',
+  ]);
+  assert.throws(
+    () =>
+      productDistributionCommand({
+        KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
+      }),
+    /requires an exact release artifact root/u,
+  );
 });
 
 test('only source-tree Python suites allow the hosted qualification interpreter', () => {

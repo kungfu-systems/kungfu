@@ -25,6 +25,7 @@
     "mutation_class",
     "approval_policy",
     "schema_refs",
+    "output",
     "availability"
   ],
   "owners": ["core", "system-kfx", "profile-kfx", "product-assembly"],
@@ -48,6 +49,7 @@
     "external-effect"
   ],
   "availabilityStates": ["available", "degraded", "unavailable"],
+  "outputModes": ["human", "json", "stream", "binary", "mixed", "unspecified"],
   "approvalModes": [
     "none",
     "explicit-execute",

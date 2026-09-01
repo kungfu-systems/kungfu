@@ -99,19 +99,19 @@
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/base.py",
-      "sha256": "799fb1a5f01c21ca35fb20b773ce85b472c03fccbd6a022091ef55cd024c8123"
+      "sha256": "3ee51f915a912edb2fdb0db6dd7e7c3d11ba29e066252e1ed4d11629b3cf67f7"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/peer.py",
-      "sha256": "977f32a802b9042f63ad7c294ab7d91020ed5e074d0f8f91826905395a0febae"
+      "sha256": "478153d7cfbdf4af1d2bbe5cc4731eef92b21f3b8da00fae185797a62be97317"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
-      "sha256": "72245bb04eea56b55f56d11ab44e955685182fd929861c8bd64aa23a4d20ce8f"
+      "sha256": "3f560eeb9fcf3aab55dd0912a35ffcdbf971d64890c68efd1ed3928152857131"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/_runtime/service.py",
-      "sha256": "be0623ab7988e197571ce93003060f651597b06d16e66cf6ee3d76803afcb26c"
+      "sha256": "0240622ca15675b4ec9dc19326b8397545e733f858d570dcb8fd38e0d0b24cc6"
     },
     {
       "path": "framework/core/tests/python/test_runtime_cli.py",
@@ -136,14 +136,14 @@
     }
   },
   "current": {
-    "physicalLines": 3673,
-    "responsibilities": 191,
+    "physicalLines": 3776,
+    "responsibilities": 195,
     "maximumPhysicalLines": 850,
     "maximumResponsibilities": 51,
     "functionRisk": {
-      "functions": 161,
-      "baseRisk": 2226,
-      "changeRisk": 2558,
+      "functions": 165,
+      "baseRisk": 2266,
+      "changeRisk": 2616,
       "maximumBaseRisk": 265,
       "maximumChangeRisk": 267
     }
@@ -153,20 +153,17 @@
       "functions": 155,
       "previousBaseRisk": 2184,
       "currentBaseRisk": 2179,
-      "currentChangeRisk": 2493
+      "currentChangeRisk": 2499
     },
     "new": {
-      "functions": 6,
-      "currentBaseRisk": 47,
-      "currentChangeRisk": 65
+      "functions": 10,
+      "currentBaseRisk": 87,
+      "currentChangeRisk": 117
     },
     "retired": {
       "functions": 2,
       "previousBaseRisk": 9,
-      "symbols": [
-        "_empty_routes",
-        "_supervisor_always_on"
-      ]
+      "symbols": ["_empty_routes", "_supervisor_always_on"]
     }
   },
   "functionRiskAdapters": [
@@ -193,12 +190,28 @@
     {
       "path": "framework/core/src/python/kungfu/_runtime_service/state.py",
       "symbol": "route_status"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+      "symbol": "_apply_gc"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+      "symbol": "_discover_gc_references"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+      "symbol": "_gc_reference_inputs"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_runtime/upgrade.py",
+      "symbol": "_plan_gc"
     }
   ],
   "adapterRiskBudget": {
-    "functions": 6,
-    "baseRisk": 47,
-    "changeRisk": 65
+    "functions": 10,
+    "baseRisk": 87,
+    "changeRisk": 117
   },
   "processIdentityContinuity": [
     "_terminate_process_if_matches",
@@ -292,9 +305,7 @@
       "route_status"
     ]
   },
-  "serviceLocalDefinitions": [
-    "_terminate_and_reap_child"
-  ],
+  "serviceLocalDefinitions": ["_terminate_and_reap_child"],
   "ownedDefinitions": {
     "moduleFunctions": [
       "_terminate_process_if_matches",
@@ -338,9 +349,9 @@
   "nonWrapperEvidence": [
     "The stable runtime_service facade preserves all 118 exact-baseline public symbols, while persistence paths, schema constants, native class signatures, side-effect ordering bodies, CoordinatorProcess, and the service-local child lifecycle remain AST-identical after removing only the declared call-time seam decorator.",
     "The CLI facade composes four responsibility owners and preserves all 42 exact-baseline Click function signatures and decorators; _plain_status moves to the rendering owner with the same bodyRoot and baseRisk 55.",
-    "Every one of the 155 exact-baseline business functions retains a previousId, previousBaseRisk 2184, and aggregate current baseRisk 2179; the only 6 new functions are the closed call-time facade adapter set, budgeted separately at baseRisk 47 and changeRisk 65, with no additional retired business function.",
+    "Every one of the 155 exact-baseline business functions retains a previousId, previousBaseRisk 2184, and aggregate current baseRisk 2179; the 10 new functions are the closed call-time facade and runtime-image GC discovery adapter set, budgeted separately at baseRisk 87 and changeRisk 117, with no additional retired business function.",
     "The migration raises measured transition changeRisk because same-owner functions acquire renamed-file movement cost; it does not raise business baseRisk or maximum baseRisk. The checker therefore records migration risk without misrepresenting it as steady-state responsibility risk.",
-    "Maximum file size falls from 1961 to 850 physical lines and maximum per-module responsibility count falls from 88 to 51. Aggregate lines and import-count responsibilities are reported honestly at 3673 and 191 because stable facades preserve every baseline module attribute and explicit owner dependencies are retained rather than hidden.",
+    "Maximum file size falls from 1961 to 850 physical lines and maximum per-module responsibility count falls from 88 to 51. Aggregate lines and import-count responsibilities are reported honestly at 3776 and 195 because stable facades preserve every baseline module attribute and explicit owner dependencies are retained rather than hidden.",
     "runtime_processes continues to own PID-reuse-fenced signalling and bounded process-tree termination from Wave 1; Wave 2 adds no cross-language, dependency, persistence-format, public API, or Click-surface change."
   ]
 }

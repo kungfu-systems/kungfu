@@ -79,7 +79,9 @@ def builtin_adapters() -> dict[str, dict[str, Any]]:
                     "-c",
                     "skills.config=[{path={skill_dir:json},enabled=true}]",
                 ],
-                "environment": {},
+                "environment": {
+                    "RUST_LOG": "warn",
+                },
                 "environmentJson": {},
                 "files": [],
             },

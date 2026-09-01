@@ -4,8 +4,11 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <map>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <utility>
@@ -21,6 +24,7 @@ namespace kungfu::runtime::kfx::authority {
 namespace {
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
 [[noreturn]] void refuse(const std::string &code, const std::string &message) {
   throw std::invalid_argument(code + ": " + message);
@@ -75,6 +79,37 @@ void require_exact_fields(const json &value, const std::set<std::string> &fields
     if (!fields.contains(field))
       refuse("KF_KFX_SCHEMA_INVALID", label + " contains unknown field " + field);
   }
+}
+
+std::optional<fs::path> git_metadata_directory(const fs::path &workspace_root) {
+  const auto marker = workspace_root / ".git";
+  if (fs::is_directory(marker))
+    return fs::weakly_canonical(marker);
+  if (!fs::is_regular_file(marker))
+    return std::nullopt;
+  std::ifstream stream(marker);
+  std::string line;
+  if (!std::getline(stream, line) || !line.starts_with("gitdir: "))
+    return std::nullopt;
+  const fs::path git_dir = line.substr(std::string{"gitdir: "}.size());
+  if (git_dir.empty())
+    return std::nullopt;
+  return fs::weakly_canonical(git_dir.is_absolute() ? git_dir : marker.parent_path() / git_dir);
+}
+
+std::optional<fs::path> git_common_directory(const fs::path &workspace_root) {
+  const auto git_dir = git_metadata_directory(workspace_root);
+  if (!git_dir)
+    return std::nullopt;
+  const auto common_marker = *git_dir / "commondir";
+  if (!fs::is_regular_file(common_marker))
+    return git_dir;
+  std::ifstream stream(common_marker);
+  std::string line;
+  if (!std::getline(stream, line) || line.empty())
+    return std::nullopt;
+  const fs::path common_dir = line;
+  return fs::weakly_canonical(common_dir.is_absolute() ? common_dir : *git_dir / common_dir);
 }
 
 bool is_content_root(const std::string &value) {
@@ -526,8 +561,67 @@ json plan(const json &packages, const std::string &registry_root, const std::str
   json dependency_root = nullptr;
   json required_approvals = json::array();
   std::string mode = "release-passport";
+  const auto development = object_or_empty(request, "developmentSourceBootstrap");
+  const bool development_source_bootstrap = !development.empty();
 
-  if (operation == "remove" || operation == "disable") {
+  if (development_source_bootstrap) {
+    require_exact_fields(development, {"schema", "sourceRoot", "workspaceRoot"}, "development source bootstrap");
+    if (development.value("schema", "") != "kungfu.kfx-development-source-bootstrap/v1")
+      refuse("KF_KFX_DEVELOPMENT_BOOTSTRAP_INVALID", "development source bootstrap has an unknown schema");
+    if (operation != "install" || package_key != "kfx-manager")
+      refuse("KF_KFX_DEVELOPMENT_BOOTSTRAP_FORBIDDEN",
+             "development source bootstrap may install only the Control Suite");
+    if (!request.contains("developmentRuntimeDir") || !request.at("developmentRuntimeDir").is_string())
+      refuse("KF_KFX_DEVELOPMENT_BOOTSTRAP_INVALID", "Core did not bind the development runtime directory");
+    const auto source_text = required_text(development, "sourceRoot", "development source bootstrap");
+    const auto workspace_text = required_text(development, "workspaceRoot", "development source bootstrap");
+    const auto runtime_text = required_text(request, "developmentRuntimeDir", "development source bootstrap");
+    const fs::path source_root = fs::weakly_canonical(fs::path(source_text));
+    const fs::path workspace_root = fs::weakly_canonical(fs::path(workspace_text));
+    const fs::path runtime_dir = fs::weakly_canonical(fs::path(runtime_text));
+    const fs::path expected_candidate = fs::weakly_canonical(source_root / "extensions" / "system" / "kfx-manager");
+    const fs::path candidate = fs::weakly_canonical(fs::path(package.at("path").get<std::string>()));
+    const fs::path expected_runtime = fs::weakly_canonical(workspace_root / ".kungfu" / "runtime");
+    const auto source_git = git_common_directory(source_root);
+    const auto workspace_git = git_common_directory(workspace_root);
+    if (!fs::path(source_text).is_absolute() || !fs::path(workspace_text).is_absolute() ||
+        candidate != expected_candidate || runtime_dir != expected_runtime || !source_git || !workspace_git ||
+        *source_git != *workspace_git ||
+        !(fs::is_regular_file(source_root / "shifu") &&
+          fs::is_regular_file(source_root / "framework" / "kfx" / "kungfu-kfx.contract.json")))
+      refuse("KF_KFX_DEVELOPMENT_BOOTSTRAP_FORBIDDEN", "development bootstrap is confined to a source checkout, its "
+                                                       "Control Suite, and a same-repository local workspace runtime");
+    for (const auto *field : {"attestation", "identity", "trustInputs", "kfdAssessment", "runtimeEvidence",
+                              "approvalRoots", "recoveryWarrant", "policy"}) {
+      if (request.contains(field))
+        refuse("KF_KFX_DEVELOPMENT_BOOTSTRAP_FORBIDDEN",
+               std::string("development bootstrap must not mix production authority field ") + field);
+    }
+    mode = "development-source-bootstrap";
+    const json policy = {{"schema", "kungfu.kfx-development-source-bootstrap-policy/v1"},
+                         {"sourceRoot", source_root.string()},
+                         {"workspaceRoot", workspace_root.string()},
+                         {"runtimeDir", runtime_dir.string()},
+                         {"packageKey", package_key},
+                         {"operation", operation},
+                         {"localOnly", true},
+                         {"publicationAllowed", false},
+                         {"sharedInstallationAllowed", false},
+                         {"externalCapabilitiesAllowed", false}};
+    policy_root = root_of(policy);
+    core_policy_root = policy_root;
+    requested_policy_root = policy_root;
+    dependency_root = root_of({{"schema", "kungfu.kfx-development-source-bootstrap-basis/v1"},
+                               {"sourceRoot", source_root.string()},
+                               {"workspaceRoot", workspace_root.string()},
+                               {"runtimeDir", runtime_dir.string()},
+                               {"packageRoot", package.at("packageRoot")}});
+    receipt_dependency_root = root_of({{"policyRoot", policy_root},
+                                       {"packageRoot", package.at("packageRoot")},
+                                       {"dependencyRoot", dependency_root},
+                                       {"priorCutRoot", prior_cut},
+                                       {"priorRevision", revision}});
+  } else if (operation == "remove" || operation == "disable") {
     mode = "owner-system-recovery";
     const auto recovery = object_or_empty(request, "recoveryWarrant");
     if (recovery.empty() || recovery.value("schema", "") != "kungfu.kfx-recovery-warrant/v1")
@@ -607,6 +701,9 @@ json plan(const json &packages, const std::string &registry_root, const std::str
                                 {"requiredApprovals", required_approvals},
                                 {"approvalRoots", approval_roots}};
   const auto requested_capabilities = string_array_or_empty(request, "requestedCapabilities");
+  if (development_source_bootstrap && requested_capabilities != std::vector<std::string>{"kfxControl"})
+    refuse("KF_KFX_DEVELOPMENT_BOOTSTRAP_FORBIDDEN",
+           "development source bootstrap grants exactly the Control Suite kfxControl capability");
   const auto declared_capabilities = package.at("declaredCapabilities").get<std::vector<std::string>>();
   for (const auto &capability : requested_capabilities) {
     if (std::find(declared_capabilities.begin(), declared_capabilities.end(), capability) ==

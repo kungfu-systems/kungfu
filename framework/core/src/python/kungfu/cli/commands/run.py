@@ -228,6 +228,56 @@ def _capture_task(workspace_root, task):
     }
 
 
+def _degraded_work_selection(workspace_id, active, diagnostic):
+    return {
+        "schema": "kungfu.native-work-selection/v1",
+        "workspaceId": workspace_id,
+        "state": "degraded",
+        "candidateAssignmentIds": sorted(row["assignmentId"] for row in active),
+        "selectionAuthority": "kungfu-work-cli",
+        "entrypoint": "kungfu work status",
+        "diagnostic": diagnostic,
+    }
+
+
+def _sealed_work_subjects(sealed):
+    undecidable = {
+        str(row.get("assignment_subject") or "")
+        for row in sealed.get("unqualified_states") or []
+    }
+    settled = {
+        str(row.get("assignment_subject") or "")
+        for row in sealed.get("states") or []
+        if row.get("settled") is True
+    }
+    return undecidable, settled
+
+
+def _settled_work_subjects(workspace_root, workspace_id, active):
+    continuation_decided = [
+        row for row in active if row["phase"] == "continuation-decided"
+    ]
+    if not continuation_decided:
+        return set(), None
+    try:
+        sealed = orchestration.list_sealed_assignment_states(workspace_root)
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        return set(), _degraded_work_selection(
+            workspace_id, active, f"sealed Work index is unavailable: {error}"
+        )
+    undecidable_subjects, settled_subjects = _sealed_work_subjects(sealed)
+    if sealed.get("issues") or any(
+        f"kungfu:{row['assignmentId']}" in undecidable_subjects
+        for row in continuation_decided
+    ):
+        return set(), _degraded_work_selection(
+            workspace_id,
+            active,
+            "sealed Work index cannot prove the current continuation boundary",
+        )
+    return settled_subjects, None
+
+
 def _native_work_binding(workspace_root, workspace_id, runtime_dir):
     """Describe current Work without creating, choosing, or advancing it."""
 
@@ -237,45 +287,11 @@ def _native_work_binding(workspace_root, workspace_id, runtime_dir):
     ]
     active_phases = {*orchestration.PHASES, "captured", "ready", "planned"}
     active = [row for row in rows if row["phase"] in active_phases]
-    continuation_decided = [
-        row for row in active if row["phase"] == "continuation-decided"
-    ]
-    settled_subjects = set()
-    if continuation_decided:
-        try:
-            sealed = orchestration.list_sealed_assignment_states(workspace_root)
-        except (OSError, ValueError, json.JSONDecodeError) as error:
-            return None, {
-                "schema": "kungfu.native-work-selection/v1",
-                "workspaceId": workspace_id,
-                "state": "degraded",
-                "candidateAssignmentIds": sorted(row["assignmentId"] for row in active),
-                "selectionAuthority": "kungfu-work-cli",
-                "entrypoint": "kungfu work status",
-                "diagnostic": f"sealed Work index is unavailable: {error}",
-            }
-        undecidable_subjects = {
-            str(row.get("assignment_subject") or "")
-            for row in sealed.get("unqualified_states") or []
-        }
-        if sealed.get("issues") or any(
-            f"kungfu:{row['assignmentId']}" in undecidable_subjects
-            for row in continuation_decided
-        ):
-            return None, {
-                "schema": "kungfu.native-work-selection/v1",
-                "workspaceId": workspace_id,
-                "state": "degraded",
-                "candidateAssignmentIds": sorted(row["assignmentId"] for row in active),
-                "selectionAuthority": "kungfu-work-cli",
-                "entrypoint": "kungfu work status",
-                "diagnostic": "sealed Work index cannot prove the current continuation boundary",
-            }
-        settled_subjects = {
-            str(row.get("assignment_subject") or "")
-            for row in sealed.get("states") or []
-            if row.get("settled") is True
-        }
+    settled_subjects, degraded = _settled_work_subjects(
+        workspace_root, workspace_id, active
+    )
+    if degraded is not None:
+        return None, degraded
     eligible = sorted(
         (
             row
@@ -312,6 +328,91 @@ def _native_work_binding(workspace_root, workspace_id, runtime_dir):
             }
         )
     return None, selection
+
+
+def _native_work_action_text(row):
+    if not isinstance(row, dict):
+        return str(row).strip()
+    parts = (row.get("action"), row.get("description"))
+    return ": ".join(str(value).strip() for value in parts if str(value).strip())
+
+
+def _native_work_next_actions(status):
+    return [
+        text
+        for row in list(status.get("next_actions") or [])
+        if (text := _native_work_action_text(row))
+    ]
+
+
+def _native_work_evidence_roots(assignment):
+    evidence_roots = assignment.get("evidenceEpisodeRoots")
+    if evidence_roots is None:
+        evidence_roots = assignment.get("evidence_episode_roots")
+    return [
+        str(root)
+        for root in list(evidence_roots or [])
+        if re.fullmatch(r"sha256:[a-f0-9]{64}", str(root))
+    ]
+
+
+def _native_work_definition(assignment):
+    definition = dict(assignment.get("work_definition") or {})
+    checks = [
+        text
+        for value in list(definition.get("acceptance_criteria") or [])
+        if (text := str(value).strip())
+    ]
+    return definition, checks
+
+
+def _native_work_continuation(status):
+    return {
+        "completionClaimCount": int(status.get("completion_claim_count") or 0),
+        "independentReviewCount": int(status.get("independent_review_count") or 0),
+        "continuationDecisionCount": int(
+            status.get("continuation_decision_count") or 0
+        ),
+    }
+
+
+def _native_work_projection_identity(assignment, definition):
+    return {
+        "title": str(definition.get("title") or assignment.get("title") or "").strip(),
+        "objective": str(
+            definition.get("objective") or assignment.get("objective") or ""
+        ).strip(),
+    }
+
+
+def _native_work_remaining_obligation(status, assignment):
+    return (
+        status.get("remainingObligation")
+        or status.get("remaining_obligation")
+        or (assignment.get("work_definition") or {}).get("remaining_obligation")
+        or None
+    )
+
+
+def _native_work_projection(status, selection, initiative_id, assignment_id):
+    assignment = dict(status.get("assignment") or {})
+    work_definition, acceptance_checks = _native_work_definition(assignment)
+    next_actions = _native_work_next_actions(status)
+    return {
+        "schema": "kungfu.native-work-observation/v1",
+        "state": "available",
+        "initiativeId": initiative_id,
+        "assignmentId": assignment_id,
+        **_native_work_projection_identity(assignment, work_definition),
+        "acceptanceChecks": acceptance_checks,
+        "phase": str(status.get("phase") or selection.get("phase") or "") or None,
+        "queryProofRoot": status.get("query_proof_root"),
+        "nextActions": next_actions,
+        "evidenceEpisodeRoots": _native_work_evidence_roots(assignment),
+        "continuation": _native_work_continuation(status),
+        "remainingObligation": _native_work_remaining_obligation(status, assignment),
+        "nextAction": next_actions[0] if next_actions else None,
+    }
 
 
 def _native_work_observer(runtime_dir, work_selection, bound_work_ref=None):
@@ -382,63 +483,7 @@ def _native_work_observer(runtime_dir, work_selection, bound_work_ref=None):
             "work": observation,
             "diagnostic": str(error),
         }
-    assignment = dict(status.get("assignment") or {})
-    work_definition = dict(assignment.get("work_definition") or {})
-    acceptance_checks = [
-        str(value).strip()
-        for value in list(work_definition.get("acceptance_criteria") or [])
-        if str(value).strip()
-    ]
-    next_action_rows = list(status.get("next_actions") or [])
-    next_actions = []
-    for row in next_action_rows:
-        if isinstance(row, dict):
-            action = str(row.get("action") or "").strip()
-            description = str(row.get("description") or "").strip()
-            next_actions.append(
-                ": ".join(value for value in (action, description) if value)
-            )
-        elif str(row).strip():
-            next_actions.append(str(row).strip())
-    evidence_roots = assignment.get("evidenceEpisodeRoots")
-    if evidence_roots is None:
-        evidence_roots = assignment.get("evidence_episode_roots")
-    evidence_roots = [
-        str(root)
-        for root in list(evidence_roots or [])
-        if re.fullmatch(r"sha256:[a-f0-9]{64}", str(root))
-    ]
-    work = {
-        "schema": "kungfu.native-work-observation/v1",
-        "state": "available",
-        "initiativeId": initiative_id,
-        "assignmentId": assignment_id,
-        "title": str(
-            work_definition.get("title") or assignment.get("title") or ""
-        ).strip(),
-        "objective": str(
-            work_definition.get("objective") or assignment.get("objective") or ""
-        ).strip(),
-        "acceptanceChecks": acceptance_checks,
-        "phase": str(status.get("phase") or selection.get("phase") or "") or None,
-        "queryProofRoot": status.get("query_proof_root"),
-        "nextActions": next_actions,
-        "evidenceEpisodeRoots": evidence_roots,
-        "continuation": {
-            "completionClaimCount": int(status.get("completion_claim_count") or 0),
-            "independentReviewCount": int(status.get("independent_review_count") or 0),
-            "continuationDecisionCount": int(
-                status.get("continuation_decision_count") or 0
-            ),
-        },
-        "remainingObligation": (
-            status.get("remainingObligation")
-            or status.get("remaining_obligation")
-            or (assignment.get("work_definition") or {}).get("remaining_obligation")
-            or None
-        ),
-        "nextAction": next_actions[0] if next_actions else None,
-    }
+    work = _native_work_projection(status, selection, initiative_id, assignment_id)
     return {"state": "fresh", "work": work}
 
 

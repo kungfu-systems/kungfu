@@ -363,6 +363,24 @@ def test_cli_exposes_one_welded_upgrade_contract_and_inventory(tmp_path):
     }
 
 
+def test_cli_gc_plan_fails_closed_without_reference_authority(tmp_path):
+    runner = CliRunner()
+    home = tmp_path / "home"
+    source = _source(tmp_path, "runtime-a")
+    installed = _install(home / "config", source, _manifest(source, "runtime-a"), 1)
+
+    result = runner.invoke(
+        upgrade_test_cli,
+        ["--home", str(home), "runtime", "upgrade", "gc-plan", "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["state"] == "action-required"
+    assert payload["candidates"] == []
+    assert [item["buildId"] for item in payload["blocked"]] == [installed["buildId"]]
+
+
 def test_corrupt_artifact_is_rejected_and_quarantine_is_recorded(tmp_path):
     source = _source(tmp_path, "runtime-a")
     manifest = _manifest(source, "runtime-a")

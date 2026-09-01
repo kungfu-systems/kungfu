@@ -212,12 +212,6 @@ export function changedFilesBetween(ref, head, root) {
       env: isolatedGitEnvironment(),
       encoding: 'utf8',
     });
-  const runTree = (commit) =>
-    childProcess.spawnSync('git', ['rev-parse', `${commit}^{tree}`], {
-      cwd: root,
-      env: isolatedGitEnvironment(),
-      encoding: 'utf8',
-    });
 
   let result = runDiff();
   if (
@@ -244,38 +238,6 @@ export function changedFilesBetween(ref, head, root) {
       );
     }
     result = runDiff();
-    if (
-      result.status !== 0 &&
-      /no merge base/u.test(String(result.stderr || ''))
-    ) {
-      // A rebase-merged promotion can leave the exact PR base and head as
-      // disconnected shallow boundaries even after both objects are fetched.
-      // The event already binds those immutable commits. Only accept a direct
-      // tree comparison when the checked-out publication candidate is exactly
-      // the event head tree; every missing object or tree mismatch still fails
-      // closed instead of inventing an ancestry relationship.
-      const candidateTree = runTree('HEAD');
-      const headTree = runTree(head);
-      if (
-        candidateTree.status !== 0 ||
-        headTree.status !== 0 ||
-        String(candidateTree.stdout || '').trim() !==
-          String(headTree.stdout || '').trim()
-      ) {
-        throw new Error(
-          `git diff ${ref}...${head} failed: shallow promotion candidate tree does not match the exact event head`,
-        );
-      }
-      result = childProcess.spawnSync(
-        'git',
-        ['diff', '--name-only', ref, head],
-        {
-          cwd: root,
-          env: isolatedGitEnvironment(),
-          encoding: 'utf8',
-        },
-      );
-    }
   }
   if (result.status !== 0) {
     throw new Error(
@@ -468,7 +430,7 @@ export function validateStaticContract(options) {
 }
 
 /** @param {any} options */
-export function evaluateReleaseGate(options) {
+function releaseGateContext(options) {
   const root = path.resolve(options.root || ROOT);
   const staticResult = validateStaticContract({
     root,
@@ -500,277 +462,331 @@ export function evaluateReleaseGate(options) {
   const blocked = [];
 
   const referenced = stringList(manifest?.adrs);
-  const checkReferenced = () => {
-    for (const id of referenced) {
-      const adr = adrs.get(id);
-      if (!adr) {
-        findings.push({
-          code: 'adr-reference',
-          adr: id,
-          message: `${id} does not exist`,
-        });
-      } else if (adr.decisionStatus !== 'accepted') {
-        findings.push({
-          code: 'adr-decision',
-          adr: id,
-          message: `${id} is not accepted`,
-        });
-      }
-    }
+  return {
+    options,
+    root,
+    contract,
+    waivers,
+    findings,
+    manifest,
+    adrs,
+    changedFiles,
+    prUrl,
+    mode,
+    admitted,
+    waived,
+    blocked,
+    referenced,
   };
+}
 
-  if (mode === 'dev') {
-    const feature = new RegExp(contract.dev.featureBranchPattern).test(
+function checkReferenced({ referenced, adrs, findings }) {
+  for (const id of referenced) {
+    const adr = adrs.get(id);
+    if (!adr) {
+      findings.push({
+        code: 'adr-reference',
+        adr: id,
+        message: `${id} does not exist`,
+      });
+    } else if (adr.decisionStatus !== 'accepted') {
+      findings.push({
+        code: 'adr-decision',
+        adr: id,
+        message: `${id} is not accepted`,
+      });
+    }
+  }
+}
+
+function validateNeutralDevRelease(context) {
+  const { options, contract, findings, manifest, changedFiles, adrs } = context;
+  if (
+    new RegExp(contract.dev.featureBranchPattern).test(
       String(options.headRef || ''),
-    );
-    if (manifest?.kind === 'adr-neutral') {
-      if (feature) {
-        findings.push({
-          code: 'feature-neutral',
-          message:
-            'feature branches must declare stage-ready or implemented intent',
-        });
-      }
-      requireText(manifest?.reason, 'reason', findings);
-      const adrChanges = changedFiles.filter((file) =>
-        [...adrs.values()].some((adr) => adr.file === file),
-      );
-      if (adrChanges.length > 0) {
-        findings.push({
-          code: 'neutral-adr-change',
-          message: 'ADR-neutral PRs cannot modify ADR records',
-        });
-      }
-    } else if (manifest?.kind === 'dev-delivery') {
-      if (!contract.dev.deliveryIntents.includes(manifest.intent)) {
-        findings.push({
-          code: 'dev-intent',
-          message: 'dev delivery intent must be stage-ready or implemented',
-        });
-      }
-      if (referenced.length === 0) {
-        findings.push({
-          code: 'adr-reference',
-          message: 'dev deliveries must reference at least one ADR',
-        });
-      }
-      requireText(manifest?.summary, 'summary', findings);
-      if (stringList(manifest?.verification).length === 0) {
-        findings.push({
-          code: 'verification',
-          message: 'dev deliveries must list verification evidence',
-        });
-      }
-      checkReferenced();
-      const allowed =
-        manifest.intent === 'implemented'
-          ? contract.dev.implementedCandidateStatuses
-          : contract.dev.stageReadyStatuses;
-      for (const id of referenced) {
-        const adr = adrs.get(id);
-        if (adr && !changedFiles.includes(adr.file)) {
-          findings.push({
-            code: 'dev-adr-projection',
-            adr: id,
-            message: `${id} must be updated in the feature PR so delivery evidence and implementation state remain synchronized`,
-          });
-        }
-        if (adr && !allowed.includes(adr.implementationStatus)) {
-          findings.push({
-            code: 'dev-status',
-            adr: id,
-            message: `${manifest.intent} cannot project ${id} from implementation_status ${adr.implementationStatus}`,
-          });
-        }
-        if (
-          manifest.intent === 'implemented' &&
-          adr &&
-          adr.qualificationRefs.length === 0
-        ) {
-          findings.push({
-            code: 'implemented-candidate-qualification',
-            adr: id,
-            message: `${id} needs qualification_refs before implemented intent`,
-          });
-        }
-      }
-    } else {
+    )
+  ) {
+    findings.push({
+      code: 'feature-neutral',
+      message:
+        'feature branches must declare stage-ready or implemented intent',
+    });
+  }
+  requireText(manifest?.reason, 'reason', findings);
+  if (
+    changedFiles.some((file) =>
+      [...adrs.values()].some((adr) => adr.file === file),
+    )
+  ) {
+    findings.push({
+      code: 'neutral-adr-change',
+      message: 'ADR-neutral PRs cannot modify ADR records',
+    });
+  }
+}
+
+function validateDevDelivery(context) {
+  const { contract, findings, manifest, changedFiles, adrs, referenced } =
+    context;
+  if (!contract.dev.deliveryIntents.includes(manifest.intent)) {
+    findings.push({
+      code: 'dev-intent',
+      message: 'dev delivery intent must be stage-ready or implemented',
+    });
+  }
+  if (referenced.length === 0) {
+    findings.push({
+      code: 'adr-reference',
+      message: 'dev deliveries must reference at least one ADR',
+    });
+  }
+  requireText(manifest?.summary, 'summary', findings);
+  if (stringList(manifest?.verification).length === 0) {
+    findings.push({
+      code: 'verification',
+      message: 'dev deliveries must list verification evidence',
+    });
+  }
+  checkReferenced(context);
+  const allowed =
+    manifest.intent === 'implemented'
+      ? contract.dev.implementedCandidateStatuses
+      : contract.dev.stageReadyStatuses;
+  for (const id of referenced) {
+    const adr = adrs.get(id);
+    if (adr && !changedFiles.includes(adr.file)) {
       findings.push({
-        code: 'dev-kind',
-        message: 'dev PR must be dev-delivery or adr-neutral',
+        code: 'dev-adr-projection',
+        adr: id,
+        message: `${id} must be updated in the feature PR so delivery evidence and implementation state remain synchronized`,
       });
     }
-  } else if (mode === 'alpha') {
-    if (manifest?.kind !== 'alpha-settlement') {
+    if (adr && !allowed.includes(adr.implementationStatus)) {
       findings.push({
-        code: 'alpha-kind',
-        message: 'alpha PR must declare an alpha-settlement',
+        code: 'dev-status',
+        adr: id,
+        message: `${manifest.intent} cannot project ${id} from implementation_status ${adr.implementationStatus}`,
       });
     }
-    const progress = Array.isArray(manifest?.progress) ? manifest.progress : [];
-    const noProgress = String(manifest?.no_adr_progress_reason || '');
-    if ((progress.length === 0) === (noProgress.length === 0)) {
+    if (
+      manifest.intent === 'implemented' &&
+      adr &&
+      adr.qualificationRefs.length === 0
+    ) {
       findings.push({
-        code: 'alpha-progress',
-        message:
-          'alpha settlement must declare progress or one explicit no-progress reason, but not both',
+        code: 'implemented-candidate-qualification',
+        adr: id,
+        message: `${id} needs qualification_refs before implemented intent`,
       });
     }
-    if (noProgress) requireText(noProgress, 'no_adr_progress_reason', findings);
-    const seen = new Set();
-    for (const entry of progress) {
-      const id = String(entry?.adr || '');
-      const adr = adrs.get(id);
-      if (!adr || adr.decisionStatus !== 'accepted') {
-        findings.push({
-          code: 'alpha-adr',
-          adr: id,
-          message: `${id || 'progress entry'} is not an accepted ADR`,
-        });
-        continue;
-      }
-      if (seen.has(id))
-        findings.push({
-          code: 'alpha-duplicate',
-          adr: id,
-          message: `${id} appears more than once`,
-        });
-      seen.add(id);
-      if (!contract.alpha.settlementStatuses.includes(entry.to)) {
-        findings.push({
-          code: 'alpha-status',
-          adr: id,
-          message: `${entry.to} is not a settlement status`,
-        });
-      } else if (adr.implementationStatus !== entry.to) {
-        findings.push({
-          code: 'alpha-projection',
-          adr: id,
-          message: `${id} projects ${adr.implementationStatus}, not declared ${entry.to}`,
-        });
-      }
-      if (!changedFiles.includes(adr.file)) {
-        findings.push({
-          code: 'alpha-evidence',
-          adr: id,
-          message: `${id} has no ADR record change in this promotion`,
-        });
-      }
-      requireText(entry?.summary, `${id} summary`, findings);
-      if (entry.to === 'implemented' && adr.qualificationRefs.length === 0) {
-        findings.push({
-          code: 'alpha-qualification',
-          adr: id,
-          message: `${id} cannot settle implemented without qualification_refs`,
-        });
-      }
-    }
-    const changedAcceptedAdrs = [...adrs.values()].filter(
-      (adr) =>
-        adr.decisionStatus === 'accepted' && changedFiles.includes(adr.file),
-    );
-    if (noProgress && changedAcceptedAdrs.length > 0) {
+  }
+}
+
+function validateDevRelease(context) {
+  if (context.manifest?.kind === 'adr-neutral')
+    validateNeutralDevRelease(context);
+  else if (context.manifest?.kind === 'dev-delivery')
+    validateDevDelivery(context);
+  else {
+    const { findings } = context;
+    findings.push({
+      code: 'dev-kind',
+      message: 'dev PR must be dev-delivery or adr-neutral',
+    });
+  }
+}
+
+function validateAlphaProgressEntry(context, entry, seen) {
+  const { contract, findings, changedFiles, adrs } = context;
+  const id = String(entry?.adr || '');
+  const adr = adrs.get(id);
+  if (!adr || adr.decisionStatus !== 'accepted') {
+    findings.push({
+      code: 'alpha-adr',
+      adr: id,
+      message: `${id || 'progress entry'} is not an accepted ADR`,
+    });
+    return;
+  }
+  if (seen.has(id))
+    findings.push({
+      code: 'alpha-duplicate',
+      adr: id,
+      message: `${id} appears more than once`,
+    });
+  seen.add(id);
+  if (!contract.alpha.settlementStatuses.includes(entry.to))
+    findings.push({
+      code: 'alpha-status',
+      adr: id,
+      message: `${entry.to} is not a settlement status`,
+    });
+  else if (adr.implementationStatus !== entry.to)
+    findings.push({
+      code: 'alpha-projection',
+      adr: id,
+      message: `${id} projects ${adr.implementationStatus}, not declared ${entry.to}`,
+    });
+  if (!changedFiles.includes(adr.file))
+    findings.push({
+      code: 'alpha-evidence',
+      adr: id,
+      message: `${id} has no ADR record change in this promotion`,
+    });
+  requireText(entry?.summary, `${id} summary`, findings);
+  if (entry.to === 'implemented' && adr.qualificationRefs.length === 0)
+    findings.push({
+      code: 'alpha-qualification',
+      adr: id,
+      message: `${id} cannot settle implemented without qualification_refs`,
+    });
+}
+
+function validateAlphaCoverage(context, seen, noProgress) {
+  const { findings, changedFiles, adrs } = context;
+  const changedAcceptedAdrs = [...adrs.values()].filter(
+    (adr) =>
+      adr.decisionStatus === 'accepted' && changedFiles.includes(adr.file),
+  );
+  if (noProgress && changedAcceptedAdrs.length > 0)
+    findings.push({
+      code: 'alpha-unsettled-change',
+      message: `no-progress settlement cannot contain changed accepted ADRs: ${changedAcceptedAdrs.map((adr) => adr.id).join(', ')}`,
+    });
+  for (const adr of changedAcceptedAdrs)
+    if (!seen.has(adr.id) && !noProgress)
       findings.push({
         code: 'alpha-unsettled-change',
-        message: `no-progress settlement cannot contain changed accepted ADRs: ${changedAcceptedAdrs.map((adr) => adr.id).join(', ')}`,
+        adr: adr.id,
+        message: `${adr.id} changed in the promotion but is absent from progress settlement`,
       });
-    }
-    for (const adr of changedAcceptedAdrs) {
-      if (!seen.has(adr.id) && !noProgress) {
-        findings.push({
-          code: 'alpha-unsettled-change',
-          adr: adr.id,
-          message: `${adr.id} changed in the promotion but is absent from progress settlement`,
-        });
-      }
-    }
-  } else if (mode === 'stable') {
-    if (manifest?.kind !== 'stable-admission') {
-      findings.push({
-        code: 'stable-kind',
-        message: 'stable PR must declare stable-admission',
-      });
-    }
-    const release = String(manifest?.release || '');
-    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(release)) {
-      findings.push({
-        code: 'stable-release',
-        message: 'stable admission needs an exact semantic version',
-      });
-    }
-    const currentWaivers = waivers.filter(
-      (waiver) => waiver.release === release,
-    );
-    const usedWaivers = new Set();
-    for (const adr of [...adrs.values()].sort((a, b) =>
-      a.id.localeCompare(b.id),
-    )) {
-      if (
-        !contract.stable.requiredDecisionStatuses.includes(adr.decisionStatus)
-      )
-        continue;
-      /** @type {string[]} */
-      const conditions = [];
-      if (
-        !contract.stable.admittedImplementationStatuses.includes(
-          adr.implementationStatus,
-        )
-      ) {
-        conditions.push(`implementation_status:${adr.implementationStatus}`);
-      } else if (
-        adr.implementationStatus === 'implemented' &&
-        contract.stable.requireQualificationForImplemented &&
-        adr.qualificationRefs.length === 0
-      ) {
-        conditions.push('qualification:missing');
-      }
-      if (conditions.length === 0) {
-        admitted.push({ adr: adr.id, status: adr.implementationStatus });
-        continue;
-      }
-      const waiver = currentWaivers.find((entry) => entry.adr === adr.id);
-      const waiverConditions = stringList(waiver?.conditions);
-      const valid =
-        waiver &&
-        waiver.expires_after === release &&
-        contract.stable.waiverApprovers.includes(waiver.approved_by) &&
-        waiver.approval_pr === prUrl &&
-        /^https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/[0-9]+$/.test(
-          String(waiver.approval_pr || ''),
-        ) &&
-        conditions.every((condition) => waiverConditions.includes(condition)) &&
-        waiverConditions.every((condition) => conditions.includes(condition));
-      if (valid) {
-        requireText(waiver.reason, `${adr.id} waiver reason`, findings);
-        requireText(waiver.risk, `${adr.id} waiver risk`, findings);
-        requireText(waiver.mitigation, `${adr.id} waiver mitigation`, findings);
-        usedWaivers.add(waiver.waiver_id);
-        waived.push({ adr: adr.id, conditions, waiver: waiver.waiver_id });
-      } else {
-        blocked.push({ adr: adr.id, conditions });
-        findings.push({
-          code: 'stable-blocked',
-          adr: adr.id,
-          message: `${adr.id} is not stable-admissible: ${conditions.join(', ')}`,
-        });
-      }
-    }
-    for (const waiver of currentWaivers) {
-      if (!usedWaivers.has(waiver.waiver_id)) {
-        findings.push({
-          code: 'waiver-stale',
-          adr: waiver.adr,
-          message: `${waiver.waiver_id} is invalid, unused, or broader than the current blocker`,
-        });
-      }
-    }
+}
+
+function validateAlphaRelease(context) {
+  const { findings, manifest } = context;
+  if (manifest?.kind !== 'alpha-settlement') {
+    findings.push({
+      code: 'alpha-kind',
+      message: 'alpha PR must declare an alpha-settlement',
+    });
+  }
+  const progress = Array.isArray(manifest?.progress) ? manifest.progress : [];
+  const noProgress = String(manifest?.no_adr_progress_reason || '');
+  if ((progress.length === 0) === (noProgress.length === 0)) {
+    findings.push({
+      code: 'alpha-progress',
+      message:
+        'alpha settlement must declare progress or one explicit no-progress reason, but not both',
+    });
+  }
+  if (noProgress) requireText(noProgress, 'no_adr_progress_reason', findings);
+  const seen = new Set();
+  for (const entry of progress)
+    validateAlphaProgressEntry(context, entry, seen);
+  validateAlphaCoverage(context, seen, noProgress);
+}
+
+function stableAdrConditions(contract, adr) {
+  if (
+    !contract.stable.admittedImplementationStatuses.includes(
+      adr.implementationStatus,
+    )
+  )
+    return [`implementation_status:${adr.implementationStatus}`];
+  if (
+    adr.implementationStatus === 'implemented' &&
+    contract.stable.requireQualificationForImplemented &&
+    adr.qualificationRefs.length === 0
+  )
+    return ['qualification:missing'];
+  return [];
+}
+
+function settleStableAdr(context, adr, release, currentWaivers, usedWaivers) {
+  const { contract, findings, prUrl, admitted, waived, blocked } = context;
+  const conditions = stableAdrConditions(contract, adr);
+  if (conditions.length === 0) {
+    admitted.push({ adr: adr.id, status: adr.implementationStatus });
+    return;
+  }
+  const waiver = currentWaivers.find((entry) => entry.adr === adr.id);
+  const waiverConditions = stringList(waiver?.conditions);
+  const valid =
+    waiver &&
+    waiver.expires_after === release &&
+    contract.stable.waiverApprovers.includes(waiver.approved_by) &&
+    waiver.approval_pr === prUrl &&
+    /^https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/[0-9]+$/.test(
+      String(waiver.approval_pr || ''),
+    ) &&
+    conditions.every((condition) => waiverConditions.includes(condition)) &&
+    waiverConditions.every((condition) => conditions.includes(condition));
+  if (valid) {
+    requireText(waiver.reason, `${adr.id} waiver reason`, findings);
+    requireText(waiver.risk, `${adr.id} waiver risk`, findings);
+    requireText(waiver.mitigation, `${adr.id} waiver mitigation`, findings);
+    usedWaivers.add(waiver.waiver_id);
+    waived.push({ adr: adr.id, conditions, waiver: waiver.waiver_id });
   } else {
+    blocked.push({ adr: adr.id, conditions });
+    findings.push({
+      code: 'stable-blocked',
+      adr: adr.id,
+      message: `${adr.id} is not stable-admissible: ${conditions.join(', ')}`,
+    });
+  }
+}
+
+function validateStableRelease(context) {
+  const { contract, findings, manifest, adrs, waivers } = context;
+  if (manifest?.kind !== 'stable-admission') {
+    findings.push({
+      code: 'stable-kind',
+      message: 'stable PR must declare stable-admission',
+    });
+  }
+  const release = String(manifest?.release || '');
+  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(release)) {
+    findings.push({
+      code: 'stable-release',
+      message: 'stable admission needs an exact semantic version',
+    });
+  }
+  const currentWaivers = waivers.filter((waiver) => waiver.release === release);
+  const usedWaivers = new Set();
+  for (const adr of [...adrs.values()].sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
+    if (!contract.stable.requiredDecisionStatuses.includes(adr.decisionStatus))
+      continue;
+    settleStableAdr(context, adr, release, currentWaivers, usedWaivers);
+  }
+  for (const waiver of currentWaivers) {
+    if (!usedWaivers.has(waiver.waiver_id)) {
+      findings.push({
+        code: 'waiver-stale',
+        adr: waiver.adr,
+        message: `${waiver.waiver_id} is invalid, unused, or broader than the current blocker`,
+      });
+    }
+  }
+}
+
+function validateReleaseMode(context) {
+  if (context.mode === 'dev') validateDevRelease(context);
+  else if (context.mode === 'alpha') validateAlphaRelease(context);
+  else if (context.mode === 'stable') validateStableRelease(context);
+  else {
+    const { findings, mode } = context;
     findings.push({
       code: 'mode',
       message: `unsupported gate mode: ${String(mode)}`,
     });
   }
+}
 
+function auditReleaseDeprecations(context) {
+  const { options, root, contract, findings, manifest, mode } = context;
   let deprecations = null;
   if (contract.deprecationLifecycle) {
     const candidateVersion =
@@ -807,7 +823,14 @@ export function evaluateReleaseGate(options) {
       });
     }
   }
+  return deprecations;
+}
 
+export function evaluateReleaseGate(options) {
+  const context = releaseGateContext(options);
+  validateReleaseMode(context);
+  const deprecations = auditReleaseDeprecations(context);
+  const { mode, manifest, findings, adrs, admitted, waived, blocked } = context;
   return {
     schema: 'kungfu.adr-release-report/v1',
     mode,

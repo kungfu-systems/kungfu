@@ -146,6 +146,72 @@ export function primaryWorkConsoleId({ workspaceId, binding }) {
   return `assistant:${required(workspaceId, 'workspaceId')}`;
 }
 
+function retainedObserverWork(value) {
+  return value.observer?.work && typeof value.observer.work === 'object'
+    ? clone(value.observer.work)
+    : null;
+}
+
+function normalizeWorkProjection(value, workBinding) {
+  if (value.workProjection && typeof value.workProjection === 'object')
+    return clone(value.workProjection);
+  const retainedWork = retainedObserverWork(value);
+  if (!retainedWork || !workBinding) return null;
+  return {
+    schema: 'kungfu.native-work-projection/v1',
+    workRefRoot: semanticRoot(workBinding.workRef),
+    state: value.observer?.state === 'fresh' ? 'fresh' : 'stale',
+    observedAt:
+      typeof value.observer?.observedAt === 'number'
+        ? value.observer.observedAt
+        : 0,
+    source: 'bounded-fallback',
+    queryCount: 1,
+    queryProofRoot: retainedWork.queryProofRoot ?? null,
+    work: retainedWork,
+    diagnostic:
+      typeof value.observer?.diagnostic === 'string'
+        ? value.observer.diagnostic
+        : null,
+  };
+}
+
+function normalizeAttemptObserver(observer) {
+  if (!observer || typeof observer !== 'object') return null;
+  return {
+    schema: 'kungfu.attempt-heartbeat/v1',
+    state: OBSERVER_STATES.has(observer.state) ? observer.state : 'unknown',
+    observedAt:
+      typeof observer.observedAt === 'number' ? observer.observedAt : 0,
+    staleAfterMs:
+      typeof observer.staleAfterMs === 'number' && observer.staleAfterMs > 0
+        ? observer.staleAfterMs
+        : 2000,
+    processIdentityRoot:
+      typeof observer.processIdentityRoot === 'string'
+        ? observer.processIdentityRoot
+        : '',
+    workRefRoot:
+      typeof observer.workRefRoot === 'string' ? observer.workRefRoot : null,
+    diagnostic:
+      typeof observer.diagnostic === 'string' ? observer.diagnostic : null,
+  };
+}
+
+function normalizeAttemptExit(exit) {
+  if (!exit || typeof exit !== 'object') return null;
+  return {
+    exitCode: typeof exit.exitCode === 'number' ? exit.exitCode : null,
+    signal: typeof exit.signal === 'string' ? exit.signal : null,
+  };
+}
+
+function objectList(value) {
+  return Array.isArray(value)
+    ? value.filter((entry) => entry && typeof entry === 'object')
+    : [];
+}
+
 function normalizeAttempt(value, { compatibility = false } = {}) {
   if (!value || typeof value !== 'object') return null;
   const sessionAttemptId =
@@ -157,32 +223,9 @@ function normalizeAttempt(value, { compatibility = false } = {}) {
   const workBinding = value.workBinding
     ? attemptWorkBinding(value.workBinding, { compatibility })
     : null;
-  const retainedWork =
-    value.observer?.work && typeof value.observer.work === 'object'
-      ? clone(value.observer.work)
-      : null;
-  const workProjection =
-    value.workProjection && typeof value.workProjection === 'object'
-      ? clone(value.workProjection)
-      : retainedWork && workBinding
-        ? {
-            schema: 'kungfu.native-work-projection/v1',
-            workRefRoot: semanticRoot(workBinding.workRef),
-            state: value.observer?.state === 'fresh' ? 'fresh' : 'stale',
-            observedAt:
-              typeof value.observer?.observedAt === 'number'
-                ? value.observer.observedAt
-                : 0,
-            source: 'bounded-fallback',
-            queryCount: 1,
-            queryProofRoot: retainedWork.queryProofRoot ?? null,
-            work: retainedWork,
-            diagnostic:
-              typeof value.observer?.diagnostic === 'string'
-                ? value.observer.diagnostic
-                : null,
-          }
-        : null;
+  const workProjection = normalizeWorkProjection(value, workBinding);
+  const observer = normalizeAttemptObserver(value.observer);
+  const exit = normalizeAttemptExit(value.exit);
   return {
     sessionAttemptId,
     runId:
@@ -202,61 +245,11 @@ function normalizeAttempt(value, { compatibility = false } = {}) {
     status: ATTEMPT_STATES.has(value.status) ? value.status : 'orphaned',
     startedAt: typeof value.startedAt === 'number' ? value.startedAt : 0,
     ...(typeof value.endedAt === 'number' ? { endedAt: value.endedAt } : {}),
-    receipts: Array.isArray(value.receipts)
-      ? value.receipts.filter(
-          (receipt) => receipt && typeof receipt === 'object',
-        )
-      : [],
-    plans: Array.isArray(value.plans)
-      ? value.plans.filter((plan) => plan && typeof plan === 'object')
-      : [],
-    ...(value.observer && typeof value.observer === 'object'
-      ? {
-          observer: {
-            schema:
-              value.observer.schema === 'kungfu.attempt-heartbeat/v1'
-                ? value.observer.schema
-                : 'kungfu.attempt-heartbeat/v1',
-            state: OBSERVER_STATES.has(value.observer.state)
-              ? value.observer.state
-              : 'unknown',
-            observedAt:
-              typeof value.observer.observedAt === 'number'
-                ? value.observer.observedAt
-                : 0,
-            staleAfterMs:
-              typeof value.observer.staleAfterMs === 'number' &&
-              value.observer.staleAfterMs > 0
-                ? value.observer.staleAfterMs
-                : 2000,
-            processIdentityRoot:
-              typeof value.observer.processIdentityRoot === 'string'
-                ? value.observer.processIdentityRoot
-                : '',
-            workRefRoot:
-              typeof value.observer.workRefRoot === 'string'
-                ? value.observer.workRefRoot
-                : null,
-            diagnostic:
-              typeof value.observer.diagnostic === 'string'
-                ? value.observer.diagnostic
-                : null,
-          },
-        }
-      : {}),
+    receipts: objectList(value.receipts),
+    plans: objectList(value.plans),
+    ...(observer ? { observer } : {}),
     ...(workProjection ? { workProjection } : {}),
-    ...(value.exit && typeof value.exit === 'object'
-      ? {
-          exit: {
-            exitCode:
-              typeof value.exit.exitCode === 'number'
-                ? value.exit.exitCode
-                : null,
-            signal:
-              typeof value.exit.signal === 'string' ? value.exit.signal : null,
-          },
-        }
-      : {}),
+    ...(exit ? { exit } : {}),
     ...(workBinding ? { workBinding } : {}),
     bootstrap: normalizeNativeBootstrap(value.bootstrap, sessionAttemptId),
     historyProtection: historyBoundary(),
