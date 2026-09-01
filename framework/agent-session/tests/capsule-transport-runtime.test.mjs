@@ -123,19 +123,36 @@ test('Capsule node-pty resolution is lazy and reports an optional capability', (
 });
 
 test('Capsule node-pty resolution includes the signed desktop app layout', () => {
-  assert.deepEqual(
-    capsuleNodePtyCandidates({
-      bundleDirectory:
-        '/Applications/Kungfu Episodes.app/Contents/Resources/tui',
-    }),
-    [
-      null,
-      null,
-      '/Applications/Kungfu Episodes.app/Contents/Resources/tui/node_modules/node-pty/lib/index.js',
-      '/Applications/Kungfu Episodes.app/Contents/Resources/node_modules/node-pty/lib/index.js',
-      '/Applications/Kungfu Episodes.app/Contents/Resources/app/node_modules/node-pty/lib/index.js',
-    ],
+  const bundleDirectory = path.join(
+    path.sep,
+    'Applications',
+    'Kungfu Episodes.app',
+    'Contents',
+    'Resources',
+    'tui',
   );
+  assert.deepEqual(capsuleNodePtyCandidates({ bundleDirectory }), [
+    null,
+    null,
+    path.join(bundleDirectory, 'node_modules', 'node-pty', 'lib', 'index.js'),
+    path.join(
+      bundleDirectory,
+      '..',
+      'node_modules',
+      'node-pty',
+      'lib',
+      'index.js',
+    ),
+    path.join(
+      bundleDirectory,
+      '..',
+      'app',
+      'node_modules',
+      'node-pty',
+      'lib',
+      'index.js',
+    ),
+  ]);
 });
 
 test('the detached control core starts without node-pty for native sessions', async () => {
