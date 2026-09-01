@@ -59,9 +59,9 @@
         "functionRisk": { "functions": 38, "total": 472, "maximum": 63 }
       },
       "current": {
-        "physicalLines": 921,
-        "responsibilities": 19,
-        "functionRisk": { "functions": 16, "total": 193, "maximum": 53 }
+        "physicalLines": 929,
+        "responsibilities": 20,
+        "functionRisk": { "functions": 17, "total": 197, "maximum": 53 }
       },
       "ownerFiles": [
         "framework/core/src/python/kungfu/agent_work_lab_evidence.py",
