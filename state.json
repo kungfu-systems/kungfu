@@ -55675,9 +55675,16 @@
       "status": "complete",
       "artifactCount": 5564,
       "sealedBundleRoot": ""
+    },
+    "github_release": {
+      "status": "complete",
+      "action": "created",
+      "tag": "v4.0.0-alpha.4",
+      "url": "https://github.com/kungfu-systems/kungfu/releases/tag/v4.0.0-alpha.4",
+      "assetCount": 24
     }
   },
   "resume_command": "",
   "created_at": "2026-09-01T22:08:44.596Z",
-  "updated_at": "2026-09-01T22:09:03.420Z"
+  "updated_at": "2026-09-01T22:11:22.605Z"
 }
