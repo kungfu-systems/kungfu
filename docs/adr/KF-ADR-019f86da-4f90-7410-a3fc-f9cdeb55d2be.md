@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/3645]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/3650]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/962
 qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json, framework/project-cut/src/settlement.mjs, framework/format/project-cut-canonical-json.mjs, framework/layout.manifest.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-framework-layout.test.mjs]
 review_state: self-reviewed
@@ -134,7 +134,8 @@ is not consulted when resolving semantic parents.
 
 ## 2026-09-02 source-boundary implementation evidence
 
-Pull request 3645 moves the canonical JSON implementation behind the shared
+Pull request 3650 supersedes pull request 3645 and moves the canonical JSON
+implementation behind the shared
 `framework/format` source boundary so Evidence and Project Cut no longer form a
 source dependency cycle. Project Cut remains the protocol owner: the extracted
 helper preserves the frozen canonical JSON algorithm, and existing golden-root,
