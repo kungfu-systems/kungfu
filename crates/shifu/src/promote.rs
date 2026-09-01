@@ -452,6 +452,34 @@ fn select_preview_build<'a>(
     entry
 }
 
+/// Select the exact Product built by the current source checkout. This route
+/// deliberately verifies product bytes, not remote delivery state: a developer
+/// must be able to install and exercise their own exact build before it has
+/// been merged or received any external delivery credential.
+fn select_current_source_build<'a>(
+    entries: &'a [BuildEntry],
+    current: &BuildEntry,
+    installed: &str,
+    allow_nonlinear: bool,
+) -> &'a BuildEntry {
+    let entry = select_named_build(entries, &current.name);
+    if !current_payload_valid(entry) {
+        util::die(&format!(
+            "current source build {} failed exact payload verification",
+            entry.name
+        ));
+    }
+    let relation = build_relation(entry, installed, entries.len());
+    if !matches!(relation, GitRelation::Same | GitRelation::Descendant) && !allow_nonlinear {
+        util::die(&format!(
+            "current source build {} is {} and requires --allow-nonlinear after review",
+            entry.name,
+            relation.as_str()
+        ));
+    }
+    entry
+}
+
 fn print_builds_json(entries: &[BuildEntry], payload_verified: bool) {
     let installed = installed_sha();
     println!("{{");
@@ -610,7 +638,7 @@ pub fn run_builds(root: Option<&Path>, args: &[String]) -> ! {
     std::process::exit(0)
 }
 
-pub fn run_promote(args: &[String]) -> ! {
+pub fn run_promote(root: Option<&Path>, args: &[String]) -> ! {
     let mut launch = false;
     let mut force = false;
     let mut check = false;
@@ -694,6 +722,21 @@ pub fn run_promote(args: &[String]) -> ! {
             );
         }
         select_preview_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
+    } else if let Some(root) = root {
+        let pointer_path = root.join(CURRENT_REGISTRATION_RELATIVE);
+        if pointer_path.is_file() {
+            let expected_sha = git_head(root);
+            let current = current_entry_at(root, &registry_dir(), &expected_sha)
+                .unwrap_or_else(|error| util::die(&error));
+            select_current_source_build(&entries, &current, &installed, allow_nonlinear)
+        } else {
+            if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
+                util::die(
+                    "installed Product has no verified rollback coordinate; refusing dogfood promotion",
+                );
+            }
+            select_product_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
+        }
     } else {
         if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
             util::die(
