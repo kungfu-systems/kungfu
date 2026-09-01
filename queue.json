@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 8984,
+  "generation": 8985,
   "fencingCounter": 862,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:e0f3959c0adf72aa5fd9017f44f48f19eeb8fa6afeadb82e11b2f546c60be731",
@@ -51,8 +51,13 @@
     "issuedAt": "2026-09-01T21:34:14.868Z",
     "expiresAt": "2026-09-01T23:09:43.619Z",
     "fencingToken": "sha256:d8598fcd9752246dd9e021a8c85ca8e9e5f12a27267ae05826139dbb2e59394c",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-01T21:39:43.619Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-01T21:39:43.619Z",
+    "nativeProofRoot": "sha256:ffadfaf7ac72a6ae874fdfb78c666d7cb019e4f23db8074e7a1ebf8cb3c9d0bc",
+    "nativeExecutionReceiptRoot": "sha256:619c49f5ff2c94ff3abc776a35ed9d53fc63df64555d3f1fde58f91927094c44",
+    "nativeProofReuseRoot": "sha256:1600bf1b2ab1c34a3846522800525a5536f829696144eb68cde508363616f2d3",
+    "qualificationReceiptRoot": "sha256:685b0639bee8f1911e8fc24fe1afa24f90133c7fd9be749e355905e8fd581768",
+    "qualifiedAt": "2026-09-01T21:40:14.198Z"
   },
   "candidates": [
     {
@@ -64435,10 +64440,10 @@
       "sourceWorkflowRunId": 33561061973,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-01T21:34:09.211Z",
-      "updatedAt": "2026-09-01T21:39:43.619Z",
+      "updatedAt": "2026-09-01T21:40:14.198Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "scripts/assemble-kungfu-publication-gate.mjs",
@@ -64501,6 +64506,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-01T21:39:43.619Z",
-  "stateRoot": "sha256:74fe5ac9d3cbf3f47bcca870a37e4efc28c54662885c2e7a65c6fbf79fddd911"
+  "updatedAt": "2026-09-01T21:40:14.198Z",
+  "stateRoot": "sha256:068984e619a9748e10d213b2b417d64c533d60570c3bcd32614d2980756cce54"
 }
