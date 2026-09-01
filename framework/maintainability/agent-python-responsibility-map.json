@@ -338,16 +338,38 @@
         "functionRisk": { "functions": 55, "total": 899, "maximum": 70 }
       },
       "current": {
-        "physicalLines": 1545,
-        "responsibilities": 60,
-        "functionRisk": { "functions": 54, "total": 845, "maximum": 70 }
+        "physicalLines": 412,
+        "responsibilities": 25,
+        "functionRisk": { "functions": 14, "total": 173, "maximum": 65 }
       },
       "ownerFiles": [
-        "framework/core/src/python/kungfu/agent/context_surface.py"
+        "framework/core/src/python/kungfu/agent/context_surface.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/provider.py"
       ],
-      "ownedDefinitions": ["project_agent_context"],
+      "ownedDefinitions": [
+        "project_agent_context",
+        "agent",
+        "work",
+        "work_action",
+        "work_import_authority",
+        "hub",
+        "hub_handle",
+        "runtime",
+        "runtime_upsert",
+        "console",
+        "console_bind_work",
+        "session_action",
+        "install_skill",
+        "bootstrap",
+        "set_mode"
+      ],
       "facadeSymbols": ["_context"],
-      "responsibility": "Click command registration remains here; native and local Agent context projection is owned by kungfu.agent.context_surface."
+      "responsibility": "The stable Agent facade keeps public imports and cross-domain discovery commands; Work, Hub, runtime, Console, Session, and provider-policy registration are owned by cohesive private command domains, while native and local context projection remains owned by kungfu.agent.context_surface."
     },
     {
       "sourcePath": "framework/core/src/python/kungfu/cli/commands/assignment.py",
