@@ -89,9 +89,7 @@ function sideEffectClass(name) {
   return 'none';
 }
 
-function normalizeRun(label, run, { observerJob = '' } = {}) {
-  if (!run || typeof run !== 'object')
-    throw new Error(`${label} run is required`);
+function normalizeRunWindow(label, run) {
   const created = timestamp(
     runField(run, 'createdAt', 'created_at'),
     `${label}.createdAt`,
@@ -106,6 +104,10 @@ function normalizeRun(label, run, { observerJob = '' } = {}) {
   );
   if (updated.epoch < created.epoch)
     throw new Error(`${label} run ends before it starts`);
+  return { created, started, updated };
+}
+
+function selectObservedJobs(label, run, observerJob) {
   const jobs = Array.isArray(run.jobs) ? run.jobs : [];
   const observers = observerJob
     ? jobs.filter((job) => job.name === observerJob)
@@ -131,61 +133,82 @@ function normalizeRun(label, run, { observerJob = '' } = {}) {
     : jobs;
   if (observedJobs.length === 0)
     throw new Error(`${label} snapshot has no completed producer jobs`);
-  const phases = [];
-  const producerCompletionEpochs = [];
-  for (const [jobIndex, job] of observedJobs.entries()) {
-    const jobName = required(
-      job.name || `job-${jobIndex}`,
-      `${label} job name`,
-    );
-    if (!['success', 'skipped'].includes(job.conclusion || ''))
-      throw new Error(`${label} producer job is not complete: ${jobName}`);
-    const jobStarted = timestamp(
-      runField(job, 'startedAt', 'started_at') || started.value,
-      `${label}.${jobName}.startedAt`,
-    );
-    const jobCompleted = timestamp(
-      runField(job, 'completedAt', 'completed_at'),
-      `${label}.${jobName}.completedAt`,
-    );
-    producerCompletionEpochs.push(jobCompleted.epoch);
-    phases.push({
-      id: `${label}/job/${slug(jobName) || jobIndex}`,
-      kind: 'job',
-      name: jobName,
-      conclusion: job.conclusion || job.status || 'unknown',
-      startedAt: jobStarted.value,
-      completedAt: jobCompleted.value,
-      durationMs: Math.max(0, jobCompleted.epoch - jobStarted.epoch),
-      externalSideEffect: sideEffectClass(jobName),
-    });
-    for (const [stepIndex, step] of (job.steps || []).entries()) {
-      const stepName = required(
-        step.name || `step-${stepIndex}`,
-        `${label} step name`,
-      );
-      const stepStarted = timestamp(
-        runField(step, 'startedAt', 'started_at') || jobStarted.value,
-        `${label}.${stepName}.startedAt`,
-      );
-      const stepCompleted = timestamp(
-        runField(step, 'completedAt', 'completed_at') || stepStarted.value,
-        `${label}.${stepName}.completedAt`,
-      );
-      phases.push({
-        id: `${label}/job/${slug(jobName) || jobIndex}/step/${
-          slug(stepName) || stepIndex
-        }`,
-        kind: 'step',
-        name: stepName,
-        conclusion: step.conclusion || step.status || 'unknown',
-        startedAt: stepStarted.value,
-        completedAt: stepCompleted.value,
-        durationMs: Math.max(0, stepCompleted.epoch - stepStarted.epoch),
-        externalSideEffect: sideEffectClass(stepName),
-      });
-    }
-  }
+  return { observedConclusion, observerStatus, observers, observedJobs };
+}
+
+function normalizeStepPhase(
+  label,
+  jobName,
+  jobIndex,
+  step,
+  stepIndex,
+  jobStarted,
+) {
+  const stepName = required(
+    step.name || `step-${stepIndex}`,
+    `${label} step name`,
+  );
+  const stepStarted = timestamp(
+    runField(step, 'startedAt', 'started_at') || jobStarted.value,
+    `${label}.${stepName}.startedAt`,
+  );
+  const stepCompleted = timestamp(
+    runField(step, 'completedAt', 'completed_at') || stepStarted.value,
+    `${label}.${stepName}.completedAt`,
+  );
+  return {
+    id: `${label}/job/${slug(jobName) || jobIndex}/step/${slug(stepName) || stepIndex}`,
+    kind: 'step',
+    name: stepName,
+    conclusion: step.conclusion || step.status || 'unknown',
+    startedAt: stepStarted.value,
+    completedAt: stepCompleted.value,
+    durationMs: Math.max(0, stepCompleted.epoch - stepStarted.epoch),
+    externalSideEffect: sideEffectClass(stepName),
+  };
+}
+
+function normalizeJobPhases(label, job, jobIndex, started) {
+  const jobName = required(job.name || `job-${jobIndex}`, `${label} job name`);
+  if (!['success', 'skipped'].includes(job.conclusion || ''))
+    throw new Error(`${label} producer job is not complete: ${jobName}`);
+  const jobStarted = timestamp(
+    runField(job, 'startedAt', 'started_at') || started.value,
+    `${label}.${jobName}.startedAt`,
+  );
+  const jobCompleted = timestamp(
+    runField(job, 'completedAt', 'completed_at'),
+    `${label}.${jobName}.completedAt`,
+  );
+  const jobPhase = {
+    id: `${label}/job/${slug(jobName) || jobIndex}`,
+    kind: 'job',
+    name: jobName,
+    conclusion: job.conclusion || job.status || 'unknown',
+    startedAt: jobStarted.value,
+    completedAt: jobCompleted.value,
+    durationMs: Math.max(0, jobCompleted.epoch - jobStarted.epoch),
+    externalSideEffect: sideEffectClass(jobName),
+  };
+  const stepPhases = (job.steps || []).map((step, stepIndex) =>
+    normalizeStepPhase(label, jobName, jobIndex, step, stepIndex, jobStarted),
+  );
+  return { jobCompleted, phases: [jobPhase, ...stepPhases] };
+}
+
+function normalizeRun(label, run, { observerJob = '' } = {}) {
+  if (!run || typeof run !== 'object')
+    throw new Error(`${label} run is required`);
+  const { created, started, updated } = normalizeRunWindow(label, run);
+  const { observedConclusion, observerStatus, observers, observedJobs } =
+    selectObservedJobs(label, run, observerJob);
+  const normalizedJobs = observedJobs.map((job, jobIndex) =>
+    normalizeJobPhases(label, job, jobIndex, started),
+  );
+  const phases = normalizedJobs.flatMap((job) => job.phases);
+  const producerCompletionEpochs = normalizedJobs.map(
+    (job) => job.jobCompleted.epoch,
+  );
   const attempt = Number(runField(run, 'runAttempt', 'run_attempt') || 1);
   const observerExcluded = observers.length === 1;
   const completedEpoch = observerExcluded

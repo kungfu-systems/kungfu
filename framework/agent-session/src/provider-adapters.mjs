@@ -318,6 +318,112 @@ export function probeProviderVersion({
   };
 }
 
+function inspectProviderInteraction(
+  { provider, profile },
+  { lines, volatileTail, lifecycleState, inputAdmission, foreground },
+) {
+  if (lifecycleState === 'ended' || inputAdmission === 'closed') {
+    return interactionResult({ state: 'ended', compatible: true });
+  }
+  if (foreground?.provider !== provider) {
+    return interactionResult({
+      state: 'unknown',
+      reason: 'foreground-provider-mismatch',
+      compatible: false,
+    });
+  }
+  const screen = cleanScreen(lines);
+  const reviewReadyIndex = screen.lastIndexOf('MOCK READY FOR REVIEW:');
+  const promptAfterReviewIndex = lastMatch(/^\s*mock›(?:\s|$)/mu, screen);
+  if (
+    provider === 'synthetic' &&
+    reviewReadyIndex >= 0 &&
+    promptAfterReviewIndex > reviewReadyIndex
+  ) {
+    return interactionResult({
+      state: 'ready',
+      signatureId: 'synthetic.ready.review',
+      compatible: true,
+    });
+  }
+  const current = currentScreenState(profile, screen);
+  if (current) {
+    return interactionResult({
+      state: current.state,
+      signatureId: current.signatureId,
+      reason:
+        current.reason ??
+        (current.state === 'unknown' ? 'unrecognized-modal-state' : null),
+      compatible: true,
+    });
+  }
+  const latest = latestVolatileState(profile, volatileTail);
+  if (latest) {
+    return interactionResult({
+      state: latest.state,
+      signatureId: latest.signatureId,
+      reason:
+        latest.reason ??
+        (latest.state === 'unknown' ? 'unrecognized-modal-state' : null),
+      compatible: true,
+    });
+  }
+  return interactionResult({
+    state: 'unknown',
+    reason: GENERIC_MODAL.test(screen)
+      ? 'unrecognized-modal-state'
+      : 'no-supported-state-signature',
+    compatible: true,
+  });
+}
+
+function encodeProviderInstruction(separateInstructionSubmit, text) {
+  if (typeof text !== 'string' || text.length === 0) {
+    throw new Error('instruction text must be non-empty');
+  }
+  if (text.includes(NUL) || text.includes(ESCAPE)) {
+    throw new Error('instruction text cannot contain NUL or escape bytes');
+  }
+  if (/(?:\r|\n)$/u.test(text)) {
+    throw new Error('instruction text cannot end with Enter');
+  }
+  if (Buffer.byteLength(text, 'utf8') > 64 * 1024) {
+    throw new Error('instruction exceeds the 64 KiB atomic paste limit');
+  }
+  const submit = separateInstructionSubmit ? '' : '\r';
+  return `\u001b[200~${text}\u001b[201~${submit}`;
+}
+
+function acknowledgesProviderPaste(
+  acknowledgedInstructionPaste,
+  { lines, text },
+) {
+  if (!acknowledgedInstructionPaste) return true;
+  const firstLine = String(text).split(/\r?\n/u, 1)[0].trim();
+  const visiblePrefix = [...firstLine].slice(0, 40).join('');
+  const screen = cleanScreen(lines);
+  const pasteLengths = new Set([
+    String(text).length,
+    [...String(text)].length,
+    Buffer.byteLength(String(text), 'utf8'),
+  ]);
+  const collapsedPasteVisible = [...pasteLengths].some((length) =>
+    screen.includes(`[Pasted Content ${String(length)} chars]`),
+  );
+  return (
+    collapsedPasteVisible ||
+    (visiblePrefix.length > 0 && screen.includes(visiblePrefix))
+  );
+}
+
+function encodeProviderKey(key) {
+  const sequence = KEY_SEQUENCES[key];
+  if (sequence === undefined) {
+    throw new Error(`unsupported semantic key '${String(key)}'`);
+  }
+  return sequence;
+}
+
 export function createProviderAdapter({ provider, version = 'unknown' }) {
   const profile = requireProvider(provider);
   const providerVersion =
@@ -352,108 +458,16 @@ export function createProviderAdapter({ provider, version = 'unknown' }) {
       'approval-and-deny-require-stage-6-real-provider-dogfood',
       'interrupt-proves-signal-delivery-not-provider-outcome',
     ],
-    inspect({
-      lines,
-      volatileTail,
-      lifecycleState,
-      inputAdmission,
-      foreground,
-    }) {
-      if (lifecycleState === 'ended' || inputAdmission === 'closed') {
-        return interactionResult({ state: 'ended', compatible: true });
-      }
-      if (foreground?.provider !== provider) {
-        return interactionResult({
-          state: 'unknown',
-          reason: 'foreground-provider-mismatch',
-          compatible: false,
-        });
-      }
-      const screen = cleanScreen(lines);
-      const reviewReadyIndex = screen.lastIndexOf('MOCK READY FOR REVIEW:');
-      const promptAfterReviewIndex = lastMatch(/^\s*mock›(?:\s|$)/mu, screen);
-      if (
-        provider === 'synthetic' &&
-        reviewReadyIndex >= 0 &&
-        promptAfterReviewIndex > reviewReadyIndex
-      ) {
-        return interactionResult({
-          state: 'ready',
-          signatureId: 'synthetic.ready.review',
-          compatible: true,
-        });
-      }
-      const current = currentScreenState(profile, screen);
-      if (current) {
-        return interactionResult({
-          state: current.state,
-          signatureId: current.signatureId,
-          reason:
-            current.reason ??
-            (current.state === 'unknown' ? 'unrecognized-modal-state' : null),
-          compatible: true,
-        });
-      }
-      const latest = latestVolatileState(profile, volatileTail);
-      if (latest) {
-        return interactionResult({
-          state: latest.state,
-          signatureId: latest.signatureId,
-          reason:
-            latest.reason ??
-            (latest.state === 'unknown' ? 'unrecognized-modal-state' : null),
-          compatible: true,
-        });
-      }
-      return interactionResult({
-        state: 'unknown',
-        reason: GENERIC_MODAL.test(screen)
-          ? 'unrecognized-modal-state'
-          : 'no-supported-state-signature',
-        compatible: true,
-      });
-    },
-    encodeInstruction(text) {
-      if (typeof text !== 'string' || text.length === 0) {
-        throw new Error('instruction text must be non-empty');
-      }
-      if (text.includes(NUL) || text.includes(ESCAPE)) {
-        throw new Error('instruction text cannot contain NUL or escape bytes');
-      }
-      if (/(?:\r|\n)$/u.test(text)) {
-        throw new Error('instruction text cannot end with Enter');
-      }
-      if (Buffer.byteLength(text, 'utf8') > 64 * 1024) {
-        throw new Error('instruction exceeds the 64 KiB atomic paste limit');
-      }
-      const submit = separateInstructionSubmit ? '' : '\r';
-      return `\u001b[200~${text}\u001b[201~${submit}`;
-    },
-    acknowledgesInstructionPaste({ lines, text }) {
-      if (!acknowledgedInstructionPaste) return true;
-      const firstLine = String(text).split(/\r?\n/u, 1)[0].trim();
-      const visiblePrefix = [...firstLine].slice(0, 40).join('');
-      const screen = cleanScreen(lines);
-      const pasteLengths = new Set([
-        String(text).length,
-        [...String(text)].length,
-        Buffer.byteLength(String(text), 'utf8'),
-      ]);
-      const collapsedPasteVisible = [...pasteLengths].some((length) =>
-        screen.includes(`[Pasted Content ${String(length)} chars]`),
-      );
-      return (
-        collapsedPasteVisible ||
-        (visiblePrefix.length > 0 && screen.includes(visiblePrefix))
-      );
-    },
-    encodeKey(key) {
-      const sequence = KEY_SEQUENCES[key];
-      if (sequence === undefined) {
-        throw new Error(`unsupported semantic key '${String(key)}'`);
-      }
-      return sequence;
-    },
+    inspect: inspectProviderInteraction.bind(null, { provider, profile }),
+    encodeInstruction: encodeProviderInstruction.bind(
+      null,
+      separateInstructionSubmit,
+    ),
+    acknowledgesInstructionPaste: acknowledgesProviderPaste.bind(
+      null,
+      acknowledgedInstructionPaste,
+    ),
+    encodeKey: encodeProviderKey,
   });
 }
 

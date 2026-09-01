@@ -142,13 +142,13 @@ class SyntheticProductRuntime {
   }
 }
 
-function fixture({ registry = null } = {}) {
+function fixture({ registry = null, now = null } = {}) {
   const runtime = new SyntheticProductRuntime();
   let id = 0;
   const surface = new AgentSessionProductSurface({
     runtime,
     ...(registry ? { registry } : {}),
-    now: () => 4000 + id,
+    now: now ?? (() => 4000 + id),
     makeId: () => `id-${++id}`,
   });
   const invoke = (request) => surface.invoke(request);
@@ -563,6 +563,34 @@ test('a second native Agent gets an explicit single-writer continuity explanatio
       assert.match(error.message, /separate WorkConsoles/u);
       return true;
     },
+  );
+});
+
+test('a stale unbound ambient attempt yields to the next exact Codex process', () => {
+  let now = 4000;
+  const registry = new WorkConsoleRegistry({ now: () => now });
+  const { clients, input } = fixture({ registry, now: () => now });
+  const ambient = {
+    ...input,
+    workspaceId: 'workspace-1',
+    workConsoleId: 'assistant:workspace-1',
+    sessionAttemptId: 'native:codex:ambient:first',
+    runtimeProfileId: 'kungfu.agent-runtime.codex.ambient',
+    binding: { kind: 'workspace-assistant', workRef: null },
+  };
+  const first = clients.cli.planNativeStart(ambient);
+  clients.cli.startNative(first, { launcherPid: 42, launchedAt: now });
+  now = 7001;
+  const second = clients.cli.planNativeStart({
+    ...ambient,
+    sessionAttemptId: 'native:codex:ambient:second',
+  });
+  assert.equal(second.sessionAttemptId, 'native:codex:ambient:second');
+  const prior = registry.snapshot().consoles[0].attempts[0];
+  assert.equal(prior.status, 'orphaned');
+  assert.equal(
+    prior.receipts.at(-1).reason,
+    'ambient-native-process-evidence-expired',
   );
 });
 

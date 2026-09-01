@@ -134,7 +134,7 @@ import {
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
   resolveTuiRuntimeDir,
-  tuiAttachedAgentSessionEnvironment,
+  tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
 import {
   globalWorkContribution,
@@ -171,10 +171,7 @@ function tuiAgentSessionEnvironment(
     KUNGFU_PROJECT_WORK_AGENT_SESSION: '1',
   };
 }
-function ensureTuiAgentSession(
-  runtimeDir: string,
-  attached = false,
-): Promise<string> {
+function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   const resolvedRuntimeDir = path.resolve(runtimeDir);
   if (
     tuiAgentSessionReady &&
@@ -208,16 +205,12 @@ function ensureTuiAgentSession(
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const paths = runtimePaths();
   const mockScenario = process.env.KUNGFU_MOCK_AGENT_SCENARIO;
-  const deterministicMock = attached || Boolean(mockScenario?.trim());
+  const deterministicMock = Boolean(mockScenario?.trim());
   const host = deterministicMock
     ? createAttachedAgentSessionHost({
         runtimeDir: resolvedRuntimeDir,
         ptyModule: process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE,
-        env: tuiAttachedAgentSessionEnvironment({
-          env: process.env,
-          packagedBin: paths.packagedBin,
-          mockPath,
-        }),
+        env: process.env,
       })
     : createDetachedAgentSessionHost({
         runtimeDir: resolvedRuntimeDir,
@@ -286,23 +279,11 @@ function runtimePaths() {
     ...cli,
   };
 }
-function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
-  return resolveTuiCliInvocation(paths, process.env);
+function cliEnvironment(): NodeJS.ProcessEnv {
+  return tuiChildCliEnvironment(process.env);
 }
-function bindMockAgentEnvironment(
-  cli: ReturnType<typeof tuiCliInvocation>,
-  paths: ReturnType<typeof runtimePaths>,
-) {
-  const { mockPath } = resolveTuiAgentSessionPaths({
-    env: process.env,
-    argvEntry: process.argv[1],
-    modulePath: fileURLToPath(import.meta.url),
-  });
-  cli.env = bindTuiMockAgentEnvironment({
-    env: cli.env,
-    packagedBin: paths.packagedBin,
-    mockPath,
-  });
+function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
+  return resolveTuiCliInvocation(paths, cliEnvironment());
 }
 function streamCliEvents({
   file,
@@ -397,7 +378,7 @@ async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const cli = tuiCliInvocation(paths);
   bindMockAgentEnvironment(cli, paths);
   if (projectTour) {
-    const endpoint = await ensureTuiAgentSession(paths.runtimeDir, true);
+    const endpoint = await ensureTuiAgentSession(paths.runtimeDir);
     cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint;
     cli.env.KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING = '1';
   }
@@ -434,7 +415,16 @@ async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
 function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
-  bindMockAgentEnvironment(cli, paths);
+  const { mockPath } = resolveTuiAgentSessionPaths({
+    env: process.env,
+    argvEntry: process.argv[1],
+    modulePath: fileURLToPath(import.meta.url),
+  });
+  cli.env = bindTuiMockAgentEnvironment({
+    env: cli.env,
+    packagedBin: paths.packagedBin,
+    mockPath,
+  });
   if (!useAgentSession) {
     cli.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = undefined;
     cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = undefined;

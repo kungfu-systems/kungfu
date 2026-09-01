@@ -51,6 +51,81 @@ const json &resolve_schema_ref(const json &root, const std::string &reference) {
   return root.at("$defs").at(key);
 }
 
+void validate_schema_value(const json &value, const json &rule, const json &root, const std::string &path);
+
+void validate_required_object_fields(const json &value, const json &rule, const std::string &path) {
+  if (!rule.contains("required"))
+    return;
+  for (const auto &field : rule.at("required")) {
+    if (!field.is_string() || !value.contains(field.get<std::string>()))
+      refuse("KF_KFX_SCHEMA_INVALID", path + " is missing a required field");
+  }
+}
+
+void validate_additional_object_fields(const json &value, const json &rule, const json &properties,
+                                       const std::string &path) {
+  if (!rule.contains("additionalProperties") || !rule.at("additionalProperties").is_boolean() ||
+      rule.at("additionalProperties").get<bool>())
+    return;
+  for (const auto &[field, ignored] : value.items()) {
+    (void)ignored;
+    if (!properties.contains(field))
+      refuse("KF_KFX_SCHEMA_INVALID", path + " contains unknown field " + field);
+  }
+}
+
+void validate_schema_object(const json &value, const json &rule, const json &root, const std::string &path) {
+  if (!value.is_object())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " must be an object");
+  validate_required_object_fields(value, rule, path);
+  const auto properties = rule.value("properties", json::object());
+  validate_additional_object_fields(value, rule, properties, path);
+  for (const auto &[field, child] : properties.items()) {
+    if (value.contains(field))
+      validate_schema_value(value.at(field), child, root, path + "." + field);
+  }
+}
+
+void validate_schema_array(const json &value, const json &rule, const json &root, const std::string &path) {
+  if (!value.is_array())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " must be an array");
+  if (rule.contains("minItems") &&
+      (!rule.at("minItems").is_number_unsigned() || value.size() < rule.at("minItems").get<size_t>()))
+    refuse("KF_KFX_SCHEMA_INVALID", path + " has too few items");
+  if (rule.value("uniqueItems", false)) {
+    std::set<std::string> identities;
+    for (const auto &item : value) {
+      if (!identities.insert(item.dump()).second)
+        refuse("KF_KFX_SCHEMA_INVALID", path + " contains duplicate items");
+    }
+  }
+  if (rule.contains("items")) {
+    size_t index = 0;
+    for (const auto &item : value)
+      validate_schema_value(item, rule.at("items"), root, path + "[" + std::to_string(index++) + "]");
+  }
+}
+
+void validate_schema_string(const json &value, const json &rule, const std::string &path) {
+  if (!value.is_string())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " must be a string");
+  const auto text = value.get<std::string>();
+  if (rule.contains("minLength") && text.size() < rule.at("minLength").get<size_t>())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " is too short");
+  if (rule.contains("pattern") && !std::regex_match(text, std::regex(rule.at("pattern").get<std::string>())))
+    refuse("KF_KFX_SCHEMA_INVALID", path + " does not match the KFX contract pattern");
+}
+
+void validate_schema_integer(const json &value, const json &rule, const std::string &path) {
+  if (!value.is_number_integer())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " must be an integer");
+  const auto number = value.get<int64_t>();
+  if (rule.contains("minimum") && number < rule.at("minimum").get<int64_t>())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " is below the KFX contract minimum");
+  if (rule.contains("maximum") && number > rule.at("maximum").get<int64_t>())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " exceeds the KFX contract maximum");
+}
+
 void validate_schema_value(const json &value, const json &rule, const json &root, const std::string &path) {
   if (rule.contains("$ref")) {
     if (!rule.at("$ref").is_string())
@@ -78,67 +153,19 @@ void validate_schema_value(const json &value, const json &rule, const json &root
 
   const auto type = rule.contains("type") && rule.at("type").is_string() ? rule.at("type").get<std::string>() : "";
   if (type == "object") {
-    if (!value.is_object())
-      refuse("KF_KFX_SCHEMA_INVALID", path + " must be an object");
-    if (rule.contains("required")) {
-      for (const auto &field : rule.at("required")) {
-        if (!field.is_string() || !value.contains(field.get<std::string>()))
-          refuse("KF_KFX_SCHEMA_INVALID", path + " is missing a required field");
-      }
-    }
-    const auto properties = rule.value("properties", json::object());
-    if (rule.contains("additionalProperties") && rule.at("additionalProperties").is_boolean() &&
-        !rule.at("additionalProperties").get<bool>()) {
-      for (const auto &[field, ignored] : value.items()) {
-        (void)ignored;
-        if (!properties.contains(field))
-          refuse("KF_KFX_SCHEMA_INVALID", path + " contains unknown field " + field);
-      }
-    }
-    for (const auto &[field, child] : properties.items()) {
-      if (value.contains(field))
-        validate_schema_value(value.at(field), child, root, path + "." + field);
-    }
+    validate_schema_object(value, rule, root, path);
     return;
   }
   if (type == "array") {
-    if (!value.is_array())
-      refuse("KF_KFX_SCHEMA_INVALID", path + " must be an array");
-    if (rule.contains("minItems") &&
-        (!rule.at("minItems").is_number_unsigned() || value.size() < rule.at("minItems").get<size_t>()))
-      refuse("KF_KFX_SCHEMA_INVALID", path + " has too few items");
-    if (rule.value("uniqueItems", false)) {
-      std::set<std::string> identities;
-      for (const auto &item : value) {
-        if (!identities.insert(item.dump()).second)
-          refuse("KF_KFX_SCHEMA_INVALID", path + " contains duplicate items");
-      }
-    }
-    if (rule.contains("items")) {
-      size_t index = 0;
-      for (const auto &item : value)
-        validate_schema_value(item, rule.at("items"), root, path + "[" + std::to_string(index++) + "]");
-    }
+    validate_schema_array(value, rule, root, path);
     return;
   }
   if (type == "string") {
-    if (!value.is_string())
-      refuse("KF_KFX_SCHEMA_INVALID", path + " must be a string");
-    const auto text = value.get<std::string>();
-    if (rule.contains("minLength") && text.size() < rule.at("minLength").get<size_t>())
-      refuse("KF_KFX_SCHEMA_INVALID", path + " is too short");
-    if (rule.contains("pattern") && !std::regex_match(text, std::regex(rule.at("pattern").get<std::string>())))
-      refuse("KF_KFX_SCHEMA_INVALID", path + " does not match the KFX contract pattern");
+    validate_schema_string(value, rule, path);
     return;
   }
   if (type == "integer") {
-    if (!value.is_number_integer())
-      refuse("KF_KFX_SCHEMA_INVALID", path + " must be an integer");
-    const auto number = value.get<int64_t>();
-    if (rule.contains("minimum") && number < rule.at("minimum").get<int64_t>())
-      refuse("KF_KFX_SCHEMA_INVALID", path + " is below the KFX contract minimum");
-    if (rule.contains("maximum") && number > rule.at("maximum").get<int64_t>())
-      refuse("KF_KFX_SCHEMA_INVALID", path + " exceeds the KFX contract maximum");
+    validate_schema_integer(value, rule, path);
     return;
   }
   if (type == "boolean" && !value.is_boolean())

@@ -10,7 +10,9 @@ import {
   sealKfdSourceEvidence,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
+  verifyReleaseArtifactRoot,
 } from '../framework/release/kfd-candidate-evidence.mjs';
+import { runShifuWithCache } from './run-shifu-lifecycle.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -45,9 +47,18 @@ function usage() {
   node scripts/kfd-candidate-evidence.mjs source-check --source-sha SHA --source-tree TREE --out FILE [--github-output FILE]
   node scripts/kfd-candidate-evidence.mjs source --source-sha SHA --source-tree TREE --expected-input-root ROOT
   node scripts/kfd-candidate-evidence.mjs run-verify --platform PLATFORM --source-sha SHA --source-tree TREE -- COMMAND...
+  node scripts/kfd-candidate-evidence.mjs artifact-root-check --expected-root ROOT
   node scripts/kfd-candidate-evidence.mjs verify-manifest-set --manifest-root DIR --source-sha SHA
   node scripts/kfd-candidate-evidence.mjs verify-set --payload-root DIR --source-sha SHA [--source-tree TREE]
 `;
+}
+
+function prepareReleaseArtifacts() {
+  for (const task of ['pack:spec', 'pack:sdk', 'pack:npm-release-inventory']) {
+    const status = runShifuWithCache([task], { root: ROOT });
+    if (status !== 0) return status;
+  }
+  return 0;
 }
 
 const { mode, options } = parse(process.argv.slice(2));
@@ -85,8 +96,19 @@ if (mode === 'source-check') {
     platform: options.platform,
     sourceSha: options.sourceSha,
     sourceTree: options.sourceTree,
+    prepareReleaseArtifacts,
   });
   result = { ok: process.exitCode === 0 };
+} else if (mode === 'artifact-root-check') {
+  const artifact = verifyReleaseArtifactRoot({
+    root: ROOT,
+    expectedRoot: options.expectedRoot,
+  });
+  result = {
+    ok: true,
+    artifactRoot: artifact.root,
+    fileCount: artifact.files.length,
+  };
 } else if (mode === 'verify-manifest-set') {
   result = verifyKfdManifestSet({
     manifestRoot: path.resolve(ROOT, options.manifestRoot),

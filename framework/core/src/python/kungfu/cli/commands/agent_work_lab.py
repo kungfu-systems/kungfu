@@ -11,7 +11,6 @@ from kungfu import agent as agent_pack
 from kungfu import agent_work_lab as lab
 from kungfu import assignment_orchestration as orchestration
 from kungfu import config as kungfu_config
-from kungfu import profile_sdk
 from kungfu import project_template
 from kungfu.project_tour import orchestration as project_tour_runtime
 from kungfu import projects as project_registry
@@ -625,7 +624,6 @@ class _NativeProjectTourOperations:
 @click.option("--allow-foreign-binding", is_flag=True, hidden=True)
 @kfd3_api("kungfu.agent-work-lab")
 @kfc.pass_context()
-@profile_sdk.validation_scope()
 def project_tour_run(
     ctx,
     destination,

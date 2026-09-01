@@ -257,6 +257,10 @@ export function qualifyCliSurface({
         .stdout,
       'kungfu agent capabilities',
     );
+    const agentMap = parseJson(
+      run(['agent', 'map', '--json'], 'kungfu agent map').stdout,
+      'kungfu agent map',
+    );
     const observedCatalog = capabilities.cliSurface;
     assert(
       observedCatalog?.schema === 'kungfu.cli-surface-catalog/v1',
@@ -296,6 +300,9 @@ export function qualifyCliSurface({
     }
 
     const surfaces = observedCatalog.surfaces || [];
+    const surfacesByPath = new Map(
+      surfaces.map((row) => [row.canonical_path, row]),
+    );
     const discoverable = surfaces.filter(
       (row) => row.visibility !== 'hidden-internal',
     );
@@ -357,6 +364,87 @@ export function qualifyCliSurface({
       'installed v3 compatibility reader is discoverable or owns a KFD identity',
     );
     run(['sdk', '--help'], 'kungfu sdk --help');
+
+    const globalObserver = (agentMap.intents || []).find(
+      (row) => row.id === 'global-observer',
+    );
+    assert(globalObserver, 'Agent Map omitted the global observer intent');
+    assert(
+      JSON.stringify(globalObserver.discoveryCommands) ===
+        JSON.stringify([
+          'kungfu workspace work --home --scope all --json',
+          'kungfu project list --json',
+        ]),
+      'Agent Map global observer discovery commands drifted',
+    );
+    const globalProjectWork = parseJson(
+      run(
+        ['workspace', 'work', '--home', '--scope', 'all', '--json'],
+        'kungfu workspace work --home --scope all --json',
+      ).stdout,
+      'kungfu workspace work --home --scope all --json',
+    );
+    assert(
+      globalProjectWork.schema === 'kungfu.workspace-federation.query/v1' &&
+        globalProjectWork.scope === 'all' &&
+        Array.isArray(globalProjectWork.writes) &&
+        globalProjectWork.writes.length === 0,
+      'Agent Map global observer command is not an executable read-only all-scope query',
+    );
+    const projectSchemas = {
+      'kungfu project list': 'kungfu.projects.catalog/v1',
+      'kungfu project works': 'kungfu.project-work.inventory/v1',
+    };
+    for (const [command, schema] of Object.entries(projectSchemas)) {
+      const surface = surfacesByPath.get(command);
+      assert(surface, `installed catalog omitted ${command}`);
+      assert(
+        surface.output?.defaultMode === 'json' &&
+          JSON.stringify(surface.output?.modes) === JSON.stringify(['json']) &&
+          JSON.stringify(surface.output?.schemaRefs) ===
+            JSON.stringify([schema]),
+        `${command} omitted its exact JSON output contract`,
+      );
+      const jsonParameter = (surface.parameters || []).find(
+        (parameter) => parameter.name === 'as_json',
+      );
+      assert(
+        jsonParameter?.flags?.includes('--json'),
+        `${command} advertises JSON without an executable --json option`,
+      );
+    }
+    const defaultProjectList = parseJson(
+      run(['project', 'list'], 'kungfu project list default').stdout,
+      'kungfu project list default',
+    );
+    const explicitProjectList = parseJson(
+      run(['project', 'list', '--json'], 'kungfu project list --json').stdout,
+      'kungfu project list --json',
+    );
+    const defaultProjectWorks = parseJson(
+      run(['project', 'works', workspace], 'kungfu project works default')
+        .stdout,
+      'kungfu project works default',
+    );
+    const explicitProjectWorks = parseJson(
+      run(
+        ['project', 'works', '--json', workspace],
+        'kungfu project works --json',
+      ).stdout,
+      'kungfu project works --json',
+    );
+    assert(
+      cliQualificationRoot(defaultProjectList) ===
+        cliQualificationRoot(explicitProjectList) &&
+        explicitProjectList.schema === projectSchemas['kungfu project list'],
+      'Project list default and explicit JSON modes diverged',
+    );
+    assert(
+      cliQualificationRoot(defaultProjectWorks) ===
+        cliQualificationRoot(explicitProjectWorks) &&
+        explicitProjectWorks.schema === projectSchemas['kungfu project works'],
+      'Project Work default and explicit JSON modes diverged',
+    );
 
     const linkage = observedCatalog.kfd3Linkage || [];
     const linkedIds = new Set(
@@ -506,6 +594,13 @@ export function qualifyCliSurface({
         agentCatalog: {
           schema: observedCatalog.schema,
           commandPackSchema: capabilities.commands?.schema,
+        },
+        projectDiscovery: {
+          intentId: globalObserver.id,
+          commands: globalObserver.discoveryCommands,
+          defaultOutputMode: 'json',
+          explicitOutputMode: 'json',
+          schemas: projectSchemas,
         },
         canonicalOnly: {
           aliases: 0,

@@ -398,3 +398,26 @@ def uninstall(ctx, execute, as_json):
         return
     click.echo("[dry-run] uninstall preview" if not execute else "uninstalled")
     click.echo(payload["plan"]["uninstallNote"])
+
+
+for _symbol in (
+    "runtime_status",
+    "runtime_operations",
+    "runtime_plan",
+    "ensure",
+    "start",
+    "stop",
+    "restart",
+    "run",
+    "assess_worker",
+    "assessments",
+    "trust",
+    "supervise",
+    "service",
+    "plan",
+    "service_status",
+    "install",
+    "uninstall",
+):
+    globals()[_symbol].callback.__module__ = "kungfu.cli.commands.runtime"
+    globals()[_symbol].callback.__qualname__ = _symbol

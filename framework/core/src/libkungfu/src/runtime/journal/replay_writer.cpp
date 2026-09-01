@@ -10,7 +10,7 @@ namespace kungfu::yijinjing::journal {
 replay_writer::replay_writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
                              const bus_ptr &bus, uint64_t page_size, int64_t begin_time)
     : writer(location, dest_id, publisher, false, bus, page_size, begin_time),
-      reader_for_write_(std::make_shared<reader>(true, false, bus)) {
+      reader_for_write_(std::make_shared<reader>(reader_policy::peer(), false, bus)) {
   if (page::check_page_existed(location, dest_id)) {
     reader_for_write_->join(location, dest_id, begin_time, page_size);
   } else {

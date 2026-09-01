@@ -447,6 +447,101 @@ export class AgentSessionSurfaceError extends Error {
   }
 }
 
+function requireStartCondition(condition, code, message) {
+  if (!condition) throw new AgentSessionSurfaceError(code, message);
+}
+
+function normalizeStartBinding(input) {
+  const binding = input.binding ?? {
+    kind: 'workspace-assistant',
+    workRef: null,
+  };
+  requireStartCondition(
+    ['work', 'workspace-assistant'].includes(binding.kind),
+    'invalid_argument',
+    `unsupported binding kind '${String(binding.kind)}'`,
+  );
+  requireStartCondition(
+    binding.kind !== 'work' ||
+      (Boolean(binding.workRef) && typeof binding.workRef === 'object'),
+    'invalid_argument',
+    'work binding requires a WorkRef',
+  );
+  return binding;
+}
+
+function validateFallbackAttempt(previous, previousStatus, input, consoleId) {
+  requireStartCondition(
+    previousStatus.transportRoute?.kind === 'structured' &&
+      previousStatus.lifecycleState === 'ended' &&
+      ['unknown', 'interrupted'].includes(previousStatus.attemptBoundary),
+    'fallback_not_ready',
+    'fallback requires an ended structured attempt boundary',
+  );
+  requireStartCondition(
+    previous.sessionAttemptId !== input.sessionAttemptId,
+    'hot_switch_forbidden',
+    'fallback must create a new session attempt',
+  );
+  requireStartCondition(
+    previous.workConsoleId === consoleId,
+    'fallback_console_mismatch',
+    'fallback must preserve the original WorkConsole identity',
+  );
+  requireStartCondition(
+    input.provider === previousStatus.foreground.provider,
+    'fallback_provider_mismatch',
+    'fallback must preserve the original provider identity',
+  );
+  return {
+    workConsoleId: previous.workConsoleId,
+    sessionAttemptId: previous.sessionAttemptId,
+    boundary: previousStatus.attemptBoundary,
+  };
+}
+
+function structuredStartOptions(input, transportRoute) {
+  if (!transportRoute) return null;
+  return {
+    initializeParams: input.structured?.initializeParams ?? {
+      clientInfo: {
+        name: 'kungfu-agent-session',
+        version: '4.0.0-alpha.4',
+      },
+    },
+    threadStartParams: input.structured?.threadStartParams ?? {
+      ...(input.cwd ? { cwd: input.cwd } : {}),
+      approvalPolicy: 'on-request',
+      approvalsReviewer: 'user',
+      sandbox: 'read-only',
+    },
+  };
+}
+
+function plannedStartEffects(existing, transportRoute, fallback) {
+  if (existing) return ['attach-presentation-to-existing-capsule'];
+  if (transportRoute) {
+    return [
+      'spawn-codex-app-server-direct-stdio',
+      'start-one-provider-thread',
+      'register-session',
+      'attach-presentation',
+    ];
+  }
+  if (fallback) {
+    return [
+      'create-new-pty-attempt-only',
+      'preserve-old-structured-receipts',
+      'attach-presentation',
+    ];
+  }
+  return [
+    'spawn-provider-in-capsule',
+    'register-session',
+    'attach-presentation',
+  ];
+}
+
 /**
  * One self-describing action surface shared by GUI, CLI and KFD-3 clients.
  *
@@ -698,6 +793,7 @@ export class AgentSessionProductSurface {
   }
 
   planNativeStart(input) {
+    this.registry.reapExpiredAmbientAttempts();
     const binding = input.binding ?? {
       kind: 'workspace-assistant',
       workRef: null,
@@ -1081,25 +1177,7 @@ export class AgentSessionProductSurface {
 
   planStart(input) {
     this.registry.observe(this.runtime.list());
-    const binding = input.binding ?? {
-      kind: 'workspace-assistant',
-      workRef: null,
-    };
-    if (!['work', 'workspace-assistant'].includes(binding.kind)) {
-      throw new AgentSessionSurfaceError(
-        'invalid_argument',
-        `unsupported binding kind '${String(binding.kind)}'`,
-      );
-    }
-    if (
-      binding.kind === 'work' &&
-      (!binding.workRef || typeof binding.workRef !== 'object')
-    ) {
-      throw new AgentSessionSurfaceError(
-        'invalid_argument',
-        'work binding requires a WorkRef',
-      );
-    }
+    const binding = normalizeStartBinding(input);
     const resolution = this.registry.resolve({
       workspaceId: input.workspaceId,
       workConsoleId: input.workConsoleId,
@@ -1120,60 +1198,18 @@ export class AgentSessionProductSurface {
     if (input.fallbackFrom) {
       const previous = this.#session(input.fallbackFrom);
       const previousStatus = publicStatus(previous);
-      if (
-        previousStatus.transportRoute?.kind !== 'structured' ||
-        previousStatus.lifecycleState !== 'ended' ||
-        !['unknown', 'interrupted'].includes(previousStatus.attemptBoundary)
-      ) {
-        throw new AgentSessionSurfaceError(
-          'fallback_not_ready',
-          'fallback requires an ended structured attempt boundary',
-        );
-      }
-      if (previous.sessionAttemptId === input.sessionAttemptId) {
-        throw new AgentSessionSurfaceError(
-          'hot_switch_forbidden',
-          'fallback must create a new session attempt',
-        );
-      }
-      if (previous.workConsoleId !== consoleId) {
-        throw new AgentSessionSurfaceError(
-          'fallback_console_mismatch',
-          'fallback must preserve the original WorkConsole identity',
-        );
-      }
-      if (input.provider !== previousStatus.foreground.provider) {
-        throw new AgentSessionSurfaceError(
-          'fallback_provider_mismatch',
-          'fallback must preserve the original provider identity',
-        );
-      }
       fallbackSession = previous;
       fallbackStatus = previousStatus;
-      fallback = {
-        workConsoleId: previous.workConsoleId,
-        sessionAttemptId: previous.sessionAttemptId,
-        boundary: previousStatus.attemptBoundary,
-      };
+      fallback = validateFallbackAttempt(
+        previous,
+        previousStatus,
+        input,
+        consoleId,
+      );
     }
     const transportRoute =
       existingStatus?.transportRoute ?? this.runtime.planRoute?.(input) ?? null;
-    const structured = transportRoute
-      ? {
-          initializeParams: input.structured?.initializeParams ?? {
-            clientInfo: {
-              name: 'kungfu-agent-session',
-              version: '4.0.0-alpha.3',
-            },
-          },
-          threadStartParams: input.structured?.threadStartParams ?? {
-            ...(input.cwd ? { cwd: input.cwd } : {}),
-            approvalPolicy: 'on-request',
-            approvalsReviewer: 'user',
-            sandbox: 'read-only',
-          },
-        }
-      : null;
+    const structured = structuredStartOptions(input, transportRoute);
     const registeredConsole = this.registry.console(consoleId);
     const body = {
       schema: 'kungfu.agent-session.start-plan/v1',
@@ -1212,26 +1248,7 @@ export class AgentSessionProductSurface {
         existingStatus?.providerAdapter.provider ??
         'unknown',
       backend: transportRoute?.kind === 'structured' ? 'structured' : 'capsule',
-      effects: existing
-        ? ['attach-presentation-to-existing-capsule']
-        : transportRoute
-          ? [
-              'spawn-codex-app-server-direct-stdio',
-              'start-one-provider-thread',
-              'register-session',
-              'attach-presentation',
-            ]
-          : fallback
-            ? [
-                'create-new-pty-attempt-only',
-                'preserve-old-structured-receipts',
-                'attach-presentation',
-              ]
-            : [
-                'spawn-provider-in-capsule',
-                'register-session',
-                'attach-presentation',
-              ],
+      effects: plannedStartEffects(existing, transportRoute, fallback),
       workEffects: [],
       rollback: existing ? 'detach-presentation' : 'end-new-session-attempt',
       ...(transportRoute ? { transportRoute, structured } : {}),

@@ -304,33 +304,38 @@ export function ProjectsHost({
     planProject,
     planSelectedRemoval,
   ]);
+  const handleProjectsMouse = React.useCallback(
+    (mouseEvents: ReturnType<typeof decodeTerminalMouseInput>) => {
+      if (inputModeActive) return;
+      for (const event of mouseEvents) {
+        if (
+          event.kind !== 'wheel' ||
+          event.column < 1 ||
+          event.column > size.columns ||
+          event.row < 2 ||
+          event.row > terminalCanvasRows(size.rows) + 1
+        ) {
+          continue;
+        }
+        const delta = event.button === 'wheel-up' ? -1 : 1;
+        setSelected((current) =>
+          scrollListSelection({
+            current,
+            delta,
+            itemCount: catalog?.projects.length ?? 0,
+          }),
+        );
+        onWorkspacePointer();
+      }
+    },
+    [catalog?.projects.length, inputModeActive, onWorkspacePointer, size],
+  );
   React.useEffect(() => {
     const handleProjectsInput = (chunk: Buffer | string) => {
       const value = String(chunk);
       const mouseEvents = decodeTerminalMouseInput(value);
       if (mouseEvents.length > 0) {
-        if (!inputModeActive) {
-          for (const event of mouseEvents) {
-            if (
-              event.kind !== 'wheel' ||
-              event.column < 1 ||
-              event.column > size.columns ||
-              event.row < 2 ||
-              event.row > terminalCanvasRows(size.rows) + 1
-            ) {
-              continue;
-            }
-            const delta = event.button === 'wheel-up' ? -1 : 1;
-            setSelected((current) =>
-              scrollListSelection({
-                current,
-                delta,
-                itemCount: catalog?.projects.length ?? 0,
-              }),
-            );
-            onWorkspacePointer();
-          }
-        }
+        handleProjectsMouse(mouseEvents);
         return;
       }
       if (isInputCaptured()) return;
@@ -455,13 +460,12 @@ export function ProjectsHost({
     beginImport,
     createPlan,
     exit,
+    handleProjectsMouse,
     importPath,
     importPlan,
-    inputModeActive,
     isInputCaptured,
     onOpenLab,
     onOpenProject,
-    onWorkspacePointer,
     planProject,
     planSelectedRemoval,
     projects,
@@ -469,7 +473,6 @@ export function ProjectsHost({
     removePlan,
     runProjectAction,
     selected,
-    size,
   ]);
 
   const visibleRows = Math.max(3, terminalCanvasRows(size.rows) - 10);

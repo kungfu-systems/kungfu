@@ -146,294 +146,466 @@ function assertByteParity(left, right, args, options) {
   }
 }
 
+function qualifyPublicSchemas(binary, targetRoot, env) {
+  const schemas = Object.fromEntries(
+    [
+      ['projectSchema', 'project'],
+      ['contextIrSchema', 'context-ir'],
+      ['atlasSchema', 'atlas'],
+      ['atlasViewSchema', 'atlas-view'],
+      ['humanViewSchema', 'human-view'],
+      ['taskChartSchema', 'task-chart'],
+      ['guiViewSchema', 'gui-view'],
+      ['projectionRecipeSchema', 'projection-recipe'],
+      ['episodeProviderSubmissionSchema', 'episode-provider-submission'],
+      ['reviewChartSchema', 'review-chart'],
+    ].map(([name, schema]) => [
+      name,
+      JSON.parse(run(binary, ['schema', schema], { cwd: targetRoot, env })),
+    ]),
+  );
+  const expectedIds = {
+    projectSchema: 'https://xinfa.dev/schema/project-v1.schema.json',
+    contextIrSchema: 'https://xinfa.dev/schema/context-ir-v1.schema.json',
+    atlasSchema: 'https://xinfa.dev/schema/atlas-v1.schema.json',
+    atlasViewSchema: 'https://xinfa.dev/schema/atlas-view-v1.schema.json',
+    humanViewSchema: 'https://xinfa.dev/schema/human-view-v1.schema.json',
+    taskChartSchema: 'https://xinfa.dev/schema/task-chart-v1.schema.json',
+    guiViewSchema: 'https://xinfa.dev/schema/gui-view-v1.schema.json',
+    projectionRecipeSchema:
+      'https://xinfa.dev/schema/projection-recipe-v1.schema.json',
+    episodeProviderSubmissionSchema:
+      'https://xinfa.dev/schema/episode-provider-submission-v1.schema.json',
+    reviewChartSchema: 'https://xinfa.dev/schema/review-chart-v1.schema.json',
+  };
+  if (
+    Object.entries(expectedIds).some(
+      ([name, expected]) => schemas[name].$id !== expected,
+    )
+  )
+    throw new Error('public schema discovery returned unexpected identities');
+  return schemas;
+}
+
+function qualifyProjectContract(binary, targetRoot, env) {
+  const project = path.join(targetRoot, 'fixtures', 'project-alpha.json');
+  const validation = JSON.parse(
+    run(binary, ['validate', '--project', project, '--json'], {
+      cwd: targetRoot,
+      env,
+    }),
+  );
+  if (
+    validation.valid !== true ||
+    validation.qualifying !== false ||
+    validation.selfCertified !== false
+  )
+    throw new Error('project validation receipt crossed its proof boundary');
+  const invalidProject = path.join(targetRoot, 'invalid-project.json');
+  const invalidValue = JSON.parse(fs.readFileSync(project, 'utf8'));
+  invalidValue.schema = 'xinfa.project/v2';
+  fs.writeFileSync(invalidProject, `${JSON.stringify(invalidValue)}\n`);
+  const invalidValidation = spawnSync(
+    binary,
+    ['validate', '--project', invalidProject, '--json'],
+    {
+      cwd: targetRoot,
+      env,
+      encoding: 'utf8',
+      shell: process.platform === 'win32',
+    },
+  );
+  const invalidReceipt = JSON.parse(invalidValidation.stdout || '{}');
+  if (
+    invalidValidation.status !== 1 ||
+    invalidReceipt.valid !== false ||
+    !invalidReceipt.diagnostics?.some(
+      (diagnostic) => diagnostic.code === 'unsupported-version',
+    )
+  )
+    throw new Error('invalid project did not fail with its stable receipt');
+  const canonicalArgs = ['canonicalize', '--project', project, '--json'];
+  const canonicalA = run(binary, canonicalArgs, { cwd: targetRoot, env });
+  const canonicalB = run(binary, canonicalArgs, { cwd: targetRoot, env });
+  if (canonicalA !== canonicalB)
+    throw new Error('project canonicalization is not byte stable');
+  const compiled = JSON.parse(
+    run(binary, ['compile', '--project', project, '--json'], {
+      cwd: targetRoot,
+      env,
+    }),
+  );
+  if (
+    compiled.schema !== 'xinfa.context-ir/v1' ||
+    compiled.routes.length !== 2 ||
+    compiled.routes[0].authorityRoot !== compiled.routes[1].authorityRoot ||
+    compiled.routes[0].status !== compiled.routes[1].status
+  )
+    throw new Error('compiled dual-reader route parity failed');
+  return { project, validation, compiled };
+}
+
+function qualifyRepositoryPack(binary, targetRoot, env) {
+  const repositoryFixture = path.join(
+    targetRoot,
+    'fixtures',
+    'repository-small',
+  );
+  const packOutput = path.join(targetRoot, 'pack-output');
+  const project = path.join(repositoryFixture, 'project.json');
+  const packReceipt = JSON.parse(
+    run(
+      binary,
+      ['compile', '--project', project, '--output', packOutput, '--json'],
+      { cwd: targetRoot, env },
+    ),
+  );
+  const packVerification = JSON.parse(
+    run(binary, ['verify', '--pack', packOutput, '--json'], {
+      cwd: targetRoot,
+      env,
+    }),
+  );
+  const packInspection = JSON.parse(
+    run(binary, ['inspect', '--pack', packOutput, '--json'], {
+      cwd: targetRoot,
+      env,
+    }),
+  );
+  const unchangedImpact = JSON.parse(
+    run(
+      binary,
+      ['impact', '--since', packOutput, '--project', project, '--json'],
+      { cwd: targetRoot, env },
+    ),
+  );
+  if (
+    packReceipt.verdict !== 'pass' ||
+    packVerification.valid !== true ||
+    packInspection.counts.routes !== 2 ||
+    unchangedImpact.affectedNodes.length !== 0
+  )
+    throw new Error('repository pack compile/verify/impact contract failed');
+  const changedProject = path.join(
+    targetRoot,
+    'fixtures',
+    'repository-small-next',
+    'project.json',
+  );
+  const changedImpact = JSON.parse(
+    run(
+      binary,
+      ['impact', '--since', packOutput, '--project', changedProject, '--json'],
+      { cwd: targetRoot, env },
+    ),
+  );
+  if (
+    JSON.stringify(changedImpact.changedSources) !==
+      JSON.stringify(['src/runtime.rs']) ||
+    !changedImpact.affectedClaims.includes('small.claim.greeting') ||
+    !changedImpact.affectedDocuments.includes('small.doc.guide') ||
+    changedImpact.affectedRoutes.length !== 2
+  )
+    throw new Error('changed repository impact closure is incomplete');
+  return { repositoryFixture, packOutput, packReceipt, changedProject };
+}
+
+function prepareStandaloneRuntime(targetRoot) {
+  const canonicalTargetRoot = fs.realpathSync(targetRoot);
+  const extractedFiles = copyExtraction(targetRoot);
+  const { cargo, originalPath } = resolveCargo();
+  const { env, removed } = cleanEnvironment(targetRoot, originalPath);
+  const manifest = path.join(targetRoot, 'Cargo.toml');
+  run(
+    process.execPath,
+    [path.join(targetRoot, 'tooling', 'check-schema-set.mjs')],
+    { cwd: targetRoot, env },
+  );
+  run(cargo, ['build', '--locked', '--manifest-path', manifest], {
+    cwd: targetRoot,
+    env,
+  });
+  run(cargo, ['test', '--locked', '--manifest-path', manifest], {
+    cwd: targetRoot,
+    env,
+  });
+  const thinBinary = path.join(
+    targetRoot,
+    'target',
+    'debug',
+    process.platform === 'win32' ? 'xinfa.exe' : 'xinfa',
+  );
+  const trunkTarget = path.join(targetRoot, 'trunk-target');
+  run(
+    cargo,
+    [
+      'build',
+      '--locked',
+      '--manifest-path',
+      path.join(ROOT, '..', 'Cargo.toml'),
+      '-p',
+      'kungfu-trunk',
+    ],
+    {
+      cwd: path.join(ROOT, '..'),
+      env: { ...env, CARGO_TARGET_DIR: trunkTarget },
+    },
+  );
+  const trunk = path.join(
+    trunkTarget,
+    'debug',
+    process.platform === 'win32' ? 'kungfu-trunk.exe' : 'kungfu-trunk',
+  );
+  const binary = writeTrunkEntry(targetRoot, trunk);
+  for (const args of [
+    ['--version'],
+    ['contract', '--json'],
+    ['schema', 'task-chart'],
+    [
+      'validate',
+      '--project',
+      path.join(targetRoot, 'fixtures', 'project-alpha.json'),
+      '--json',
+    ],
+    [
+      'compile',
+      '--project',
+      path.join(targetRoot, 'fixtures', 'project-alpha.json'),
+      '--json',
+    ],
+  ])
+    assertByteParity(thinBinary, binary, args, { cwd: targetRoot, env });
+  const version = run(binary, ['--version'], { cwd: targetRoot, env });
+  const contractA = run(binary, ['contract', '--json'], {
+    cwd: targetRoot,
+    env,
+  });
+  const contractB = run(binary, ['contract', '--json'], {
+    cwd: targetRoot,
+    env,
+  });
+  if (contractA !== contractB) throw new Error('contract output is not stable');
+  return {
+    canonicalTargetRoot,
+    extractedFiles,
+    env,
+    removed,
+    binary,
+    version,
+    contractA,
+  };
+}
+
+function qualifyStateDiagnostics(binary, targetRoot, canonicalTargetRoot, env) {
+  const diagnostic = JSON.parse(
+    run(binary, ['diagnose', '--json'], { cwd: targetRoot, env }),
+  );
+  if (
+    diagnostic.stateHome !== path.join(canonicalTargetRoot, '.xinfa') ||
+    diagnostic.cacheHome !==
+      path.join(canonicalTargetRoot, '.xinfa', 'cache') ||
+    diagnostic.writesState !== false
+  )
+    throw new Error(
+      'default state diagnostic violates the standalone contract',
+    );
+  const overrideEnv = {
+    ...env,
+    XINFA_STATE_HOME: path.join(targetRoot, 'state-override'),
+    XINFA_CACHE_HOME: path.join(targetRoot, 'cache-override'),
+  };
+  const overrideDiagnostic = JSON.parse(
+    run(binary, ['diagnose', '--json'], {
+      cwd: targetRoot,
+      env: overrideEnv,
+    }),
+  );
+  if (
+    overrideDiagnostic.stateSource !== 'environment' ||
+    overrideDiagnostic.cacheSource !== 'environment' ||
+    overrideDiagnostic.writesState !== false
+  )
+    throw new Error('state overrides violate the standalone contract');
+  if (
+    [
+      diagnostic.stateHome,
+      overrideDiagnostic.stateHome,
+      overrideDiagnostic.cacheHome,
+    ].some((directory) => fs.existsSync(directory))
+  )
+    throw new Error('read-only diagnostics created state or cache directories');
+}
+
+function assertAtlasContract(evidence) {
+  const {
+    atlasReceipt,
+    packReceipt,
+    atlasVerification,
+    atlasInspection,
+    atlasDiff,
+    atlasImpact,
+    importedReceipt,
+    legacyPackBytes,
+    importedPackBytes,
+    humanView,
+    agentView,
+  } = evidence;
+  if (
+    atlasReceipt.verdict !== 'pass' ||
+    atlasReceipt.context_pack_root !== packReceipt.packRoot ||
+    atlasReceipt.atlas_root === packReceipt.packRoot ||
+    atlasVerification.valid !== true ||
+    atlasInspection.kind !== 'xinfa.atlas/v1' ||
+    atlasDiff.unchanged !== true ||
+    JSON.stringify(atlasImpact.impact.changedSources) !==
+      JSON.stringify(['src/runtime.rs']) ||
+    importedReceipt.atlas_root !== atlasReceipt.atlas_root ||
+    !legacyPackBytes.equals(importedPackBytes) ||
+    humanView.atlas_root !== agentView.atlas_root ||
+    JSON.stringify(humanView.shared) !== JSON.stringify(agentView.shared)
+  ) {
+    throw new Error(
+      'Xinfa Atlas compile/verify/diff/impact/import contract failed',
+    );
+  }
+}
+
+function assertEpisodeContract({
+  episodeReceipt,
+  atlasReceipt,
+  episodeVerification,
+}) {
+  if (
+    episodeReceipt.verdict !== 'pass' ||
+    episodeReceipt.beforeAtlasRoot !== atlasReceipt.atlas_root ||
+    episodeReceipt.resultAtlasRoot === atlasReceipt.atlas_root ||
+    episodeReceipt.reviewChart?.schema !== 'xinfa.review-chart/v1' ||
+    episodeReceipt.reviewChart?.episodeRoots?.length !== 1 ||
+    episodeReceipt.fullIncrementalEquivalent !== true ||
+    episodeReceipt.cacheUsed !== false ||
+    episodeVerification.valid !== true
+  ) {
+    throw new Error('Episode evidence successor Atlas contract failed');
+  }
+}
+
+function assertProjectionParity({ humanProjection, chart, guiProjection }) {
+  for (const field of [
+    'atlas_root',
+    'cut_root',
+    'evidence',
+    'atlas_omissions',
+  ]) {
+    const humanValue =
+      field === 'atlas_root' || field === 'cut_root'
+        ? humanProjection[field]
+        : humanProjection.parity[field];
+    const chartValue =
+      field === 'atlas_root' || field === 'cut_root'
+        ? chart[field]
+        : chart.parity[field];
+    const guiValue =
+      field === 'atlas_root' || field === 'cut_root'
+        ? guiProjection[field]
+        : guiProjection.parity[field];
+    if (
+      JSON.stringify(humanValue) !== JSON.stringify(chartValue) ||
+      JSON.stringify(humanValue) !== JSON.stringify(guiValue)
+    ) {
+      throw new Error(`projection parity diverged at ${field}`);
+    }
+  }
+}
+
+function assertProjectionContract(evidence) {
+  const {
+    humanProjection,
+    guiProjection,
+    chart,
+    chartInspection,
+    chartVerification,
+    degraded,
+    expansion,
+    repositoryFixture,
+  } = evidence;
+  if (
+    humanProjection.schema !== 'xinfa.human-view/v1' ||
+    guiProjection.schema !== 'xinfa.gui-view/v1' ||
+    chart.schema !== 'xinfa.task-chart/v1' ||
+    chart.status !== 'complete' ||
+    chartInspection.valid_structure !== true ||
+    chartVerification.valid !== true ||
+    degraded.status !== 'degraded' ||
+    degraded.omissions.length === 0 ||
+    expansion.atlas_root !== degraded.atlas_root ||
+    expansion.cut_root !== degraded.cut_root ||
+    expansion.predecessor_root !== degraded.projection_root ||
+    chart.materialization.provider_input !== 'excluded' ||
+    chart.materialization.promotion.same_cut_allowed !== false ||
+    fs.existsSync(path.join(repositoryFixture, '.xinfa', 'generated'))
+  ) {
+    throw new Error(
+      'bounded projection, expansion, or ownership contract failed',
+    );
+  }
+}
+
+function assertRejectedProjectionInput({ compile, receipt, code, output }) {
+  if (
+    compile.status !== 1 ||
+    !receipt.diagnostics?.some((item) => item.code === code) ||
+    (output && fs.existsSync(output))
+  ) {
+    throw new Error(
+      code === 'generated-projection-input'
+        ? 'generated projection feedback was not rejected'
+        : 'malicious repository did not fail closed without output',
+    );
+  }
+}
+
+function assertStandaloneContract(stage, evidence) {
+  if (stage === 'atlas') return assertAtlasContract(evidence);
+  if (stage === 'episode') return assertEpisodeContract(evidence);
+  if (stage === 'parity') return assertProjectionParity(evidence);
+  if (stage === 'projection') return assertProjectionContract(evidence);
+  if (stage === 'rejected-input')
+    return assertRejectedProjectionInput(evidence);
+  throw new Error(`unknown standalone contract stage: ${stage}`);
+}
+
 function main() {
   const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), PREFIX));
   try {
-    const canonicalTargetRoot = fs.realpathSync(targetRoot);
-    const extractedFiles = copyExtraction(targetRoot);
-    const { cargo, originalPath } = resolveCargo();
-    const { env, removed } = cleanEnvironment(targetRoot, originalPath);
-    const manifest = path.join(targetRoot, 'Cargo.toml');
-    run(
-      process.execPath,
-      [path.join(targetRoot, 'tooling', 'check-schema-set.mjs')],
-      { cwd: targetRoot, env },
-    );
-    run(cargo, ['build', '--locked', '--manifest-path', manifest], {
-      cwd: targetRoot,
+    const {
+      canonicalTargetRoot,
+      extractedFiles,
       env,
-    });
-    run(cargo, ['test', '--locked', '--manifest-path', manifest], {
-      cwd: targetRoot,
-      env,
-    });
-
-    const thinBinary = path.join(
-      targetRoot,
-      'target',
-      'debug',
-      process.platform === 'win32' ? 'xinfa.exe' : 'xinfa',
-    );
-    const trunkTarget = path.join(targetRoot, 'trunk-target');
-    run(
-      cargo,
-      [
-        'build',
-        '--locked',
-        '--manifest-path',
-        path.join(ROOT, '..', 'Cargo.toml'),
-        '-p',
-        'kungfu-trunk',
-      ],
-      {
-        cwd: path.join(ROOT, '..'),
-        env: { ...env, CARGO_TARGET_DIR: trunkTarget },
-      },
-    );
-    const trunk = path.join(
-      trunkTarget,
-      'debug',
-      process.platform === 'win32' ? 'kungfu-trunk.exe' : 'kungfu-trunk',
-    );
-    const binary = writeTrunkEntry(targetRoot, trunk);
-    for (const args of [
-      ['--version'],
-      ['contract', '--json'],
-      ['schema', 'task-chart'],
-      [
-        'validate',
-        '--project',
-        path.join(targetRoot, 'fixtures', 'project-alpha.json'),
-        '--json',
-      ],
-      [
-        'compile',
-        '--project',
-        path.join(targetRoot, 'fixtures', 'project-alpha.json'),
-        '--json',
-      ],
-    ]) {
-      assertByteParity(thinBinary, binary, args, { cwd: targetRoot, env });
-    }
-    const version = run(binary, ['--version'], { cwd: targetRoot, env });
-    const contractA = run(binary, ['contract', '--json'], {
-      cwd: targetRoot,
-      env,
-    });
-    const contractB = run(binary, ['contract', '--json'], {
-      cwd: targetRoot,
-      env,
-    });
-    if (contractA !== contractB)
-      throw new Error('contract output is not stable');
-
-    const projectSchema = JSON.parse(
-      run(binary, ['schema', 'project'], { cwd: targetRoot, env }),
-    );
-    const contextIrSchema = JSON.parse(
-      run(binary, ['schema', 'context-ir'], { cwd: targetRoot, env }),
-    );
-    const atlasSchema = JSON.parse(
-      run(binary, ['schema', 'atlas'], { cwd: targetRoot, env }),
-    );
-    const atlasViewSchema = JSON.parse(
-      run(binary, ['schema', 'atlas-view'], { cwd: targetRoot, env }),
-    );
-    const humanViewSchema = JSON.parse(
-      run(binary, ['schema', 'human-view'], { cwd: targetRoot, env }),
-    );
-    const taskChartSchema = JSON.parse(
-      run(binary, ['schema', 'task-chart'], { cwd: targetRoot, env }),
-    );
-    const guiViewSchema = JSON.parse(
-      run(binary, ['schema', 'gui-view'], { cwd: targetRoot, env }),
-    );
-    const projectionRecipeSchema = JSON.parse(
-      run(binary, ['schema', 'projection-recipe'], {
-        cwd: targetRoot,
-        env,
-      }),
-    );
-    const episodeProviderSubmissionSchema = JSON.parse(
-      run(binary, ['schema', 'episode-provider-submission'], {
-        cwd: targetRoot,
-        env,
-      }),
-    );
-    const reviewChartSchema = JSON.parse(
-      run(binary, ['schema', 'review-chart'], { cwd: targetRoot, env }),
-    );
-    if (
-      projectSchema.$id !== 'https://xinfa.dev/schema/project-v1.schema.json' ||
-      contextIrSchema.$id !==
-        'https://xinfa.dev/schema/context-ir-v1.schema.json' ||
-      atlasSchema.$id !== 'https://xinfa.dev/schema/atlas-v1.schema.json' ||
-      atlasViewSchema.$id !==
-        'https://xinfa.dev/schema/atlas-view-v1.schema.json' ||
-      humanViewSchema.$id !==
-        'https://xinfa.dev/schema/human-view-v1.schema.json' ||
-      taskChartSchema.$id !==
-        'https://xinfa.dev/schema/task-chart-v1.schema.json' ||
-      guiViewSchema.$id !==
-        'https://xinfa.dev/schema/gui-view-v1.schema.json' ||
-      projectionRecipeSchema.$id !==
-        'https://xinfa.dev/schema/projection-recipe-v1.schema.json' ||
-      episodeProviderSubmissionSchema.$id !==
-        'https://xinfa.dev/schema/episode-provider-submission-v1.schema.json' ||
-      reviewChartSchema.$id !==
-        'https://xinfa.dev/schema/review-chart-v1.schema.json'
-    ) {
-      throw new Error('public schema discovery returned unexpected identities');
-    }
-
-    const project = path.join(targetRoot, 'fixtures', 'project-alpha.json');
-    const validation = JSON.parse(
-      run(binary, ['validate', '--project', project, '--json'], {
-        cwd: targetRoot,
-        env,
-      }),
-    );
-    if (
-      validation.valid !== true ||
-      validation.qualifying !== false ||
-      validation.selfCertified !== false
-    ) {
-      throw new Error('project validation receipt crossed its proof boundary');
-    }
-    const invalidProject = path.join(targetRoot, 'invalid-project.json');
-    const invalidValue = JSON.parse(fs.readFileSync(project, 'utf8'));
-    invalidValue.schema = 'xinfa.project/v2';
-    fs.writeFileSync(invalidProject, `${JSON.stringify(invalidValue)}\n`);
-    const invalidValidation = spawnSync(
+      removed,
       binary,
-      ['validate', '--project', invalidProject, '--json'],
-      {
-        cwd: targetRoot,
-        env,
-        encoding: 'utf8',
-        shell: process.platform === 'win32',
-      },
-    );
-    const invalidReceipt = JSON.parse(invalidValidation.stdout || '{}');
-    if (
-      invalidValidation.status !== 1 ||
-      invalidReceipt.valid !== false ||
-      !invalidReceipt.diagnostics?.some(
-        (diagnostic) => diagnostic.code === 'unsupported-version',
-      )
-    ) {
-      throw new Error('invalid project did not fail with its stable receipt');
-    }
-    const canonicalA = run(
-      binary,
-      ['canonicalize', '--project', project, '--json'],
-      { cwd: targetRoot, env },
-    );
-    const canonicalB = run(
-      binary,
-      ['canonicalize', '--project', project, '--json'],
-      { cwd: targetRoot, env },
-    );
-    if (canonicalA !== canonicalB)
-      throw new Error('project canonicalization is not byte stable');
-    const compiled = JSON.parse(
-      run(binary, ['compile', '--project', project, '--json'], {
-        cwd: targetRoot,
-        env,
-      }),
-    );
-    if (
-      compiled.schema !== 'xinfa.context-ir/v1' ||
-      compiled.routes.length !== 2 ||
-      compiled.routes[0].authorityRoot !== compiled.routes[1].authorityRoot ||
-      compiled.routes[0].status !== compiled.routes[1].status
-    ) {
-      throw new Error('compiled dual-reader route parity failed');
-    }
+      version,
+      contractA,
+    } = prepareStandaloneRuntime(targetRoot);
 
-    const repositoryFixture = path.join(
+    const {
+      projectSchema,
+      contextIrSchema,
+      humanViewSchema,
+      taskChartSchema,
+      guiViewSchema,
+      projectionRecipeSchema,
+      episodeProviderSubmissionSchema,
+      reviewChartSchema,
+    } = qualifyPublicSchemas(binary, targetRoot, env);
+
+    const { validation, compiled } = qualifyProjectContract(
+      binary,
       targetRoot,
-      'fixtures',
-      'repository-small',
+      env,
     );
-    const packOutput = path.join(targetRoot, 'pack-output');
-    const packReceipt = JSON.parse(
-      run(
-        binary,
-        [
-          'compile',
-          '--project',
-          path.join(repositoryFixture, 'project.json'),
-          '--output',
-          packOutput,
-          '--json',
-        ],
-        { cwd: targetRoot, env },
-      ),
-    );
-    const packVerification = JSON.parse(
-      run(binary, ['verify', '--pack', packOutput, '--json'], {
-        cwd: targetRoot,
-        env,
-      }),
-    );
-    const packInspection = JSON.parse(
-      run(binary, ['inspect', '--pack', packOutput, '--json'], {
-        cwd: targetRoot,
-        env,
-      }),
-    );
-    const unchangedImpact = JSON.parse(
-      run(
-        binary,
-        [
-          'impact',
-          '--since',
-          packOutput,
-          '--project',
-          path.join(repositoryFixture, 'project.json'),
-          '--json',
-        ],
-        { cwd: targetRoot, env },
-      ),
-    );
-    if (
-      packReceipt.verdict !== 'pass' ||
-      packVerification.valid !== true ||
-      packInspection.counts.routes !== 2 ||
-      unchangedImpact.affectedNodes.length !== 0
-    ) {
-      throw new Error('repository pack compile/verify/impact contract failed');
-    }
-    const changedProject = path.join(
-      targetRoot,
-      'fixtures',
-      'repository-small-next',
-      'project.json',
-    );
-    const changedImpact = JSON.parse(
-      run(
-        binary,
-        [
-          'impact',
-          '--since',
-          packOutput,
-          '--project',
-          changedProject,
-          '--json',
-        ],
-        { cwd: targetRoot, env },
-      ),
-    );
-    if (
-      JSON.stringify(changedImpact.changedSources) !==
-        JSON.stringify(['src/runtime.rs']) ||
-      !changedImpact.affectedClaims.includes('small.claim.greeting') ||
-      !changedImpact.affectedDocuments.includes('small.doc.guide') ||
-      changedImpact.affectedRoutes.length !== 2
-    ) {
-      throw new Error('changed repository impact closure is incomplete');
-    }
+
+    const { repositoryFixture, packOutput, packReceipt, changedProject } =
+      qualifyRepositoryPack(binary, targetRoot, env);
 
     const atlasOutput = path.join(targetRoot, 'atlas-output');
     const atlasReceipt = JSON.parse(
@@ -521,24 +693,19 @@ function main() {
     const agentView = JSON.parse(
       fs.readFileSync(path.join(atlasOutput, 'views', 'agent.json'), 'utf8'),
     );
-    if (
-      atlasReceipt.verdict !== 'pass' ||
-      atlasReceipt.context_pack_root !== packReceipt.packRoot ||
-      atlasReceipt.atlas_root === packReceipt.packRoot ||
-      atlasVerification.valid !== true ||
-      atlasInspection.kind !== 'xinfa.atlas/v1' ||
-      atlasDiff.unchanged !== true ||
-      JSON.stringify(atlasImpact.impact.changedSources) !==
-        JSON.stringify(['src/runtime.rs']) ||
-      importedReceipt.atlas_root !== atlasReceipt.atlas_root ||
-      !legacyPackBytes.equals(importedPackBytes) ||
-      humanView.atlas_root !== agentView.atlas_root ||
-      JSON.stringify(humanView.shared) !== JSON.stringify(agentView.shared)
-    ) {
-      throw new Error(
-        'Xinfa Atlas compile/verify/diff/impact/import contract failed',
-      );
-    }
+    assertStandaloneContract('atlas', {
+      atlasReceipt,
+      packReceipt,
+      atlasVerification,
+      atlasInspection,
+      atlasDiff,
+      atlasImpact,
+      importedReceipt,
+      legacyPackBytes,
+      importedPackBytes,
+      humanView,
+      agentView,
+    });
 
     const episodeAtlas = path.join(targetRoot, 'episode-atlas');
     const episodeReceipt = JSON.parse(
@@ -566,18 +733,11 @@ function main() {
         env,
       }),
     );
-    if (
-      episodeReceipt.verdict !== 'pass' ||
-      episodeReceipt.beforeAtlasRoot !== atlasReceipt.atlas_root ||
-      episodeReceipt.resultAtlasRoot === atlasReceipt.atlas_root ||
-      episodeReceipt.reviewChart?.schema !== 'xinfa.review-chart/v1' ||
-      episodeReceipt.reviewChart?.episodeRoots?.length !== 1 ||
-      episodeReceipt.fullIncrementalEquivalent !== true ||
-      episodeReceipt.cacheUsed !== false ||
-      episodeVerification.valid !== true
-    ) {
-      throw new Error('Episode evidence successor Atlas contract failed');
-    }
+    assertStandaloneContract('episode', {
+      episodeReceipt,
+      atlasReceipt,
+      episodeVerification,
+    });
 
     const humanProjection = JSON.parse(
       run(
@@ -723,52 +883,21 @@ function main() {
         { cwd: targetRoot, env },
       ),
     );
-    const parityFields = [
-      'atlas_root',
-      'cut_root',
-      'evidence',
-      'atlas_omissions',
-    ];
-    for (const field of parityFields) {
-      const humanValue =
-        field === 'atlas_root' || field === 'cut_root'
-          ? humanProjection[field]
-          : humanProjection.parity[field];
-      const chartValue =
-        field === 'atlas_root' || field === 'cut_root'
-          ? chart[field]
-          : chart.parity[field];
-      const guiValue =
-        field === 'atlas_root' || field === 'cut_root'
-          ? guiProjection[field]
-          : guiProjection.parity[field];
-      if (
-        JSON.stringify(humanValue) !== JSON.stringify(chartValue) ||
-        JSON.stringify(humanValue) !== JSON.stringify(guiValue)
-      ) {
-        throw new Error(`projection parity diverged at ${field}`);
-      }
-    }
-    if (
-      humanProjection.schema !== 'xinfa.human-view/v1' ||
-      guiProjection.schema !== 'xinfa.gui-view/v1' ||
-      chart.schema !== 'xinfa.task-chart/v1' ||
-      chart.status !== 'complete' ||
-      chartInspection.valid_structure !== true ||
-      chartVerification.valid !== true ||
-      degraded.status !== 'degraded' ||
-      degraded.omissions.length === 0 ||
-      expansion.atlas_root !== degraded.atlas_root ||
-      expansion.cut_root !== degraded.cut_root ||
-      expansion.predecessor_root !== degraded.projection_root ||
-      chart.materialization.provider_input !== 'excluded' ||
-      chart.materialization.promotion.same_cut_allowed !== false ||
-      fs.existsSync(path.join(repositoryFixture, '.xinfa', 'generated'))
-    ) {
-      throw new Error(
-        'bounded projection, expansion, or ownership contract failed',
-      );
-    }
+    assertStandaloneContract('parity', {
+      humanProjection,
+      chart,
+      guiProjection,
+    });
+    assertStandaloneContract('projection', {
+      humanProjection,
+      guiProjection,
+      chart,
+      chartInspection,
+      chartVerification,
+      degraded,
+      expansion,
+      repositoryFixture,
+    });
 
     const feedbackProject = JSON.parse(
       fs.readFileSync(path.join(repositoryFixture, 'project.json'), 'utf8'),
@@ -810,14 +939,12 @@ function main() {
       },
     );
     const feedbackReceipt = JSON.parse(feedbackCompile.stdout || '{}');
-    if (
-      feedbackCompile.status !== 1 ||
-      !feedbackReceipt.diagnostics?.some(
-        (item) => item.code === 'generated-projection-input',
-      )
-    ) {
-      throw new Error('generated projection feedback was not rejected');
-    }
+    assertStandaloneContract('rejected-input', {
+      compile: feedbackCompile,
+      receipt: feedbackReceipt,
+      code: 'generated-projection-input',
+      output: null,
+    });
     const maliciousOutput = path.join(targetRoot, 'malicious-output');
     const maliciousProject = path.join(
       targetRoot,
@@ -843,59 +970,14 @@ function main() {
       },
     );
     const maliciousReceipt = JSON.parse(maliciousCompile.stdout || '{}');
-    if (
-      maliciousCompile.status !== 1 ||
-      !maliciousReceipt.diagnostics?.some(
-        (item) => item.code === 'sensitive-path',
-      ) ||
-      fs.existsSync(maliciousOutput)
-    ) {
-      throw new Error(
-        'malicious repository did not fail closed without output',
-      );
-    }
+    assertStandaloneContract('rejected-input', {
+      compile: maliciousCompile,
+      receipt: maliciousReceipt,
+      code: 'sensitive-path',
+      output: maliciousOutput,
+    });
 
-    const diagnostic = JSON.parse(
-      run(binary, ['diagnose', '--json'], { cwd: targetRoot, env }),
-    );
-    if (
-      diagnostic.stateHome !== path.join(canonicalTargetRoot, '.xinfa') ||
-      diagnostic.cacheHome !==
-        path.join(canonicalTargetRoot, '.xinfa', 'cache') ||
-      diagnostic.writesState !== false
-    ) {
-      throw new Error(
-        'default state diagnostic violates the standalone contract',
-      );
-    }
-
-    const overrideEnv = {
-      ...env,
-      XINFA_STATE_HOME: path.join(targetRoot, 'state-override'),
-      XINFA_CACHE_HOME: path.join(targetRoot, 'cache-override'),
-    };
-    const overrideDiagnostic = JSON.parse(
-      run(binary, ['diagnose', '--json'], {
-        cwd: targetRoot,
-        env: overrideEnv,
-      }),
-    );
-    if (
-      overrideDiagnostic.stateSource !== 'environment' ||
-      overrideDiagnostic.cacheSource !== 'environment' ||
-      overrideDiagnostic.writesState !== false
-    ) {
-      throw new Error('state overrides violate the standalone contract');
-    }
-    if (
-      fs.existsSync(diagnostic.stateHome) ||
-      fs.existsSync(overrideDiagnostic.stateHome) ||
-      fs.existsSync(overrideDiagnostic.cacheHome)
-    ) {
-      throw new Error(
-        'read-only diagnostics created state or cache directories',
-      );
-    }
+    qualifyStateDiagnostics(binary, targetRoot, canonicalTargetRoot, env);
 
     const receipt = {
       schema: 'xinfa.standalone-smoke-receipt/v1',

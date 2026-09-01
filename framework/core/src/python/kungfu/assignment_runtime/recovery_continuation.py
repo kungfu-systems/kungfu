@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from kungfu import initiative_family
+from kungfu import initiative_family, work_authority
 from kungfu.agent import session_contract
 from kungfu.coordination import locks
 
@@ -17,8 +17,8 @@ JsonObject = dict[str, Any]
 CONTINUATION_SCHEMA = "kungfu.work.fresh-recovery-continuation/v1"
 CONTINUATION_INDEX_SCHEMA = "kungfu.work.fresh-recovery-continuation-index/v1"
 CONTINUATION_MODE = "resume/new-attempt"
-RECEIPT_SCHEMA = "kungfu.work.fresh-recovery-receipt/v1"
-_PROJECTION_KEYS = frozenset({"query_proof_root", "work_semantics"})
+RECEIPT_SCHEMA = "kungfu.work.fresh-recovery-receipt/v3"
+_continuation_actions = work_authority.continuation_actions
 
 
 def _root(value: Any) -> str:
@@ -26,7 +26,7 @@ def _root(value: Any) -> str:
 
 
 def _preserved_state(status: Mapping[str, Any]) -> JsonObject:
-    return {key: value for key, value in status.items() if key not in _PROJECTION_KEYS}
+    return work_authority.retained_assignment_authority(status)
 
 
 def _storage_root(runtime_dir: str | Path) -> Path:
@@ -54,19 +54,21 @@ def _write_exact_json(path: Path, value: Mapping[str, Any]) -> None:
 
 
 def _body(plan: Mapping[str, Any], receipt: Mapping[str, Any]) -> JsonObject:
+    decision = dict(receipt["continuationDecision"])
     return {
         "schema": CONTINUATION_SCHEMA,
         "state": "available",
         "continuationMode": CONTINUATION_MODE,
-        "freshRecoveryPlanRoot": str(plan.get("planRoot") or ""),
-        "freshRecoveryReceiptRoot": str(receipt.get("receiptRoot") or ""),
+        "freshRecoveryPlanRoot": str(plan["planRoot"]),
+        "freshRecoveryReceiptRoot": str(receipt["receiptRoot"]),
         "freshRecoveryReceipt": dict(receipt),
-        "workRef": session_contract.validate_work_ref(dict(plan.get("workRef", {}))),
-        "attempt": dict(plan.get("attempt") or {}),
-        "work": dict(plan.get("work") or {}),
+        "workRef": session_contract.validate_work_ref(dict(plan["workRef"])),
+        "attempt": dict(plan["attempt"]),
+        "work": dict(plan["work"]),
         "writeAuthority": "none",
         "assignmentWrites": [],
-        "allowedNextActions": ["claim-completion"],
+        "continuationDecision": decision,
+        "allowedNextActions": _continuation_actions(decision),
         "forbiddenEffects": ["admit", "claim", "kickoff"],
     }
 
@@ -150,7 +152,6 @@ def _identity_checks(
         continuation.get("continuationRoot") == _root(body),
         continuation.get("writeAuthority") == "none",
         continuation.get("assignmentWrites") == [],
-        continuation.get("allowedNextActions") == ["claim-completion"],
         set(continuation.get("forbiddenEffects") or [])
         == {"admit", "claim", "kickoff"},
         not lifecycle.get("active_lease"),
@@ -164,6 +165,15 @@ def _identity_checks(
         work_ref.get("entityRoot") == work.get("assignmentRoot"),
         work_ref.get("systemTimeCut") == work.get("systemTimeCut"),
         str(continuation.get("freshRecoveryPlanRoot") or "").startswith("sha256:"),
+    )
+
+
+def _decision_checks(continuation: Mapping[str, Any]) -> tuple[bool, ...]:
+    decision = dict(continuation.get("continuationDecision", {}))
+    receipt = dict(continuation.get("freshRecoveryReceipt", {}))
+    return (
+        decision == receipt.get("continuationDecision"),
+        continuation.get("allowedNextActions") == _continuation_actions(decision),
     )
 
 
@@ -207,6 +217,7 @@ def resolve(
     attempt = dict(continuation.get("attempt", {}))
     checks = (
         *_identity_checks(continuation, initiative_id, assignment_id, lifecycle),
+        *_decision_checks(continuation),
         *_receipt_checks(continuation),
         bool(attempt.get("newSessionAttemptId")),
         attempt.get("newSessionAttemptId") != attempt.get("previousSessionAttemptId"),

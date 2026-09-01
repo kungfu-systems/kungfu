@@ -9,12 +9,14 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 import { observeNativeToolchain } from './affected-native-proof.mjs';
+import * as selfTestSupport from './affected-native-self-test-support.mjs';
 import telemetry from './candidate-timeline-events.cjs';
 import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 import { parseDocument } from './readonly-source-toolchain.mjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 
 const { measureCandidateStage } = telemetry;
+const noNativeWork = selfTestSupport.assertNoNativeWork;
 
 const root = process.cwd();
 const coreRoot = path.join(root, 'framework', 'core');
@@ -1343,37 +1345,8 @@ export function verifyAffectedNativeReceipt(receipt) {
   return true;
 }
 
-function selfTest(authority, buildAuthority) {
-  let passed = 0;
-  const expect = (name, action, pattern = null) => {
-    try {
-      action();
-      if (pattern) throw new Error(`${name}: expected failure`);
-      console.log(`  ok: ${name}`);
-      passed += 1;
-    } catch (error) {
-      if (!pattern || !pattern.test(error.message)) throw error;
-      console.log(`  ok: ${name}`);
-      passed += 1;
-    }
-  };
-  const implementation = [
-    'framework/core/src/libkungfu/src/runtime/storage/query_render.cpp',
-  ];
-  const first = planFromChanged(
-    implementation,
-    authority,
-    buildAuthority,
-    'base',
-    'head',
-  );
-  const second = planFromChanged(
-    implementation,
-    authority,
-    buildAuthority,
-    'base',
-    'head',
-  );
+function selfTestGroup1(context) {
+  const { authority, buildAuthority, expect, first, second } = context;
   expect('deterministic implementation plan', () => {
     if (stableJson(first) !== stableJson(second)) throw new Error('plan drift');
     if (!first.directComponents.includes('runtime-storage-services'))
@@ -1456,6 +1429,10 @@ function selfTest(authority, buildAuthority) {
       }
     }
   });
+}
+
+function selfTestGroup2(context) {
+  const { authority, buildAuthority, expect, first } = context;
   expect('Core uv lock changes expand native and SDK qualification', () => {
     const plan = planFromChanged(
       ['framework/core/uv.lock'],
@@ -1525,6 +1502,10 @@ function selfTest(authority, buildAuthority) {
       throw new Error('cross-language native fixture was not classified');
     }
   });
+}
+
+function selfTestGroup3(context) {
+  const { authority, buildAuthority, expect } = context;
   expect('native schema artifacts propagate through contract owners', () => {
     for (const relative of [
       'framework/core/src/libkungfu/schemas/work_events.bfbs',
@@ -1574,14 +1555,7 @@ function selfTest(authority, buildAuthority) {
         'base',
         'head',
       );
-      if (
-        plan.platformTier !== 'none' ||
-        plan.profile !== null ||
-        plan.targets.length ||
-        plan.tests.length
-      ) {
-        throw new Error('outside-Core plan scheduled native work');
-      }
+      noNativeWork(plan, 'outside-Core plan scheduled native work');
     },
   );
   expect('Python source changes do not invent native work', () => {
@@ -1595,19 +1569,16 @@ function selfTest(authority, buildAuthority) {
       'base',
       'head',
     );
-    if (
-      plan.platformTier !== 'none' ||
-      plan.profile !== null ||
-      plan.targets.length ||
-      plan.tests.length
-    ) {
-      throw new Error('Python surface scheduled native work');
-    }
+    noNativeWork(plan, 'Python surface scheduled native work');
     const kinds = new Set(plan.reasons.map(({ kind }) => kind));
     if (kinds.size !== 1 || !kinds.has('core-python-source')) {
       throw new Error('Python source classification drifted');
     }
   });
+}
+
+function selfTestGroup4(context) {
+  const { authority, buildAuthority, expect } = context;
   expect('runtime packaging changes do not invent native work', () => {
     const plan = planFromChanged(
       ['framework/core/.gyp/run-freeze.js'],
@@ -1616,14 +1587,7 @@ function selfTest(authority, buildAuthority) {
       'base',
       'head',
     );
-    if (
-      plan.platformTier !== 'none' ||
-      plan.profile !== null ||
-      plan.targets.length ||
-      plan.tests.length
-    ) {
-      throw new Error('runtime packaging scheduled native work');
-    }
+    noNativeWork(plan, 'runtime packaging scheduled native work');
     if (!plan.reasons.some(({ kind }) => kind === 'core-packaging-source')) {
       throw new Error('runtime packaging classification missing');
     }
@@ -1639,14 +1603,7 @@ function selfTest(authority, buildAuthority) {
       'base',
       'head',
     );
-    if (
-      plan.platformTier !== 'none' ||
-      plan.profile !== null ||
-      plan.targets.length ||
-      plan.tests.length
-    ) {
-      throw new Error('Core architecture check scheduled native work');
-    }
+    noNativeWork(plan, 'Core architecture check scheduled native work');
     if (!plan.reasons.some(({ kind }) => kind === 'core-architecture-check')) {
       throw new Error('Core architecture check classification missing');
     }
@@ -1685,6 +1642,10 @@ function selfTest(authority, buildAuthority) {
       ),
     /exactly one architecture component/,
   );
+}
+
+function selfTestGroup5(context) {
+  const { authority, buildAuthority, expect, first, sourceBoundPlan } = context;
   expect('native source outside tracked_roots is outside the authority', () => {
     const plan = planFromChanged(
       ['framework/core/slices/embedding/main.cpp'],
@@ -1755,6 +1716,10 @@ function selfTest(authority, buildAuthority) {
       throw new Error('unknown qualification source did not expand globally');
     }
   });
+}
+
+function selfTestGroup6(context) {
+  const { authority, buildAuthority, expect } = context;
   expect('authority dependency change expands globally', () => {
     for (const file of [
       'framework/core/architecture/layers.json',
@@ -1834,6 +1799,10 @@ function selfTest(authority, buildAuthority) {
     if (plan.targets.includes('kungfu_contracts'))
       throw new Error('INTERFACE target scheduled as a build goal');
   });
+}
+
+function selfTestGroup7(context) {
+  const { authority, buildAuthority, expect, first, sourceBoundPlan } = context;
   expect(
     'target deletion fails closed',
     () => {
@@ -1887,13 +1856,6 @@ function selfTest(authority, buildAuthority) {
     },
     /partition drift/,
   );
-  const sourceBoundPlan = planFromChanged(
-    ['docs/README.md'],
-    authority,
-    buildAuthority,
-    git('rev-parse', 'HEAD'),
-    git('rev-parse', 'HEAD'),
-  );
   expect('source-bound plan verifies before execution', () => {
     verifyAffectedNativePlan(sourceBoundPlan);
   });
@@ -1902,9 +1864,53 @@ function selfTest(authority, buildAuthority) {
     () => verifyAffectedNativePlan({ ...sourceBoundPlan, profile: 'full' }),
     /plan digest drift/,
   );
-  console.log(`[core-affected] ${passed} negative/determinism fixtures passed`);
 }
 
+function selfTest(authority, buildAuthority) {
+  const { expect, passed } = selfTestSupport.createSelfTestHarness();
+  const implementation = [
+    'framework/core/src/libkungfu/src/runtime/storage/query_render.cpp',
+  ];
+  const first = planFromChanged(
+    implementation,
+    authority,
+    buildAuthority,
+    'base',
+    'head',
+  );
+  const second = planFromChanged(
+    implementation,
+    authority,
+    buildAuthority,
+    'base',
+    'head',
+  );
+  const sourceBoundPlan = planFromChanged(
+    ['docs/README.md'],
+    authority,
+    buildAuthority,
+    git('rev-parse', 'HEAD'),
+    git('rev-parse', 'HEAD'),
+  );
+  const context = {
+    authority,
+    buildAuthority,
+    expect,
+    first,
+    second,
+    sourceBoundPlan,
+  };
+  selfTestGroup1(context);
+  selfTestGroup2(context);
+  selfTestGroup3(context);
+  selfTestGroup4(context);
+  selfTestGroup5(context);
+  selfTestGroup6(context);
+  selfTestGroup7(context);
+  console.log(
+    `[core-affected] ${passed()} negative/determinism fixtures passed`,
+  );
+}
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const authority = readJson(architecturePath);

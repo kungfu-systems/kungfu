@@ -276,58 +276,70 @@ export function ProjectFileTreeNavigation({
     [entries, onCopyNotice, root],
   );
 
-  React.useEffect(() => {
-    const onData = (chunk: Buffer | string) => {
-      const input = String(chunk);
-      const mouseEvents = decodeTerminalMouseInput(input);
-      if (mouseEvents.length > 0) {
-        for (const event of mouseEvents) {
-          if (
-            event.column < 1 ||
-            event.column > navigationWidth + 2 ||
-            event.row < topOffset ||
-            event.row > terminalCanvasRows(size.rows)
-          ) {
-            continue;
-          }
-          onWorkspacePointer();
-          const tab = projectNavigationTabAtPoint({
-            column: event.column,
-            row: event.row,
-            topOffset,
-            navigationWidth,
-          });
-          if (tab) {
-            if (event.kind === 'press' && event.button === 'left') {
-              if (tab === 'work') onOpenWork();
-              else onFocus();
-            }
-            continue;
-          }
-          if (!focused) continue;
-          onFocus();
-          if (event.kind === 'wheel') {
-            const delta = event.button === 'wheel-up' ? -1 : 1;
-            setSelected((current) =>
-              scrollListSelection({
-                current,
-                delta,
-                itemCount: entries.length,
-              }),
-            );
-            continue;
-          }
-          if (event.kind !== 'press' || event.button !== 'left') continue;
-          const rangeVisible = entries.length > visibleEntries.length;
-          const firstTreeRow = topOffset + 2 + (rangeVisible ? 1 : 0);
-          const offset = event.row - firstTreeRow;
-          if (offset < 0 || offset >= visibleEntries.length) continue;
-          const index = treeWindow.start + offset;
-          setSelected(index);
-          if (entries[index]?.kind === 'directory') activate(index);
+  const handleProjectFileMouse = React.useCallback(
+    (mouseEvents: ReturnType<typeof decodeTerminalMouseInput>) => {
+      for (const event of mouseEvents) {
+        if (
+          event.column < 1 ||
+          event.column > navigationWidth + 2 ||
+          event.row < topOffset ||
+          event.row > terminalCanvasRows(size.rows)
+        ) {
+          continue;
         }
-        return;
+        onWorkspacePointer();
+        const tab = projectNavigationTabAtPoint({
+          column: event.column,
+          row: event.row,
+          topOffset,
+          navigationWidth,
+        });
+        if (tab) {
+          if (event.kind === 'press' && event.button === 'left') {
+            if (tab === 'work') onOpenWork();
+            else onFocus();
+          }
+          continue;
+        }
+        if (!focused) continue;
+        onFocus();
+        if (event.kind === 'wheel') {
+          const delta = event.button === 'wheel-up' ? -1 : 1;
+          setSelected((current) =>
+            scrollListSelection({
+              current,
+              delta,
+              itemCount: entries.length,
+            }),
+          );
+          continue;
+        }
+        if (event.kind !== 'press' || event.button !== 'left') continue;
+        const rangeVisible = entries.length > visibleEntries.length;
+        const firstTreeRow = topOffset + 2 + (rangeVisible ? 1 : 0);
+        const offset = event.row - firstTreeRow;
+        if (offset < 0 || offset >= visibleEntries.length) continue;
+        const index = treeWindow.start + offset;
+        setSelected(index);
+        if (entries[index]?.kind === 'directory') activate(index);
       }
+    },
+    [
+      activate,
+      entries,
+      focused,
+      navigationWidth,
+      onFocus,
+      onOpenWork,
+      onWorkspacePointer,
+      size.rows,
+      topOffset,
+      treeWindow.start,
+      visibleEntries.length,
+    ],
+  );
+  const handleProjectFileKeyboard = React.useCallback(
+    (input: string) => {
       if (!focused || isInputCaptured()) return;
       if (input === 'q' || input === '\u0003') return exit();
       if (input === 'w' || input === 't' || input === '\u001b') {
@@ -360,29 +372,34 @@ export function ProjectFileTreeNavigation({
           setSelected(projectFileTreeParentIndex(entries, selected));
         }
       }
+    },
+    [
+      activate,
+      entries,
+      exit,
+      focused,
+      isInputCaptured,
+      onOpenLab,
+      onOpenProjects,
+      onOpenWork,
+      selected,
+    ],
+  );
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const input = String(chunk);
+      const mouseEvents = decodeTerminalMouseInput(input);
+      if (mouseEvents.length > 0) {
+        handleProjectFileMouse(mouseEvents);
+        return;
+      }
+      handleProjectFileKeyboard(input);
     };
     process.stdin.on('data', onData);
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [
-    activate,
-    entries,
-    exit,
-    focused,
-    isInputCaptured,
-    navigationWidth,
-    onFocus,
-    onOpenLab,
-    onOpenProjects,
-    onOpenWork,
-    onWorkspacePointer,
-    selected,
-    size.rows,
-    topOffset,
-    treeWindow.start,
-    visibleEntries.length,
-  ]);
+  }, [handleProjectFileKeyboard, handleProjectFileMouse]);
 
   return (
     <Box

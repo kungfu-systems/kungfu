@@ -61,6 +61,160 @@ function digest(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+/**
+ * @param {string} id
+ * @param {any} artifact
+ * @param {any} manifest
+ * @param {(condition: unknown, message: string) => void} check
+ * @param {string[]} failures
+ */
+function verifySpecArtifact(id, artifact, manifest, check, failures) {
+  let file;
+  try {
+    file = inside(distDir, artifact.path);
+  } catch (error) {
+    failures.push(error instanceof Error ? error.message : String(error));
+    return;
+  }
+  if (!fs.existsSync(file)) {
+    failures.push(`artifact ${id} is missing: ${artifact.path}`);
+    return;
+  }
+  const bytes = fs.readFileSync(file);
+  check(
+    digest(bytes) === artifact.artifact_root,
+    `artifact ${id} root drifted`,
+  );
+  check(
+    bytes.length === artifact.byte_length,
+    `artifact ${id} byte_length drifted`,
+  );
+  let generated;
+  try {
+    generated = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    failures.push(`artifact ${id} is not valid JSON`);
+    return;
+  }
+  check(
+    generated.schema === artifact.schema,
+    `artifact ${id} schema identity drifted`,
+  );
+  check(
+    JSON.stringify(generated.projection?.sources) ===
+      JSON.stringify(artifact.source_roots),
+    `artifact ${id} source bindings drifted`,
+  );
+  for (const source of artifact.source_roots) {
+    try {
+      const sourceFile = inside(repoRoot, source.path);
+      check(fs.existsSync(sourceFile), `artifact ${id} source is missing`);
+      if (fs.existsSync(sourceFile))
+        check(
+          digest(fs.readFileSync(sourceFile)) === source.root,
+          `artifact ${id} source root drifted: ${source.path}`,
+        );
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  const preimage = manifest.normative.preimage.artifacts[id];
+  check(
+    preimage?.path === artifact.path &&
+      preimage?.root === artifact.artifact_root,
+    `artifact ${id} is not exactly bound into the normative preimage`,
+  );
+}
+
+/**
+ * @param {any} manifest
+ * @param {(condition: unknown, message: string) => void} check
+ * @param {string[]} failures
+ */
+function verifySpecArtifacts(manifest, check, failures) {
+  for (const [id, artifact] of Object.entries(manifest.artifacts)) {
+    verifySpecArtifact(id, artifact, manifest, check, failures);
+  }
+}
+
+/**
+ * @param {ReaderJourneyGuide} guide
+ * @param {Set<string>} guideIds
+ * @param {(condition: unknown, message: string) => void} check
+ */
+function verifyReaderGuide(guide, guideIds, check) {
+  const guidePath = inside(distDir, guide.path);
+  const bytes = fs.readFileSync(guidePath);
+  check(
+    digest(bytes) === guide.content_root,
+    `reader guide root drifted: ${guide.id}`,
+  );
+  check(
+    bytes.length === guide.byte_length,
+    `reader guide byte_length drifted: ${guide.id}`,
+  );
+  for (const linked of [guide.previous, guide.next, ...(guide.related || [])])
+    check(
+      linked === null || guideIds.has(linked),
+      `reader guide ${guide.id} links unknown guide ${linked}`,
+    );
+  const markdown = bytes.toString('utf8');
+  for (const match of markdown.matchAll(/\]\(([^)]+)\)/gu)) {
+    const target = match[1].split('#', 1)[0];
+    if (!target || /^[a-z]+:/iu.test(target)) continue;
+    const linkedPath = path.resolve(path.dirname(guidePath), target);
+    check(
+      (linkedPath === distDir ||
+        linkedPath.startsWith(`${distDir}${path.sep}`)) &&
+        fs.existsSync(linkedPath),
+      `reader guide ${guide.id} has broken link: ${target}`,
+    );
+  }
+}
+
+/**
+ * @param {any} manifest
+ * @param {(condition: unknown, message: string) => void} check
+ * @param {string[]} failures
+ */
+function verifyReaderJourney(manifest, check, failures) {
+  try {
+    const journeyPath = inside(distDir, manifest.reader_journey.path);
+    const journeyBytes = fs.readFileSync(journeyPath);
+    check(
+      digest(journeyBytes) === manifest.reader_journey.content_root,
+      'reader journey index root drifted',
+    );
+    check(
+      journeyBytes.length === manifest.reader_journey.byte_length,
+      'reader journey index byte_length drifted',
+    );
+    const journey = /** @type {ReaderJourney} */ (
+      JSON.parse(journeyBytes.toString('utf8'))
+    );
+    check(
+      journey.schema === manifest.reader_journey.schema,
+      'reader journey schema drifted',
+    );
+    const guideIds = new Set(journey.guides.map((guide) => guide.id));
+    check(
+      guideIds.size === journey.guides.length,
+      'reader journey contains duplicate guide ids',
+    );
+    check(
+      journey.levels.flatMap((level) => level.guide_ids).length ===
+        journey.guides.length,
+      'reader journey levels do not cover every guide exactly once',
+    );
+    for (const guide of journey.guides)
+      verifyReaderGuide(guide, guideIds, check);
+  } catch (error) {
+    failures.push(
+      `reader journey verification failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function main() {
   /** @type {string[]} */
   const failures = [];
@@ -147,63 +301,7 @@ function main() {
     'normative root does not match its canonical preimage',
   );
 
-  for (const [id, artifact] of Object.entries(manifest.artifacts)) {
-    let file;
-    try {
-      file = inside(distDir, artifact.path);
-    } catch (error) {
-      failures.push(error instanceof Error ? error.message : String(error));
-      continue;
-    }
-    if (!fs.existsSync(file)) {
-      failures.push(`artifact ${id} is missing: ${artifact.path}`);
-      continue;
-    }
-    const bytes = fs.readFileSync(file);
-    check(
-      digest(bytes) === artifact.artifact_root,
-      `artifact ${id} root drifted`,
-    );
-    check(
-      bytes.length === artifact.byte_length,
-      `artifact ${id} byte_length drifted`,
-    );
-    let generated;
-    try {
-      generated = JSON.parse(bytes.toString('utf8'));
-    } catch {
-      failures.push(`artifact ${id} is not valid JSON`);
-      continue;
-    }
-    check(
-      generated.schema === artifact.schema,
-      `artifact ${id} schema identity drifted`,
-    );
-    check(
-      JSON.stringify(generated.projection?.sources) ===
-        JSON.stringify(artifact.source_roots),
-      `artifact ${id} source bindings drifted`,
-    );
-    for (const source of artifact.source_roots) {
-      try {
-        const sourceFile = inside(repoRoot, source.path);
-        check(fs.existsSync(sourceFile), `artifact ${id} source is missing`);
-        if (fs.existsSync(sourceFile))
-          check(
-            digest(fs.readFileSync(sourceFile)) === source.root,
-            `artifact ${id} source root drifted: ${source.path}`,
-          );
-      } catch (error) {
-        failures.push(error instanceof Error ? error.message : String(error));
-      }
-    }
-    const preimage = manifest.normative.preimage.artifacts[id];
-    check(
-      preimage?.path === artifact.path &&
-        preimage?.root === artifact.artifact_root,
-      `artifact ${id} is not exactly bound into the normative preimage`,
-    );
-  }
+  verifySpecArtifacts(manifest, check, failures);
 
   const registry = json(path.join(distDir, 'registry.json'));
   const errors = json(path.join(distDir, 'errors.json'));
@@ -278,72 +376,7 @@ function main() {
     fs.existsSync(inside(distDir, manifest.overview.path)),
     'overview is missing',
   );
-  try {
-    const journeyPath = inside(distDir, manifest.reader_journey.path);
-    const journeyBytes = fs.readFileSync(journeyPath);
-    check(
-      digest(journeyBytes) === manifest.reader_journey.content_root,
-      'reader journey index root drifted',
-    );
-    check(
-      journeyBytes.length === manifest.reader_journey.byte_length,
-      'reader journey index byte_length drifted',
-    );
-    const journey = /** @type {ReaderJourney} */ (
-      JSON.parse(journeyBytes.toString('utf8'))
-    );
-    check(
-      journey.schema === manifest.reader_journey.schema,
-      'reader journey schema drifted',
-    );
-    const guideIds = new Set(journey.guides.map((guide) => guide.id));
-    check(
-      guideIds.size === journey.guides.length,
-      'reader journey contains duplicate guide ids',
-    );
-    check(
-      journey.levels.flatMap((level) => level.guide_ids).length ===
-        journey.guides.length,
-      'reader journey levels do not cover every guide exactly once',
-    );
-    for (const guide of journey.guides) {
-      const guidePath = inside(distDir, guide.path);
-      const bytes = fs.readFileSync(guidePath);
-      check(
-        digest(bytes) === guide.content_root,
-        `reader guide root drifted: ${guide.id}`,
-      );
-      check(
-        bytes.length === guide.byte_length,
-        `reader guide byte_length drifted: ${guide.id}`,
-      );
-      for (const linked of [
-        guide.previous,
-        guide.next,
-        ...(guide.related || []),
-      ])
-        check(
-          linked === null || guideIds.has(linked),
-          `reader guide ${guide.id} links unknown guide ${linked}`,
-        );
-      const markdown = bytes.toString('utf8');
-      for (const match of markdown.matchAll(/\]\(([^)]+)\)/gu)) {
-        const target = match[1].split('#', 1)[0];
-        if (!target || /^[a-z]+:/iu.test(target)) continue;
-        const linkedPath = path.resolve(path.dirname(guidePath), target);
-        check(
-          (linkedPath === distDir ||
-            linkedPath.startsWith(`${distDir}${path.sep}`)) &&
-            fs.existsSync(linkedPath),
-          `reader guide ${guide.id} has broken link: ${target}`,
-        );
-      }
-    }
-  } catch (error) {
-    failures.push(
-      `reader journey verification failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
+  verifyReaderJourney(manifest, check, failures);
 
   if (failures.length) {
     console.error('[spec:verify] FAIL — authority bundle gate failed:');

@@ -399,6 +399,24 @@ def test_manager_projects_lifecycle_and_current_source_health(tmp_path):
     assert [view["id"] for view in managed["catalog"]["views"]] == ["week-table"]
 
 
+def test_manager_relocates_removed_source_from_exact_bundled_root(
+    tmp_path, monkeypatch
+):
+    source = _source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _activate(source, runtime)
+    bundled_root = tmp_path / "current-image" / "extensions"
+    bundled_root.mkdir(parents=True)
+    relocated = source.rename(bundled_root / "week-day")
+    monkeypatch.setenv("KF_BUNDLED_EXTENSION_ROOT", str(bundled_root))
+
+    managed = profile_composition.manager(runtime)["profiles"][0]
+
+    assert managed["health"] == "active"
+    assert managed["source"] == str(relocated.resolve())
+    assert managed["catalog"]["activeExactRoot"] is True
+
+
 def test_manager_reports_source_drift_without_hiding_lifecycle_state(tmp_path):
     source = _source(tmp_path)
     runtime = tmp_path / "runtime"

@@ -220,6 +220,47 @@ def upgrade_reconcile(ctx, receipt, readiness_passed, as_json):
     click.echo(f"{payload['state']}: {payload['reasonCode']}")
 
 
+def _discover_gc_references(ctx, *, inventory_nonempty):
+    workspace = runtime_broker.workspace_id(ctx.runtime_dir)
+    current = runtime_upgrade.active_image(ctx.config_home, workspace)
+    status = runtime_service.route_status(ctx.home, ctx.runtime_dir, ctx.config_home)
+    references = runtime_upgrade.references_from_runtime_status(status, current)
+    return references, bool(inventory_nonempty and current is None)
+
+
+def _gc_reference_inputs(ctx, references, *, inventory_nonempty):
+    if references is not None:
+        return _load_array(references), False
+    return _discover_gc_references(ctx, inventory_nonempty=inventory_nonempty)
+
+
+def _plan_gc(ctx, references, unknown_references):
+    images = runtime_upgrade.list_images(ctx.config_home)
+    reference_values, discovery_incomplete = _gc_reference_inputs(
+        ctx, references, inventory_nonempty=images
+    )
+    return runtime_upgrade.plan_gc(
+        images,
+        reference_values,
+        unknown_references=unknown_references or discovery_incomplete,
+    )
+
+
+def _apply_gc(ctx, plan_value, references, unknown_references, expected_plan_id):
+    reference_values, discovery_incomplete = _gc_reference_inputs(
+        ctx,
+        references,
+        inventory_nonempty=plan_value.get("candidates") or plan_value.get("blocked"),
+    )
+    return runtime_upgrade.apply_gc(
+        plan_value,
+        expected_plan_id=expected_plan_id,
+        config_home=ctx.config_home,
+        references=reference_values,
+        unknown_references=unknown_references or discovery_incomplete,
+    )
+
+
 @runtime_upgrade_group.command(
     name="gc-plan", help="list only images with no live or retained reference"
 )
@@ -234,11 +275,7 @@ def upgrade_reconcile(ctx, receipt, readiness_passed, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
 def upgrade_gc_plan(ctx, references, unknown_references, as_json):
-    payload = runtime_upgrade.plan_gc(
-        runtime_upgrade.list_images(ctx.config_home),
-        _load_array(references),
-        unknown_references=unknown_references,
-    )
+    payload = _plan_gc(ctx, references, unknown_references)
     if as_json:
         _json(payload)
         return
@@ -275,12 +312,12 @@ def upgrade_gc(
         payload = {
             "schema": "kungfu.runtime-image-gc-receipt/v1",
             "planId": expected_plan_id,
-            "removedBuildIds": runtime_upgrade.apply_gc(
+            "removedBuildIds": _apply_gc(
+                ctx,
                 plan_value,
-                expected_plan_id=expected_plan_id,
-                config_home=ctx.config_home,
-                references=_load_array(references),
-                unknown_references=unknown_references,
+                references,
+                unknown_references,
+                expected_plan_id,
             ),
         }
     if as_json:
@@ -294,3 +331,19 @@ def upgrade_gc(
         click.echo(
             f"dry-run: pass --execute with --expected-plan-id {expected_plan_id}"
         )
+
+
+for _symbol in (
+    "runtime_upgrade_group",
+    "upgrade_contract",
+    "upgrade_inventory",
+    "upgrade_plan_install",
+    "upgrade_install",
+    "upgrade_plan",
+    "upgrade_stage",
+    "upgrade_reconcile",
+    "upgrade_gc_plan",
+    "upgrade_gc",
+):
+    globals()[_symbol].callback.__module__ = "kungfu.cli.commands.runtime"
+    globals()[_symbol].callback.__qualname__ = _symbol

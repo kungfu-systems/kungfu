@@ -5,7 +5,14 @@ from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from kungfu.agent import run_agent, session_contract, session_surface
+from kungfu.agent import (
+    provider_bootstrap,
+    run_agent,
+    runtime_profiles,
+    session_contract,
+    session_surface,
+)
+from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.workspace import resolve_workspace_target
 from agent_bootstrap_fixtures import verified_bootstrap_receipt
@@ -13,6 +20,33 @@ from agent_bootstrap_fixtures import verified_bootstrap_receipt
 
 ROOT_HASH = "sha256:" + "a" * 64
 THREAD_ID = "019ff927-f9a4-7502-999a-6bc5a69bb702"
+
+
+def test_codex_defaults_to_bounded_diagnostic_logging():
+    assert runtime_profiles.builtin_adapters()["codex"]["skill"]["environment"] == {
+        "RUST_LOG": "warn"
+    }
+
+
+def test_provider_log_retention_prunes_only_finalized_attempts(tmp_path):
+    root = tmp_path / "runtime"
+    finalized = "00000000-0000-4000-8000-000000000001"
+    active = "00000000-0000-4000-8000-000000000002"
+    logs = [
+        root / "agent-sessions" / "native-attempts" / item / "provider-logs" / "log"
+        for item in (finalized, active)
+    ]
+    provider_bootstrap.write_runtime_file(logs[0], "old")
+    provider_bootstrap.write_runtime_file(logs[1], "live")
+    provider_bootstrap.write_runtime_file(
+        root / "skill-manager" / f"agent-console-native:{finalized}-final.json",
+        '{"schema":"kungfu.skill-runtime-audit/v2"}',
+    )
+    receipt = provider_bootstrap.prune_finalized_provider_logs(
+        root, now_ns=10_000_000_000, retention_seconds=100, max_bytes=0
+    )
+    assert not logs[0].exists() and logs[1].read_text(encoding="utf-8") == "live"
+    assert receipt["removedFiles"] == receipt["unfinalizedFilesPreserved"] == 1
 
 
 def process_identity():
@@ -166,6 +200,143 @@ def test_current_native_console_adopts_exact_ambient_process(monkeypatch, tmp_pa
         {"id": "kungfu.work-control", "root": ROOT_HASH}
     ]
     assert "bootstrap" not in current["envelope"]
+    session_contract.validate_agent_console_envelope(current["envelope"])
+
+
+def test_current_native_console_can_project_identity_without_stale_work_binding(
+    monkeypatch, tmp_path
+):
+    project = tmp_path / "project"
+    runtime = project / ".kungfu" / "runtime"
+    runtime.mkdir(parents=True)
+    target = SimpleNamespace(
+        identity=SimpleNamespace(
+            workspace_kind="project",
+            identity_state="qualified",
+            workspace_root=str(project),
+            workspace_id="project:exact",
+        ),
+        runtime_dir=str(runtime),
+    )
+    monkeypatch.setattr(
+        session_surface, "resolve_workspace_target", lambda *_a, **_k: target
+    )
+    current_root = "sha256:" + "b" * 64
+    stale_work_ref = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "project:exact",
+        "profileId": "kungfu.work-control",
+        "profileRoot": ROOT_HASH,
+        "entityType": "assignment",
+        "entityId": "assignment:old",
+        "entityRoot": "sha256:" + "c" * 64,
+        "purpose": "continue-project-assignment",
+        "systemTimeCut": "sha256:" + "d" * 64,
+        "initiativeId": "initiative:test",
+    }
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: {
+            "id": "kungfu.work-control",
+            "root": current_root,
+            "source": str(project / "extensions" / "work-control"),
+        },
+    )
+    identity = process_identity()
+    identity_root = session_contract.semantic_root(identity)
+
+    def invoke(request):
+        assert request["operation"] == "show"
+        return {
+            "lifecycleState": "running",
+            "binding": {"kind": "work", "workRef": stale_work_ref},
+            "attempt": {
+                "provider": "codex",
+                "observer": {"processIdentityRoot": identity_root},
+            },
+        }
+
+    current = session_surface.current_native_console(
+        str(runtime),
+        project_work_binding=False,
+        cwd=str(project),
+        environ={"KUNGFU_CLI_BIN": "/exact/kungfu"},
+        process_identity=identity,
+        session_invoker=invoke,
+    )
+
+    assert current["envelope"]["attemptId"] == (
+        f"native:codex:ambient:{identity_root.removeprefix('sha256:')[:24]}"
+    )
+    assert current["envelope"]["activeProfiles"] == []
+    assert current["envelope"]["workRef"] is None
+    session_contract.validate_agent_console_envelope(current["envelope"])
+
+
+def test_current_native_console_preserves_bound_external_work_profile(
+    monkeypatch, tmp_path
+):
+    project = tmp_path / "console-project"
+    runtime = project / ".kungfu" / "runtime"
+    runtime.mkdir(parents=True)
+    target = SimpleNamespace(
+        identity=SimpleNamespace(
+            workspace_kind="project",
+            identity_state="qualified",
+            workspace_root=str(project),
+            workspace_id="project:console",
+        ),
+        runtime_dir=str(runtime),
+    )
+    monkeypatch.setattr(
+        session_surface, "resolve_workspace_target", lambda *_a, **_k: target
+    )
+    work_ref = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "project:work",
+        "profileId": "kungfu.work-control",
+        "profileRoot": ROOT_HASH,
+        "entityType": "assignment",
+        "entityId": "assignment:external",
+        "entityRoot": "sha256:" + "c" * 64,
+        "purpose": "continue-project-assignment",
+        "systemTimeCut": "sha256:" + "d" * 64,
+        "initiativeId": "initiative:external",
+    }
+    monkeypatch.setattr(
+        "kungfu.assignment_runtime.profile_lifecycle.resolve_qualified_work_profile",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("bound Work projection must not rediscover Console Profile")
+        ),
+    )
+    identity = process_identity()
+    identity_root = session_contract.semantic_root(identity)
+
+    def invoke(request):
+        assert request["operation"] == "show"
+        return {
+            "lifecycleState": "running",
+            "binding": {"kind": "work", "workRef": work_ref},
+            "attempt": {
+                "provider": "codex",
+                "observer": {"processIdentityRoot": identity_root},
+            },
+        }
+
+    current = session_surface.current_native_console(
+        str(runtime),
+        adopt=False,
+        cwd=str(project),
+        environ={"KUNGFU_CLI_BIN": "/exact/kungfu"},
+        process_identity=identity,
+        session_invoker=invoke,
+    )
+
+    assert current["envelope"]["workspaceId"] == "project:console"
+    assert current["envelope"]["workRef"] == work_ref
+    assert current["envelope"]["activeProfiles"] == [
+        {"id": "kungfu.work-control", "root": ROOT_HASH}
+    ]
     session_contract.validate_agent_console_envelope(current["envelope"])
 
 

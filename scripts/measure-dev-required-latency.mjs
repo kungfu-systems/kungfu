@@ -40,6 +40,11 @@ import {
   requiredMergeQueueWindow,
   selectLatencyCohort as selectCohort,
 } from './candidate-timeline-events.cjs';
+import {
+  collectRunnerWaitEvidence,
+  collectWastedRunnerEvidence,
+  parseAndValidateNativeEvidenceMembers,
+} from './measure-dev-required-latency-evidence.mjs';
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 export { requiredMergeQueueWindow };
 export {
@@ -257,7 +262,7 @@ function projectedJob(job) {
   };
 }
 
-export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
+function collectMergeQueueRounds(events, runs, jobsByRun) {
   const orderedEvents = [...events]
     .filter(({ __typename }) =>
       ['AddedToMergeQueueEvent', 'RemovedFromMergeQueueEvent'].includes(
@@ -316,6 +321,12 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
     current = null;
   }
   if (current) diagnostics.push('queue-add-without-removal');
+  return { orderedEvents, orderedRuns, rounds, diagnostics };
+}
+
+export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
+  const { orderedEvents, orderedRuns, rounds, diagnostics } =
+    collectMergeQueueRounds(events, runs, jobsByRun);
 
   const assignedRunIds = new Set(
     rounds.flatMap(({ mergeGroupRuns }) =>
@@ -332,64 +343,15 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
   const wastedRuns = exitedRounds.flatMap(({ removedAt, mergeGroupRuns }) =>
     mergeGroupRuns.map((run) => ({ ...run, removedAt })),
   );
-  let runnerEvidenceComplete = wastedRuns.every(({ id }) =>
-    Array.isArray(jobsByRun[String(id)]),
+  const runnerWait = collectRunnerWaitEvidence(allRuns, jobsByRun, {
+    milliseconds,
+  });
+  const runnerWaste = collectWastedRunnerEvidence(
+    wastedRuns,
+    jobsByRun,
+    diagnostics,
+    { jobDuration, milliseconds },
   );
-  let wastedRunnerMs = 0;
-  let postDequeueRunnerMs = 0;
-  const runnerWaitUpperBounds = [];
-  let runnerWaitEvidenceComplete = allRuns.every(
-    ({ id, createdAt }) =>
-      Boolean(createdAt) &&
-      Array.isArray(jobsByRun[String(id)]) &&
-      jobsByRun[String(id)].length > 0,
-  );
-  for (const run of allRuns) {
-    for (const job of jobsByRun[String(run.id)] || []) {
-      if (!run.createdAt || !job.started_at) {
-        runnerWaitEvidenceComplete = false;
-        continue;
-      }
-      const upperBoundMs = milliseconds(run.createdAt, job.started_at);
-      if (!Number.isFinite(upperBoundMs) || upperBoundMs < 0) {
-        runnerWaitEvidenceComplete = false;
-        continue;
-      }
-      runnerWaitUpperBounds.push({
-        workflowRunId: run.id,
-        jobId: job.id,
-        jobName: job.name,
-        upperBoundMs,
-        authority:
-          'github-actions-workflow-created_at-to-job-started_at-upper-bound',
-      });
-    }
-  }
-  if (runnerEvidenceComplete) {
-    for (const run of wastedRuns) {
-      for (const job of jobsByRun[String(run.id)]) {
-        const durationMs = jobDuration(job);
-        if (durationMs === null) {
-          diagnostics.push('merge-group-job-not-terminal');
-          runnerEvidenceComplete = false;
-          continue;
-        }
-        wastedRunnerMs += durationMs;
-        if (job.started_at && job.completed_at) {
-          const afterRemoval = milliseconds(
-            new Date(
-              Math.max(
-                new Date(job.started_at).getTime(),
-                new Date(run.removedAt).getTime(),
-              ),
-            ).toISOString(),
-            job.completed_at,
-          );
-          postDequeueRunnerMs += Math.max(0, afterRemoval);
-        }
-      }
-    }
-  }
   const firstEnqueuedAt = rounds[0]?.enqueuedAt || null;
   const mergedRounds = rounds.filter(({ reason }) => reason === 'merged');
   const queueIncomplete = diagnostics.some((value) =>
@@ -437,18 +399,20 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
     explainedRepeatedValidationCount: validationRepeats.explained,
     unexplainedRepeatedValidationCount: validationRepeats.unexplained,
     repeatedValidationExplanations: validationRepeats.explanations,
-    runnerWaitEvidenceComplete,
-    runnerWaitUpperBoundMs: runnerWaitEvidenceComplete
-      ? runnerWaitUpperBounds.length
+    runnerWaitEvidenceComplete: runnerWait.complete,
+    runnerWaitUpperBoundMs: runnerWait.complete
+      ? runnerWait.upperBounds.length
         ? Math.max(
-            ...runnerWaitUpperBounds.map(({ upperBoundMs }) => upperBoundMs),
+            ...runnerWait.upperBounds.map(({ upperBoundMs }) => upperBoundMs),
           )
         : 0
       : null,
-    runnerWaitUpperBounds,
-    runnerEvidenceComplete,
-    wastedRunnerMs: runnerEvidenceComplete ? wastedRunnerMs : null,
-    postDequeueRunnerMs: runnerEvidenceComplete ? postDequeueRunnerMs : null,
+    runnerWaitUpperBounds: runnerWait.upperBounds,
+    runnerEvidenceComplete: runnerWaste.complete,
+    wastedRunnerMs: runnerWaste.complete ? runnerWaste.wastedRunnerMs : null,
+    postDequeueRunnerMs: runnerWaste.complete
+      ? runnerWaste.postDequeueRunnerMs
+      : null,
     rounds,
     diagnostics,
   };
@@ -699,78 +663,11 @@ export function nativeEvidenceFromMembers(members, classification) {
     };
   }
   try {
-    if (!members['receipt.json']) throw new Error('missing native receipt');
-    if (!members['diagnostics.json']) {
-      throw new Error('missing Buildchain diagnostics');
-    }
-    const receipt = JSON.parse(members['receipt.json']);
-    const diagnostics = JSON.parse(members['diagnostics.json']);
-    const candidateEvents = (members['candidate-events.jsonl'] || '')
-      .split(/\r?\n/u)
-      .filter(Boolean)
-      .map((line) => JSON.parse(line));
-    if (
-      receipt.schema !== 'kungfu.core-affected-native-receipt/v1' ||
-      receipt.status !== 'passed' ||
-      !Array.isArray(receipt.steps)
-    ) {
-      throw new Error('invalid native receipt');
-    }
-    if (
-      candidateEvents.some(
-        (event) =>
-          !event.id ||
-          !event.attempt?.id ||
-          !event.phase ||
-          !event.status ||
-          event.attributes?.sourceSha !== receipt.source.head,
-      )
-    ) {
-      throw new Error('invalid candidate timeline event binding');
-    }
-    if (receipt.plan?.planDigest) {
-      const { planDigest, ...planWithoutDigest } = receipt.plan;
-      if (
-        planDigest !== structuredDigest(planWithoutDigest) ||
-        receipt.planDigest !== planDigest
-      ) {
-        throw new Error('native receipt plan digest drift');
-      }
-    }
-    if (
-      diagnostics.contract !== 'kungfu-buildchain-diagnostics' ||
-      diagnostics.consumer?.contract !==
-        'kungfu.affected-native-diagnostics/v1' ||
-      diagnostics.consumer?.gateId !== 'source.changed-scope'
-    ) {
-      throw new Error('invalid Buildchain diagnostics binding');
-    }
-    if (
-      receipt.diagnostics?.digest !== digest(members['diagnostics.json']) ||
-      receipt.diagnostics?.consumerContract !== diagnostics.consumer.contract ||
-      receipt.planDigest !== diagnostics.consumer.planDigest
-    ) {
-      throw new Error('native diagnostics digest or plan binding drift');
-    }
-    const partition = receipt.executionPartition || null;
-    if (partition) {
-      if (
-        partition.schema !== 'kungfu.core-affected-native-partition/v1' ||
-        !Number.isInteger(partition.index) ||
-        !Number.isInteger(partition.count) ||
-        partition.count < 1 ||
-        partition.index < 0 ||
-        partition.index >= partition.count ||
-        !Array.isArray(partition.targets) ||
-        !Array.isArray(partition.tests) ||
-        diagnostics.consumer?.executionPartition?.partitionDigest !==
-          partition.partitionDigest ||
-        diagnostics.consumer?.executionPartition?.coverageDigest !==
-          partition.coverageDigest
-      ) {
-        throw new Error('invalid native execution partition binding');
-      }
-    }
+    const { receipt, diagnostics, candidateEvents, partition } =
+      parseAndValidateNativeEvidenceMembers(members, {
+        digest,
+        structuredDigest,
+      });
     return {
       outcome: 'observed',
       authority: 'affected-native-receipt-and-buildchain-diagnostics',
@@ -1464,15 +1361,8 @@ function workflowJobGate(job) {
   };
 }
 
-export function candidateTimelineInput(repository, branch, sample) {
-  const events = [];
-  const sourceSha = sample.sourceSha;
-  const prAttempt = {
-    id: `pr-${sample.pullRequest}-${sourceSha}`,
-    index: 0,
-    kind: 'pull-request',
-  };
-  for (const check of sample.checks || []) {
+function appendPrCheckEvents(events, sourceSha, prAttempt, checks) {
+  for (const check of checks || []) {
     const timing = providerTiming(
       check.startedAt,
       check.completedAt,
@@ -1493,11 +1383,135 @@ export function candidateTimelineInput(repository, branch, sample) {
       },
     });
   }
+}
 
-  const rounds = sample.mergeQueue?.rounds || [];
+function appendWorkflowJobEvents(
+  events,
+  repository,
+  sourceSha,
+  attempt,
+  run,
+  job,
+) {
+  const gate = workflowJobGate(job);
+  const laneId =
+    gate.partition === undefined
+      ? undefined
+      : `affected-native/partition-${gate.partition}`;
+  const jobTiming = providerTiming(
+    job.startedAt,
+    job.completedAt,
+    'github-actions-job',
+  );
+  events.push({
+    id: `${attempt.id}:job:${job.id}`,
+    attempt,
+    phase: workflowJobPhase(job.name),
+    category: 'job',
+    status: providerStatus(job.conclusion, Boolean(jobTiming)),
+    gate,
+    execution: { boundary: 'github-actions-job', runner: job.runnerName },
+    timing: jobTiming,
+    attributes: {
+      sourceSha,
+      jobId: job.id,
+      jobUrl: `https://github.com/${repository}/actions/runs/${run.id}/job/${job.id}`,
+      laneId,
+    },
+  });
+  events.push({
+    id: `${attempt.id}:job:${job.id}:runner-wait`,
+    attempt,
+    phase: 'runner-wait',
+    category: 'runner-wait',
+    status: 'unknown',
+    gate,
+    criticalPathEligible: true,
+    attributes: {
+      sourceSha,
+      reason: 'github-actions-jobs-api-does-not-expose-job-queued-at',
+      laneId,
+    },
+  });
+  for (const step of job.steps || []) {
+    const stepTiming = providerTiming(
+      step.startedAt,
+      step.completedAt,
+      'github-actions-job-step',
+    );
+    events.push({
+      id: `${attempt.id}:job:${job.id}:step:${step.number}`,
+      attempt,
+      phase: workflowStepPhase(step.name),
+      category: 'workflow-step',
+      status: providerStatus(step.conclusion, Boolean(stepTiming)),
+      gate,
+      span: {
+        id: `${attempt.id}:job:${job.id}:step:${step.number}`,
+        parentId: `${attempt.id}:job:${job.id}`,
+      },
+      execution: {
+        boundary: 'github-actions-step',
+        runner: job.runnerName,
+      },
+      timing: stepTiming,
+      attributes: {
+        sourceSha,
+        stepName: step.name,
+        jobUrl: `https://github.com/${repository}/actions/runs/${run.id}/job/${job.id}`,
+        laneId,
+      },
+    });
+  }
+}
+
+function appendWorkflowRunEvents(events, repository, sourceSha, attempt, run) {
+  const runAttempt = {
+    ...attempt,
+    mergeGroupSha: run.headSha,
+    workflowRunId: run.id,
+  };
+  const runTiming = providerTiming(
+    run.createdAt,
+    run.completedAt,
+    'github-actions-workflow-run',
+  );
+  events.push({
+    id: `${attempt.id}:workflow:${run.id}`,
+    attempt: runAttempt,
+    phase: 'authoritative-build',
+    category: 'workflow',
+    status: providerStatus(run.conclusion, Boolean(runTiming)),
+    timing: runTiming,
+    attributes: {
+      sourceSha,
+      workflowRunId: run.id,
+      runUrl: `https://github.com/${repository}/actions/runs/${run.id}`,
+    },
+  });
+  for (const job of run.jobs || []) {
+    appendWorkflowJobEvents(
+      events,
+      repository,
+      sourceSha,
+      runAttempt,
+      run,
+      job,
+    );
+  }
+  return runAttempt;
+}
+
+function appendQueueRoundEvents(
+  events,
+  repository,
+  sourceSha,
+  pullRequest,
+  rounds,
+) {
   const runAttempts = new Map();
   for (const round of rounds) {
-    const attempt = roundAttempt(sample.pullRequest, round);
+    const attempt = roundAttempt(pullRequest, round);
     events.push({
       id: `${attempt.id}:queue-residence`,
       attempt,
@@ -1512,104 +1526,37 @@ export function candidateTimelineInput(repository, branch, sample) {
       attributes: { sourceSha, dequeueReason: round.reason },
     });
     for (const run of round.mergeGroupRuns || []) {
-      const runAttempt = {
-        ...attempt,
-        mergeGroupSha: run.headSha,
-        workflowRunId: run.id,
-      };
-      runAttempts.set(String(run.id), runAttempt);
-      const runTiming = providerTiming(
-        run.createdAt,
-        run.completedAt,
-        'github-actions-workflow-run',
+      const runAttempt = appendWorkflowRunEvents(
+        events,
+        repository,
+        sourceSha,
+        attempt,
+        run,
       );
-      events.push({
-        id: `${attempt.id}:workflow:${run.id}`,
-        attempt: runAttempt,
-        phase: 'authoritative-build',
-        category: 'workflow',
-        status: providerStatus(run.conclusion, Boolean(runTiming)),
-        timing: runTiming,
-        attributes: {
-          sourceSha,
-          workflowRunId: run.id,
-          runUrl: `https://github.com/${repository}/actions/runs/${run.id}`,
-        },
-      });
-      for (const job of run.jobs || []) {
-        const gate = workflowJobGate(job);
-        const laneId =
-          gate.partition === undefined
-            ? undefined
-            : `affected-native/partition-${gate.partition}`;
-        const jobTiming = providerTiming(
-          job.startedAt,
-          job.completedAt,
-          'github-actions-job',
-        );
-        events.push({
-          id: `${attempt.id}:job:${job.id}`,
-          attempt: runAttempt,
-          phase: workflowJobPhase(job.name),
-          category: 'job',
-          status: providerStatus(job.conclusion, Boolean(jobTiming)),
-          gate,
-          execution: { boundary: 'github-actions-job', runner: job.runnerName },
-          timing: jobTiming,
-          attributes: {
-            sourceSha,
-            jobId: job.id,
-            jobUrl: `https://github.com/${repository}/actions/runs/${run.id}/job/${job.id}`,
-            laneId,
-          },
-        });
-        events.push({
-          id: `${attempt.id}:job:${job.id}:runner-wait`,
-          attempt: runAttempt,
-          phase: 'runner-wait',
-          category: 'runner-wait',
-          status: 'unknown',
-          gate,
-          criticalPathEligible: true,
-          attributes: {
-            sourceSha,
-            reason: 'github-actions-jobs-api-does-not-expose-job-queued-at',
-            laneId,
-          },
-        });
-        for (const step of job.steps || []) {
-          const stepTiming = providerTiming(
-            step.startedAt,
-            step.completedAt,
-            'github-actions-job-step',
-          );
-          events.push({
-            id: `${attempt.id}:job:${job.id}:step:${step.number}`,
-            attempt: runAttempt,
-            phase: workflowStepPhase(step.name),
-            category: 'workflow-step',
-            status: providerStatus(step.conclusion, Boolean(stepTiming)),
-            gate,
-            span: {
-              id: `${attempt.id}:job:${job.id}:step:${step.number}`,
-              parentId: `${attempt.id}:job:${job.id}`,
-            },
-            execution: {
-              boundary: 'github-actions-step',
-              runner: job.runnerName,
-            },
-            timing: stepTiming,
-            attributes: {
-              sourceSha,
-              stepName: step.name,
-              jobUrl: `https://github.com/${repository}/actions/runs/${run.id}/job/${job.id}`,
-              laneId,
-            },
-          });
-        }
-      }
+      runAttempts.set(String(run.id), runAttempt);
     }
   }
+  return runAttempts;
+}
+
+export function candidateTimelineInput(repository, branch, sample) {
+  const events = [];
+  const sourceSha = sample.sourceSha;
+  const prAttempt = {
+    id: `pr-${sample.pullRequest}-${sourceSha}`,
+    index: 0,
+    kind: 'pull-request',
+  };
+  appendPrCheckEvents(events, sourceSha, prAttempt, sample.checks);
+
+  const rounds = sample.mergeQueue?.rounds || [];
+  const runAttempts = appendQueueRoundEvents(
+    events,
+    repository,
+    sourceSha,
+    sample.pullRequest,
+    rounds,
+  );
 
   const mergedRound = [...rounds]
     .reverse()
