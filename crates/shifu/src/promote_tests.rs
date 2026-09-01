@@ -280,6 +280,24 @@ fn preview_keeps_mainline_qualification_separate_from_exact_product_provenance()
     let _ = fs::remove_dir_all(root);
 }
 
+#[test]
+fn current_source_build_can_be_selected_without_mainline_delivery_state() {
+    let root = shifu_core::host::unique_temp_dir("promote-current-source").unwrap();
+    let mut entry = qualified_app(&root);
+    entry.integrated = false;
+    entry.qualified = false;
+    entry.mainline_sha = "2".repeat(40);
+    fs::create_dir_all(entry.slot.join(&entry.artifact)).unwrap();
+    write_app_manifests(&mut entry);
+
+    let entries = vec![entry];
+    let selected = select_current_source_build(&entries, &entries[0], "", true);
+    assert_eq!(selected.name, "qualified-build");
+    assert!(current_payload_valid(selected));
+    assert!(!build_valid(selected));
+    let _ = fs::remove_dir_all(root);
+}
+
 #[cfg(unix)]
 #[test]
 fn exact_installed_preview_converges_only_with_matching_native_receipt() {
