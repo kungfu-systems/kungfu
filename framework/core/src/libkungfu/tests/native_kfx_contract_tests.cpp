@@ -17,6 +17,7 @@ namespace fs = std::filesystem;
 namespace kfx = kungfu::runtime::kfx;
 
 void test_native_kfx_service_host_contract();
+void test_development_source_bootstrap_is_local_and_confined();
 void test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed();
 
 namespace {
@@ -150,6 +151,12 @@ void test_contract_is_versioned_and_core_owned() {
   require(
       bootstrap.at("authority").at("selfGrant") == false && bootstrap.at("authority").at("originAuthority") == false &&
           bootstrap.at("authority").at("productAssemblyAuthority") == false &&
+          bootstrap.at("developmentSourceBootstrap").at("operations") == nlohmann::json::array({"install"}) &&
+          bootstrap.at("developmentSourceBootstrap").at("grantedCapabilities") ==
+              nlohmann::json::array({"kfxControl"}) &&
+          bootstrap.at("developmentSourceBootstrap").at("publicationAllowed") == false &&
+          bootstrap.at("developmentSourceBootstrap").at("sharedInstallationAllowed") == false &&
+          bootstrap.at("developmentSourceBootstrap").at("externalCapabilitiesAllowed") == false &&
           bootstrap.at("recovery").at("automaticActivation") == false &&
           bootstrap.at("bootstrapTcb") ==
               nlohmann::json::array({"manifest-and-closure-verifier", "release-passport-verifier",
@@ -1203,6 +1210,7 @@ int main() {
     test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed();
     test_native_adapter_authority_requires_the_current_fact_cut();
     test_control_suite_recursively_dogfoods_public_fact_work();
+    test_development_source_bootstrap_is_local_and_confined();
     std::cout << "native KFX contract tests passed\n";
     return 0;
   } catch (const std::exception &error) {

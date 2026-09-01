@@ -100,9 +100,9 @@ rejected. Isolation still applies when a package is KFD-compliant.
 ## Control Suite and minimal TCB
 
 The KFX Control Suite follows the same public contract as every other KFX. It
-does not gain authority from being shipped with Kungfu. Its normal active path
-requires the same exact Passport, KFD eligibility, policy, Work/Warrant, grant,
-Fact cut, generation, and host authorization chain.
+does not gain authority from being shipped with Kungfu. Its production active
+path requires the same exact Passport, KFD eligibility, policy, Work/Warrant,
+grant, Fact cut, generation, and host authorization chain.
 
 Only a minimal Core-owned recovery TCB exists:
 
@@ -114,8 +114,18 @@ Only a minimal Core-owned recovery TCB exists:
 - owner- and threshold-governed emergency recovery.
 
 The TCB is enumerated by the native contract and tested as refusal-first
-behavior. Safe mode does not implicitly activate the Control Suite, and product
-assembly cannot add a bootstrap exception.
+behavior. Safe mode does not implicitly activate the Control Suite.
+
+For developer recovery and debugging, Core also provides one deliberately
+separate source-bootstrap route. It may install only the checked-out
+`extensions/system/kfx-manager` into the `.kungfu/runtime` of an explicitly
+named local workspace that shares the same Git common directory. It grants
+exactly `kfxControl`, requires the ordinary plan/apply CAS sequence, and is
+never a Release Passport or Warrant substitute: publication, shared
+installation, external capabilities, updates, removal, and cross-repository
+targets are refused. The resulting receipt is labelled
+`development-source-bootstrap`, so it cannot be confused with production
+admission evidence.
 
 ## Author obligations
 

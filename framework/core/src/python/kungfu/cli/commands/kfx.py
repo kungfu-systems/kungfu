@@ -22,6 +22,7 @@ from pathlib import Path
 
 from kungfu import kfx_contract
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.kfx_authority import native_authority_file, native_json_file
 from kungfu.kfx_host import authorize_host_launch
 from kungfu.storage import service as storage_service
 
@@ -90,34 +91,6 @@ def _libwasm_host():
         "kungfu-wasm-host is not installed next to the runtime; this artifact "
         "does not carry the production libwasm closure"
     )
-
-
-_MUTATION_AUTHORITY_FIELDS = {
-    "purpose",
-    "policy",
-    "assessmentTime",
-    "authorizationTime",
-    "attestation",
-    "identity",
-    "trustInputs",
-    "kfdAssessment",
-    "runtimeEvidence",
-    "requestedCapabilities",
-    "approvalRoots",
-    "recoveryWarrant",
-}
-
-
-def _native_authority_file(path):
-    authority = _native_json_file(path, "KFX mutation authority evidence")
-    unsupported = sorted(set(authority) - _MUTATION_AUTHORITY_FIELDS)
-    if unsupported:
-        raise click.BadParameter(
-            "KFX mutation authority evidence contains non-authority fields: "
-            + ", ".join(unsupported),
-            param_hint="--authority-file",
-        )
-    return authority
 
 
 def _native_mutation(ctx, package_root, key, operation, authority, **values):
@@ -206,7 +179,7 @@ def install(ctx, source, force, authority_file):
             sys.exit(1)
     operation = "update" if dest.exists() else "install"
     try:
-        authority = _native_authority_file(authority_file)
+        authority = native_authority_file(authority_file)
         if is_tgz:
             with tempfile.TemporaryDirectory(prefix="kungfu-kfx-package-") as temp:
                 package_root = Path(temp) / "package"
@@ -426,7 +399,7 @@ def remove(ctx, key, authority_file):
         sys.exit(1)
     try:
         kfx_contract.read_manifest_from_dir(dest)
-        authority = _native_authority_file(authority_file)
+        authority = native_authority_file(authority_file)
         application = _native_mutation(
             ctx,
             None,
@@ -519,16 +492,6 @@ def _native_query(ctx, action, roots, **values):
             sort_keys=True,
         )
     )
-
-
-def _native_json_file(path, label):
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        raise click.BadParameter(f"cannot read {label}: {error}") from error
-    if not isinstance(value, dict):
-        raise click.BadParameter(f"{label} must contain one JSON object")
-    return value
 
 
 @native_group.command(name="list", help="list canonical KFX package candidates")
@@ -639,7 +602,7 @@ def native_control_status(ctx):
 @kfx_command_context
 def native_control_plan(ctx, candidate, operation, authority_file):
     request = {
-        **_native_authority_file(authority_file),
+        **native_authority_file(authority_file),
         **_control_request(candidate, operation),
     }
     click.echo(
@@ -675,7 +638,7 @@ def native_control_plan(ctx, candidate, operation, authority_file):
 )
 @kfx_command_context
 def native_control_apply(ctx, candidate, plan_file, authority_file, authorized_by):
-    plan = _native_json_file(plan_file, "Control Suite plan")
+    plan = native_json_file(plan_file, "Control Suite plan")
     load_plan = plan.get("loadPlan") or {}
     package = next(
         (
@@ -690,7 +653,7 @@ def native_control_apply(ctx, candidate, plan_file, authority_file, authorized_b
             "Control Suite plan does not contain kfx-manager", param_hint="plan_file"
         )
     request = {
-        **_native_authority_file(authority_file),
+        **native_authority_file(authority_file),
         **_control_request(candidate, str(plan.get("operation") or "")),
         "expectedCutRoot": load_plan.get("cutRoot"),
         "expectedRevision": load_plan.get("revision"),
@@ -789,20 +752,20 @@ def native_assess(
         "purpose": purpose,
         "cut": cut,
         "assessmentTime": assessment_time,
-        "policy": _native_json_file(policy, "policy"),
+        "policy": native_json_file(policy, "policy"),
         "requestedCapabilities": list(requested_capabilities),
         "capabilityExpansion": capability_expansion,
     }
     if attestation is not None:
-        values["attestation"] = _native_json_file(attestation, "attestation")
+        values["attestation"] = native_json_file(attestation, "attestation")
     if identity is not None:
-        values["identity"] = _native_json_file(identity, "identity")
+        values["identity"] = native_json_file(identity, "identity")
     if trust_inputs is not None:
-        values["trustInputs"] = _native_json_file(trust_inputs, "trust inputs")
+        values["trustInputs"] = native_json_file(trust_inputs, "trust inputs")
     if kfd_assessment is not None:
-        values["kfdAssessment"] = _native_json_file(kfd_assessment, "KFD assessment")
+        values["kfdAssessment"] = native_json_file(kfd_assessment, "KFD assessment")
     if runtime_evidence is not None:
-        values["runtimeEvidence"] = _native_json_file(
+        values["runtimeEvidence"] = native_json_file(
             runtime_evidence, "runtime evidence"
         )
     if cached_dependency_root is not None:
