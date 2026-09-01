@@ -16,8 +16,8 @@
   "state_ref": "buildchain/release-state/4-0-0-alpha-4",
   "state_path": "/home/runner/work/kungfu/kungfu/.buildchain/release-state/v4.0.0-alpha.4.json",
   "evidence_path": "/home/runner/work/kungfu/kungfu/.buildchain/release-evidence/v4.0.0-alpha.4/evidence.json",
-  "state": "finalizing",
-  "previous_state": "published",
+  "state": "complete",
+  "previous_state": "finalizing",
   "actor": "dongkeren",
   "run_id": "33562820534",
   "superseded_by": "",
@@ -55669,7 +55669,7 @@
     ".buildchain/release-evidence/v4.0.0-alpha.4/dist-tag-evidence.json"
   ],
   "sealed_bundle": null,
-  "publication_state": "package-published",
+  "publication_state": "alpha-complete",
   "milestones": {
     "package_published": {
       "status": "complete",
@@ -55679,5 +55679,5 @@
   },
   "resume_command": "",
   "created_at": "2026-09-01T22:08:44.596Z",
-  "updated_at": "2026-09-01T22:08:54.196Z"
+  "updated_at": "2026-09-01T22:09:03.420Z"
 }
