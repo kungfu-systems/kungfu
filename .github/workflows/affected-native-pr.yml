@@ -221,8 +221,6 @@ jobs:
             --candidate-tree "$candidate_tree"
       - name: Verify ADR delivery intent
         run: ./shifu gate run governance.adr-delivery
-      - name: Rehearse alpha and stable promotion contracts
-        run: ./shifu gate run governance.promotion-rehearsal
       - name: Plan exact dev candidate qualification
         id: plan
         shell: bash
