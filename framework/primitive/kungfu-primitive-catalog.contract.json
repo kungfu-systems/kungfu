@@ -1585,7 +1585,7 @@
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:42a2413213f6cf7945a2075021c36a40de9aa23a71f75b3edf3466d726d5db7b"
+                "root": "sha256:5ad40568edef4dca66d0ea2f77c6ac67742a6f52106c35b6bc6a7b5f11536ca9"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
@@ -1627,7 +1627,7 @@
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:42a2413213f6cf7945a2075021c36a40de9aa23a71f75b3edf3466d726d5db7b"
+                "root": "sha256:5ad40568edef4dca66d0ea2f77c6ac67742a6f52106c35b6bc6a7b5f11536ca9"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
@@ -1661,7 +1661,7 @@
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:42a2413213f6cf7945a2075021c36a40de9aa23a71f75b3edf3466d726d5db7b"
+                "root": "sha256:5ad40568edef4dca66d0ea2f77c6ac67742a6f52106c35b6bc6a7b5f11536ca9"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:f1a0b8ba38614575c52f6b13c41d0cd8cda1720aac089b516c20797b37f25a2b"
+  "catalogRoot": "sha256:603c2fafd492aa250d958377620d49dacf706522fb325c0b5353c2e566334869"
 }
