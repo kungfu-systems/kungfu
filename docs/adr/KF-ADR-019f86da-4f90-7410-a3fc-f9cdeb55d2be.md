@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/3650]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/3650, https://github.com/kungfu-systems/kungfu/pull/3665]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/962
 qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json, framework/project-cut/src/settlement.mjs, framework/format/project-cut-canonical-json.mjs, framework/layout.manifest.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-framework-layout.test.mjs]
 review_state: self-reviewed
@@ -15,7 +15,7 @@ theme: project-cut-v1-canonical-root-source-projection
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-09-02
-ai_provenance: GPT-5 via Codex on 2026-09-02 added the source-boundary and canonical-JSON extraction implementation evidence from the user-authorized framework public-boundary Assignment; protected merge, exact protected-head qualification, and native Assignment seal are not yet claimed
+ai_provenance: GPT-5 via Codex on 2026-09-02 added the source-boundary, canonical-JSON extraction, and Wave 1 stable-entrypoint import-convergence implementation evidence from the user-authorized framework public-boundary Assignments; protected merge, exact protected-head qualification, and native Assignment seal for pull request 3665 are not yet claimed
 ---
 
 # KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be: Project Cut v1 uses a closed canonical root input and an explicit source projection
@@ -144,6 +144,17 @@ require byte-identical results. The framework layout manifest and its fail-close
 validator additionally prevent new private deep imports or accidental npm
 package ownership. This is implementation evidence for the existing decision,
 not a new Project Cut version or a new public package contract.
+
+Pull request 3665 proposes the first stable-entrypoint import-convergence wave:
+44 exact cross-directory consumers move from `framework/project-cut/src/project-cut.mjs`
+to `framework/project-cut/index.mjs`, while the retained private-import ratchet
+contracts from 56 to 12. The remaining 12 imports are deliberate internal or
+deferred consumers in settlement, composition, publication, history,
+native-loop qualification, and receipt evidence. The change does not alter the
+Project Cut export set, protocol schemas, root algorithms, or runtime behavior;
+the framework layout ratchet and existing Project Cut source gates qualify that
+boundary-only claim. Until the pull request is protected-merged and qualified
+at the protected head, this paragraph records proposed delivery evidence only.
 
 ## Non-claims
 
