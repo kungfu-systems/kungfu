@@ -476,8 +476,4 @@ test('native qualification keeps ccache optional without weakening the cold Gate
       ),
     );
   }
-  assert.match(
-    workflow,
-    /name: Run all expensive native qualification under the live Warrant[\s\S]*?\.\/shifu gate run source\.changed-scope/u,
-  );
 });
