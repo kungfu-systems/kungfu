@@ -29,6 +29,7 @@
       "events",
       "errors",
       "localRuntimeProfile",
+      "postgresqlRuntimeProfile",
       "implementationStatus",
       "nonClaims"
     ],
@@ -94,6 +95,9 @@
         "minItems": 10
       },
       "localRuntimeProfile": {
+        "type": "object"
+      },
+      "postgresqlRuntimeProfile": {
         "type": "object"
       },
       "implementationStatus": {
@@ -171,8 +175,8 @@
     },
     {
       "id": "cluster",
-      "status": "future-replaceable-adapter-only",
-      "semantics": "may implement the same protocol later; no database, scheduler, HA, or capacity behavior is implied"
+      "status": "postgresql-authority-v1",
+      "semantics": "PostgreSQL stores authoritative Initiative and Assignment transaction heads, fenced leases, append-only events and evidence, and idempotent receipts; clients remain storage-thin"
     }
   ],
   "capabilities": [
@@ -383,18 +387,43 @@
     "migrationSeam": "Backend replacement preserves protocol identities, revisions, roots, receipts, error codes, CAS, idempotency, and event-resume behavior.",
     "callerStorageMutation": "forbidden"
   },
+  "postgresqlRuntimeProfile": {
+    "status": "implemented-v1",
+    "realmKind": "cluster",
+    "authority": "kungfu-native-postgresql",
+    "schema": "postgresql-authority.sql",
+    "commandSurface": "kungfu work transaction apply",
+    "readSurfaces": [
+      "kungfu work transaction status",
+      "kungfu work transaction list"
+    ],
+    "lifecycle": [
+      "admitted",
+      "claimed",
+      "executing",
+      "stage-ready",
+      "completion-claimed",
+      "settled"
+    ],
+    "concurrency": "Every mutation locks one Assignment head, checks expectedVersion, and advances its monotonic version in the same transaction as its event and receipt.",
+    "leaseFence": "Acquisition advances lease generation and returns an opaque token; every later write must match generation, token hash, expiry, and expectedVersion.",
+    "idempotency": "An advisory transaction lock serializes each idempotency key; same request returns the original receipt and different request fails.",
+    "failure": "A database or transport failure never falls through to the Local Runtime or Atlas files.",
+    "legacyRead": "The Local Runtime remains available as an explicit legacy reader and writer profile; no existing journal root is rewritten.",
+    "callerStorageMutation": "forbidden"
+  },
   "implementationStatus": {
     "r0Contract": "proved-by-schema-fixtures-and-source-audit",
     "localRuntime": "implemented-r1",
     "guiRuntimeClient": "implemented-r2",
     "cliAgentKfxConvergence": "implemented-r3",
     "workSemantics": "implemented-domain-neutral-v1",
-    "clusterRuntime": "not-started-out-of-scope"
+    "clusterRuntime": "implemented-postgresql-authority-v1"
   },
   "nonClaims": [
     "The contract document alone does not certify an installed Runtime build or adopter integration.",
     "This contract does not migrate, initialize, or mutate a real Home Workspace.",
-    "This contract does not qualify PostgreSQL, distributed scheduling, multi-host recovery, high availability, sharding, or capacity.",
+    "This contract qualifies PostgreSQL transaction semantics but does not itself qualify one deployed cluster, scheduler, sharding, or capacity envelope.",
     "Registering the contract does not prove that existing GUI, CLI, Agent, or KFX paths already consume it."
   ]
 }

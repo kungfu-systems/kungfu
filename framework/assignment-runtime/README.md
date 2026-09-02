@@ -30,6 +30,27 @@ CLI, Agent, and KFX callers are clients: they may discover capabilities, read
 snapshots, resume events, and submit fenced commands, but they never own or
 mutate journal, JSON, SQLite, PostgreSQL, Electron, or filesystem layouts.
 
+The PostgreSQL Runtime Profile is the cluster writer for ordinary code Work.
+Its canonical schema is [`postgresql-authority.sql`](postgresql-authority.sql).
+The SQL authority owns the reduced lifecycle, optimistic version check, lease
+generation and token fence, append-only events and evidence, and idempotent
+receipts. `kungfu work transaction` is deliberately a thin transport: it sends
+one command to the SQL function or reads one authoritative view and never
+contains a second transition table.
+
+```sh
+export KUNGFU_ASSIGNMENT_PSQL_ARGV='["psql","-XAt","-v","ON_ERROR_STOP=1","kungfu_work_control"]'
+kungfu work transaction apply --request command.json
+kungfu work transaction status --initiative-id INITIATIVE --assignment-id ASSIGNMENT
+kungfu work transaction list
+```
+
+`KUNGFU_ASSIGNMENT_PSQL_ARGV` is an argv-only transport boundary, not a shell
+snippet. Credentials remain in the selected PostgreSQL client environment and
+must not be embedded in the command JSON. An unavailable or rejected database
+fails closed; the client does not write Local Runtime or Atlas compatibility
+state.
+
 Run the build-free contract checks with:
 
 ```sh

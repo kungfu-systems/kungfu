@@ -185,9 +185,15 @@ export function validateContract() {
   }
   if (contract.localRuntimeProfile.publicPathContract !== false)
     errors.push('the Local Runtime must not expose a public path contract');
+  const postgresBoundary = [
+    contract.implementationStatus.clusterRuntime,
+    contract.postgresqlRuntimeProfile?.authority,
+    contract.postgresqlRuntimeProfile?.callerStorageMutation,
+  ].join('|');
   if (
-    contract.implementationStatus.clusterRuntime !== 'not-started-out-of-scope'
+    postgresBoundary !==
+    'implemented-postgresql-authority-v1|kungfu-native-postgresql|forbidden'
   )
-    errors.push('Cluster Runtime must remain explicitly out of scope');
+    errors.push('PostgreSQL Runtime authority boundary is incomplete');
   return { ok: errors.length === 0, errors };
 }

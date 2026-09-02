@@ -23,6 +23,13 @@
       "rule": "Contains only admitted Assignment identity and lifecycle facts; reader proofs, Work semantics, Console, process, and lease observations are not members."
     },
     {
+      "id": "postgresql-assignment-authority",
+      "class": "authority",
+      "owner": "assignment-runtime",
+      "schema": "kungfu.work.postgresql-assignment-authority/v1",
+      "rule": "For a declared cluster realm, PostgreSQL alone owns Initiative and Assignment heads, version CAS, fenced leases, append-only events and evidence, and command receipts; Local Runtime and Atlas files are not fallback writers."
+    },
+    {
       "id": "planned-profile-source",
       "class": "historical-identity",
       "owner": "fresh-recovery-plan",
@@ -63,7 +70,7 @@
       "id": "assignment-lifecycle-authority",
       "kind": "writer",
       "owner": "assignment-runtime",
-      "site": "framework/core/src/python/kungfu/assignment_runtime/__init__.py#LocalAssignmentRuntimeApplication"
+      "site": "framework/assignment-runtime/postgresql-authority.sql#kungfu_work.command"
     },
     {
       "id": "assignment-phase-fold",
@@ -103,6 +110,14 @@
     }
   ],
   "callSites": [
+    {
+      "id": "postgresql-command-writer",
+      "path": "framework/assignment-runtime/postgresql-authority.sql",
+      "anchor": "CREATE OR REPLACE FUNCTION kungfu_work.command(request jsonb)",
+      "class": "authority",
+      "data": ["Initiative", "Assignment", "lease", "evidence", "Receipt"],
+      "disposition": "canonical-cluster-realm"
+    },
     {
       "id": "runtime-command-writer",
       "path": "framework/core/src/python/kungfu/assignment_runtime/__init__.py",
@@ -177,7 +192,7 @@
     },
     {
       "id": "agent-bind-workref-builder",
-      "path": "framework/core/src/python/kungfu/agent/run_agent.py",
+      "path": "framework/core/src/python/kungfu/agent/_run_agent/runtime.py",
       "anchor": "def bind_current_native_work(",
       "class": "discovery",
       "data": ["WorkRef", "Profile source", "workspace"],

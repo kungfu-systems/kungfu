@@ -32,6 +32,7 @@ from kungfu.cli.commands import (
     kfc,
 )
 from kungfu.cli.commands import assignment_review
+from kungfu.cli.commands import assignment_postgresql
 from kungfu.cli.commands import assignment_session
 from kungfu.cli.surface_contract import surface
 from kungfu.initiative_family import (  # noqa: F401 -- private owner seam
@@ -152,6 +153,7 @@ def _assignment_runtime(workspace_root, home, operation_class):
 
 
 assignment.add_command(create_runtime_host_command(_runtime))
+assignment.add_command(assignment_postgresql.transaction)
 for (
     runtime_recovery_command
 ) in assignment_runtime_recovery.create_runtime_recovery_commands(

@@ -53,7 +53,15 @@ test('freezes one backend-neutral Assignment Runtime contract', () => {
   );
   assert.equal(
     contract.implementationStatus.clusterRuntime,
-    'not-started-out-of-scope',
+    'implemented-postgresql-authority-v1',
+  );
+  assert.equal(
+    contract.postgresqlRuntimeProfile.authority,
+    'kungfu-native-postgresql',
+  );
+  assert.equal(
+    contract.postgresqlRuntimeProfile.callerStorageMutation,
+    'forbidden',
   );
 });
 
@@ -88,6 +96,18 @@ test('registers one byte-identical discoverable contract surface', () => {
 
 test('pins the current Assignment authority and client-path audit', () => {
   const audit = [
+    [
+      'framework/assignment-runtime/postgresql-authority.sql',
+      [
+        'CREATE OR REPLACE FUNCTION kungfu_work.command(request jsonb)',
+        'pg_advisory_xact_lock',
+        'generation-fenced',
+      ],
+    ],
+    [
+      'framework/core/src/python/kungfu/assignment_runtime/postgresql.py',
+      ['class PostgresAssignmentClient', 'class PsqlJsonTransport'],
+    ],
     [
       'framework/assignment-capture/assignment-capture.mjs',
       ['assignment-requests', 'assignment-request-captured'],
