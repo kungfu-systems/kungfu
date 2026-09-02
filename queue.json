@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9070,
+  "generation": 9071,
   "fencingCounter": 870,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:d213d4f9b0d19e4cd1a9c9d582a5160595454dc63bc1e04a75cd4d40524d1433",
@@ -73,8 +73,13 @@
     "issuedAt": "2026-09-02T12:06:01.755Z",
     "expiresAt": "2026-09-02T14:34:07.779Z",
     "fencingToken": "sha256:e48dffe5da51945ae0bb2fbdefee245112ea5a23c4f0e460bc58fc389ad5ef1c",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-02T13:04:07.779Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-02T13:04:07.779Z",
+    "nativeProofRoot": "sha256:c38f89cb6f12aa83f2187646b99e280edb1c7cb5191223417810e0763299774a",
+    "nativeExecutionReceiptRoot": "sha256:e3ccde9727737c5650a8ee941bb4cacf68828fefee67c3ee43eab4d354c66a17",
+    "nativeProofReuseRoot": "sha256:4afaa857aa9ace78afb86f6380c4a7ee0bc3bdefb5ec38d6a403d51cd06652c9",
+    "qualificationReceiptRoot": "sha256:05d4530f06736b617209269cc0c2610fb4e69580fa54e0b150989cba57b8f7a6",
+    "qualifiedAt": "2026-09-02T13:04:35.715Z"
   },
   "candidates": [
     {
@@ -65539,10 +65544,10 @@
       "sourceWorkflowRunId": 33626099811,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-02T11:51:01.050Z",
-      "updatedAt": "2026-09-02T13:04:07.779Z",
+      "updatedAt": "2026-09-02T13:04:35.715Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".github/workflows/affected-native-pr.yml",
@@ -65643,6 +65648,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-02T13:04:07.779Z",
-  "stateRoot": "sha256:b264fac5c75fc82eaa38c5be95c8bf00206658d5319738396ebfaad51042fe5f"
+  "updatedAt": "2026-09-02T13:04:35.715Z",
+  "stateRoot": "sha256:b4a6ef470b148eae62bdb0b17d68282d86032b721fde7a90fb731da270a4f169"
 }
