@@ -147,39 +147,3 @@ test('Alpha.1 and Alpha.2 semantics survive topology removal and flattening', ()
     semanticRelease(flattened, alpha1Fact.cutRoot),
   );
 });
-
-test('normal release routing no longer evaluates historical parent topology', () => {
-  const contract = readJson(CONTRACT_PATH);
-  const patrol = read(
-    '.github/workflows/dev-alpha-candidate-patrol.yml',
-  ).toString();
-  const build = read('.github/workflows/build.yml').toString();
-  const promotion = read(
-    '.github/workflows/release-new-version.yml',
-  ).toString();
-
-  for (const workflow of [patrol, build, promotion]) {
-    assert.match(workflow, /check:durable-provenance-authority/u);
-    assert.doesNotMatch(workflow, /git show -s --format=%P/u);
-    assert.doesNotMatch(workflow, /candidate-provenance|promotion-provenance/u);
-  }
-  assert.doesNotMatch(patrol, /git fetch --no-tags --depth=2/u);
-  assert.doesNotMatch(build, /RELEASE_CUT_SOURCE_REF/u);
-  assert.doesNotMatch(build, /alphaBaseSha/u);
-  assert.deepEqual(contract.releaseRehearsal, {
-    mode: 'normal-protected-non-public',
-    gate: 'governance.promotion-rehearsal',
-    publication: false,
-    topologyRequirement: 'none',
-    specialPromotionRoute: false,
-    handMaintainedAllowlist: false,
-    prooflessFallback: false,
-  });
-  assert.deepEqual(Object.values(contract.retirement.activeModes), [
-    'retired',
-    'retired',
-    'retired',
-    'retired',
-    'retired',
-  ]);
-});

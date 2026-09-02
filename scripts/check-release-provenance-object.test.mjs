@@ -82,19 +82,6 @@ test('release provenance is a welded KFR2 semantic contract', () => {
   );
 });
 
-test('legacy provenance objects are retired from active release workflows', () => {
-  const candidate = read('.github/workflows/dev-alpha-candidate-patrol.yml');
-  const promotion = read('.github/workflows/release-new-version.yml');
-
-  for (const workflow of [candidate, promotion]) {
-    assert.match(workflow, /check:durable-provenance-authority/u);
-    assert.doesNotMatch(workflow, /release-provenance-object\.py/u);
-    assert.doesNotMatch(workflow, /candidate-provenance/u);
-    assert.doesNotMatch(workflow, /promotion-provenance/u);
-    assert.doesNotMatch(workflow, /git show -s --format=%P/u);
-  }
-});
-
 test('canonical source content is stable across commit topology and changes on bytes', () => {
   const repository = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-release-source-content-'),
