@@ -15,16 +15,16 @@ import {
 } from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
 
 import {
-  observeComposition,
-  verifyComposition,
-} from '../framework/project-cut/src/composition.mjs';
-import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
   sha256Bytes,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
+import {
+  observeComposition,
+  verifyComposition,
+} from '../framework/project-cut/src/composition.mjs';
 import {
   sourceProjectionAtCommit,
   sourceProjectionAtTree,

@@ -263,6 +263,7 @@ test('freeze assembly executes the complete isolated Work Design runtime closure
     ).files,
   );
   assert.ok(files.includes('format/project-cut-canonical-json.mjs'));
+  assert.ok(files.includes('project-cut/index.mjs'));
   assert.ok(files.includes('project-cut/src/json-scanner.mjs'));
   for (const relative of files) {
     const source = path.join(ROOT, 'framework', relative);

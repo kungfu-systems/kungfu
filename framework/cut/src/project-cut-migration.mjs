@@ -4,7 +4,7 @@
 import {
   semanticRoot as legacySemanticRoot,
   verifyProjectCut,
-} from '../../project-cut/src/project-cut.mjs';
+} from '../../project-cut/index.mjs';
 import { buildCut, semanticRoot, verifyCut } from './cut.mjs';
 
 export const MIGRATION_SCHEMA = 'kungfu.cut.migration-receipt/v1';

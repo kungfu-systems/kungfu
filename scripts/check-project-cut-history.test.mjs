@@ -9,15 +9,15 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  buildProjectCut,
+  canonicalJson,
+  semanticRoot,
+} from '../framework/project-cut/index.mjs';
+import {
   observeHistory,
   reconcileHistory,
   verifyHistoryObservation,
 } from '../framework/project-cut/src/history.mjs';
-import {
-  buildProjectCut,
-  canonicalJson,
-  semanticRoot,
-} from '../framework/project-cut/src/project-cut.mjs';
 import { checkProjectCutHistoryContract } from './project-cut-history-contract.mjs';
 
 const REPO_ROOT = path.resolve(

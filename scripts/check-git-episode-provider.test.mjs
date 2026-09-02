@@ -22,7 +22,7 @@ import {
   canonicalJson,
   semanticRoot,
   sha256Bytes,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
 
 const ROOT = 'a'.repeat(64);
 const Ajv2020 = optionalAjv2020();
