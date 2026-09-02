@@ -36,7 +36,12 @@ const ROLES = new Set([
   'repository-tool',
   'runtime-package',
 ]);
-const BOUNDARY_REVIEWS = new Set(['candidate', 'none']);
+const BOUNDARY_REVIEWS = new Set(['candidate', 'complete', 'none']);
+const BOUNDARY_DISPOSITIONS = new Set([
+  'embedded-public-protocol',
+  'repository-stable',
+]);
+const DEEP_IMPORT_POLICY = 'stable-entrypoints-with-exact-legacy-ratchet';
 const RELATIVE_LITERAL = /(['"`])(\.\.?\/[^'"`\r\n\\]+)\1/gu;
 
 function issue(code, message) {
@@ -72,6 +77,231 @@ function sourceFiles(directory) {
   };
   visit(directory);
   return files.sort();
+}
+
+function repositoryPath(root, target) {
+  return path.relative(root, target).split(path.sep).join('/');
+}
+
+function isSafeRepositoryPath(value) {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    !path.posix.isAbsolute(value) &&
+    !value.includes('\\') &&
+    !value
+      .split('/')
+      .some((part) => part === '' || part === '.' || part === '..')
+  );
+}
+
+function skipLineComment(source, index) {
+  const end = source.indexOf('\n', index + 2);
+  return end === -1 ? source.length : end;
+}
+
+function skipBlockComment(source, index) {
+  const end = source.indexOf('*/', index + 2);
+  return end === -1 ? source.length : end + 2;
+}
+
+function scanQuotedString(source, index) {
+  const quote = source[index];
+  let value = '';
+  let cursor = index + 1;
+  while (cursor < source.length && source[cursor] !== quote) {
+    if (source[cursor] === '\\' && cursor + 1 < source.length) {
+      value += source.slice(cursor, cursor + 2);
+      cursor += 2;
+    } else {
+      value += source[cursor];
+      cursor += 1;
+    }
+  }
+  return { next: cursor + 1, token: { kind: 'string', value } };
+}
+
+function skipTemplateLiteral(source, index) {
+  let cursor = index + 1;
+  while (cursor < source.length) {
+    if (source[cursor] === '\\') cursor += 2;
+    else if (source[cursor] === '`') return cursor + 1;
+    else cursor += 1;
+  }
+  return cursor;
+}
+
+function scanWord(source, index) {
+  let cursor = index + 1;
+  while (cursor < source.length && /[A-Za-z0-9_$]/u.test(source[cursor]))
+    cursor += 1;
+  return {
+    next: cursor,
+    token: { kind: 'word', value: source.slice(index, cursor) },
+  };
+}
+
+function javascriptTokens(source) {
+  const tokens = [];
+  let index = 0;
+  while (index < source.length) {
+    const character = source[index];
+    if (/\s/u.test(character)) index += 1;
+    else if (source.startsWith('//', index))
+      index = skipLineComment(source, index);
+    else if (source.startsWith('/*', index))
+      index = skipBlockComment(source, index);
+    else if (character === '"' || character === "'") {
+      const scanned = scanQuotedString(source, index);
+      tokens.push(scanned.token);
+      index = scanned.next;
+    } else if (character === '`') index = skipTemplateLiteral(source, index);
+    else if (/[A-Za-z_$]/u.test(character)) {
+      const scanned = scanWord(source, index);
+      tokens.push(scanned.token);
+      index = scanned.next;
+    } else {
+      tokens.push({ kind: 'punctuation', value: character });
+      index += 1;
+    }
+  }
+  return tokens;
+}
+
+function callSpecifier(tokens, tokenIndex) {
+  if (
+    tokens[tokenIndex + 1]?.value === '(' &&
+    tokens[tokenIndex + 2]?.kind === 'string'
+  )
+    return tokens[tokenIndex + 2].value;
+  return '';
+}
+
+function fromSpecifier(tokens, tokenIndex) {
+  for (let cursor = tokenIndex + 1; cursor < tokens.length; cursor += 1) {
+    if (tokens[cursor].value === ';') return '';
+    if (
+      tokens[cursor].kind === 'word' &&
+      tokens[cursor].value === 'from' &&
+      tokens[cursor + 1]?.kind === 'string'
+    )
+      return tokens[cursor + 1].value;
+  }
+  return '';
+}
+
+function tokenSpecifier(tokens, tokenIndex) {
+  const token = tokens[tokenIndex];
+  if (token.kind !== 'word') return '';
+  if (token.value === 'require') return callSpecifier(tokens, tokenIndex);
+  if (token.value !== 'import' && token.value !== 'export') return '';
+  return (
+    callSpecifier(tokens, tokenIndex) ||
+    (tokens[tokenIndex + 1]?.kind === 'string'
+      ? tokens[tokenIndex + 1].value
+      : fromSpecifier(tokens, tokenIndex))
+  );
+}
+
+function importSpecifiers(source) {
+  const tokens = javascriptTokens(source);
+  const specifiers = [];
+  for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+    const specifier = tokenSpecifier(tokens, tokenIndex);
+    if (specifier) specifiers.push(specifier);
+  }
+  return specifiers.filter((specifier) => /^\.\.?\//u.test(specifier));
+}
+
+function completedBoundaries(root, manifest) {
+  const entries = Array.isArray(manifest?.entries) ? manifest.entries : [];
+  return entries
+    .filter((entry) => entry.boundaryReview === 'complete' && entry.boundary)
+    .map((entry) => ({
+      path: entry.path,
+      root: path.resolve(root, entry.path),
+      stableEntrypoints: new Set(entry.boundary.stableEntrypoints || []),
+    }));
+}
+
+function importedBoundary(root, file, specifier, boundary) {
+  const target = path.resolve(path.dirname(file), specifier);
+  if (
+    target !== boundary.root &&
+    !target.startsWith(`${boundary.root}${path.sep}`)
+  )
+    return null;
+  if (file === boundary.root || file.startsWith(`${boundary.root}${path.sep}`))
+    return null;
+  const targetPath = repositoryPath(root, target);
+  return {
+    importer: repositoryPath(root, file),
+    target: targetPath,
+    kind: boundary.stableEntrypoints.has(targetPath) ? 'stable' : 'deep',
+  };
+}
+
+function sortBoundaryImports(imports) {
+  for (const values of Object.values(imports))
+    values.sort((left, right) => {
+      const leftKey = `${left.importer}\0${left.target}`;
+      const rightKey = `${right.importer}\0${right.target}`;
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    });
+  return imports;
+}
+
+export function discoverBoundaryImports({ root = ROOT, manifest } = {}) {
+  const boundaries = completedBoundaries(root, manifest);
+  const imports = Object.fromEntries(
+    boundaries.map((entry) => [entry.path, []]),
+  );
+  if (boundaries.length === 0) return imports;
+
+  for (const file of sourceFiles(root)) {
+    for (const specifier of importSpecifiers(fs.readFileSync(file, 'utf8'))) {
+      for (const boundary of boundaries) {
+        const imported = importedBoundary(root, file, specifier, boundary);
+        if (imported) imports[boundary.path].push(imported);
+      }
+    }
+  }
+  return sortBoundaryImports(imports);
+}
+
+function boundaryCycles(entries) {
+  const completed = new Set(
+    entries
+      .filter((entry) => entry.boundaryReview === 'complete')
+      .map((entry) => entry.path),
+  );
+  const graph = new Map(
+    entries
+      .filter((entry) => completed.has(entry.path))
+      .map((entry) => [
+        entry.path,
+        (entry.dependencies || []).filter((dependency) =>
+          completed.has(dependency),
+        ),
+      ]),
+  );
+  const cycles = [];
+  const visited = new Set();
+  const active = [];
+  const visit = (node) => {
+    const activeIndex = active.indexOf(node);
+    if (activeIndex !== -1) {
+      cycles.push([...active.slice(activeIndex), node]);
+      return;
+    }
+    if (visited.has(node)) return;
+    active.push(node);
+    for (const dependency of graph.get(node) || []) visit(dependency);
+    active.pop();
+    visited.add(node);
+  };
+  for (const node of [...graph.keys()].sort()) visit(node);
+  return cycles;
 }
 
 export function discoverFrameworkDependencies({ root = ROOT } = {}) {
@@ -179,6 +409,147 @@ export function collectFrameworkLayoutIssues({
           `${entry.path || '<unknown>'} has an invalid boundaryReview`,
         ),
       );
+    if (entry.boundaryReview === 'complete') {
+      const boundary = entry.boundary;
+      if (entry.distribution !== 'source-only')
+        issues.push(
+          issue(
+            'boundary-distribution',
+            `${entry.path} completed boundary must remain source-only`,
+          ),
+        );
+      if (
+        !boundary ||
+        typeof boundary !== 'object' ||
+        Array.isArray(boundary)
+      ) {
+        issues.push(
+          issue(
+            'boundary-missing',
+            `${entry.path} completed boundary has no decision`,
+          ),
+        );
+      } else {
+        if (!BOUNDARY_DISPOSITIONS.has(boundary.disposition))
+          issues.push(
+            issue(
+              'boundary-disposition',
+              `${entry.path} has an invalid boundary disposition`,
+            ),
+          );
+        if (boundary.deepImportPolicy !== DEEP_IMPORT_POLICY)
+          issues.push(
+            issue(
+              'deep-import-policy',
+              `${entry.path} must use ${DEEP_IMPORT_POLICY}`,
+            ),
+          );
+        for (const field of ['stableEntrypoints', 'consumers']) {
+          const values = Array.isArray(boundary[field]) ? boundary[field] : [];
+          if (field === 'stableEntrypoints' && values.length === 0)
+            issues.push(
+              issue(
+                'boundary-entrypoint',
+                `${entry.path} must declare at least one stable entrypoint`,
+              ),
+            );
+          if (
+            !Array.isArray(boundary[field]) ||
+            JSON.stringify(values) !==
+              JSON.stringify([...new Set(values)].sort())
+          )
+            issues.push(
+              issue(
+                `boundary-${field === 'consumers' ? 'consumer' : 'entrypoint'}-order`,
+                `${entry.path} ${field} must be unique and sorted`,
+              ),
+            );
+          for (const value of values) {
+            if (!isSafeRepositoryPath(value)) {
+              issues.push(
+                issue(
+                  `boundary-${field === 'consumers' ? 'consumer' : 'entrypoint'}-path`,
+                  `${entry.path} declares invalid ${field} path ${String(value)}`,
+                ),
+              );
+              continue;
+            }
+            if (
+              field === 'stableEntrypoints' &&
+              value !== entry.path &&
+              !value.startsWith(`${entry.path}/`)
+            )
+              issues.push(
+                issue(
+                  'boundary-entrypoint-scope',
+                  `${entry.path} entrypoint is outside its boundary: ${value}`,
+                ),
+              );
+            if (!fs.existsSync(path.join(root, value)))
+              issues.push(
+                issue(
+                  `boundary-${field === 'consumers' ? 'consumer' : 'entrypoint'}-missing`,
+                  `${entry.path} declares missing ${field} path ${value}`,
+                ),
+              );
+          }
+        }
+        const legacy = Array.isArray(boundary.legacyDeepImports)
+          ? boundary.legacyDeepImports
+          : [];
+        const legacyKeys = legacy.map(
+          (entryValue) => `${entryValue?.importer}\0${entryValue?.target}`,
+        );
+        if (
+          !Array.isArray(boundary.legacyDeepImports) ||
+          JSON.stringify(legacyKeys) !==
+            JSON.stringify([...new Set(legacyKeys)].sort())
+        )
+          issues.push(
+            issue(
+              'legacy-deep-import-order',
+              `${entry.path} legacyDeepImports must be unique and sorted`,
+            ),
+          );
+        for (const legacyImport of legacy) {
+          if (
+            !isSafeRepositoryPath(legacyImport?.importer) ||
+            !isSafeRepositoryPath(legacyImport?.target)
+          ) {
+            issues.push(
+              issue(
+                'legacy-deep-import-path',
+                `${entry.path} has an invalid legacy deep-import entry`,
+              ),
+            );
+            continue;
+          }
+          if (!legacyImport.target.startsWith(`${entry.path}/`))
+            issues.push(
+              issue(
+                'legacy-deep-import-scope',
+                `${entry.path} legacy target is outside its boundary: ${legacyImport.target}`,
+              ),
+            );
+          for (const field of ['importer', 'target']) {
+            if (!fs.existsSync(path.join(root, legacyImport[field])))
+              issues.push(
+                issue(
+                  'legacy-deep-import-missing',
+                  `${entry.path} legacy ${field} is missing: ${legacyImport[field]}`,
+                ),
+              );
+          }
+        }
+      }
+    } else if (Object.hasOwn(entry, 'boundary')) {
+      issues.push(
+        issue(
+          'boundary-unreviewed',
+          `${entry.path} cannot declare a boundary before review is complete`,
+        ),
+      );
+    }
     const declaredDependencies = Array.isArray(entry.dependencies)
       ? entry.dependencies
       : [];
@@ -284,6 +655,60 @@ export function collectFrameworkLayoutIssues({
       );
   }
 
+  for (const cycle of boundaryCycles(entries))
+    issues.push(
+      issue(
+        'boundary-cycle',
+        `completed boundary dependency cycle: ${cycle.join(' -> ')}`,
+      ),
+    );
+
+  const boundaryImports = discoverBoundaryImports({ root, manifest });
+  for (const entry of entries.filter(
+    (candidate) =>
+      candidate.boundaryReview === 'complete' && candidate.boundary,
+  )) {
+    const actual = boundaryImports[entry.path] || [];
+    const duplicateKeys = actual
+      .map((value) => `${value.importer}\0${value.target}`)
+      .filter((value, index, values) => values.indexOf(value) !== index);
+    if (duplicateKeys.length)
+      issues.push(
+        issue(
+          'deep-import-duplicate',
+          `${entry.path} has duplicate static imports: ${[...new Set(duplicateKeys)].join(', ')}`,
+        ),
+      );
+    for (const imported of actual) {
+      if (
+        !(entry.boundary.consumers || []).some(
+          (consumer) =>
+            imported.importer === consumer ||
+            imported.importer.startsWith(`${consumer}/`),
+        )
+      )
+        issues.push(
+          issue(
+            'boundary-consumer-drift',
+            `${entry.path} has undeclared consumer ${imported.importer}`,
+          ),
+        );
+    }
+    const actualDeep = actual
+      .filter((value) => value.kind === 'deep')
+      .map(({ importer, target }) => ({ importer, target }));
+    const declaredDeep = Array.isArray(entry.boundary.legacyDeepImports)
+      ? entry.boundary.legacyDeepImports
+      : [];
+    if (JSON.stringify(actualDeep) !== JSON.stringify(declaredDeep))
+      issues.push(
+        issue(
+          'legacy-deep-import-drift',
+          `${entry.path} legacy deep imports declared=${JSON.stringify(declaredDeep)} discovered=${JSON.stringify(actualDeep)}`,
+        ),
+      );
+  }
+
   return issues;
 }
 
@@ -320,4 +745,9 @@ function main() {
   );
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] || '').href) main();
+if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
+  if (process.argv.includes('--print-boundary-imports')) {
+    const manifest = readJson(ROOT, MANIFEST_PATH);
+    console.log(JSON.stringify(discoverBoundaryImports({ manifest }), null, 2));
+  } else main();
+}

@@ -7,7 +7,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../project-cut/src/project-cut.mjs';
+import { semanticRoot } from '../project-cut/index.mjs';
 import {
   observeRun,
   parseCommandJson,

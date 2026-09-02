@@ -128,10 +128,12 @@ test('high-value command paths declare the registered preflight profiles', () =>
   ]
     .map((relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8'))
     .join('\n');
-  const storageSource = fs.readFileSync(
-    path.join(ROOT, 'framework/core/src/python/kungfu/cli/commands/storage.py'),
-    'utf8',
-  );
+  const storageSource = [
+    'framework/core/src/python/kungfu/cli/commands/storage.py',
+    'framework/core/src/python/kungfu/storage/cli_episode.py',
+  ]
+    .map((relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8'))
+    .join('\n');
   assert.match(runtimeSource, /command_preflight\("runtime-activation"\)/);
   assert.match(runtimeSource, /command_preflight\("peer-activation"\)/);
   assert.match(storageSource, /run_command_preflight\(ctx, "episode-write"\)/);

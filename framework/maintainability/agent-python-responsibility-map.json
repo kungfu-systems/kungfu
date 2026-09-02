@@ -42,14 +42,57 @@
         "functionRisk": { "functions": 22, "total": 171, "maximum": 28 }
       },
       "current": {
-        "physicalLines": 1210,
-        "responsibilities": 33,
-        "functionRisk": { "functions": 20, "total": 133, "maximum": 27 }
+        "physicalLines": 528,
+        "responsibilities": 18,
+        "functionRisk": { "functions": 5, "total": 48, "maximum": 27 }
       },
-      "ownerFiles": ["framework/core/src/python/kungfu/agent/native_launch.py"],
-      "ownedDefinitions": ["provider_interactive_argv"],
-      "facadeSymbols": ["interactive_launch_argv"],
-      "responsibility": "Agent process execution remains here; provider-specific interactive launch construction is owned by kungfu.agent.native_launch."
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/agent/native_launch.py",
+        "framework/core/src/python/kungfu/agent/_run_agent/runtime.py"
+      ],
+      "ownedDefinitions": [
+        "provider_interactive_argv",
+        "bind_current_native_work",
+        "agent_activity_history_projection",
+        "validate_work_ref",
+        "validate_continuation",
+        "select_profile",
+        "select_interactive_profile",
+        "launch_argv",
+        "_direct_process_transport",
+        "native_environment",
+        "run_native_interactive",
+        "_environment",
+        "_cwd",
+        "ProcessResult",
+        "_session_ref",
+        "_invoke_session_control",
+        "_wait_for_session",
+        "run_session_attempt",
+        "run_process"
+      ],
+      "facadeSymbols": [
+        "interactive_launch_argv",
+        "bind_current_native_work",
+        "agent_activity_history_projection",
+        "validate_work_ref",
+        "validate_continuation",
+        "select_profile",
+        "select_interactive_profile",
+        "launch_argv",
+        "_direct_process_transport",
+        "native_environment",
+        "run_native_interactive",
+        "_environment",
+        "_cwd",
+        "ProcessResult",
+        "_session_ref",
+        "_invoke_session_control",
+        "_wait_for_session",
+        "run_session_attempt",
+        "run_process"
+      ],
+      "responsibility": "Episode, report, and public execution orchestration remain on the stable facade; Work binding, launch policy, environment construction, Session control, and direct process transport are owned by the private run-agent runtime module, while provider-specific interactive argv remains owned by native_launch."
     },
     {
       "sourcePath": "framework/core/src/python/kungfu/agent_work_lab.py",
@@ -59,28 +102,44 @@
         "functionRisk": { "functions": 38, "total": 472, "maximum": 63 }
       },
       "current": {
-        "physicalLines": 1523,
-        "responsibilities": 36,
-        "functionRisk": { "functions": 31, "total": 318, "maximum": 53 }
+        "physicalLines": 929,
+        "responsibilities": 20,
+        "functionRisk": { "functions": 17, "total": 197, "maximum": 53 }
       },
       "ownerFiles": [
-        "framework/core/src/python/kungfu/agent_work_lab_evidence.py"
+        "framework/core/src/python/kungfu/agent_work_lab_evidence.py",
+        "framework/core/src/python/kungfu/agent_work_lab_demo.py",
+        "framework/core/src/python/kungfu/agent_work_lab_template.py"
       ],
       "ownedDefinitions": [
+        "content_root",
         "load_suite_catalog",
         "work_reference",
         "open_episode",
         "close_episode",
-        "publish_event"
+        "publish_event",
+        "demo_plan",
+        "run_demo",
+        "ProjectTemplateError",
+        "load_project_template",
+        "plan_project_template",
+        "create_project_template"
       ],
       "facadeSymbols": [
+        "content_root",
         "_load_suite_catalog",
         "_work_ref",
         "_open_session_episode",
         "_close_session_episode",
-        "_publish_event"
+        "_publish_event",
+        "demo_plan",
+        "run_demo",
+        "ProjectTemplateError",
+        "load_project_template",
+        "plan_project_template",
+        "create_project_template"
       ],
-      "responsibility": "Work Lab commands and projections remain here; Suite discovery and exact Episode evidence are owned by kungfu.agent_work_lab_evidence."
+      "responsibility": "Agent process execution and report verification remain on the public facade; shared schemas and immutable Episode evidence, deterministic demo execution, and fail-closed project templates are owned by the evidence, demo, and template modules."
     },
     {
       "sourcePath": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -338,16 +397,38 @@
         "functionRisk": { "functions": 55, "total": 899, "maximum": 70 }
       },
       "current": {
-        "physicalLines": 1545,
-        "responsibilities": 60,
-        "functionRisk": { "functions": 54, "total": 845, "maximum": 70 }
+        "physicalLines": 412,
+        "responsibilities": 25,
+        "functionRisk": { "functions": 14, "total": 173, "maximum": 65 }
       },
       "ownerFiles": [
-        "framework/core/src/python/kungfu/agent/context_surface.py"
+        "framework/core/src/python/kungfu/agent/context_surface.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/provider.py"
       ],
-      "ownedDefinitions": ["project_agent_context"],
+      "ownedDefinitions": [
+        "project_agent_context",
+        "agent",
+        "work",
+        "work_action",
+        "work_import_authority",
+        "hub",
+        "hub_handle",
+        "runtime",
+        "runtime_upsert",
+        "console",
+        "console_bind_work",
+        "session_action",
+        "install_skill",
+        "bootstrap",
+        "set_mode"
+      ],
       "facadeSymbols": ["_context"],
-      "responsibility": "Click command registration remains here; native and local Agent context projection is owned by kungfu.agent.context_surface."
+      "responsibility": "The stable Agent facade keeps public imports and cross-domain discovery commands; Work, Hub, runtime, Console, Session, and provider-policy registration are owned by cohesive private command domains, while native and local context projection remains owned by kungfu.agent.context_surface."
     },
     {
       "sourcePath": "framework/core/src/python/kungfu/cli/commands/assignment.py",

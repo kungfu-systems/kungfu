@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   canonicalJson,
   semanticRoot,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
 import {
   observeSettlementCommit,
   prepareSettlement,

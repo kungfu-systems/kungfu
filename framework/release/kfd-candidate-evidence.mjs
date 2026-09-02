@@ -742,75 +742,21 @@ export function verifyKfdManifestSet({
       throw new Error(`KFD candidate/source root mismatch on ${platform}`);
     }
     const required = [
-      `product/release/qualification/kfd/artifacts/${platform}.json`,
-      `product/release/qualification/kfd/source/kfd-3/collaboration-interface.${platform}.prebuild.json`,
-      'product/release/qualification/kfd/source-gate.json',
-      'product/release/qualification/kfd/candidate-evidence.json',
+      'product/release/qualification/platform-qualification-manifest.json',
     ];
     const files = new Map((manifest.files || []).map((row) => [row.path, row]));
     for (const requiredPath of required) {
       const row = files.get(requiredPath);
       if (!row)
         throw new Error(
-          `missing sealed KFD manifest evidence on ${platform}: ${requiredPath}`,
+          `missing platform qualification manifest on ${platform}: ${requiredPath}`,
         );
       if (!/^[a-f0-9]{64}$/u.test(String(row.sha256 || ''))) {
         throw new Error(
-          `invalid sealed KFD manifest digest on ${platform}: ${requiredPath}`,
+          `invalid platform qualification manifest digest on ${platform}: ${requiredPath}`,
         );
       }
     }
   }
   return { ok: true, sourceSha, platforms: [...platforms] };
-}
-
-export function runVerifiedQualification({
-  root,
-  command,
-  platform,
-  sourceSha,
-  sourceTree,
-  buildArtifactWitness,
-  prepareReleaseArtifacts,
-}) {
-  const prepareStatus = prepareReleaseArtifacts?.();
-  if (prepareStatus !== undefined && prepareStatus !== 0) {
-    return prepareStatus || 1;
-  }
-  sealKfdPrebuiltLayerArtifacts({ root });
-  prepareKfdArtifactWitness({
-    root,
-    platform,
-    sourceSha,
-    sourceTree,
-    buildArtifactWitness,
-  });
-  const output = path.join(root, 'product', 'release', 'qualification', 'kfd');
-  const sealed = path.join(
-    root,
-    '.buildchain',
-    'runtime',
-    'kfd-candidate-evidence',
-    'artifact-before-verify',
-  );
-  fs.rmSync(sealed, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(sealed), { recursive: true });
-  fs.renameSync(output, sealed);
-  const result = spawnSync(command[0], command.slice(1), {
-    cwd: root,
-    env: {
-      ...process.env,
-      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
-      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT:
-        releaseArtifactRoot(root).root,
-    },
-    stdio: 'inherit',
-  });
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.renameSync(sealed, output);
-  if (result.error) throw result.error;
-  if (result.status !== 0) return result.status || 1;
-  finalizeKfdCandidateEvidence({ root, platform, sourceSha, sourceTree });
-  return 0;
 }

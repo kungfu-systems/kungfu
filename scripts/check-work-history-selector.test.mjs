@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { semanticRoot } from '../framework/project-cut/src/project-cut.mjs';
+import { semanticRoot } from '../framework/project-cut/index.mjs';
 import {
   buildWorkHistoryCandidate,
   buildWorkHistoryIndexSnapshot,

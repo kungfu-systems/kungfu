@@ -1,0 +1,131 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:8ccff0c59d6ac485dc4251bfc5a2fca5adaed66a30d7ddfbe93af5ee3175174f",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "framework/core/src/python/kungfu/agent/_action_loop_support.py",
+    "framework/core/src/python/kungfu/agent/_action_loop_transport.py",
+    "framework/core/src/python/kungfu/agent/_run_agent/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/authoring.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/lifecycle.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_workspace/admission.py",
+    "framework/core/src/python/kungfu/cli/commands/_workspace/presentation.py",
+    "framework/core/src/python/kungfu/project_tour/native_operations.py",
+    "framework/core/src/python/kungfu/skill/_registry/support.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "framework/core/src/python/kungfu/agent/_action_loop_support.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 61,
+      "contentRoot": "sha256:2f48d8bfd65f9eba350b161fa328ee9cf9ccc4e327750b04633d6b0757b4efc3"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/_action_loop_transport.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 53,
+      "contentRoot": "sha256:aca56d518a88ea12530d048e4eb3aac84291ca89a5dd90d509b9394653cad778"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/_run_agent/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 836,
+      "contentRoot": "sha256:179a798613cff52fc4178b30cf5eb2291c6d93b083291bf5dbd968d8189c53f5"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/authoring.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 199,
+      "contentRoot": "sha256:cb44718b221a03b048e552a565074b863f715e59ae859a105563bb8ecedd7565"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 45,
+      "contentRoot": "sha256:afd3b9cebc95e37a34c46d9252ebd0ab9a718a875f39a1ad5a5db1682a5cb867"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/lifecycle.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 489,
+      "contentRoot": "sha256:ed7a68b4405a1180955347df3e0bfd29ede4b35cde8e2dea5c8e9f30e9f513c6"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 616,
+      "contentRoot": "sha256:36b0f5d45979641b69e54cb52094bfc772b023e682002bd9f13b4915b0573938"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_workspace/admission.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 136,
+      "contentRoot": "sha256:2c659d480c1d0f351cfe60c13ccb60223d20d6eaf2f3cc69f63423d4894bd54f"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_workspace/presentation.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 37,
+      "contentRoot": "sha256:e659913be08e99474b8c188aa3be63add553456aca4c9cae2fbfd8a6a5ad5ae3"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/project_tour/native_operations.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 200,
+      "contentRoot": "sha256:d19a741aedca642547233699714d67139ebea88f395eb90945994d71fc4ad964"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/skill/_registry/support.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 418,
+      "contentRoot": "sha256:9bd200ba083e3ebb64a14b29c6b21d8b7b0dac4f11390359c5c2de0bcfb7e09d"
+    }
+  ],
+  "allowed_delta": 3090,
+  "owner": "core/package",
+  "responsibility_boundary": "Phase 7 separates seven production Python facades into cohesive Skill CLI, Agent run, Skill registry, Workspace CLI, Project Tour, Action Loop, and Storage Episode owners while preserving their stable public modules.",
+  "cohesion_rationale": "The eleven new owner modules are the minimum cumulative responsibility set needed to remove the seven Phase 7 monoliths. Storage Episode commands move from the CLI package into their existing storage-domain ownership without increasing the clean-HEAD helper count, and each new helper owns an independently changing command, transport, persistence, or native-operation boundary.",
+  "rejected_split_alternatives": [
+    "Keeping any of the seven responsibility groups in its original facade would retain an over-1000-line handwritten production module.",
+    "Splitting individual commands or functions into smaller arbitrary files would increase indirection without creating independent ownership.",
+    "Moving domain behavior solely to satisfy a metric, changing public imports, or relaxing the aggregate structure baseline would hide debt instead of reducing it."
+  ],
+  "affected_tests_and_qualification": [
+    "focused Skill, Agent run, Workspace, Project Tour, Action Loop, and Storage CLI regression suites",
+    "./shifu check:cli-catalog-parity",
+    "./shifu check:python-structure",
+    "./shifu maintainability:complexity",
+    "./shifu maintainability:function-risk",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-production-phase7"
+}

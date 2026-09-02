@@ -256,7 +256,7 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
         doctor::run(root.as_deref(), &args[1..]);
     }
     if is_promote {
-        promote::run_promote(&args[1..]);
+        promote::run_promote(root.as_deref(), &args[1..]);
     }
     if is_builds {
         promote::run_builds(root.as_deref(), &args[1..]);

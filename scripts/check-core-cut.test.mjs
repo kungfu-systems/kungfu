@@ -16,7 +16,7 @@ import {
   migrateProjectCut,
   verifyMigration,
 } from '../framework/cut/src/project-cut-migration.mjs';
-import { buildProjectCut } from '../framework/project-cut/src/project-cut.mjs';
+import { buildProjectCut } from '../framework/project-cut/index.mjs';
 
 const root = (digit) => `sha256:${digit.repeat(64)}`;
 const base = (

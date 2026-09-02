@@ -6,11 +6,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { executeQualificationActionLoop } from '../action/action-loop-qualification-adapters.mjs';
 import {
   classifyPrecondition,
   classifyRecovery,
-} from '../action/action-loop.mjs';
+  executeQualificationActionLoop,
+} from '../action/index.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

@@ -6,13 +6,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createKfdPrebuildGate,
-  runVerifiedQualification,
   sealKfdSourceEvidence,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
   verifyReleaseArtifactRoot,
 } from '../framework/release/kfd-candidate-evidence.mjs';
-import { runShifuWithCache } from './run-shifu-lifecycle.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -46,19 +44,10 @@ function usage() {
   return `Usage:
   node scripts/kfd-candidate-evidence.mjs source-check --source-sha SHA --source-tree TREE --out FILE [--github-output FILE]
   node scripts/kfd-candidate-evidence.mjs source --source-sha SHA --source-tree TREE --expected-input-root ROOT
-  node scripts/kfd-candidate-evidence.mjs run-verify --platform PLATFORM --source-sha SHA --source-tree TREE -- COMMAND...
   node scripts/kfd-candidate-evidence.mjs artifact-root-check --expected-root ROOT
   node scripts/kfd-candidate-evidence.mjs verify-manifest-set --manifest-root DIR --source-sha SHA
   node scripts/kfd-candidate-evidence.mjs verify-set --payload-root DIR --source-sha SHA [--source-tree TREE]
 `;
-}
-
-function prepareReleaseArtifacts() {
-  for (const task of ['pack:spec', 'pack:sdk', 'pack:npm-release-inventory']) {
-    const status = runShifuWithCache([task], { root: ROOT });
-    if (status !== 0) return status;
-  }
-  return 0;
 }
 
 const { mode, options } = parse(process.argv.slice(2));
@@ -87,18 +76,6 @@ if (mode === 'source-check') {
     sourceTree: options.sourceTree,
     platform: options.platform,
   });
-} else if (mode === 'run-verify') {
-  if (!options.command.length)
-    throw new Error('run-verify requires a command after --');
-  process.exitCode = runVerifiedQualification({
-    root: ROOT,
-    command: options.command,
-    platform: options.platform,
-    sourceSha: options.sourceSha,
-    sourceTree: options.sourceTree,
-    prepareReleaseArtifacts,
-  });
-  result = { ok: process.exitCode === 0 };
 } else if (mode === 'artifact-root-check') {
   const artifact = verifyReleaseArtifactRoot({
     root: ROOT,

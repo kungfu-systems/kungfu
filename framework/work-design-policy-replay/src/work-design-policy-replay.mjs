@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import {
-  canonicalJson,
-  semanticRoot,
-} from '../../project-cut/src/project-cut.mjs';
+import { canonicalJson, semanticRoot } from '../../project-cut/index.mjs';
 
 export const WORK_DESIGN_REPLAY_POLICY_SCHEMA =
   'kungfu.work-design.replay-policy/v1';

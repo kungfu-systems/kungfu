@@ -1,8 +1,29 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: protocol-guide
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-09-01
+theme: assignment-runtime-public-boundary
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-09-01
+ai_provenance: GPT-5 via Codex on 2026-09-01; updated from checked-in contracts and consumer inventory, with no access to invisible model internals
+---
+
 # Assignment Runtime API contract
 
-This package freezes the pre-release `kungfu.assignment-runtime/v1` protocol.
+This source-only boundary freezes the pre-release
+`kungfu.assignment-runtime/v1` protocol. It is not an independent npm package.
 The contract is implemented by the embedded Local Runtime and shared by GUI,
 CLI, Agent, and KFX clients.
+
+Repository tools import executable validation through [`index.mjs`](index.mjs).
+Runtime clients receive the protocol through the existing Core, API, GUI and
+KFX product surfaces; they do not import this directory as a separately
+versioned distribution artifact.
 
 The contract keeps Assignment state authority inside one declared realm. GUI,
 CLI, Agent, and KFX callers are clients: they may discover capabilities, read
@@ -12,7 +33,7 @@ mutate journal, JSON, SQLite, PostgreSQL, Electron, or filesystem layouts.
 Run the build-free contract checks with:
 
 ```sh
-node --test framework/assignment-runtime/assignment-runtime.test.mjs
+./shifu test:assignment-runtime
 ```
 
 The positive and negative cases use only in-memory JSON fixtures. They do not

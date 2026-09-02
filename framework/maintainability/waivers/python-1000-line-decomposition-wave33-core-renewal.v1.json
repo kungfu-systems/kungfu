@@ -1,0 +1,239 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:da6ce30289d2690b8a1329867668f8d9906c5fe0eb4ddcd5ebc1ed8c30b148ba",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "framework/core/src/python/kungfu/agent_work_lab_demo.py",
+    "framework/core/src/python/kungfu/agent_work_lab_template.py",
+    "framework/core/src/python/kungfu/agent/_action_loop_support.py",
+    "framework/core/src/python/kungfu/agent/_action_loop_transport.py",
+    "framework/core/src/python/kungfu/agent/_run_agent/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/authoring.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/lifecycle.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_storage_episode.py",
+    "framework/core/src/python/kungfu/cli/commands/_workspace/admission.py",
+    "framework/core/src/python/kungfu/cli/commands/_workspace/presentation.py",
+    "framework/core/src/python/kungfu/kfx_cli_support.py",
+    "framework/core/src/python/kungfu/project_tour/native_operations.py",
+    "framework/core/src/python/kungfu/skill/_registry/support.py",
+    "framework/core/src/python/kungfu/storage/_service_episode.py",
+    "framework/core/src/python/kungfu/storage/_service_fact.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "framework/core/src/python/kungfu/agent_work_lab_demo.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 332,
+      "contentRoot": "sha256:bf75b7f3ff40e847babc5505d7d0de4f79860c2a2834cca8a8ad127d09c43083"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent_work_lab_template.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 340,
+      "contentRoot": "sha256:defda8c879baf32ae27f41bc446dd12603319a38b573105323b567129f081a1f"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/_action_loop_support.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 61,
+      "contentRoot": "sha256:2f48d8bfd65f9eba350b161fa328ee9cf9ccc4e327750b04633d6b0757b4efc3"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/_action_loop_transport.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 53,
+      "contentRoot": "sha256:aca56d518a88ea12530d048e4eb3aac84291ca89a5dd90d509b9394653cad778"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/_run_agent/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 835,
+      "contentRoot": "sha256:74355b5492f9bc3427f76402cf5abe8b1e1a71cbbb1976602f3bab4ebdf0007d"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 82,
+      "contentRoot": "sha256:2ed0310826b7cc99381bf8dcab023eb7cd5d7247af00f60de6e412a3dded52be"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 230,
+      "contentRoot": "sha256:702157bd0006bfe7c3bfad52983e8824c7ecf4b87af4f9fe05991f0eb0b05495"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 230,
+      "contentRoot": "sha256:bc528e65020ac6d8917b593db5a8bd67de6c3c1c8512677480799aee71e9d237"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 343,
+      "contentRoot": "sha256:2cb0a75d1a7465a10fb864ef289d222f513151809629c4d02f02e2b71c3c377c"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 242,
+      "contentRoot": "sha256:382b88523ac77efc45f36c13da1f9044f24fbaec2f12dd21612ec5c86673ac27"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 202,
+      "contentRoot": "sha256:0b2aa3e2565a69557c38741d3b2dda16d334e2a4d2a390be9866d32f3ee9e2b5"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/authoring.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 199,
+      "contentRoot": "sha256:cb44718b221a03b048e552a565074b863f715e59ae859a105563bb8ecedd7565"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 45,
+      "contentRoot": "sha256:afd3b9cebc95e37a34c46d9252ebd0ab9a718a875f39a1ad5a5db1682a5cb867"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/lifecycle.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 489,
+      "contentRoot": "sha256:ed7a68b4405a1180955347df3e0bfd29ede4b35cde8e2dea5c8e9f30e9f513c6"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 616,
+      "contentRoot": "sha256:36b0f5d45979641b69e54cb52094bfc772b023e682002bd9f13b4915b0573938"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_storage_episode.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 480,
+      "contentRoot": "sha256:32acaf409c1d649ad2df2bba1e509d7f6fe72c8c55f36b3c271691da86b6082b"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_workspace/admission.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 136,
+      "contentRoot": "sha256:2c659d480c1d0f351cfe60c13ccb60223d20d6eaf2f3cc69f63423d4894bd54f"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_workspace/presentation.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 37,
+      "contentRoot": "sha256:e659913be08e99474b8c188aa3be63add553456aca4c9cae2fbfd8a6a5ad5ae3"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/kfx_cli_support.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 64,
+      "contentRoot": "sha256:07ddf393a41d4e46331a76c75d737b8373d6089f3251b12f5a74ed201553e46f"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/project_tour/native_operations.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 200,
+      "contentRoot": "sha256:d19a741aedca642547233699714d67139ebea88f395eb90945994d71fc4ad964"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/skill/_registry/support.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 418,
+      "contentRoot": "sha256:9bd200ba083e3ebb64a14b29c6b21d8b7b0dac4f11390359c5c2de0bcfb7e09d"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/storage/_service_episode.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 393,
+      "contentRoot": "sha256:c2ad2b16c65dbc483bf43503914bcabfe3466741d0d77bb3c9acb76f6261dc20"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/storage/_service_fact.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 499,
+      "contentRoot": "sha256:738bad5f96fc978145423bab33feadef5d395ebd4145ef20dd18086faabe37be"
+    }
+  ],
+  "allowed_delta": 6526,
+  "owner": "core/package",
+  "responsibility_boundary": "Wave 33 separates the Episode CLI command family from the general storage command facade, while renewing the complete protected core/package helper issue root inherited from earlier decomposition waves.",
+  "cohesion_rationale": "The Episode CLI helper is one cohesive command family with its own lifecycle, recovery, payload attachment, preflight, and rendering behavior. A single owner reduces storage.py below 1000 lines without proliferating per-command modules, while the exact scope, measurements, and allowance renew the complete owner-wide issue root.",
+  "rejected_split_alternatives": [
+    "Keeping Episode commands in storage.py would retain the 1358-line CLI monolith.",
+    "Splitting individual Click commands into arbitrary micro-files would add registration indirection without independent responsibility.",
+    "Moving general storage commands or altering the public kungfu.cli.commands.storage module would enlarge the compatibility surface without further reducing this threshold debt."
+  ],
+  "affected_tests_and_qualification": [
+    "55 focused pinned-runtime storage CLI, query, diagnostics, backend, and decomposition tests",
+    "storage CLI relocated definition AST root sha256:8ca0068023c66de9af2c7540198429eb32a8b7088cbcf503b9ec562462c570be",
+    "./shifu maintainability:python-structure",
+    "./shifu maintainability:function-risk",
+    "./shifu maintainability:amplification",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-wave33"
+}

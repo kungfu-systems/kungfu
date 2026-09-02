@@ -35,6 +35,7 @@ from kungfu.workspace_federation import (
     verify_dogfood_gate_receipt,
 )
 from kungfu.workspace_federation_observer import _runtime_signal
+import kungfu.cli.commands.workspace as workspace_command_module
 from kungfu.cli.commands.workspace import (
     _human_initiative_group_line,
     _human_work_line,
@@ -54,6 +55,17 @@ CONTRACT = (
 WORK_CONTROL_SOURCE = (
     Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 )
+
+
+def test_workspace_cli_responsibility_modules_are_bounded():
+    workspace_path = Path(workspace_command_module.__file__).resolve()
+    budgets = {
+        workspace_path: 950,
+        workspace_path.parent / "_workspace" / "admission.py": 160,
+        workspace_path.parent / "_workspace" / "presentation.py": 60,
+    }
+    for source, maximum in budgets.items():
+        assert len(source.read_text(encoding="utf-8").splitlines()) <= maximum
 
 
 @pytest.fixture(autouse=True)

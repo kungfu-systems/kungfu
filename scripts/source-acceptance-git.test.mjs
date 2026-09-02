@@ -17,7 +17,7 @@ import {
   sourceMergeGroupBase,
 } from './source-acceptance.mjs';
 
-test('KFD replay traverses only a composition-preserving Project Cut', (t) => {
+test('KFD source equivalence follows reachable content, independent of Project Cut topology', (t) => {
   const repository = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-kfd-project-cut-replay-'),
   );
@@ -105,7 +105,7 @@ test('KFD replay traverses only a composition-preserving Project Cut', (t) => {
   ]);
   assert.equal(
     findGitTreeEquivalentAncestor(sourceSha, changedSyntheticHead, gitRead),
-    '',
+    protectedReplay,
   );
 });
 

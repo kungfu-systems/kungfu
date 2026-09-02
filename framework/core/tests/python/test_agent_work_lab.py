@@ -18,6 +18,16 @@ from kungfu.cli.commands.assignment import (
 )
 
 
+def test_agent_work_lab_cli_responsibility_modules_are_bounded():
+    command_path = Path(agent_work_lab_commands.__file__).resolve()
+    budgets = {
+        command_path: 900,
+        command_path.parents[2] / "project_tour" / "native_operations.py": 210,
+    }
+    for source, maximum in budgets.items():
+        assert len(source.read_text(encoding="utf-8").splitlines()) <= maximum
+
+
 def _verified_query(canonical_work_count=0):
     projection_root = "sha256:" + "a" * 64
     proof_root = "sha256:" + "b" * 64

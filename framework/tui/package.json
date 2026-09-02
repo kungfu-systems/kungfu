@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.4",
+  "version": "4.0.0-alpha.5",
   "description": "Kungfu reference TUI — the platform's shell-native reference surface (Ink)",
   "license": "Apache-2.0",
   "repository": {

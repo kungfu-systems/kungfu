@@ -8,7 +8,7 @@ import {
   canonicalJson,
   semanticRoot,
   sha256Bytes,
-} from '../../project-cut/src/project-cut.mjs';
+} from '../../project-cut/index.mjs';
 
 export const GIT_EPISODE_SEGMENT_SCHEMA =
   'kungfu.episode.git-workspace-segment/v1';

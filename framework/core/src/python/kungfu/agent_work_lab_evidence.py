@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Suite discovery and immutable Episode evidence for Agent Work Lab."""
+"""Shared contracts, suite discovery, and immutable Agent Work Lab evidence."""
 
 from __future__ import annotations
 
@@ -26,16 +26,56 @@ from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
 SUITE_ID = "kungfu.agent-work-lab"
 FIXTURE_ID = "partial-claim-fresh-session"
+CATALOG_SCHEMA = "kungfu.agent-work-lab.catalog/v1"
+DEMO_PLAN_SCHEMA = "kungfu.agent-work-lab.demo-plan/v1"
+DEMO_REPORT_SCHEMA = "kungfu.agent-work-lab.report/v1"
+AGENT_PLAN_SCHEMA = "kungfu.agent-work-lab.agent-plan/v1"
+AGENT_REPORT_SCHEMA = "kungfu.agent-work-lab.agent-report/v1"
+PUBLIC_ACTIVITY_SCHEMA = "kungfu.agent-work-lab.public-activity/v1"
+PUBLIC_OUTPUT_SCHEMA = "kungfu.agent-work-lab.public-output/v1"
+TEMPLATE_SCHEMA = "kungfu.project-template/v1"
+PLAN_SCHEMA = "kungfu.project-template.plan/v1"
+RECEIPT_SCHEMA = "kungfu.project-template.creation-receipt/v1"
+DEFAULT_TEMPLATE_ID = "kungfu.agent-work-starter"
+FORBIDDEN_TEMPLATE_ROOTS = {".git", ".kungfu"}
 CONTENT_ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
+ANSI_ESCAPE = re.compile(r"\x1b(?:[@-_][0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
+PUBLIC_OUTPUT_MESSAGES = {
+    1: "Recorded the bounded partial result and stopped.",
+    2: "Found the prior governed state and completed only the remaining step.",
+}
+PUBLIC_PROGRESS_MESSAGES = {
+    1: (
+        "I’m starting fresh, so I’ll inspect the governed task state first.",
+        "I found an unstarted task. I’ll record only the bounded first step.",
+    ),
+    2: (
+        "I’m starting fresh, so I’ll recover the governed task state before acting.",
+        "I found Session 1’s partial result and the same Work identity.",
+    ),
+}
+DEMO_AGENT_IDENTITY = {
+    "provider": "kungfu-demo-agent",
+    "executableDigest": "sha256:" + hashlib.sha256(b"kungfu-demo-agent/v1").hexdigest(),
+    "version": "1",
+    "model": "deterministic-state-machine",
+    "runtimeProfileRoot": "sha256:"
+    + hashlib.sha256(b"kungfu-demo-agent-profile/v1").hexdigest(),
+    "argv": ["bundled", "agent-work-lab-demo"],
+}
 
-EventSink = Callable[[Mapping[str, Any]], None]
+AgentWorkLabEventSink = Callable[[Mapping[str, Any]], None]
+EventSink = AgentWorkLabEventSink
 
 
-def _content_root(value: Any) -> str:
+def content_root(value: Any) -> str:
     encoded = json.dumps(
         value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8")
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+_content_root = content_root
 
 
 def _catalog_paths() -> list[Path]:
