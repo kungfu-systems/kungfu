@@ -5,12 +5,12 @@ doc_type: architecture-guide
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
-period: 2026-09-01
+period: 2026-09-02
 theme: framework-layout-governance
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-09-01
-ai_provenance: GPT-5 via Codex on 2026-09-01; generated from checked-in source and repository contracts, with no access to invisible model internals
+last_reviewed: 2026-09-02
+ai_provenance: GPT-5 via Codex on 2026-09-01; updated on 2026-09-02 from checked-in source and repository contracts, with no access to invisible model internals
 ---
 
 # Framework layout and package boundaries
@@ -62,7 +62,7 @@ repository train unless an explicit future package decision proves otherwise.
 | `action` | `repository-stable` | `action/index.mjs` | `work-profile-conformance` | The sole cross-directory code consumer now uses the index; other Action artifacts remain contract/package data rather than npm exports. |
 | `assignment-runtime` | `embedded-public-protocol` | `assignment-runtime/index.mjs`, the v1 contract and envelope schema | Core CLI/Agent, API, GUI and Work Dashboard | The protocol stays public through existing runtime products; no separate package, writer or transport is created. |
 | `evidence` | `repository-stable` | `evidence/index.mjs` and its envelope schema | Project Cut and source qualification | New code uses the index; envelope identity is unchanged and no independent release is introduced. |
-| `project-cut` | `repository-stable` | `project-cut/index.mjs` for the frozen core protocol | Assignment Capture, Core, Cut, Episode Provider, maintainability/work-design tooling and scripts | Existing specialized `src/*` imports are an exact non-growing ratchet; new consumers must use the stable core index or first make a new boundary decision. |
+| `project-cut` | `repository-stable` | `project-cut/index.mjs` for the frozen core protocol; `project-cut/composition.mjs` for composition observation and verification | Assignment Capture, Core, Cut, Episode Provider, maintainability/work-design tooling and scripts | Composition consumers use the narrow stable sub-entrypoint. The remaining specialized `src/*` imports are an exact non-growing ratchet; new consumers must use a declared stable seam or first make a new boundary decision. |
 
 The Evidence/Project Cut source cycle is removed by keeping the one canonical
 JSON/root implementation in

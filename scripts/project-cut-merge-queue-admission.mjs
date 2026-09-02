@@ -4,12 +4,12 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-import { semanticRoot } from '../framework/project-cut/index.mjs';
 import {
   compositionChanged,
   observeComposition,
   verifyComposition,
-} from '../framework/project-cut/src/composition.mjs';
+} from '../framework/project-cut/composition.mjs';
+import { semanticRoot } from '../framework/project-cut/index.mjs';
 
 export const MERGE_QUEUE_ADMISSION_SCHEMA =
   'project.cut.merge-queue-admission/v1';

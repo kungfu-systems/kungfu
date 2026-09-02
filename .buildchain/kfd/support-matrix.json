@@ -337,7 +337,7 @@
           },
           {
             "path": "framework/project-cut/README.md",
-            "sha256": "sha256:50313b4d028df7674d98e88c225c0d116242ec1d803c03131b1f682b0d6df49b"
+            "sha256": "sha256:d57cabdd601dd99864035fad0620329d333ad120fd68e59a3a54c283717278f1"
           }
         ],
         "missingGates": [

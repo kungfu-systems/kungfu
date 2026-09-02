@@ -5,12 +5,12 @@ doc_type: protocol-guide
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
-period: 2026-09-01
+period: 2026-09-02
 theme: project-cut-public-boundary
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-09-01
-ai_provenance: GPT-5 via Codex on 2026-09-01; updated from checked-in protocol code and golden fixtures, with no access to invisible model internals
+last_reviewed: 2026-09-02
+ai_provenance: GPT-5 via Codex on 2026-09-01; updated on 2026-09-02 from checked-in protocol code, boundary manifests, and golden fixtures, with no access to invisible model internals
 ---
 
 # Project Cut protocol contract
@@ -69,9 +69,13 @@ import {
 The canonical JSON and semantic-root implementation is shared from
 [`../format/project-cut-canonical-json.mjs`](../format/project-cut-canonical-json.mjs)
 and re-exported by this entrypoint. Project Cut continues to own the algorithm
-label, admitted preimages and golden roots. Existing specialized `src/*`
-consumers remain compatibility-ratcheted, but new consumers cannot add another
-private import without changing the checked boundary decision.
+label, admitted preimages and golden roots. Composition observation and
+verification use the narrow repository-stable
+[`composition.mjs`](composition.mjs) sub-entrypoint, which exports only
+`compositionChanged`, `observeComposition`, and `verifyComposition`. The
+remaining specialized `src/*` consumers stay compatibility-ratcheted; new
+consumers cannot add another private import without changing the checked
+boundary decision.
 
 The object, composition, and settlement receipts retain their independent
 payload schemas. Consumers that need a common evidence transport can wrap
