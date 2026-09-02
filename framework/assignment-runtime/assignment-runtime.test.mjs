@@ -7,11 +7,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import {
-  contract,
-  validateContract,
-  validateEnvelope,
-} from './validate-contract.mjs';
+import { contract, validateContract, validateEnvelope } from './index.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = JSON.parse(
@@ -111,10 +107,17 @@ test('pins the current Assignment authority and client-path audit', () => {
     [
       'extensions/work-control/work-control-actions/domain/work_control_runtime.py',
       [
-        'def claim_assignment_execution(',
-        'def assignment_orchestration_status(',
-        'def advance_assignment_phase(',
+        'claim_assignment_execution as claim_assignment_execution',
+        'assignment_orchestration_status as assignment_orchestration_status',
       ],
+    ],
+    [
+      'extensions/work-control/work-control-actions/domain/_work_control_assignment.py',
+      ['def claim_assignment_execution('],
+    ],
+    [
+      'extensions/work-control/work-control-actions/domain/_work_control_lifecycle.py',
+      ['def assignment_orchestration_status(', 'def advance_assignment_phase('],
     ],
     [
       'extensions/work-dashboard/src/view/work-control-profile.ts',

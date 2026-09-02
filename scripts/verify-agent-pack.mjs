@@ -18,11 +18,12 @@ const PACK = path.join(
   'kungfu',
   'agent',
 );
-const AGENT_CLI_SOURCES = [
+const AGENT_CLI_FACADE_SOURCES = [
   'agent.py',
   'agent_first_value_entry.py',
   'agent_work_lab.py',
 ];
+const AGENT_CLI_DOMAIN_ROOT = '_agent';
 
 const REQUIRED = [
   'index.json',
@@ -66,6 +67,17 @@ function readJson(rel) {
 
 function exists(rel) {
   return fs.existsSync(path.join(PACK, rel));
+}
+
+function pythonSourcesUnder(root) {
+  return fs
+    .readdirSync(root, { withFileTypes: true })
+    .flatMap((entry) => {
+      const source = path.join(root, entry.name);
+      if (entry.isDirectory()) return pythonSourcesUnder(source);
+      return entry.isFile() && entry.name.endsWith('.py') ? [source] : [];
+    })
+    .sort();
 }
 
 for (const rel of REQUIRED) {
@@ -513,9 +525,13 @@ if (apiRegistry) {
     'cli',
     'commands',
   );
-  const agentCli = AGENT_CLI_SOURCES.map((source) =>
-    fs.readFileSync(path.join(commandRoot, source), 'utf8'),
-  ).join('\n');
+  const agentCliSources = [
+    ...AGENT_CLI_FACADE_SOURCES.map((source) => path.join(commandRoot, source)),
+    ...pythonSourcesUnder(path.join(commandRoot, AGENT_CLI_DOMAIN_ROOT)),
+  ];
+  const agentCli = agentCliSources
+    .map((source) => fs.readFileSync(source, 'utf8'))
+    .join('\n');
   const expectedRuntimeIds = new Set(
     (apiRegistry.apis || [])
       .filter((row) => row.anchor?.kind === 'runtime-click')

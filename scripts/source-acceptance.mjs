@@ -363,10 +363,9 @@ function assertYijinjingWriterInterface() {
 
 const KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT = 4096;
 
-function findFirstParentTreeEquivalent(sourceTree, headSha, gitRead) {
+function findReachableTreeEquivalent(sourceTree, headSha, gitRead) {
   for (const line of gitRead([
     'log',
-    '--first-parent',
     `--max-count=${KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT}`,
     '--format=%H %T',
     headSha,
@@ -451,18 +450,12 @@ export function findGitTreeEquivalentAncestor(
   const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
   if (!/^[0-9a-f]{40}$/u.test(sourceTree)) return '';
 
-  const directMatch = findFirstParentTreeEquivalent(
-    sourceTree,
-    headSha,
-    gitRead,
-  );
+  // Source equivalence is a content claim, not a Git-parent topology claim.
+  // Search the bounded reachable graph so ordinary commits, protected replay,
+  // synthetic PR merges, and historical Project Cuts receive the same rule.
+  const directMatch = findReachableTreeEquivalent(sourceTree, headSha, gitRead);
   if (directMatch) return directMatch;
 
-  // GitHub tests a pull request through a synthetic two-parent merge commit.
-  // Its first parent is the protected base, so a first-parent-only lookup
-  // cannot see a tree-equivalent commit retained on the candidate branch. Only
-  // enter the candidate parent when it has the exact checked merge tree; a
-  // conflict-resolved or otherwise changed merge remains ineligible.
   const [mergeSha, baseParent, candidateParent, ...extraParents] = gitRead([
     'rev-list',
     '--parents',
@@ -493,6 +486,10 @@ export function findGitTreeEquivalentAncestor(
       gitRead,
     );
   }
+  // A protected base may advance while GitHub creates a synthetic merge whose
+  // candidate branch contains an exact cumulative replay. This is the only
+  // topology-sensitive compatibility case: it compares bytes, not parent
+  // meaning, and rejects conflict-resolved or otherwise changed compositions.
   if (
     mergeSha !== headSha ||
     !baseParent ||
@@ -500,48 +497,6 @@ export function findGitTreeEquivalentAncestor(
     extraParents.length > 0
   )
     return '';
-  const headTree = gitRead(['rev-parse', `${headSha}^{tree}`]);
-  const candidateTree = gitRead(['rev-parse', `${candidateParent}^{tree}`]);
-  if (headTree !== candidateTree) return '';
-  const treeMatch = findFirstParentTreeEquivalent(
-    sourceTree,
-    candidateParent,
-    gitRead,
-  );
-  if (treeMatch) return treeMatch;
-
-  // A qualified Project Cut is itself a two-parent composition commit: its
-  // first parent is the protected release base and its second parent is the
-  // protected development head, while its tree is exactly the development
-  // tree. GitHub then wraps that cut in the synthetic PR merge inspected
-  // above. Admit a retained exact-tree replay from the development chain only
-  // when every edge and tree in that nested topology is unchanged. An
-  // ordinary merge, a differently based cut, or a composed/conflict-resolved
-  // cut cannot enter this path.
-  const [cutSha, cutBaseParent, cutDevelopmentParent, ...cutExtraParents] =
-    gitRead(['rev-list', '--parents', '-n', '1', candidateParent])
-      .trim()
-      .split(/\s+/u);
-  if (
-    cutSha === candidateParent &&
-    cutBaseParent === baseParent &&
-    cutDevelopmentParent &&
-    cutExtraParents.length === 0 &&
-    gitRead(['rev-parse', `${cutDevelopmentParent}^{tree}`]) === candidateTree
-  ) {
-    const projectCutTreeMatch = findFirstParentTreeEquivalent(
-      sourceTree,
-      cutDevelopmentParent,
-      gitRead,
-    );
-    if (projectCutTreeMatch) return projectCutTreeMatch;
-  }
-
-  // A protected base may advance in unrelated paths while GitHub exactly
-  // replays the candidate's Project Cut. The whole trees then differ even
-  // though the cumulative binary patch is byte-for-byte identical. Admit only
-  // a bounded first-parent candidate whose complete patch from the protected
-  // base exactly matches sourceSha's complete patch from their merge base.
   return findFirstParentPatchEquivalent(
     sourceSha,
     baseParent,

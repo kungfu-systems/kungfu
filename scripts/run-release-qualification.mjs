@@ -8,6 +8,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import {
+  finalizeKfdCandidateEvidence,
+  prepareKfdArtifactWitness,
+  releaseArtifactRoot,
+  resolveKfdSourcePlatform,
+  sealKfdPrebuiltLayerArtifacts,
+  sealKfdSourceEvidence,
+} from '../framework/release/kfd-candidate-evidence.mjs';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   lifecycleEnvironment,
@@ -32,6 +40,13 @@ const SUMMARY = path.join(
 );
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const TREE_PATTERN = /^[0-9a-f]{40}$/u;
+const PLATFORM_MANIFEST = path.join(
+  ROOT,
+  'product',
+  'release',
+  'qualification',
+  'platform-qualification-manifest.json',
+);
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -121,7 +136,29 @@ export function parseExecutionProfile(argv) {
   return parseReleaseQualificationOptions(argv).executionProfile;
 }
 
+function extractKfdSourceInputRoot(argv) {
+  let root = '';
+  const remaining = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg !== '--kfd-source-input-root') {
+      remaining.push(arg);
+      continue;
+    }
+    if (root) throw new Error('--kfd-source-input-root may be specified once');
+    index += 1;
+    if (index >= argv.length)
+      throw new Error('--kfd-source-input-root requires a value');
+    root = argv[index];
+  }
+  if (root && !ROOT_PATTERN.test(root))
+    throw new Error('--kfd-source-input-root must be a sha256 root');
+  return { argv: remaining, root };
+}
+
 export function parseReleaseQualificationOptions(argv) {
+  const kfdSource = extractKfdSourceInputRoot(argv);
+  const args = kfdSource.argv;
   let name = '';
   let nativeUpgradePolicy = 'required';
   let nativeUpgradePolicySeen = false;
@@ -132,8 +169,8 @@ export function parseReleaseQualificationOptions(argv) {
     sourceTree: '',
     policyRoot: '',
   };
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
     if (
       ![
         '--execution-profile',
@@ -146,24 +183,24 @@ export function parseReleaseQualificationOptions(argv) {
     )
       throw new Error(`unknown release qualification option: ${arg}`);
     index += 1;
-    if (index >= argv.length) throw new Error(`${arg} requires a value`);
+    if (index >= args.length) throw new Error(`${arg} requires a value`);
     if (arg === '--execution-profile') {
       if (name) throw new Error('--execution-profile may be specified once');
-      name = argv[index];
+      name = args[index];
       continue;
     }
     if (arg === '--native-upgrade-policy') {
       if (nativeUpgradePolicySeen)
         throw new Error('--native-upgrade-policy may be specified once');
       nativeUpgradePolicySeen = true;
-      nativeUpgradePolicy = argv[index];
+      nativeUpgradePolicy = args[index];
       continue;
     }
     if (arg === '--artifact-scope') {
       if (artifactScopeSeen)
         throw new Error('--artifact-scope may be specified once');
       artifactScopeSeen = true;
-      artifactScope = argv[index];
+      artifactScope = args[index];
       continue;
     }
     const sourceField = {
@@ -173,7 +210,7 @@ export function parseReleaseQualificationOptions(argv) {
     }[arg];
     if (sourceOnlyEvidence[sourceField])
       throw new Error(`${arg} may be specified once`);
-    sourceOnlyEvidence[sourceField] = argv[index];
+    sourceOnlyEvidence[sourceField] = args[index];
   }
   if (!name)
     throw new Error(
@@ -204,7 +241,57 @@ export function parseReleaseQualificationOptions(argv) {
     nativeUpgradePolicy,
     artifactScope,
     sourceOnlyEvidence: evidenceFields.length === 3 ? sourceOnlyEvidence : null,
+    kfdSourceInputRoot: kfdSource.root,
   };
+}
+
+export function releaseQualificationPlatform(
+  explicit = process.env.BUILDCHAIN_PLATFORM_ID || '',
+  platform = process.platform,
+  arch = process.arch,
+) {
+  if (explicit) return resolveKfdSourcePlatform(explicit);
+  const local = new Map([
+    ['linux:x64', 'linux-x64'],
+    ['linux:arm64', 'linux-arm64'],
+    ['darwin:arm64', 'macos-arm64'],
+    ['win32:x64', 'windows-x64'],
+  ]).get(`${platform}:${arch}`);
+  if (!local)
+    throw new Error(
+      `unsupported local Alpha qualification platform: ${platform}-${arch}`,
+    );
+  return local;
+}
+
+function prepareKfdReleaseArtifacts(root = ROOT) {
+  for (const task of ['pack:spec', 'pack:sdk', 'pack:npm-release-inventory']) {
+    const status = runShifuWithCache([task], { root });
+    if (status !== 0)
+      throw new Error(`KFD release artifact preparation failed at ${task}`);
+  }
+}
+
+function prepareKfdQualification(options, root = ROOT) {
+  const platform = releaseQualificationPlatform();
+  const sourceSha = gitRevision();
+  const sourceTree = gitTreeRevision();
+  const sourceGate = sealKfdSourceEvidence({
+    root,
+    expectedInputRoot: options.kfdSourceInputRoot,
+    sourceSha,
+    sourceTree,
+    platform,
+  });
+  prepareKfdReleaseArtifacts(root);
+  sealKfdPrebuiltLayerArtifacts({ root });
+  const witness = prepareKfdArtifactWitness({
+    root,
+    platform,
+    sourceSha,
+    sourceTree,
+  });
+  return { platform, sourceSha, sourceTree, sourceGate, witness };
 }
 
 export function releaseQualificationEnvironment(
@@ -773,6 +860,50 @@ function writeSummary(
   return summary;
 }
 
+function writePlatformQualificationManifest({
+  execution,
+  summary,
+  kfd,
+  kfdCapsule,
+}) {
+  const summaryPath = path.relative(ROOT, SUMMARY).split(path.sep).join('/');
+  const body = {
+    schema: 'kungfu.platform-release-qualification/v1',
+    status: summary.status,
+    command:
+      execution.name === 'alpha'
+        ? './shifu alpha:qualify'
+        : './shifu release:qualify:candidate',
+    executionProfile: execution.name,
+    source: { sha: kfd.sourceSha, tree: kfd.sourceTree },
+    platform: {
+      id: kfd.platform,
+      os: process.platform,
+      arch: process.arch,
+    },
+    productQualification: {
+      path: summaryPath,
+      sha256: fileDigest(SUMMARY),
+      status: summary.status,
+      failedStage:
+        summary.timings.find((timing) => timing.status !== 0)?.stage || null,
+    },
+    kfd: {
+      sourceGateRoot: kfd.sourceGate.gateRoot,
+      sourceInputRoot: kfd.sourceGate.sourceInputRoot,
+      artifactBindingRoot: kfd.witness.candidateBinding.bindingRoot,
+      capsuleRoot: kfdCapsule?.capsuleRoot || null,
+      evidenceRoot: kfdCapsule?.evidenceRoot || null,
+    },
+    artifact: {
+      root: kfdCapsule?.artifactRoot || releaseArtifactRoot(ROOT).root,
+    },
+  };
+  const manifest = { ...body, manifestRoot: digest(body) };
+  fs.writeFileSync(PLATFORM_MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
+  return manifest;
+}
+
 export async function main(argv = process.argv.slice(2)) {
   if (argv.length === 1 && argv[0] === '--core-platform-only') {
     try {
@@ -786,6 +917,7 @@ export async function main(argv = process.argv.slice(2)) {
   const options = parseReleaseQualificationOptions(argv);
   const execution = loadExecutionProfile(options.executionProfile);
   prepareReleaseQualificationOutput();
+  const kfd = prepareKfdQualification(options);
   const sourceOnlyEvidence = verifySourceOnlyEvidence(
     options.sourceOnlyEvidence,
   );
@@ -798,7 +930,12 @@ export async function main(argv = process.argv.slice(2)) {
   );
   const env = releaseQualificationEnvironment(
     ROOT,
-    process.env,
+    {
+      ...process.env,
+      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS: '1',
+      KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT:
+        releaseArtifactRoot(ROOT).root,
+    },
     execution.parameters.fuzzSecondsPerTarget,
   );
   const startedAt = new Date().toISOString();
@@ -809,10 +946,59 @@ export async function main(argv = process.argv.slice(2)) {
     options.artifactScope,
     process.arch,
   );
-  const { timings, finalStatus } = await executeReleaseQualificationStages(
-    stages,
-    { env, sourceOnlyEvidence },
-  );
+  const executionResult = await executeReleaseQualificationStages(stages, {
+    env,
+    sourceOnlyEvidence,
+  });
+  const { timings } = executionResult;
+  let finalStatus = executionResult.finalStatus;
+  let kfdCapsule = null;
+  if (finalStatus === 0) {
+    const startedAt = new Date().toISOString();
+    try {
+      kfdCapsule = finalizeKfdCandidateEvidence({
+        root: ROOT,
+        platform: kfd.platform,
+        sourceSha: kfd.sourceSha,
+        sourceTree: kfd.sourceTree,
+      });
+      timings.push(
+        rootedTiming({
+          stage: 'kfd-artifact-manifest',
+          startedAt,
+          completedAt: new Date().toISOString(),
+          durationSeconds: Math.max(
+            0,
+            (Date.now() - Date.parse(startedAt)) / 1000,
+          ),
+          status: 0,
+          conclusion: 'passed',
+          executionMode: 'platform-native',
+          concurrencyGroup: 'serial-final-kfd-artifact-manifest',
+        }),
+      );
+    } catch (error) {
+      finalStatus = 1;
+      console.error(
+        `[release-qualification:kfd-artifact-manifest] ${error instanceof Error ? error.message : String(error)}`,
+      );
+      timings.push(
+        rootedTiming({
+          stage: 'kfd-artifact-manifest',
+          startedAt,
+          completedAt: new Date().toISOString(),
+          durationSeconds: Math.max(
+            0,
+            (Date.now() - Date.parse(startedAt)) / 1000,
+          ),
+          status: 1,
+          conclusion: 'failed',
+          executionMode: 'platform-native',
+          concurrencyGroup: 'serial-final-kfd-artifact-manifest',
+        }),
+      );
+    }
+  }
   const summary = writeSummary(
     execution,
     timings,
@@ -821,6 +1007,7 @@ export async function main(argv = process.argv.slice(2)) {
     options.nativeUpgradePolicy,
     options.artifactScope,
   );
+  writePlatformQualificationManifest({ execution, summary, kfd, kfdCapsule });
   if (finalStatus === 0 && !summary.budget.withinLimit) {
     console.error(
       `[release-qualification] execution profile ${execution.name} exceeded its ${summary.budget.executionLimitSeconds}s execution limit`,

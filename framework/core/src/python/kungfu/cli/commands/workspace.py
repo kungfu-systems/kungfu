@@ -4,13 +4,20 @@ from __future__ import annotations
 
 import json
 import signal
-from functools import wraps
+from functools import wraps as wraps
 
 import click
 
 from kungfu.distribution_update import local_dogfood_residency
 from kungfu.cli.surface_contract import surface
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.commands._workspace.admission import (
+    admission_command as _admission_command_impl,
+)
+from kungfu.cli.commands._workspace.presentation import (
+    human_initiative_group_line as _human_initiative_group_line_impl,
+    human_work_line as _human_work_line_impl,
+)
 from kungfu.workspace import (
     current_workspace,
     ensure_workspace_data_home,
@@ -52,39 +59,11 @@ def _json(payload):
 
 
 def _human_work_line(row, width):
-    display = row["display"]
-    state = display.get("portfolio_state") or display.get("status") or "unknown"
-    phase = display.get("orchestration_phase")
-    source_status = display.get("source_status") or display.get("status")
-    state_detail = str(state)
-    if phase:
-        state_detail += f" phase={phase}"
-    if source_status:
-        state_detail += f" src={source_status}"
-    conflict = " !conflict" if row["conflict"] else ""
-    replicas = f" x{row['replica_count'] + 1}" if row["replica_count"] else ""
-    suffix = f" [{state_detail}]{conflict}{replicas} {row['canonical_root'][7:15]}"
-    prefix = f"{row['object_kind']} "
-    available = max(8, width - len(prefix) - len(suffix))
-    title = str(display["title"])
-    if len(title) > available:
-        title = title[: max(1, available - 1)] + "…"
-    return f"{prefix}{title}{suffix}"
+    return _human_work_line_impl(row, width)
 
 
 def _human_initiative_group_line(group, width):
-    state = group["display"].get("portfolio_state") or "unknown"
-    authority = group["authority_state"]
-    suffix = (
-        f" [{state} {authority} authorities={group['authority_count']}] "
-        f"{group['group_root'][7:15]}"
-    )
-    prefix = "initiative "
-    available = max(1, width - len(prefix) - len(suffix))
-    title = str(group["display"]["title"])
-    if len(title) > available:
-        title = title[: max(1, available - 1)] + "…"
-    return f"{prefix}{title}{suffix}"
+    return _human_initiative_group_line_impl(group, width)
 
 
 def _identity_or_error(path: str | None, home: bool):
@@ -120,133 +99,7 @@ def workspace():
 
 
 def _admission_command(initiator: str):
-    def decorate(function):
-        @wraps(function)
-        def wrapped(
-            source_runtime,
-            destination_runtime,
-            episode_ids,
-            transport,
-            action,
-            plan_root,
-            project_cut_root,
-            bundle_files,
-            source_id,
-            as_json,
-        ):
-            from kungfu.storage import service
-
-            if (
-                action in {"plan", "execute", "resume"}
-                and transport == "local-direct"
-                and (not source_runtime or not episode_ids)
-            ):
-                raise click.UsageError(
-                    "--source-runtime and at least one --episode-id are required"
-                )
-            if (
-                action in {"plan", "execute", "resume"}
-                and transport != "local-direct"
-                and (not bundle_files or not source_id)
-            ):
-                raise click.UsageError(
-                    "--bundle-file and --source-id are required for bundle and remote-stream"
-                )
-            if action in {"inspect", "resume", "reconcile", "cancel"} and not plan_root:
-                raise click.UsageError(f"--plan-root is required for {action}")
-            episode_bundles = []
-            for bundle_file in bundle_files:
-                with open(bundle_file, encoding="utf-8") as input_file:
-                    episode_bundles.append(json.load(input_file))
-            values = {
-                "source_runtime_dir": source_runtime,
-                "episode_ids": list(episode_ids),
-                "transport": transport,
-                "initiator": initiator,
-                "plan_root": plan_root,
-                "project_cut_roots": list(project_cut_root),
-                "episode_bundles": episode_bundles or None,
-                "source_identity": (
-                    {
-                        "schema": "kungfu.workspace.identity/v1",
-                        "kind": "declared",
-                        "id": source_id,
-                    }
-                    if source_id
-                    else None
-                ),
-            }
-            if action == "execute":
-                plan = service.episode_admission(
-                    destination_runtime, action="plan", **values
-                )
-                payload = service.episode_admission(
-                    destination_runtime, action="execute", plan=plan, **values
-                )
-            else:
-                payload = service.episode_admission(
-                    destination_runtime, action=action, **values
-                )
-            if as_json:
-                _json(payload)
-                return
-            click.echo(
-                f"{initiator} {payload.get('status', 'planned')} "
-                f"{payload.get('plan_root', plan_root)}"
-            )
-
-        wrapped = click.option(
-            "--json", "as_json", is_flag=True, help="machine-readable output"
-        )(wrapped)
-        wrapped = click.option(
-            "--source-id",
-            default="",
-            help="declared source identity for non-local transports",
-        )(wrapped)
-        wrapped = click.option(
-            "--bundle-file",
-            "bundle_files",
-            multiple=True,
-            type=click.Path(exists=True, dir_okay=False),
-            help="self-contained Episode bundle for bundle or remote-stream",
-        )(wrapped)
-        wrapped = click.option(
-            "--project-cut-root", multiple=True, help="related Project Cut root"
-        )(wrapped)
-        wrapped = click.option(
-            "--plan-root", default="", help="existing plan root for lifecycle actions"
-        )(wrapped)
-        wrapped = click.option(
-            "--action",
-            type=click.Choice(
-                ["plan", "execute", "inspect", "resume", "reconcile", "cancel"]
-            ),
-            default="plan",
-            show_default=True,
-        )(wrapped)
-        wrapped = click.option(
-            "--transport",
-            type=click.Choice(["local-direct", "bundle", "remote-stream"]),
-            default="local-direct",
-            show_default=True,
-        )(wrapped)
-        wrapped = click.option("--episode-id", "episode_ids", multiple=True, type=int)(
-            wrapped
-        )
-        wrapped = click.option(
-            "--destination-runtime",
-            required=True,
-            type=click.Path(file_okay=False),
-            help="destination workspace runtime directory",
-        )(wrapped)
-        wrapped = click.option(
-            "--source-runtime",
-            type=click.Path(file_okay=False),
-            help="source workspace runtime directory",
-        )(wrapped)
-        return wrapped
-
-    return decorate
+    return _admission_command_impl(initiator)
 
 
 @workspace.command(

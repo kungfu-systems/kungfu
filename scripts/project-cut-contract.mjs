@@ -14,7 +14,7 @@ import {
   verifyProjectCut,
   verifyProjectCutReceipt,
   verifySourceProjection,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

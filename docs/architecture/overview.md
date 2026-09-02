@@ -297,7 +297,9 @@ boundary are maintained in [`framework/README.md`](../../framework/README.md):
   packages; others are source-only contracts, internal libraries or repository
   tools. A directory becomes an npm package only when it has `package.json` and
   is owned by the npm release registry; its location alone grants no package or
-  publication boundary.
+  publication boundary. The completed Wave 1 boundaries for Action, Assignment
+  Runtime, Evidence and Project Cut expose checked repository entrypoints while
+  deliberately retaining source-only, repository-train distribution.
 - **`developer/`** — a build-time **tool** you build with: invoked (typically a
   CLI) and taken as a **devDependency**, never imported at runtime (`sdk`).
 - **`extensions/`** — a kfx plugin built on the extension contract.

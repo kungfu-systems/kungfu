@@ -17,7 +17,7 @@ import {
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
 import {
   advanceSettlementPublication,
   checkSettlementPublicationContract,

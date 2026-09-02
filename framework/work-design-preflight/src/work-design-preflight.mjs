@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { semanticRoot } from '../../project-cut/src/project-cut.mjs';
+import { semanticRoot } from '../../project-cut/index.mjs';
 import {
   WORK_DESIGN_OUTCOME_HISTORY_RECORD_SCHEMA,
   buildOutcomeInformedEstimate,

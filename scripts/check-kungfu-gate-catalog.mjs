@@ -1135,21 +1135,24 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
   const issues = [];
   const registry = readJson(root, 'shifu.gates.json');
   const validation = validateGateRegistry(registry);
-  for (const issue of validation)
-    issues.push(`[registry] ${issue.path}: ${issue.message}`);
+  issues.push(
+    ...validation.map((issue) => `[registry] ${issue.path}: ${issue.message}`),
+  );
   if (validation.length) return { issues, registry };
 
   const authorityValidation = validateWorkflowAuthority(root);
   issues.push(...authorityValidation.issues);
   const authorityDocPath = path.join(root, WORKFLOW_AUTHORITY_DOC);
   const authorityDoc = fs.readFileSync(authorityDocPath, 'utf8');
-  if (
-    authorityDoc !==
-    replaceWorkflowAuthorityMatrix(authorityDoc, authorityValidation.document)
-  )
-    issues.push(
+  const expectedAuthorityDoc = replaceWorkflowAuthorityMatrix(
+    authorityDoc,
+    authorityValidation.document,
+  );
+  issues.push(
+    ...Array(Number(authorityDoc !== expectedAuthorityDoc)).fill(
       `[workflow-authority] ${WORKFLOW_AUTHORITY_DOC} differs from the authority manifest`,
-    );
+    ),
+  );
   try {
     validateKungfuReleaseAdmissionPolicy(root);
   } catch (error) {
@@ -1162,21 +1165,22 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
     options,
   );
   issues.push(...measurementValidation.issues);
-  if (!measurementValidation.issues.length) {
-    const measurementReportPath = path.join(root, MEASUREMENT_REPORT);
-    const measurementReportText = fs.readFileSync(
-      measurementReportPath,
-      'utf8',
-    );
-    const expectedMeasurementReport = replaceGeneratedMeasurements(
-      measurementReportText,
-      renderMeasurementCoverage(registry, measurementValidation.document),
-    );
-    if (measurementReportText !== expectedMeasurementReport)
-      issues.push(
-        `[measurement] ${MEASUREMENT_REPORT} differs from registered measurements`,
-      );
-  }
+  const measurementReportPath = path.join(root, MEASUREMENT_REPORT);
+  const measurementReportText = fs.readFileSync(measurementReportPath, 'utf8');
+  const expectedMeasurementReport = replaceGeneratedMeasurements(
+    measurementReportText,
+    renderMeasurementCoverage(registry, measurementValidation.document),
+  );
+  issues.push(
+    ...Array(
+      Number(
+        Number(!measurementValidation.issues.length) *
+          Number(measurementReportText !== expectedMeasurementReport),
+      ),
+    ).fill(
+      `[measurement] ${MEASUREMENT_REPORT} differs from registered measurements`,
+    ),
+  );
 
   const bindingDocument = readJson(root, BINDINGS);
   const executionValidation = validateExecutionProfiles(root, bindingDocument);

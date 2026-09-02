@@ -9,17 +9,27 @@ existing KFD-7 Work Profile, native Fact ref CAS, and Episode lifecycle APIs.
 
 from __future__ import annotations
 
-import argparse
+import argparse as argparse
 import copy
-import hashlib
 import json
-import sys
+import sys as sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from kungfu.agent import _action_loop_transport
 from kungfu.agent import work_profile
-from kungfu.agent.native_authority import inspect_native_authority
+from kungfu.agent._action_loop_support import (
+    _episode_number,
+    _fact_ref,
+    _object_id,
+    _root,
+    _step_receipt,
+    _support,
+)
+from kungfu.agent.native_authority import (
+    inspect_native_authority as inspect_native_authority,
+)
 from kungfu.storage import service
 from kungfu.storage.episode_lifecycle import (
     RuntimeEpisodeLifecycle,
@@ -28,58 +38,6 @@ from kungfu.storage.episode_lifecycle import (
 
 
 CHECKPOINT_SCHEMA = "kungfu.action-loop.checkpoint/v0"
-
-
-def _root(value: Any) -> str:
-    if not isinstance(value, str):
-        value = json.dumps(
-            value, ensure_ascii=False, separators=(",", ":"), sort_keys=True
-        )
-    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
-
-
-def _step_receipt(
-    payload: dict[str, Any], step_id: str, authority_root: str, result_roots: list[str]
-) -> dict[str, Any]:
-    body = {
-        "schema": "kungfu.action-loop.step-receipt/v0",
-        "loopId": payload["loopId"],
-        "stepId": step_id,
-        "idempotencyKey": payload["idempotencyKey"],
-        "status": "accepted",
-        "preconditionRoots": [payload["loopRoot"]],
-        "resultRoots": result_roots,
-        "authorityReceiptRoot": authority_root,
-    }
-    return {**body, "receiptRoot": _root(body)}
-
-
-def _object_id(loop_id: str, role: str) -> str:
-    digest = hashlib.sha256(f"{loop_id}:{role}".encode()).hexdigest()
-    return f"fact:{digest[:32]}"
-
-
-def _episode_number(identity: str) -> int:
-    digest = hashlib.sha256(identity.encode()).hexdigest()
-    return (int(digest[:15], 16) % ((1 << 63) - 1)) + 1
-
-
-def _support(loop_root: str, operation: str) -> dict[str, Any]:
-    return {
-        "createdByReceiptRoot": _root({"loopRoot": loop_root, "kind": "creation"}),
-        "schemaRoot": _root(work_profile.ACTION_SCHEMA),
-        "declarationRoots": [_root({"loopRoot": loop_root, "kind": "declaration"})],
-        "admissionRoots": [_root({"loopRoot": loop_root, "kind": "admission"})],
-        "reasonRoot": _root({"loopRoot": loop_root, "operation": operation}),
-    }
-
-
-def _fact_ref(ref_name: str, inspection: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "name": ref_name,
-        "cutRoot": inspection["cutRoot"],
-        "revision": inspection["revision"],
-    }
 
 
 def bind_work_profile(
@@ -981,39 +939,11 @@ def resolve_fact_ref(runtime_dir: str | Path, loop_ref: str) -> dict[str, Any] |
 
 
 def dispatch(runtime_dir: str | Path, operation: str, payload: Any) -> Any:
-    if operation == "authority-inspect":
-        expected = payload if isinstance(payload, Mapping) else None
-        return inspect_native_authority(runtime_dir, expected)
-    if isinstance(payload, Mapping):
-        expected_authority = payload.get("nativeAuthority")
-        envelope = payload.get("envelope")
-        if expected_authority is None and isinstance(envelope, Mapping):
-            expected_authority = envelope.get("nativeAuthority")
-        if isinstance(expected_authority, Mapping):
-            authority = inspect_native_authority(runtime_dir, expected_authority)
-            if authority.get("status") != "current":
-                return authority
-    if operation == "work-profile-bind":
-        return bind_work_profile(runtime_dir, payload)
-    if operation == "episode-resume-or-begin":
-        return resume_or_begin_episode(runtime_dir, payload)
-    if operation == "episode-inspect":
-        return inspect_episode(runtime_dir, payload)
-    if operation == "episode-seal":
-        return seal_episode(runtime_dir, payload)
-    if operation == "work-profile-atlas-refresh":
-        return refresh_atlas(runtime_dir, payload)
-    if operation == "completion-review":
-        return review_completion(runtime_dir, payload)
-    if operation == "fact-settle":
-        return settle_fact(runtime_dir, payload)
-    if operation == "checkpoint-save":
-        return save_checkpoint(runtime_dir, payload)
-    if operation == "checkpoint-load":
-        return load_checkpoint(runtime_dir, payload)
-    if operation == "checkpoint-resolve":
-        return resolve_fact_ref(runtime_dir, payload)
-    raise ValueError(f"unsupported Action Loop adapter operation: {operation}")
+    gate = _action_loop_transport.authority_gate
+    handled, result = gate(runtime_dir, operation, payload, inspect_native_authority)
+    if handled:
+        return result
+    return _action_loop_transport.operation_handler(operation)(runtime_dir, payload)
 
 
 def main(argv: list[str] | None = None) -> int:

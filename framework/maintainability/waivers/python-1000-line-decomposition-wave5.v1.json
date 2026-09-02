@@ -1,0 +1,84 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:d91a4180a7a4bb8762126a09edf823e320f24dc2ce9bf7205f82ab310dc8c878",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/work.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 81,
+      "contentRoot": "sha256:768035c0e0d49e8d0eb0f148322ba220ecb9f0041b94da74581d00da9e0969d9"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 229,
+      "contentRoot": "sha256:24913d4cb53e3bc351fef93a2b403d3571a46e22dca9ad7d542184df84488a55"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 229,
+      "contentRoot": "sha256:5603299037d4bca2b3e3aa8f442aa024c1b6d9a99010c2bd185b6a5bb4746e08"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 342,
+      "contentRoot": "sha256:e7cb6681d2de259d6936009b6573e9df6ca34c605cd49549e6d7b0b4bb316d3a"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 241,
+      "contentRoot": "sha256:d186c828165fc2fd638fdee7366da662b3facb275d6147e2480e7429c06958d6"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 201,
+      "contentRoot": "sha256:38418293bcd4a7598018e3bd64b3f7c137b79bdda2e36f7df2ab04e6bcd2da72"
+    }
+  ],
+  "allowed_delta": 1323,
+  "owner": "core/package",
+  "responsibility_boundary": "Wave 5 decomposes the protected Agent CLI megamodule into explicit shared base, console, Hub, provider, runtime, and Work command owners behind a stable facade.",
+  "cohesion_rationale": "The six Agent CLI files are the minimum cohesive owner set needed to separate independently changing command responsibilities below 1000 physical lines.",
+  "rejected_split_alternatives": [
+    "Keeping no more than three Agent CLI helper files would recombine unrelated console, Hub, provider, runtime, and Work command responsibilities.",
+    "Combining storage capability owners with Agent CLI domains would couple unrelated persistence and command responsibilities.",
+    "Relabeling handwritten files or removing stable facades would hide responsibility or break supported imports instead of reducing complexity."
+  ],
+  "affected_tests_and_qualification": [
+    "focused storage and Agent CLI pytest suites",
+    "./shifu check:python-structure",
+    "./shifu maintainability:amplification --json",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-wave5"
+}

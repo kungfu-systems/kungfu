@@ -199,6 +199,21 @@ Kungfu product Publication Bundle. Component workflows explicitly use
 `make_latest=false`, so Shifu or Xinfa publication cannot replace the product
 discovery pointer.
 
+### Product qualification ownership
+
+Buildchain runs `build` and then delegates `verify` to Kungfu's
+`./shifu alpha:qualify` (or `release:qualify:candidate`) task. That task is also
+the local reproduction surface and emits one platform qualification manifest
+after all Kungfu-owned runtime, ABI, schema, Episode, KFD, layer, and invariant
+checks pass. Buildchain verifies the declared artifact inventory and digests;
+it does not recompute the product summary through a controller-owned substage
+receipt.
+
+The four-platform fan-in is deliberately shallow: it admits the complete set
+of source-matched platform manifests before the protected publication tail.
+Signing, notarization, publication, and public readback remain Buildchain
+responsibilities and are not weakened by this ownership split.
+
 ### Linux x64 Core package budget preflight
 
 Before writing the Linux x64 Core npm tarball, the packer performs a dry-run
