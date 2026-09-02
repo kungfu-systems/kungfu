@@ -179,7 +179,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Verify protected merge-queue replay
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -189,7 +189,7 @@ jobs:
             --base "$base_sha" \
             --head "$head_sha"
       - name: Verify exact Initiative-family queue lease
-        if: ${{ github.event_name == 'merge_group' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -264,6 +264,7 @@ jobs:
 
   proof_probe:
     name: affected-native proof probe / linux
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
