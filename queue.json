@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9051,
+  "generation": 9052,
   "fencingCounter": 868,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:f928d4664a1b10962da58684b8552ea0d13a081ca939817389d63d4a2091dc8c",
@@ -97,8 +97,13 @@
     "issuedAt": "2026-09-02T09:22:16.792Z",
     "expiresAt": "2026-09-02T11:18:13.465Z",
     "fencingToken": "sha256:2e9e1d7d986d78d5bc542d364f1b9b18f0920151a6d64ae123a4ad0accfbf6c3",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-02T09:48:13.465Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-02T09:48:13.465Z",
+    "nativeProofRoot": "sha256:b248f8085a54a621ffbfb6dc0015a12c2f246c541fb39754553ef8714eb3e961",
+    "nativeExecutionReceiptRoot": "sha256:9a5b463e1b2a2899b0565faf738c73d05ee152a180cb18f84bb6577294a80727",
+    "nativeProofReuseRoot": "sha256:d0c6d236a895da4d5df71ecd0d2393845c7688507fdaafa0e5071bb833753b79",
+    "qualificationReceiptRoot": "sha256:a2b8354f5ab963a960a4cbdf0b8dc05cb5b37056e691125da4e365ae2d600fbd",
+    "qualifiedAt": "2026-09-02T09:48:44.865Z"
   },
   "candidates": [
     {
@@ -65113,10 +65118,10 @@
       "sourceWorkflowRunId": 33607912432,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-02T08:51:24.164Z",
-      "updatedAt": "2026-09-02T09:48:13.465Z",
+      "updatedAt": "2026-09-02T09:48:44.865Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "docs/adr/KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be.md",
@@ -65309,6 +65314,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-02T09:48:13.465Z",
-  "stateRoot": "sha256:bf6fad3f3af7468ac26fd6f2fe5c784069fec051d322446365e5622392d1e3a5"
+  "updatedAt": "2026-09-02T09:48:44.865Z",
+  "stateRoot": "sha256:e467078cc086aee0f1d369ba04b7885442fcc29f4c3ac8a40ccada5701dba593"
 }
