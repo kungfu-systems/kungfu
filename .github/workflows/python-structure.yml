@@ -6,7 +6,6 @@ on:
   pull_request:
     branches:
       - dev/v*/v*
-      - alpha/v*/v*
       - release/v*/v*
     paths:
       - "framework/core/src/python/**"
