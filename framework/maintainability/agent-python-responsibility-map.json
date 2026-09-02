@@ -209,7 +209,7 @@
         "cli": {
           "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
           "group": "work",
-          "sha256": "ab73a9782818b0fa0a7f8bb8c3bcdc5dfa6160d9f3d324909a5d468184e8e5a7",
+          "sha256": "73b6a8ce53f1d73fe11917b3d85bc292ae1ff61096251d89b54852f68b611d9e",
           "invariant": "Pre-existing command names, option names, defaults, output schemas, and exit behavior remain compatible; domain-neutral Work commands are additive."
         },
         "schemas": [
@@ -303,7 +303,11 @@
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
-            "sha256": "ab73a9782818b0fa0a7f8bb8c3bcdc5dfa6160d9f3d324909a5d468184e8e5a7"
+            "sha256": "73b6a8ce53f1d73fe11917b3d85bc292ae1ff61096251d89b54852f68b611d9e"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/cli/commands/assignment_postgresql.py",
+            "sha256": "35605cf7291931427778f8c3e02f74e696c8e117adf00c121808b6983f92cae0"
           },
           {
             "path": "framework/core/src/python/kungfu/_assignment_orchestration/portable.py",
@@ -438,12 +442,13 @@
         "functionRisk": { "functions": 71, "total": 1022, "maximum": 157 }
       },
       "current": {
-        "physicalLines": 982,
+        "physicalLines": 984,
         "responsibilities": 46,
         "functionRisk": { "functions": 35, "total": 519, "maximum": 57 }
       },
       "ownerFiles": [
         "framework/core/src/python/kungfu/cli/commands/assignment_review/__init__.py",
+        "framework/core/src/python/kungfu/cli/commands/assignment_postgresql.py",
         "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
         "framework/core/src/python/kungfu/cli/commands/_assignment/review.py",
         "framework/core/src/python/kungfu/cli/commands/_assignment/family.py"
@@ -464,7 +469,7 @@
         "binding_create",
         "seal"
       ],
-      "responsibility": "Work CLI facade keeps stable command imports and shared context; starter, independent-review, Initiative-family, binding, and portable-seal commands are owned by cohesive private command domains."
+      "responsibility": "Work CLI facade keeps stable command imports and shared context; starter, independent-review, Initiative-family, binding, portable-seal, and PostgreSQL transaction commands are owned by cohesive private command domains."
     },
     {
       "sourcePath": "framework/core/src/python/kungfu/profile_sdk.py",
