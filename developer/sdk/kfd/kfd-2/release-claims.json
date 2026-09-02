@@ -8,10 +8,10 @@
     "package": "@kungfu-tech/product-kungfu"
   },
   "release": {
-    "version": "4.0.0-alpha.4",
+    "version": "4.0.0-alpha.5",
     "channel": "repository-default",
-    "tag": "v4.0.0-alpha.4",
-    "sourceSha": "2d5aa4338d67f7696c790e920d86b0fc4cbd111d"
+    "tag": "v4.0.0-alpha.5",
+    "sourceSha": "28fbb497f29ed7806b9ae199ddff83035b79177c"
   },
   "claims": [
     {

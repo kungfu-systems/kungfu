@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.manifest/v1",
   "name": "@kungfu-tech/kfx-github-webhook-ingress",
-  "version": "4.0.0-alpha.4",
+  "version": "4.0.0-alpha.5",
   "kungfuConfig": {
     "key": "github-webhook-ingress",
     "config": {
