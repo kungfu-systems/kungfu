@@ -535,7 +535,7 @@
           "require-install": true,
           "require-build": true,
           "require-verify": true,
-          "verify-command": "node scripts/run-shifu-lifecycle.mjs cache-apply ${{ startsWith(github.base_ref, 'release/') && 'release:qualify:candidate' || 'alpha:qualify' }} -- --kfd-source-input-root ${{ needs.preflight.outputs.kfd-source-input-root }} --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}",
+          "verify-command": "node scripts/run-shifu-lifecycle.mjs cache-apply ${{ startsWith(github.base_ref, 'release/') && 'release:qualify:candidate' || 'alpha:qualify' }} --kfd-source-input-root ${{ needs.preflight.outputs.kfd-source-input-root }} --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}",
           "release-candidate": true,
           "publish-channel": "${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",

@@ -177,6 +177,10 @@ test('Alpha build lanes reuse one exact-tree source receipt in the product-owned
     workflow,
     /cache-apply[^\n]+alpha:qualify[^\n]+--source-only-receipt-root \$\{\{ needs\.preflight\.outputs\.receipt-root \}\}[^\n]+--source-only-source-tree \$\{\{ needs\.preflight\.outputs\.source-tree \}\}/u,
   );
+  assert.doesNotMatch(
+    workflow,
+    /(?:alpha:qualify' \}\}|release:qualify:candidate) -- --kfd-source-input-root/u,
+  );
   assert.doesNotMatch(workflow, /verify-substage-evidence-path/u);
 });
 
