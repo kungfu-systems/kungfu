@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx-authoring-kit/v1",
   "version": 1,
-  "productVersion": "4.0.0-alpha.4",
+  "productVersion": "4.0.0-alpha.5",
   "nativeKfx": {
     "contractVersion": 14,
     "serviceHostSchema": "kungfu.kfx.service-host/v1",
@@ -9,9 +9,9 @@
   },
   "sdk": {
     "schema": "kungfu.kfx-authoring-sdk-projection/v1",
-    "productVersion": "4.0.0-alpha.4",
-    "apiVersion": "4.0.0-alpha.4",
-    "kfxVersion": "4.0.0-alpha.4",
+    "productVersion": "4.0.0-alpha.5",
+    "apiVersion": "4.0.0-alpha.5",
+    "kfxVersion": "4.0.0-alpha.5",
     "source": "framework/api/src/capability/service-authz.ts",
     "sourceRoot": "sha256:75342c374616da7718d306a2c05241cca6d8edc8bac6f007a4e62f905ad8c27a",
     "files": [
@@ -28,7 +28,7 @@
       "service-webhook-host.mjs": "460cb9938c8c0596d160fbcd61eb42bcfd9838cf8d154553b2544321af340a11",
       "types.d.ts": "1d063701b8e57c21899fb741d2adaee3cd36fcb0895ccf6f71eb1ef8e6bf5a65"
     },
-    "root": "sha256:3c5b7d2037929fc95c5b774ee09fc0f56afd9e4b7588cc58195f4b85bcaedcec"
+    "root": "sha256:afc271124cefdb764987acb2496bf15f8e06de04e496b7be41e12f4e30370eb0"
   },
   "schemas": {
     "packageManifest": "kungfu.kfx.manifest/v1",
@@ -158,5 +158,5 @@
       "bytes": 4338
     }
   ],
-  "contractRoot": "sha256:def0c4655dfda866fba9365f83ce59d3f07e4515b82ecbc2ecc24aefbe98596d"
+  "contractRoot": "sha256:d6cf2b84098fe38e930ce7166c0a6da21c358762d20b8cd3b8b2cd8b2f2418b3"
 }
