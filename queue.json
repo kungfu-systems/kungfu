@@ -3,15 +3,78 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9055,
-  "fencingCounter": 868,
+  "generation": 9056,
+  "fencingCounter": 869,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:c01a41558946c9fd283fa60be1c0979748c6737f8660b809150b20ec4e725026",
+    "pullRequestNumber": 3664,
+    "sourceHead": "d50b49a4656a5b92f7c6d3323027ee45f0e92803",
+    "assignmentRoot": "sha256:7aac14058238c63d6e6db516d50ffa089b397a235a20948671f54007c596c788",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:8a468d769303240208eea1bd539666b349ddc3765e74008c0f3fad604b14be77",
+    "sourcePatchRoot": "sha256:12d55621374696cec9606b9137bec5416d30b78fc32ea46857e6700a47e2f45d",
+    "sourceProofRoot": "sha256:323a179ce6a73925be0e55f953cadf54c694c9c13d539afadab3289ef2b50a92",
+    "planRoot": "sha256:c1dce2da7f401fea258b9212a412b24c257b5314ae26f0b0ab3904e35efe9b9c",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:2fdc47176316bb9b557e293fb9d7833ab69d3f2eda7fd83dab4a8e3675b30490",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3664 --expected-head d50b49a4656a5b92f7c6d3323027ee45f0e92803 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:5f663955d68f06c54b8022bd9a74d4cff28fbdd8d4b8ee0aeef00136f84ff84f"
+    },
+    "affectedPaths": [
+      ".github/workflows/affected-native-pr.yml",
+      ".github/workflows/alpha-promotion-preflight.yml",
+      ".github/workflows/auditable-demo.yml",
+      ".github/workflows/build.yml",
+      ".github/workflows/buildchain-validate.yml",
+      ".github/workflows/embedding-membrane-spike.yml",
+      ".github/workflows/linux-arm64-alpha-qualification.yml",
+      ".github/workflows/python-structure.yml",
+      ".github/workflows/release-new-version.yml",
+      ".github/workflows/report-projection.yml",
+      ".github/workflows/shifu-ci.yml",
+      ".xinfa/portable-atlas-classification.json.gz",
+      ".xinfa/product-atlas-bundle.json",
+      "scripts/affected-native-cache-payload.test.mjs",
+      "scripts/affected-native-proof.test.mjs",
+      "scripts/check-durable-provenance-authority.test.mjs",
+      "scripts/check-kungfu-gate-catalog.mjs",
+      "scripts/check-kungfu-gate-catalog.test.mjs",
+      "scripts/check-release-provenance-object.test.mjs",
+      "scripts/check-shifu-cache-contract.test.mjs",
+      "scripts/publish-alpha-run.mjs",
+      "scripts/release-promotion-rehearsal.test.mjs",
+      "scripts/source-acceptance.mjs",
+      "scripts/source-acceptance.test.mjs"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:49bae777da67e8d4dfa7107968eb87df7a716497ba3d2d35706e4a47353b6c58",
+      "sha256:8d0a2bb1e4a668dd139a9f342a44f487fe82383f0c2d1a52da8b322514e3e1c8"
+    ],
+    "sourceWorkflowRunId": 33611450752,
+    "deliveryClass": "native-proof-required",
+    "priority": "ordinary",
+    "generation": 869,
+    "expectedOldStateRoot": "sha256:3e5060809aa52cbd5249bf179b1dcd0147a7f72747e7eb769eef3102b5258bd5",
+    "issuedAt": "2026-09-02T11:29:02.085Z",
+    "expiresAt": "2026-09-02T12:59:02.085Z",
+    "fencingToken": "sha256:6997f13f307912083e6a97259087803774af79d545c82ce7713ff403b199ce7b",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -65279,10 +65342,10 @@
       "sourceWorkflowRunId": 33611450752,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-02T09:10:15.974Z",
-      "updatedAt": "2026-09-02T09:10:15.974Z",
+      "updatedAt": "2026-09-02T11:29:02.085Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".github/workflows/affected-native-pr.yml",
@@ -65378,6 +65441,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-02T11:28:56.043Z",
-  "stateRoot": "sha256:3e5060809aa52cbd5249bf179b1dcd0147a7f72747e7eb769eef3102b5258bd5"
+  "updatedAt": "2026-09-02T11:29:02.085Z",
+  "stateRoot": "sha256:544f5f1cfcf8d24b463edc6fc163110bbe57115eff68d30f0144b51f3697cb8c"
 }
