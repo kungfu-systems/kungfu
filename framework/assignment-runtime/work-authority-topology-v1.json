@@ -68,8 +68,8 @@
     {
       "id": "assignment-phase-fold",
       "kind": "deriver",
-      "owner": "work-control-runtime",
-      "site": "extensions/work-control/work-control-actions/domain/work_control_runtime.py#assignment_orchestration_status"
+      "owner": "work-control-lifecycle",
+      "site": "extensions/work-control/work-control-actions/domain/_work_control_lifecycle.py#assignment_orchestration_status"
     },
     {
       "id": "stable-work-ref",
@@ -113,7 +113,7 @@
     },
     {
       "id": "work-control-phase-fold",
-      "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_lifecycle.py",
       "anchor": "def assignment_orchestration_status(",
       "class": "authority",
       "data": ["Assignment lifecycle", "lease"],
@@ -177,7 +177,7 @@
     },
     {
       "id": "agent-bind-workref-builder",
-      "path": "framework/core/src/python/kungfu/agent/run_agent.py",
+      "path": "framework/core/src/python/kungfu/agent/_run_agent/runtime.py",
       "anchor": "def bind_current_native_work(",
       "class": "discovery",
       "data": ["WorkRef", "Profile source", "workspace"],
