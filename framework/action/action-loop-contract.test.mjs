@@ -11,7 +11,7 @@ import {
   classifyRecovery,
   rootStepReceipt,
   validateEnvelope,
-} from './action-loop.mjs';
+} from './index.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const contract = JSON.parse(

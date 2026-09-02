@@ -331,7 +331,8 @@ def test_python_session_services_are_import_closed_and_bounded():
     )
     agent_root = ROOT / "src" / "python" / "kungfu" / "agent"
     budgets = {
-        agent_root / "run_agent.py": 1450,
+        agent_root / "run_agent.py": 550,
+        agent_root / "_run_agent" / "runtime.py": 900,
         agent_root / "runtime_profiles.py": 800,
         ROOT / "src" / "python" / "kungfu" / "cli" / "commands" / "run.py": 900,
     }

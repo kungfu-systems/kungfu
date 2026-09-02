@@ -8,7 +8,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../../../../project-cut/src/project-cut.mjs';
+import { semanticRoot } from '../../../../project-cut/index.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

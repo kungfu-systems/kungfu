@@ -1,8 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0
 
+from pathlib import Path
+
 import pytest
 
 from kungfu.agent import action_loop
+
+
+def test_action_loop_responsibility_modules_are_bounded():
+    facade = Path(action_loop.__file__).resolve()
+    budgets = {
+        facade: 1000,
+        facade.with_name("_action_loop_support.py"): 80,
+        facade.with_name("_action_loop_transport.py"): 80,
+    }
+    for source, maximum in budgets.items():
+        assert len(source.read_text(encoding="utf-8").splitlines()) <= maximum
 
 
 def _root(character: str) -> str:

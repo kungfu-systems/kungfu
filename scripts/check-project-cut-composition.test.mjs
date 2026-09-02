@@ -14,22 +14,29 @@ import {
   sealGitEpisode,
 } from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
 
-import {
-  observeComposition,
-  verifyComposition,
-} from '../framework/project-cut/src/composition.mjs';
+import * as compositionApi from '../framework/project-cut/composition.mjs';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
   sha256Bytes,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
 import {
   sourceProjectionAtCommit,
   sourceProjectionAtTree,
 } from '../framework/project-cut/src/settlement.mjs';
 import { checkProjectCutCompositionContract } from './project-cut-composition-contract.mjs';
+
+const { observeComposition, verifyComposition } = compositionApi;
+
+test('composition entrypoint exposes only the stable repository API', () => {
+  assert.deepEqual(Object.keys(compositionApi).sort(), [
+    'compositionChanged',
+    'observeComposition',
+    'verifyComposition',
+  ]);
+});
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

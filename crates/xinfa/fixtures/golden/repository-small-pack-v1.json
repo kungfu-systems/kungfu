@@ -2,13 +2,13 @@
   "schema": "xinfa.context-pack-golden/v1",
   "fixture": "fixtures/repository-small/project.json",
   "visibility": "public",
-  "packRoot": "sha256:2910cfae833f4f8eb35dba33b535e1a2ae8c9ad957ff3385691e74fdfe8507f7",
+  "packRoot": "sha256:40bab9d2820e6ea40567ecc18d1138cbbf6d60eb5cceacd5f36eaa0a8f0f49bb",
   "sourceRoot": "sha256:eeab29ac55b2ee5bd42e2869c574e7542569c035d64173bd4e5837e9d36b42ec",
   "policyRoot": "sha256:78aeb0a9d5429aec779f5d0ddfe3ba8e992fe17f2c08339e6ac6252c354911f6",
   "cutRoot": "sha256:43e26d3383c20defb7d0f66a0a992b89d5a5279b1430da2ab5c4a3c93f3be654",
   "authorityRoot": "sha256:df4bc471e2ccc0baa627b764a365a4aea0b2f9b0807b8a1ba52ef30b02a838f7",
   "coverageRoot": "sha256:9a32a11da66e7b23accbd2b2e1254d84d0faf9a081381ae1008cfa3a42186652",
-  "manifestRoot": "sha256:23925ecc88220f21f113d7024698a182d3bd53e3338f486a549db8062424e184",
-  "receiptRoot": "sha256:d0dad9f57bbc4d5274dca00756add8c3f160b019777920f21d45c6a1c41ec273",
+  "manifestRoot": "sha256:23a7d605d829fc921655d5dbb430416e28dfc6fff2845367b2c1fe1173a109db",
+  "receiptRoot": "sha256:48dd3cade4cff9dda97bd91b33fcfa7829eefaff999afd43829698f9a5e6949f",
   "counts": { "sources": 4, "nodes": 4, "edges": 3, "routes": 2 }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { createEvidenceEnvelope } from '../../evidence/src/evidence-envelope.mjs';
+import { createEvidenceEnvelope } from '../../evidence/index.mjs';
 import { COMPOSITION_SCHEMA } from './composition.mjs';
 import { PROJECT_CUT_RECEIPT_SCHEMA } from './project-cut.mjs';
 import { SETTLEMENT_RECEIPT_SCHEMA } from './settlement.mjs';

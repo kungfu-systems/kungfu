@@ -18,6 +18,7 @@ from kungfu.cli.commands import kfc
 import kungfu.cli.commands.agent as agent_command_module
 import kungfu.cli.commands.skill as skill_command_module
 import kungfu.skill.dependencies as skill_authority
+import kungfu.skill.registry as skill_registry_module
 from kungfu.coordination import locks
 from kungfu.skill import (
     SkillAuthorityError,
@@ -39,6 +40,16 @@ from kungfu.skill import (
 )
 
 assert agent_command_module and skill_command_module
+
+
+def test_skill_registry_responsibility_modules_are_bounded():
+    registry_path = Path(skill_registry_module.__file__).resolve()
+    budgets = {
+        registry_path: 850,
+        registry_path.parent / "_registry" / "support.py": 450,
+    }
+    for source, maximum in budgets.items():
+        assert len(source.read_text(encoding="utf-8").splitlines()) <= maximum
 
 
 def _root(value) -> str:

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { semanticRoot } from '../../project-cut/src/project-cut.mjs';
+import { semanticRoot } from '../../format/project-cut-canonical-json.mjs';
 
 export const EVIDENCE_ENVELOPE_SCHEMA = 'kungfu.evidence-envelope/v1';
 

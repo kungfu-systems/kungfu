@@ -216,9 +216,20 @@ def verify_recovery_profile_source(
 
 def verify_planned_workspace(plan: Mapping[str, Any]) -> tuple[Path, JsonObject]:
     workspace = dict((plan.get("plannedTarget") or {}).get("workspace") or {})
-    workspace_root = Path(str(workspace.get("root") or "")).expanduser().resolve()
-    runtime_dir = Path(str(workspace.get("runtimeRoot") or "")).expanduser().resolve()
-    if runtime_dir != workspace_root / ".kungfu" / "runtime":
+    workspace_id, runtime_root = (
+        _text(workspace.get("id")),
+        _text(workspace.get("runtimeRoot")),
+    )
+    if not runtime_root:
+        raise ValueError("fresh recovery planned workspace runtime changed")
+    workspace_root = Path(_text(workspace.get("root"))).expanduser().resolve()
+    runtime_dir = Path(runtime_root).expanduser().resolve()
+    home_workspace = workspace_id == "home"
+    expected_kind = ("project", "home")[home_workspace]
+    expected_runtime = (workspace_root / ".kungfu" / "runtime", runtime_dir)[
+        home_workspace
+    ]
+    if runtime_dir != expected_runtime:
         raise ValueError("fresh recovery planned workspace runtime changed")
     identity_path = runtime_dir.parent / "workspace-identity.json"
     try:
@@ -229,18 +240,21 @@ def verify_planned_workspace(plan: Mapping[str, Any]) -> tuple[Path, JsonObject]
         ) from error
     body = {key: value for key, value in material.items() if key != "identityRoot"}
     identity_root = str(material.get("identityRoot") or "")
-    workspace_id = f"project:{identity_root.removeprefix('sha256:')[:16]}"
+    expected_workspace_id = (
+        f"project:{identity_root.removeprefix('sha256:')[:16]}",
+        "home",
+    )[home_workspace]
     checks = (
         material.get("schema") == "kungfu.workspace.identity-material/v1",
-        material.get("workspaceKind") == "project",
+        material.get("workspaceKind") == expected_kind,
         identity_root == work_authority.semantic_root(body),
         identity_root == workspace.get("identityRoot"),
-        workspace_id == workspace.get("id"),
+        expected_workspace_id == workspace_id,
     )
     if not all(checks):
         raise ValueError("fresh recovery planned workspace identity changed")
     observation = {
-        "workspaceId": workspace_id,
+        "workspaceId": expected_workspace_id,
         "identityRoot": identity_root,
         "runtimeRoot": str(runtime_dir),
         "available": runtime_dir.is_dir(),

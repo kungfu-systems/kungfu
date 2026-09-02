@@ -1,0 +1,166 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:0623066907beeeeebf425d64ab686f71a9fc9571e7cc821b211560332c6c5fc1",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "framework/core/src/python/kungfu/agent_work_lab_demo.py",
+    "framework/core/src/python/kungfu/agent_work_lab_template.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+    "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/authoring.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/base.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/lifecycle.py",
+    "framework/core/src/python/kungfu/cli/commands/_skill/runtime.py",
+    "framework/core/src/python/kungfu/storage/_service_backend.py",
+    "framework/core/src/python/kungfu/storage/_service_episode.py",
+    "framework/core/src/python/kungfu/storage/_service_fact.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "framework/core/src/python/kungfu/agent_work_lab_demo.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 332,
+      "contentRoot": "sha256:bf75b7f3ff40e847babc5505d7d0de4f79860c2a2834cca8a8ad127d09c43083"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent_work_lab_template.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 340,
+      "contentRoot": "sha256:defda8c879baf32ae27f41bc446dd12603319a38b573105323b567129f081a1f"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 82,
+      "contentRoot": "sha256:2ed0310826b7cc99381bf8dcab023eb7cd5d7247af00f60de6e412a3dded52be"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 230,
+      "contentRoot": "sha256:702157bd0006bfe7c3bfad52983e8824c7ecf4b87af4f9fe05991f0eb0b05495"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 230,
+      "contentRoot": "sha256:bc528e65020ac6d8917b593db5a8bd67de6c3c1c8512677480799aee71e9d237"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/provider.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 343,
+      "contentRoot": "sha256:2cb0a75d1a7465a10fb864ef289d222f513151809629c4d02f02e2b71c3c377c"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 242,
+      "contentRoot": "sha256:382b88523ac77efc45f36c13da1f9044f24fbaec2f12dd21612ec5c86673ac27"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 202,
+      "contentRoot": "sha256:0b2aa3e2565a69557c38741d3b2dda16d334e2a4d2a390be9866d32f3ee9e2b5"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/authoring.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 199,
+      "contentRoot": "sha256:cb44718b221a03b048e552a565074b863f715e59ae859a105563bb8ecedd7565"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/base.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 45,
+      "contentRoot": "sha256:afd3b9cebc95e37a34c46d9252ebd0ab9a718a875f39a1ad5a5db1682a5cb867"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/lifecycle.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 489,
+      "contentRoot": "sha256:ed7a68b4405a1180955347df3e0bfd29ede4b35cde8e2dea5c8e9f30e9f513c6"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/_skill/runtime.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 616,
+      "contentRoot": "sha256:36b0f5d45979641b69e54cb52094bfc772b023e682002bd9f13b4915b0573938"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/storage/_service_backend.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 390,
+      "contentRoot": "sha256:c44008503a9eccda284aeeafd01b24362f5a93c5567fe8c50de9748a1a3972ce"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/storage/_service_episode.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 382,
+      "contentRoot": "sha256:46b1bb07dcea443ab4174680eee0defeade8ee8a79c4d5c5780d379931aef4e7"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/storage/_service_fact.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "core/package",
+      "lines": 630,
+      "contentRoot": "sha256:d3c597ed03663e6371db1475e8e9fb2b90770e312f5e14425646eaa945da606b"
+    }
+  ],
+  "allowed_delta": 4752,
+  "owner": "core/package",
+  "responsibility_boundary": "Wave 7 separates Skill CLI authoring, lifecycle, and runtime presentation while retaining the Wave 4 storage, Wave 5 Agent CLI, and Wave 6 Work Lab owners behind stable public facades.",
+  "cohesion_rationale": "The four Skill CLI owners are the minimum cohesive split for independently changing authoring, lifecycle, runtime, and shared command seams; the exact scope also renews the eleven still-live owner files from Waves 4 through 6 required by the owner-wide issue root.",
+  "rejected_split_alternatives": [
+    "Folding Skill authoring, lifecycle, or runtime commands back into skill.py would restore the mixed-responsibility module this wave removes.",
+    "Combining Skill CLI helpers with storage, Agent CLI, or Work Lab owners would couple unrelated persistence, execution, and presentation responsibilities.",
+    "Relabeling handwritten files or changing stable command callbacks would hide responsibility or break supported imports instead of reducing complexity."
+  ],
+  "affected_tests_and_qualification": [
+    "focused Skill authoring, lifecycle, CLI group, help, and surface-contract pytest suites",
+    "./shifu check:cli-catalog-parity",
+    "./shifu check:python-structure",
+    "./shifu maintainability:amplification --json",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-wave7"
+}

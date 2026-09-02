@@ -198,15 +198,15 @@ function validateKfdEvidenceFrontload(
   );
   requirePattern(
     build,
-    /kfd-candidate-evidence\.mjs source-check[\s\S]*kfd-candidate-evidence\.mjs source --expected-input-root[\s\S]*kfd-candidate-evidence\.mjs run-verify/,
+    /kfd-candidate-evidence\.mjs source-check[\s\S]*verify-command: node scripts\/run-shifu-lifecycle\.mjs cache-apply [^\n]*alpha:qualify[^\n]*--kfd-source-input-root/,
     findings,
-    'Build must gate source evidence before build and artifact evidence before Verify',
+    'Build must bind preflight source evidence into the product-owned Alpha qualifier',
   );
   requirePattern(
     build,
-    /kfd-candidate-evidence:[\s\S]*verify-manifest-set/,
+    /qualification-manifest-set:[\s\S]*verify-manifest-set/,
     findings,
-    'Build must reject an incomplete sealed KFD platform set before promotion',
+    'Build must reject an incomplete platform qualification set before promotion',
   );
 }
 

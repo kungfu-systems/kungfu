@@ -15,7 +15,6 @@ import {
   releaseArtifactRoot,
   resolveKfdSourcePlatform,
   restoreKfdPrebuiltLayerArtifact,
-  runVerifiedQualification,
   sealKfdPrebuiltLayerArtifacts,
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
@@ -250,49 +249,6 @@ test('seals the artifact witness before qualification and the capsule after it',
   assert.equal(capsule.platform, fixture.platform);
 });
 
-test('the Verify wrapper restores pre-qualification evidence after qualification cleanup', () => {
-  const fixture = artifactFixture();
-  let prepared = 0;
-  const qualification = path.join(
-    fixture.root,
-    'product',
-    'release',
-    'qualification',
-  );
-  const command = [
-    process.execPath,
-    '-e',
-    `const fs=require('node:fs');if(process.env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACTS!=='1'||!/^sha256:[a-f0-9]{64}$/.test(process.env.KUNGFU_VERIFY_PREBUILT_RELEASE_ARTIFACT_ROOT||''))process.exit(23);fs.rmSync(${JSON.stringify(qualification)},{recursive:true,force:true});fs.mkdirSync(${JSON.stringify(qualification)},{recursive:true});fs.writeFileSync(${JSON.stringify(path.join(qualification, 'qualification-passed.json'))},'{}\\n')`,
-  ];
-  assert.equal(
-    runVerifiedQualification({
-      ...fixture,
-      command,
-      prepareReleaseArtifacts() {
-        prepared += 1;
-        writePrebuiltLayerArtifacts(fixture.root);
-        return 0;
-      },
-      buildArtifactWitness: () => ({
-        id: 'kungfu-collaboration-interface',
-        standard: 'kfd-3',
-        witnessKind: 'artifact',
-        exposedSurfaces: [],
-      }),
-    }),
-    0,
-  );
-  assert.equal(prepared, 1);
-  assert.equal(
-    fs.existsSync(path.join(qualification, 'qualification-passed.json')),
-    true,
-  );
-  assert.equal(
-    fs.existsSync(path.join(qualification, 'kfd', 'candidate-evidence.json')),
-    true,
-  );
-});
-
 test('sealed prebuilt layer artifacts restore exact bytes and reject tampering', () => {
   const fixture = artifactFixture();
   const artifacts = writePrebuiltLayerArtifacts(fixture.root);
@@ -321,28 +277,6 @@ test('sealed prebuilt layer artifacts restore exact bytes and reject tampering',
   assert.throws(
     () => restoreKfdPrebuiltLayerArtifact({ ...fixture, layer: 'sdk' }),
     /sealed KFD sdk layer artifact digest mismatch/u,
-  );
-});
-
-test('Verify stops before witnessing when release artifact materialization fails', () => {
-  const fixture = artifactFixture();
-  assert.equal(
-    runVerifiedQualification({
-      ...fixture,
-      command: [process.execPath, '-e', 'process.exit(0)'],
-      prepareReleaseArtifacts: () => 29,
-    }),
-    29,
-  );
-  assert.equal(
-    fs.existsSync(
-      path.join(
-        fixture.root,
-        'product/release/qualification/kfd/artifacts',
-        `${fixture.platform}.json`,
-      ),
-    ),
-    false,
   );
 });
 
@@ -482,10 +416,7 @@ test('manifest fan-in rejects a missing platform before promotion', () => {
       platform: { id: platform },
       git: { sha: SOURCE_SHA },
       files: [
-        `product/release/qualification/kfd/artifacts/${platform}.json`,
-        `product/release/qualification/kfd/source/kfd-3/collaboration-interface.${platform}.prebuild.json`,
-        'product/release/qualification/kfd/source-gate.json',
-        'product/release/qualification/kfd/candidate-evidence.json',
+        'product/release/qualification/platform-qualification-manifest.json',
       ].map((filePath) => ({ path: filePath, sha256: 'd'.repeat(64) })),
     });
   }

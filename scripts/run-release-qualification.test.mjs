@@ -22,6 +22,7 @@ import {
   qualificationHostTemporary,
   releaseQualificationEnvironment,
   releaseQualificationExecutionGroups,
+  releaseQualificationPlatform,
   releaseQualificationStages,
   verifyCorePlatformRelease,
   verifySourceOnlyEvidence,
@@ -545,7 +546,7 @@ test('alpha and release qualification retain the cross-layer desktop report and 
   }
 });
 
-test('the Buildchain artifact contract requires the common lane summary', () => {
+test('the Buildchain artifact contract requires the product summary and platform manifest', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github', 'workflows', 'build.yml'),
     'utf8',
@@ -557,10 +558,40 @@ test('the Buildchain artifact contract requires the common lane summary', () => 
   const expected = JSON.parse(encoded);
   assert.deepEqual(expected.requiredPaths, [
     'product/release/qualification/layer-qualification-summary.json',
-    'product/release/qualification/kfd/source-gate.json',
-    'product/release/qualification/kfd/candidate-evidence.json',
+    'product/release/qualification/platform-qualification-manifest.json',
   ]);
-  assert.equal(expected.minFiles, 3);
+  assert.equal(expected.minFiles, 2);
+});
+
+test('local and hosted Alpha qualification resolve the same platform identities', () => {
+  assert.equal(releaseQualificationPlatform('', 'linux', 'x64'), 'linux-x64');
+  assert.equal(
+    releaseQualificationPlatform('', 'linux', 'arm64'),
+    'linux-arm64',
+  );
+  assert.equal(
+    releaseQualificationPlatform('', 'darwin', 'arm64'),
+    'macos-arm64',
+  );
+  assert.equal(releaseQualificationPlatform('', 'win32', 'x64'), 'windows-x64');
+  assert.equal(
+    releaseQualificationPlatform('macos-arm64', 'linux', 'x64'),
+    'macos-arm64',
+  );
+  assert.throws(
+    () => releaseQualificationPlatform('', 'darwin', 'x64'),
+    /unsupported local Alpha qualification platform/u,
+  );
+});
+
+test('GitHub invokes the same product qualification task without recursive receipt adjudication', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github', 'workflows', 'build.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /cache-apply[^\n]+alpha:qualify/u);
+  assert.doesNotMatch(workflow, /kfd-candidate-evidence\.mjs run-verify/u);
+  assert.doesNotMatch(workflow, /verify-substage-evidence-path/u);
 });
 
 test('the Gate stage emits one source-bound receipt for all artifact layers', () => {
@@ -691,6 +722,7 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
       nativeUpgradePolicy: 'skip',
       artifactScope: 'product',
       sourceOnlyEvidence: null,
+      kfdSourceInputRoot: '',
     },
   );
   assert.deepEqual(
@@ -707,6 +739,7 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
       nativeUpgradePolicy: 'skip',
       artifactScope: 'hub-cli',
       sourceOnlyEvidence: null,
+      kfdSourceInputRoot: '',
     },
   );
   assert.throws(
@@ -760,6 +793,26 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
       sourceOnlyEvidence.policyRoot,
     ]).sourceOnlyEvidence,
     sourceOnlyEvidence,
+  );
+  const kfdSourceInputRoot = `sha256:${'d'.repeat(64)}`;
+  assert.equal(
+    parseReleaseQualificationOptions([
+      '--execution-profile',
+      'alpha',
+      '--kfd-source-input-root',
+      kfdSourceInputRoot,
+    ]).kfdSourceInputRoot,
+    kfdSourceInputRoot,
+  );
+  assert.throws(
+    () =>
+      parseReleaseQualificationOptions([
+        '--execution-profile',
+        'alpha',
+        '--kfd-source-input-root',
+        'not-a-root',
+      ]),
+    /must be a sha256 root/u,
   );
   assert.throws(
     () =>

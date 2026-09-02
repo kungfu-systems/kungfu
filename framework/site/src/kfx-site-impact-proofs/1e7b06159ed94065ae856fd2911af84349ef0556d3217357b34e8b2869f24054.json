@@ -1,0 +1,172 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "e88aeeac0a14b4333edbc3fc126569d63a6252d0",
+  "changeRoot": "sha256:3c92609da81294715ffc2c184f6889ba2e4bd2e03c4e565ab6bfda7822f1d886",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:aee825a02297456cbcf454edbc77e069050ed6ed4eccd4bcf2c3d1761b48a409",
+      "contentRoot": "sha256:c52cc5b5ca1bc16bdd2773a974089e354392608243dc9f56956f9d469ee47f3c",
+      "path": ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6fae25376347e519e97d4c40c67f9d294d237d06b4297c164f2077638e49281d",
+      "contentRoot": "sha256:f1c8713be33ddff0b544c900122cfaca65cb29c65decf21289cd826d396548e1",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2cee4c24d1dd1ab9550110f2a5f211a74c8e3d159193590a35889c17a36578f1",
+      "contentRoot": "sha256:0f7537366442b449f6dd1780beeecc4c271298c065d49b3dbe51d040ad9166ed",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7f913c8a365569f612ff5f4056bdd12a9c2960a9d3f32e0d9fb8372fe72d379a",
+      "contentRoot": "sha256:7e3b05d7efb9b0e704e199a5d1fc0f52b18577716f7059adf4aa67958debfcfa",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:60baf341ea6916c8ef662ce622701059b6bf013fc08918a56bc33d195cb06ae3",
+      "contentRoot": "sha256:b5dcf689a6345bb88e591d86ef0a4c65d96325bce35984d05078759d820a75f9",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3b41b5f30c77e7dbcb4f08f7ffaa2b40753e9a857d1728ecb03f808b447bd79a",
+      "contentRoot": "sha256:292c713fc3b4881c51eebe2328286ad1493317a641aa413ebf7f90bc59aa8f35",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5161dddcd427f0c55fa83fe8ebb07b3ed98b142fb139ac0a6117aa7c8f3982ba",
+      "contentRoot": "sha256:8b7d201c5744f99c3eef7eb14282eb239e98c7e4120744311f7e250ba50aacb4",
+      "path": ".xinfa/product-atlas-bundle.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6b095ec2dc8b5612ab590e2e173e68eba7897e484d7ed9ab7054b9989ae898ce",
+      "contentRoot": "sha256:5edc4ae64061536ec525d5dc569493ca967f8044a7b2e8211df48161189f9513",
+      "path": "config/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:bf21a69efe053bb0a5ec2e2458f22ef9f14fc44ba94dc617cd8c22fe5d4c02fe",
+      "contentRoot": "sha256:a7a10d4b6bf9cef652d5e3bedd094ab68a7572cc6e3e66d6a53812c4c7894a3b",
+      "path": "config/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:aee825a02297456cbcf454edbc77e069050ed6ed4eccd4bcf2c3d1761b48a409",
+      "contentRoot": "sha256:c52cc5b5ca1bc16bdd2773a974089e354392608243dc9f56956f9d469ee47f3c",
+      "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6fae25376347e519e97d4c40c67f9d294d237d06b4297c164f2077638e49281d",
+      "contentRoot": "sha256:f1c8713be33ddff0b544c900122cfaca65cb29c65decf21289cd826d396548e1",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2cee4c24d1dd1ab9550110f2a5f211a74c8e3d159193590a35889c17a36578f1",
+      "contentRoot": "sha256:0f7537366442b449f6dd1780beeecc4c271298c065d49b3dbe51d040ad9166ed",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:60baf341ea6916c8ef662ce622701059b6bf013fc08918a56bc33d195cb06ae3",
+      "contentRoot": "sha256:b5dcf689a6345bb88e591d86ef0a4c65d96325bce35984d05078759d820a75f9",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e42010abb845ed1e0a3c14a779dbe16ce37ddc025432ee59a9a0e97d5d91b1dc",
+      "contentRoot": "sha256:a6d698537a9146bf25226e56601611b9be739a6bed9beed8c871678b68e26894",
+      "path": "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:54bf8d41a3a2ab3d2c33f09d3ef9a91a01b2f94a7bf6bf33f1638acb88f0bb6b",
+      "contentRoot": "sha256:ff77cda9f1066469acd144063a335da7925e1993d7ace32a1b4b053b32177bb5",
+      "path": "docs/architecture/adr-map.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3d4ff6e29ef24e7a3b47a04defa98b578a0dba036d125d41b3a321e15afccefd",
+      "contentRoot": "sha256:be743c889c704c3478b07a550670063494dff4c3019a0473519d24ed7b9a4111",
+      "path": "docs/architecture/adr-map.md",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:968890ad62206df355ca2a541213ae1307311e8b2906e0150ce75496bb94714b",
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assignment.py",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:3821a5815bd1d149141e1ed65774418affe40398505233c540d38c3a49d27738",
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_lifecycle.py",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:8776fe6ba458b9c9aa6888a240f20ababc9056a03185624d96f77c6e1282902a",
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_state.py",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:a2e64cf0376b5bb639f35adbda603eef0eb75ad033503c84d47d2efdb2213692",
+      "contentRoot": "sha256:3360f81fbd30aa42ff4889d53e58c4608f4c2ec8dbcd8207d36fb920c7f04746",
+      "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e50d95043f99770df399e87adc2d5ac846f127c88a45f9f947978c9bb1ccb9fc",
+      "contentRoot": "sha256:33b7c7c8a9323b98838382034bf6288974fd18d6fbdf6359fdb655d98534483c",
+      "path": "framework/assignment-runtime/assignment-runtime.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ba3c648af84ab2dc81b4b43268dfc8d954f9895b6d05436cde2cbd9279e15444",
+      "contentRoot": "sha256:e2736dd3efd185e9ed9c58937f98edc4f37a170b87b64d5453272dd48e13f7dd",
+      "path": "framework/assignment-runtime/work-authority-topology-v1.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6b095ec2dc8b5612ab590e2e173e68eba7897e484d7ed9ab7054b9989ae898ce",
+      "contentRoot": "sha256:5edc4ae64061536ec525d5dc569493ca967f8044a7b2e8211df48161189f9513",
+      "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f875813988d12efe8847fa7b0cf0605d2fac4edf33a87eb35552c491b9b28f29",
+      "contentRoot": "sha256:199fcfeae220bf9a93bf7e4ecbada2c43e3806db9cea8a667d1e01f42aca756b",
+      "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:bf21a69efe053bb0a5ec2e2458f22ef9f14fc44ba94dc617cd8c22fe5d4c02fe",
+      "contentRoot": "sha256:a7a10d4b6bf9cef652d5e3bedd094ab68a7572cc6e3e66d6a53812c4c7894a3b",
+      "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f3d197e3e53f15b3d3728ef2a9eae424daf9aab94aeab4f24ebbc6e7ae6798e8",
+      "contentRoot": "sha256:26662d79e7e1ff4f62f5ac0361e41c5b20c8ddccb9e7130b288e0692de867b13",
+      "path": "package.json",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Maintainability ADR and its generated navigation projection bind the canonical Work Control Phase 8 owners without changing KFX product or documentation facets.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:1e7b06159ed94065ae856fd2911af84349ef0556d3217357b34e8b2869f24054"
+}

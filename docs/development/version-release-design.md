@@ -108,6 +108,16 @@ without Git or GitHub reads. Historical v1/v2 provenance envelopes and the
 Alpha.2 source-lock remain byte-preserved offline evidence; their dual-write,
 dual-read, manual legacy route, and proofless fallback are retired.
 
+The same separation applies to KFD source admission during Alpha
+qualification. An exact source tree may be found through the bounded reachable
+commit graph or by byte-equivalent queue replay, but a Project Cut's parent
+count, parent order, or synthetic merge topology is never a product verdict.
+After platform build, the local `./shifu alpha:qualify` task and GitHub's
+Buildchain verify lane are the same Kungfu-owned qualification surface.
+Buildchain fans that command out across platforms and admits the resulting
+manifest set; it does not mint a second semantic verdict by recursively
+revalidating Kungfu's internal receipts.
+
 **3. A release tag carries weight = code-freeze ⊗ binary distribution, performed
 atomically.** kungfu ships **prebuilt cross-platform binaries** (node-pre-gyp artifacts via
 `prebuilt.libkungfu.cc`, plus the assembled `kungfu` runtime), not source for users to compile. For such

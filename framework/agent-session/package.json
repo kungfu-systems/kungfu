@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/agent-session",
-  "version": "4.0.0-alpha.4",
+  "version": "4.0.0-alpha.5",
   "description": "Kungfu agent session process, PTY, structured stdio, and interaction ports",
   "license": "Apache-2.0",
   "type": "module",

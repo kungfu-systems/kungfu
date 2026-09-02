@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { semanticRoot } from '../framework/project-cut/src/project-cut.mjs';
+import { semanticRoot } from '../framework/project-cut/index.mjs';
 import {
   MINIMUM_DEFAULT_PROMOTION_SAMPLES,
   WORK_DESIGN_REPLAY_REQUEST_SCHEMA,

@@ -8,10 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import {
-  canonicalJson,
-  semanticRoot,
-} from '../project-cut/src/project-cut.mjs';
+import { canonicalJson, semanticRoot } from '../project-cut/index.mjs';
 
 export const ASSIGNMENT_REQUEST_SCHEMA = 'kungfu.assignment-request/v1';
 export const CAPTURE_RECEIPT_SCHEMA = 'kungfu.assignment-capture.receipt/v1';

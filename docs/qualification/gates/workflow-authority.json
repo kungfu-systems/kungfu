@@ -338,20 +338,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:f5e28c5dc705dfc79ae7fe189ec68e894bf2e53e9aa99367ed4490f5032658f6",
+          "definitionDigest": "sha256:092a9c8f6f61e64319e4e34fca21e78109e05133ebf968301d8ce34f2fcd74c8",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105"],
           "steps": []
-        },
-        {
-          "id": "kfd-candidate-evidence",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "qualifying",
-          "definitionDigest": "sha256:c9c19bf65c399f3e1a78159b36dc33956b29360e130618921225d3e18c059ad7",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Download the four sealed platform manifests","authority":"evidence-publication","definitionDigest":"sha256:42c573d71fdc7e604ce081cc6a32b211a2119f95f78b63fd1629784c172d9492"},{"index":3,"label":"name:Reject missing, incomplete, or root-mismatched KFD evidence","definitionDigest":"sha256:0e167978f56979f54d0ba794c79481778221583667013e6ed3795166a1ea0f1e"}]
         },
         {
           "id": "kungfu-phase-b",
@@ -378,7 +368,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:38d49c7b65d207c896b96ae3870aebcc361981ca13c38149657facb36878713d",
+          "definitionDigest": "sha256:cd6a6db090d247d5556ded11d9245aa77df724714b9f2add0e9f065efe6b8b33",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Set up pinned Node.js","definitionDigest":"sha256:93f3675945caff80d4b510964b74f50d37e770eade12d52d8600f9da040518ad"},{"index":3,"label":"name:Write and verify source-bound publication tail plan","definitionDigest":"sha256:e075a84c94c4739580838ada3af1260ab9564d2588370db897a15b69706fb698"},{"index":4,"label":"name:Upload immutable publication tail plan","authority":"evidence-publication","definitionDigest":"sha256:b0388d88b612b793c99061ca6ce9c6ae485b7c4677c6057c2dd1745dbfc55853"}]
@@ -392,6 +382,16 @@
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Verify durable release provenance authority","definitionDigest":"sha256:16201d279579125918f57e6598c179467f2d31e291ad09f23f233afaed0fa423"},{"index":3,"label":"id:kfd-source","definitionDigest":"sha256:e0838c8baeac111a165e985eedb1f9559a2faa3d2e133cbb8783549f7754a44d"},{"index":4,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
+        },
+        {
+          "id": "qualification-manifest-set",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "qualifying",
+          "definitionDigest": "sha256:ca1bca8a935076553568d37a1b9e64fe1f848bd3950dd47d8d8d528d2dbfdc7f",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Download the four Buildchain artifact manifests","authority":"evidence-publication","definitionDigest":"sha256:d07d6d23a17d468081ba7d8035458b30089737ffad6316e4f6cab1820e8b7428"},{"index":3,"label":"name:Reject an incomplete or source-mismatched qualification set","definitionDigest":"sha256:dc67815e5076733fd68c0ecdf5b208500c77a28029b126129cca0b3a158e0911"}]
         },
         {
           "id": "windows-fast-sentinel",

@@ -13,16 +13,16 @@ import {
   sealGitEpisode,
 } from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
 import {
-  checkNativeLoopQualificationContract,
-  sealNativeLoopQualification,
-  verifyNativeLoopQualification,
-} from '../framework/project-cut/src/native-loop-qualification.mjs';
-import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
+import {
+  checkNativeLoopQualificationContract,
+  sealNativeLoopQualification,
+  verifyNativeLoopQualification,
+} from '../framework/project-cut/src/native-loop-qualification.mjs';
 import {
   materializeSettlementPublication,
   planSettlementPublication,

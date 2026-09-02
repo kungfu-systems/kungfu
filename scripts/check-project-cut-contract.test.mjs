@@ -12,7 +12,7 @@ import {
   semanticRoot,
   verifyProjectCut,
   verifyProjectCutReceipt,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
 import {
   checkProjectCutContract,
   loadProjectCutFixture,

@@ -13,7 +13,7 @@ import {
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/src/project-cut.mjs';
+} from '../framework/project-cut/index.mjs';
 import { sourceProjectionAtCommit } from '../framework/project-cut/src/settlement.mjs';
 import {
   admitFamilyQueueLease,
