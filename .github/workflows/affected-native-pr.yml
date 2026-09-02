@@ -997,6 +997,47 @@ jobs:
       - kfd_verifier
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    steps:
+      - name: Report qualification result
+        shell: bash
+        env:
+          DCO_RESULT: ${{ needs.dco.result }}
+          SOURCE_RESULT: ${{ needs.source_acceptance.result }}
+          PREFLIGHT_RESULT: ${{ needs.candidate_preflight.result }}
+          PROBE_RESULT: ${{ needs.proof_probe.result }}
+          NATIVE_RESULT: ${{ needs.affected_native_shards.result }}
+          SHIFU_RESULT: ${{ needs.shifu_workspace.result }}
+          KFD_RESULT: ${{ needs.kfd_verifier.result }}
+        run: |
+          set -euo pipefail
+          for result in \
+            "$DCO_RESULT" \
+            "$SOURCE_RESULT" \
+            "$PREFLIGHT_RESULT" \
+            "$PROBE_RESULT" \
+            "$NATIVE_RESULT" \
+            "$SHIFU_RESULT" \
+            "$KFD_RESULT"; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "Qualification job failed: $result" >&2; exit 1 ;;
+            esac
+          done
+          echo "Dev qualification passed."
+
+  legacy_affected_native:
+    name: Legacy affected-native proof publication / linux
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs:
+      - dco
+      - source_acceptance
+      - candidate_preflight
+      - proof_probe
+      - affected_native_shards
+      - shifu_workspace
+      - kfd_verifier
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       actions: read
       contents: write

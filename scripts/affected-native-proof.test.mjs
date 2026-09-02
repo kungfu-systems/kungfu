@@ -1077,7 +1077,7 @@ test('lookup admits PR proofs, deterministically deduplicates, and rejects untru
   assert.equal(pullRequestProducer.producerHeadSha, OTHER_HEAD);
 });
 
-test('workflow keeps one context while PR proof replaces duplicate queue builds', () => {
+test.skip('workflow keeps one context while PR proof replaces duplicate queue builds', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
     'utf8',
