@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-adopter-manifest-gate",
+  "checkedAt": "2026-09-02T22:38:10.666Z",
+  "authority": {
+    "path": "kfd-adopter-manifest.json",
+    "contract": "kfd.adopter-conformance-manifest/v1",
+    "manifestRoot": "sha256:44352bc256265b4b9155a4365a7ef0ab99db790c5d8bd7c6533c41bd7c8adb3b"
+  },
+  "adopter": {
+    "id": "kungfu-systems/kungfu"
+  },
+  "source": {
+    "repository": "kungfu-systems/kungfu",
+    "coordinate": "kungfu-systems/kungfu@14b68af31119d29b5d0ee1836cf429e98f97822d",
+    "sha": "14b68af31119d29b5d0ee1836cf429e98f97822d",
+    "artifactRoot": "sha256:a7a0b98005101acea0096ff839cc29f1779bb9ef24383e82b4f6ae316952eaaa"
+  },
+  "verificationCut": {
+    "checkedAt": "2026-09-02T22:38:10.666Z",
+    "maxAgeSeconds": 86400
+  },
+  "standardPackage": {
+    "name": "@kungfu-tech/kfd",
+    "version": "1.0.0-alpha.65",
+    "artifactRoot": "sha256:c0781bcaf191a58561ae32ee2fbedabbb48ed50b5725c356fbd83704089637f8",
+    "registryRoot": "sha256:8ab283dd225e8940a4f9d92eca7d59fff6e8d29e66275c03baa923ad2ff63298",
+    "verifierSetRoot": "sha256:aad9b4193e965b68e465bbe4e648e5a03c3d78a6575dfda1d5e90943404779f4"
+  },
+  "decisionWitness": {
+    "rootAlgorithm": "sha256-buildchain-stable-json-v1",
+    "root": "sha256:147383df96ab82e5292b9ad82a088b6d68a6de2be8873ef3a664f6678c139cbd"
+  },
+  "gateResults": [
+    {
+      "standard": "kfd-4",
+      "sourceRepository": "kungfu-systems/kungfu",
+      "sourceSha": "14b68af31119d29b5d0ee1836cf429e98f97822d",
+      "gateRoot": "sha256:8e7d39e625ad1d71cffbbe085a8f2e0c05786cd395c62d2254f651abdf38bed4",
+      "status": "passed"
+    },
+    {
+      "standard": "kfd-5",
+      "sourceRepository": "kungfu-systems/kungfu",
+      "sourceSha": "14b68af31119d29b5d0ee1836cf429e98f97822d",
+      "gateRoot": "sha256:3e49ab6328ef51345919765d64c7dfbfff4fcc19bcb3351c3dbada5b249a0f3f",
+      "status": "passed"
+    },
+    {
+      "standard": "kfd-7",
+      "sourceRepository": "kungfu-systems/kungfu",
+      "sourceSha": "14b68af31119d29b5d0ee1836cf429e98f97822d",
+      "gateRoot": "sha256:d9db146fe5d1eb727ab977d3db6fbb51fee0f89618f2838362debcd8b1d971c0",
+      "status": "passed"
+    }
+  ],
+  "manifestVerificationReportRoot": "sha256:ea478aebb47254943655480014d024b56497e0afa313df782a9ed711bac366fc",
+  "manifestBundleRoot": "sha256:964d579d35f66b98355be59d21bf2617ee1cd1b1d79327d7ad2872b1b8654e45",
+  "status": "passed",
+  "qualifying": false,
+  "selfCertified": false,
+  "nonClaims": [
+    "The standard adopter manifest is the sole declaration authority; legacy support matrices are projections only.",
+    "A passing manifest gate does not authorize release, runtime action, activation, or independent certification."
+  ],
+  "issues": [],
+  "gateRoot": "sha256:7cb8bf4bd378a759c598603df53255bd8fd0df9c9f811735fb6ea723eb741686"
+}
