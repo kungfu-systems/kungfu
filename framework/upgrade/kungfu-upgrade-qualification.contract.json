@@ -61,17 +61,27 @@
     "win32": ["archive"]
   },
   "mechanicsEvidence": {
-    "archive": {
-      "testFile": "framework/core/tests/python/test_distribution_update.py",
+    "archive-command": {
+      "testFile": "framework/core/tests/python/_distribution_update_cli_cases.py",
       "requiredTests": [
-        "test_previous_archive_alpha_upgrades_once_with_rooted_receipts",
-        "test_download_recovers_from_disk_full_using_retained_partial",
+        "test_previous_archive_alpha_upgrades_once_with_rooted_receipts"
+      ]
+    },
+    "archive-download": {
+      "testFile": "framework/core/tests/python/_distribution_update_download_cases.py",
+      "requiredTests": [
+        "test_download_recovers_from_disk_full_using_retained_partial"
+      ]
+    },
+    "archive-activation": {
+      "testFile": "framework/core/tests/python/_distribution_update_activation_cases.py",
+      "requiredTests": [
         "test_apply_rejects_unsafe_archive_before_inventory_write",
         "test_apply_rechecks_publication_before_preview_or_inventory_write"
       ]
     },
     "homebrew": {
-      "testFile": "framework/core/tests/python/test_distribution_update.py",
+      "testFile": "framework/core/tests/python/_distribution_update_package_manager_cases.py",
       "requiredTests": [
         "test_package_manager_execution_uses_exact_argv_and_writes_receipt",
         "test_package_manager_failure_is_durable_and_recoverable",
