@@ -331,18 +331,24 @@ test('release workflows bind product and component metadata explicitly', () => {
   assert.match(layerWorkflow, /release:github:metadata:apply/u);
 });
 
-test('Alpha publisher rejects a retired CLI artifact before creating a release', () => {
-  const root = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-alpha-publisher-'),
-  );
-  try {
-    const bin = path.join(root, 'bin');
-    const calls = path.join(root, 'gh-calls.jsonl');
-    fs.mkdirSync(bin, { recursive: true });
-    const fakeGh = path.join(bin, 'gh');
-    fs.writeFileSync(
-      fakeGh,
-      `#!/usr/bin/env node
+test('Alpha publisher rejects retired artifacts before creating a release', () => {
+  const retiredArtifacts = [
+    'kungfu-episodes-cli-darwin-arm64.tar.gz',
+    'Kungfu-Episodes-4.0.0-alpha.6-macos-arm64.zip',
+    'Kungfu Episodes-4.0.0-alpha.6-macos-arm64.zip',
+  ];
+  for (const retiredArtifact of retiredArtifacts) {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kungfu-alpha-publisher-'),
+    );
+    try {
+      const bin = path.join(root, 'bin');
+      const calls = path.join(root, 'gh-calls.jsonl');
+      fs.mkdirSync(bin, { recursive: true });
+      const fakeGh = path.join(bin, 'gh');
+      fs.writeFileSync(
+        fakeGh,
+        `#!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
 const args = process.argv.slice(2);
@@ -363,37 +369,39 @@ if (args[0] === 'run' && args[1] === 'download') {
     }));
   } else {
     fs.writeFileSync(path.join(destination, 'Kungfu-4.0.0-alpha.6-macos-arm64.dmg'), 'desktop');
-    fs.writeFileSync(path.join(destination, 'kungfu-episodes-cli-darwin-arm64.tar.gz'), 'retired-cli');
+    fs.writeFileSync(path.join(destination, process.env.FAKE_RETIRED_ARTIFACT), 'retired');
   }
   process.exit(0);
 }
 console.error('unexpected fake gh call: ' + JSON.stringify(args));
 process.exit(97);
 `,
-    );
-    fs.chmodSync(fakeGh, 0o755);
-    const result = spawnSync(process.execPath, [PUBLISHER, '123'], {
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        GH_REPO: REPOSITORY,
-        FAKE_GH_CALLS: calls,
-        PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
-        RUNNER_TEMP: root,
-      },
-    });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /retired product artifact name/u);
-    const invoked = fs
-      .readFileSync(calls, 'utf8')
-      .trim()
-      .split('\n')
-      .map((line) => JSON.parse(line));
-    assert.equal(
-      invoked.some((args) => args[0] === 'release'),
-      false,
-    );
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+      );
+      fs.chmodSync(fakeGh, 0o755);
+      const result = spawnSync(process.execPath, [PUBLISHER, '123'], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GH_REPO: REPOSITORY,
+          FAKE_GH_CALLS: calls,
+          FAKE_RETIRED_ARTIFACT: retiredArtifact,
+          PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
+          RUNNER_TEMP: root,
+        },
+      });
+      assert.equal(result.status, 1, retiredArtifact);
+      assert.match(result.stderr, /retired product artifact name/u);
+      const invoked = fs
+        .readFileSync(calls, 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line));
+      assert.equal(
+        invoked.some((args) => args[0] === 'release'),
+        false,
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   }
 });

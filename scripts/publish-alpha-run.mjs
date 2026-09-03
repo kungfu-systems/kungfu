@@ -115,7 +115,7 @@ try {
 
   const downloadedFiles = filesUnder(downloadRoot);
   const retiredProductArtifact =
-    /^(?:kungfu-episodes-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu(?:[ -])Episodes.*\.(?:dmg|AppImage|exe))$/u;
+    /^(?:kungfu-episodes-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu(?:[ -])Episodes.*\.(?:dmg|zip|AppImage|exe))$/u;
   const retiredSource = downloadedFiles.find((sourcePath) =>
     retiredProductArtifact.test(path.basename(sourcePath)),
   );
