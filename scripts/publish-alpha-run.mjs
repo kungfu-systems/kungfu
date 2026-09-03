@@ -114,7 +114,7 @@ try {
   }
 
   const releaseAsset =
-    /^(?:kungfu-episodes-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu-\d+\.\d+\.\d+.*\.AppImage|Kungfu Setup \d+\.\d+\.\d+.*\.exe|Kungfu-\d+\.\d+\.\d+.*-macos-arm64\.(?:dmg|zip))$/u;
+    /^(?:kungfu-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu-\d+\.\d+\.\d+.*\.AppImage|Kungfu Setup \d+\.\d+\.\d+.*\.exe|Kungfu-\d+\.\d+\.\d+.*-macos-arm64\.(?:dmg|zip))$/u;
   const releaseFiles = filesUnder(downloadRoot)
     .filter((sourcePath) => releaseAsset.test(path.basename(sourcePath)))
     .sort((left, right) => {

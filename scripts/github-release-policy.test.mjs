@@ -298,6 +298,8 @@ test('release workflows bind product and component metadata explicitly', () => {
   assert.match(alphaPublication, /'--latest'/u);
   assert.doesNotMatch(productWorkflow, /release:github:latest:verify/u);
   assert.doesNotMatch(productWorkflow, /release:github:metadata:apply-newest/u);
+  assert.match(alphaPublication, /kungfu-cli-/u);
+  assert.doesNotMatch(alphaPublication, /kungfu-episodes-cli-/u);
   assert.match(
     alphaPublication,
     /Kungfu-\\d\+\\\.\\d\+\\\.\\d\+\.\*-macos-arm64/u,
