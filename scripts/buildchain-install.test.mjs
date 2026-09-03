@@ -280,21 +280,17 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', 
     retirement.evidence.macosValidationTrainHead,
     '6b39d6f72224a8b2fa93c1bb997ed72cbed6cdf4',
   );
-  const promotion = JSON.parse(
-    fs.readFileSync(
-      path.join(
-        repositoryRoot,
-        'docs/release-promotion-rehearsal.contract.json',
-      ),
-      'utf8',
-    ),
+  const buildWorkflow = fs.readFileSync(
+    path.join(repositoryRoot, '.github/workflows/build.yml'),
+    'utf8',
   );
-  const macosImmutableBuildSource =
-    promotion.buildchain.build_workflow_shell_resolved_sha;
-  assert.match(macosImmutableBuildSource, /^[0-9a-f]{40}$/);
-  assert.equal(
-    promotion.buildchain.build_runtime_resolved_sha,
-    macosImmutableBuildSource,
+  const macosImmutableBuildSource = buildWorkflow.match(
+    /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@([0-9a-f]{40})/u,
+  )?.[1];
+  assert.match(macosImmutableBuildSource || '', /^[0-9a-f]{40}$/u);
+  assert.match(
+    buildWorkflow,
+    new RegExp(`buildchain-ref: ${macosImmutableBuildSource}`, 'u'),
   );
 
   for (const name of [

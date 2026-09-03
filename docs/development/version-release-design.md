@@ -65,12 +65,10 @@ Three independent values must not be collapsed into one boolean:
    `xinfa-v*` explicitly set `make_latest=false`; they are independently
    installable components, not the repository's product discovery authority.
 
-The publication tail normalizes Alpha product metadata inside the same final
-publication-commit command that binds the public authority. A read-only gate
-then requires `/releases/latest` to name the newest public Kungfu product and
-requires `/releases/latest/download/buildchain.release.json` to resolve to that
-release's exact Publication Bundle. A component release, a missing bundle, a
-redirect to another tag, or mismatched product/tag/channel fields fails closed.
+The GitHub-only publication tail sets these three presentation fields while it
+creates or resumes the release. It does not run a second source-admission,
+publication-bundle, or `/releases/latest` verification gate after the four
+platforms have already built and qualified the candidate.
 
 **The pipeline is asymmetric by design.** `dev` remains the fast integration
 zone: it runs a lightweight source and ADR-delivery gate rather than the full
@@ -347,38 +345,13 @@ sealed candidate and owns the publication transaction; Kungfu checks its exact
 manifest, asset, channel, installer, and KFD closure without minting a second
 upgrade admission authority.
 
-Kungfu does not need to publish an alpha or stable release to test its side of
-the promotion contract. `./shifu release:promotion:rehearse` executes committed
-positive and fail-closed fixtures for both channels, validates the real GitHub
-workflow wiring and immutable Buildchain contract locks, checks every declared
-release-passport input, and reports current stable ADR readiness. The command
-also proves that tracked files, branches, and tags remain unchanged. It never
-receives release credentials and contains no version bump, tag, push, package
-publish, or GitHub Release operation.
-
-The ordinary `Buildchain Validate` workflow runs this rehearsal on a
-GitHub-hosted runner after Buildchain configuration validation. On a future
-merged alpha or stable promotion PR, `Release - New Version` runs the same
-rehearsal against the actual immutable PR event before the Buildchain reusable
-promotion job. Buildchain promotion has an explicit `needs` edge to that
-preflight, so contract drift or ADR-admission failure blocks publication before
-release credentials are exposed to the reusable job.
-
-This boundary is deliberately precise. The rehearsal proves Kungfu's event,
-evidence, channel routing, Buildchain lock, and workflow-consumer contract. It
-does not claim to execute or emulate Buildchain's internal publication engine;
-the first controlled alpha remains the black-box integration proof for that
-implementation.
-
-For a local report:
-
-```bash
-./shifu release:promotion:rehearse -- \
-  --report product/release/qualification/release-promotion-rehearsal.json
-```
-
-The report schema is `kungfu.release-promotion-rehearsal/v1`; its executable
-contract is `docs/release-promotion-rehearsal.contract.json`.
+Alpha qualification ends when the four-platform Buildchain candidate run
+succeeds. After the channel pull request merges, the release workflow locates
+that successful run, downloads its retained artifacts, derives the version
+from its candidate passport, and publishes one GitHub Release. A failed
+publication is retried with that Build run ID alone; the tail does not repeat
+source admission, Project Cut topology, KFD, Warrant, controller, receipt, or
+consumer-predicate qualification.
 
 ## Why not changesets / semantic-release / standard tools
 

@@ -1101,7 +1101,7 @@
       "owner": "product/release",
       "identityTokens": [
         "kungfu.trademark-public-use/v1",
-        "kungfu.release-admission"
+        "kungfu.alpha-github-release"
       ],
       "discoveryRoots": [
         "framework/release/",
@@ -1115,8 +1115,7 @@
         "sources": [
           "shifu.gates.json",
           "framework/release/kungfu-trademark-public-use.contract.json",
-          "product/release-channel-trust.json",
-          "docs/qualification/gates/release-admission-policy.json"
+          "product/release-channel-trust.json"
         ]
       },
       "surfaces": [
@@ -1125,19 +1124,11 @@
           "role": "conformance-oracle"
         },
         {
-          "path": "scripts/verify-kungfu-release-admission.mjs",
-          "role": "conformance-oracle"
-        },
-        {
           "path": "scripts/prepare-ungfu-release-evidence.mjs",
           "role": "generated-projection"
         },
         {
-          "path": "scripts/release-promotion-rehearsal.mjs",
-          "role": "conformance-oracle"
-        },
-        {
-          "path": "scripts/kungfu-release-qualification.mjs",
+          "path": "scripts/publish-alpha-run.mjs",
           "role": "package-release"
         },
         {
@@ -1150,10 +1141,6 @@
         },
         {
           "path": "docs/qualification/gates/release-and-promotion.md",
-          "role": "documentation"
-        },
-        {
-          "path": "docs/qualification/gates/release-admission.md",
           "role": "documentation"
         },
         {

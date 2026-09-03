@@ -1351,28 +1351,6 @@
         "invisible_context_boundary": "provider internals, hidden model checkpoints, private session stores, pending agent-121 real-snapshot execution, and generalized product claims are not claimed"
       }
     },
-    "docs/qualification/alpha-local-publication-debug.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "qualification-runbook",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "executable-probe",
-        "local-files"
-      ],
-      "period": "2026-08-08",
-      "theme": "alpha-local-publication-debug",
-      "confidence": "high",
-      "evidence_grade": "A",
-      "last_reviewed": "2026-08-08",
-      "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-08-08",
-        "invisible_context_boundary": "Credential archive contents, provider secrets, external publication state, hidden model checkpoints, and runtime parameters are not claimed"
-      }
-    },
     "docs/qualification/continuity-pilot.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -1732,23 +1710,6 @@
       "doc_type": "documentation-section",
       "review_state": "self-reviewed",
       "sensitivity": "public"
-    },
-    "docs/qualification/gates/release-admission.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "design-reference",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files",
-        "user-consensus"
-      ],
-      "period": "ongoing",
-      "theme": "sealed-release-admission",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-08-15"
     },
     "docs/qualification/gates/release-and-promotion.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

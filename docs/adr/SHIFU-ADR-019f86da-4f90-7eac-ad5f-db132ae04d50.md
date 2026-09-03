@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/965, https://github.com/kungfu-systems/kungfu/pull/984, https://github.com/kungfu-systems/kungfu/pull/1583]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/984
-qualification_refs: [scripts/check-kungfu-gate-catalog.test.mjs, scripts/verify-kungfu-release-admission.test.mjs, scripts/kungfu-release-qualification.mjs, docs/qualification/gates/workflow-authority.json, docs/qualification/gates/release-admission-policy.json, framework/release/component-distribution.contract.json, .github/workflows/release-shifu.yml]
+qualification_refs: [scripts/check-kungfu-gate-catalog.test.mjs, commit:db0010dacd76f913a8dc2704faf0cfceb55b1553, docs/qualification/gates/workflow-authority.json, framework/release/component-distribution.contract.json, .github/workflows/release-shifu.yml]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
