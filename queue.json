@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9174,
+  "generation": 9175,
   "fencingCounter": 879,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:76f04d574ed492c0f4f9a4374a713ee30b859fbd989ca682f585ef00f3b6a41b",
@@ -164,8 +164,13 @@
     "issuedAt": "2026-09-03T03:34:00.058Z",
     "expiresAt": "2026-09-03T05:50:22.389Z",
     "fencingToken": "sha256:e0536ae4a78be0d091388dffbec6b090ae931adac3962574320fa899d3e4f718",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-03T04:20:22.389Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-03T04:20:22.389Z",
+    "nativeProofRoot": "sha256:c9dc43725b3e5d2990ee89ca50bfd7a1b734cca7b33e6ffac16b6c623ef61146",
+    "nativeExecutionReceiptRoot": "sha256:6fecbfbe34b204f1b74a34d570d40055ae4f410550e0790f33774f64b90eb23b",
+    "nativeProofReuseRoot": "sha256:0acc8a230cccd34d58968d059cdbd16e79b75fa9a1beab0e174aa0d1ec3d54a6",
+    "qualificationReceiptRoot": "sha256:03d1b2d9ee50f6cd39b306ad7fc60ab3ece5f6bd1a73845325185e6876e02a44",
+    "qualifiedAt": "2026-09-03T04:20:46.856Z"
   },
   "candidates": [
     {
@@ -66911,10 +66916,10 @@
       "sourceWorkflowRunId": 33711259697,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-03T03:25:21.899Z",
-      "updatedAt": "2026-09-03T04:20:22.389Z",
+      "updatedAt": "2026-09-03T04:20:46.856Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/auditable-demo-transport-smoke.json",
@@ -67039,6 +67044,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-03T04:20:22.389Z",
-  "stateRoot": "sha256:94d00e8503adacd61490c691db438f179d30963e13588dd295eb2c6850b71e18"
+  "updatedAt": "2026-09-03T04:20:46.856Z",
+  "stateRoot": "sha256:97eb436c7d9d4b054cb1178651fdc6e24ba469fb056b9e0250f3fd0ee4abdd74"
 }
