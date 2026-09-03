@@ -995,12 +995,32 @@ function validateWorkflowCoverage(registry, covered, issues) {
   }
 }
 
+function validateMeasurementReport(
+  root,
+  registry,
+  measurementValidation,
+  issues,
+) {
+  if (measurementValidation.issues.length) return;
+  const measurementReportPath = path.join(root, MEASUREMENT_REPORT);
+  const measurementReportText = fs.readFileSync(measurementReportPath, 'utf8');
+  const expectedMeasurementReport = replaceGeneratedMeasurements(
+    measurementReportText,
+    renderMeasurementCoverage(registry, measurementValidation.document),
+  );
+  if (measurementReportText !== expectedMeasurementReport)
+    issues.push(
+      `[measurement] ${MEASUREMENT_REPORT} differs from registered measurements`,
+    );
+}
+
 export function checkKungfuGateCatalog(root = ROOT, options = {}) {
   const issues = [];
   const registry = readJson(root, 'shifu.gates.json');
   const validation = validateGateRegistry(registry);
-  for (const issue of validation)
-    issues.push(`[registry] ${issue.path}: ${issue.message}`);
+  issues.push(
+    ...validation.map((issue) => `[registry] ${issue.path}: ${issue.message}`),
+  );
   if (validation.length) return { issues, registry };
 
   const measurementValidation = validateMeasurementCoverage(
@@ -1009,21 +1029,7 @@ export function checkKungfuGateCatalog(root = ROOT, options = {}) {
     options,
   );
   issues.push(...measurementValidation.issues);
-  if (!measurementValidation.issues.length) {
-    const measurementReportPath = path.join(root, MEASUREMENT_REPORT);
-    const measurementReportText = fs.readFileSync(
-      measurementReportPath,
-      'utf8',
-    );
-    const expectedMeasurementReport = replaceGeneratedMeasurements(
-      measurementReportText,
-      renderMeasurementCoverage(registry, measurementValidation.document),
-    );
-    if (measurementReportText !== expectedMeasurementReport)
-      issues.push(
-        `[measurement] ${MEASUREMENT_REPORT} differs from registered measurements`,
-      );
-  }
+  validateMeasurementReport(root, registry, measurementValidation, issues);
 
   const bindingDocument = readJson(root, BINDINGS);
   const executionValidation = validateExecutionProfiles(root, bindingDocument);
