@@ -113,9 +113,21 @@ try {
     ]);
   }
 
+  const downloadedFiles = filesUnder(downloadRoot);
+  const retiredProductArtifact =
+    /^(?:kungfu-episodes-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu(?:[ -])Episodes.*\.(?:dmg|AppImage|exe))$/u;
+  const retiredSource = downloadedFiles.find((sourcePath) =>
+    retiredProductArtifact.test(path.basename(sourcePath)),
+  );
+  if (retiredSource) {
+    throw new Error(
+      `retired product artifact name is not publishable: ${path.basename(retiredSource)}`,
+    );
+  }
+
   const releaseAsset =
     /^(?:kungfu-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu-\d+\.\d+\.\d+.*\.AppImage|Kungfu Setup \d+\.\d+\.\d+.*\.exe|Kungfu-\d+\.\d+\.\d+.*-macos-arm64\.(?:dmg|zip))$/u;
-  const releaseFiles = filesUnder(downloadRoot)
+  const releaseFiles = downloadedFiles
     .filter((sourcePath) => releaseAsset.test(path.basename(sourcePath)))
     .sort((left, right) => {
       const credentialName = credentialArtifact?.name || '';
