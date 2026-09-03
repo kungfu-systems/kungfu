@@ -24,10 +24,14 @@ function walk(root) {
   return files;
 }
 
-function classify(file) {
-  const name = path.basename(file);
+function rejectRetiredDesktopArtifact(name) {
   if (/^Kungfu(?:[ -])Episodes.*\.(?:dmg|AppImage|exe)$/u.test(name))
     fail(`retired desktop product artifact name is not publishable: ${name}`);
+}
+
+function classify(file) {
+  const name = path.basename(file);
+  rejectRetiredDesktopArtifact(name);
   if (/^kungfu-tech-.+\.tgz$/.test(name)) return 'npm';
   if (/^kungfu_storage-.+\.whl$/.test(name)) return 'pypi';
   if (/^kungfu-sdk-.+\.crate$/.test(name)) return 'cargo';

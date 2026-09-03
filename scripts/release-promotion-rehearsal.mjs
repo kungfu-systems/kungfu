@@ -304,7 +304,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     );
     requirePattern(
       job,
-      /github-release-payload-patterns:[\s\S]*kungfu-cli-\*\.tar\.gz[\s\S]*kungfu-cli-\*\.zip[\s\S]*kungfu-cli-\*\.qualification\.json[\s\S]*Kungfu-\*-macos-arm64\.dmg[\s\S]*Kungfu-\*-macos-arm64\.zip[\s\S]*Kungfu-\*\.AppImage[\s\S]*Kungfu Setup \*\.exe/,
+      /github-release-payload-patterns:[\s\S]*kungfu-cli-\*\.tar\.gz[\s\S]*kungfu-cli-\*\.zip[\s\S]*kungfu-cli-\*\.qualification\.json[\s\S]*Kungfu-\[0-9\]\*\.\[0-9\]\*\.\[0-9\]\*-macos-arm64\.dmg[\s\S]*Kungfu-\[0-9\]\*\.\[0-9\]\*\.\[0-9\]\*-macos-arm64\.zip[\s\S]*Kungfu-\*\.AppImage[\s\S]*Kungfu Setup \*\.exe/,
       findings,
       `${label} must retain the exact GitHub Release payloads`,
     );
@@ -581,7 +581,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /github-release-payload-patterns:[\s\S]*kungfu-cli-\*\.tar\.gz[\s\S]*kungfu-cli-\*\.zip[\s\S]*kungfu-cli-\*\.qualification\.json[\s\S]*Kungfu-\*-macos-arm64\.dmg[\s\S]*Kungfu-\*-macos-arm64\.zip[\s\S]*Kungfu-\*\.AppImage[\s\S]*Kungfu Setup \*\.exe/,
+    /github-release-payload-patterns:[\s\S]*kungfu-cli-\*\.tar\.gz[\s\S]*kungfu-cli-\*\.zip[\s\S]*kungfu-cli-\*\.qualification\.json[\s\S]*Kungfu-\[0-9\]\*\.\[0-9\]\*\.\[0-9\]\*-macos-arm64\.dmg[\s\S]*Kungfu-\[0-9\]\*\.\[0-9\]\*\.\[0-9\]\*-macos-arm64\.zip[\s\S]*Kungfu-\*\.AppImage[\s\S]*Kungfu Setup \*\.exe/,
     findings,
     'promotion must publish the exact CLI archives and qualification receipts from the PR-stage payload',
   );

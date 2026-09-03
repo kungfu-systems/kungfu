@@ -297,6 +297,11 @@ test('release workflows bind product and component metadata explicitly', () => {
   assert.match(productWorkflow, /release:github:latest:verify/u);
   assert.match(productWorkflow, /release:github:metadata:apply-newest/u);
   assert.match(
+    productWorkflow,
+    /Kungfu-\[0-9\]\*\.\[0-9\]\*\.\[0-9\]\*-macos-arm64\.dmg/u,
+  );
+  assert.doesNotMatch(productWorkflow, /Kungfu-\*-macos-arm64\.(?:dmg|zip)/u);
+  assert.match(
     packageJson.scripts['release:github:latest:verify'],
     /github-release-policy\.mjs verify-latest/u,
   );
