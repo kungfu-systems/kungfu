@@ -163,8 +163,7 @@ export function verifyWindows(root, manifest) {
   const installer = artifactPath(root, desktop);
   const executable = findExactlyOne(
     path.join(root, 'product', 'dist', 'desktop'),
-    (target, entry) =>
-      entry.isFile() && path.basename(target) === 'Kungfu Episodes.exe',
+    (target, entry) => entry.isFile() && path.basename(target) === 'Kungfu.exe',
     'packaged Windows application',
   );
   for (const [label, target] of [

@@ -124,7 +124,7 @@ function normalizeReleasePlatform(value) {
 
 function artifactPlatform(name) {
   const match = name.match(
-    /^kungfu-episodes-cli-(darwin-arm64|linux-x64|linux-arm64|windows-x64)\.(?:tar\.gz|zip)$/u,
+    /^kungfu-cli-(darwin-arm64|linux-x64|linux-arm64|windows-x64)\.(?:tar\.gz|zip)$/u,
   );
   return match ? normalizeReleasePlatform(match[1]) : null;
 }

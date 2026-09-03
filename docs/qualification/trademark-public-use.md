@@ -49,9 +49,9 @@ The assembled Rust front door and the Python compatibility path now render
 line, and **Kungfu UNGFU™ · Never Guess. Facts Unfold.** is the second. Readers
 that need only the version continue to consume the first non-empty line.
 
-The packaged desktop app sets a native About panel for **Kungfu Episodes** with
+The packaged desktop app sets a native About panel for **Kungfu** with
 **Kungfu UNGFU™** as its secondary signature and **Never Guess. Facts Unfold.**
-as its credits line. Kungfu Episodes remains the application name.
+as its credits line. Kungfu is the application name.
 
 These source-implemented surfaces are not release evidence by themselves. The
 static contract keeps a preparation-state baseline; the synthesized public

@@ -22,7 +22,7 @@ A qualifying capability must bind all of the following exact values:
 | Runner | qualifying ephemeral, reimaged, or measured persistent-runner provenance; unqualified is denied |
 | Control plane | fresh passing Actions, branch/ruleset, Environment, OIDC, publisher, and runner audit facts |
 | Artifact | recomputed manifests and every product payload byte for the exact RC platform set |
-| Target | Kungfu Episodes, `github-release:kungfu-systems/kungfu`, exact version, and only `alpha` or `release` |
+| Target | Kungfu, `github-release:kungfu-systems/kungfu`, exact version, and only `alpha` or `release` |
 | Freshness | unique nonce, no replay, and no more than 15 minutes from issue to expiry |
 | Temporal path | exact release-provenance object plus either the current direct contract binding or an explicitly composed path through selected Buildchain compatibility Facts; every Fact and path receipt is rooted, and repository, source/tree, promotion, artifacts, runtime, contract, qualification, approval, and authority are all bound |
 

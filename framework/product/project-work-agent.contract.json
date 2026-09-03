@@ -95,7 +95,7 @@
       }
     },
     "gui": {
-      "entrypoint": "Kungfu Episodes.app",
+      "entrypoint": "Kungfu.app",
       "requiredCopy": {
         "framework/gui/src/renderer/src/product-navigation/index.tsx": [
           "Keep your agent. Give it durable Work.",

@@ -14,8 +14,8 @@ import tarfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-PACKAGE_NAME = "kungfu-episodes-cli-linux-x64.tar.gz"
-PACKAGE_ROOT = "kungfu-episodes-cli-linux-x64"
+PACKAGE_NAME = "kungfu-cli-linux-x64.tar.gz"
+PACKAGE_ROOT = "kungfu-cli-linux-x64"
 MAX_METADATA_BYTES = 4 * 1024 * 1024
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 

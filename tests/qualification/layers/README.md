@@ -57,7 +57,7 @@ lower data root is byte-identical and still passes fsck:
 
 ```sh
 ./shifu layers:qualify:surfaces -- \
-  --cli-archive product/release/cli/kungfu-episodes-cli-<platform>.tar.gz \
+  --cli-archive product/release/cli/kungfu-cli-<platform>.tar.gz \
   --desktop-dir product/dist/desktop/<packaged-app-dir> \
   --report /tmp/kungfu-surface-qualification.json
 ```

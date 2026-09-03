@@ -496,7 +496,7 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     signing,
-    /id = "kungfu-cli-macos-arm64"[\s\S]*entitlements_profile = "jit-executable-v1"[\s\S]*entitlements_paths = \[[\s\S]*"kungfu-episodes-cli-darwin-arm64\/runtime\/kungfu"[\s\S]*"kungfu-episodes-cli-darwin-arm64\/runtime\/python\/bin\/python3"[\s\S]*"kungfu-episodes-cli-darwin-arm64\/runtime\/python\/bin\/python3\.13"[\s\S]*\]/u,
+    /id = "kungfu-cli-macos-arm64"[\s\S]*entitlements_profile = "jit-executable-v1"[\s\S]*entitlements_paths = \[[\s\S]*"kungfu-cli-darwin-arm64\/runtime\/kungfu"[\s\S]*"kungfu-cli-darwin-arm64\/runtime\/python\/bin\/python3"[\s\S]*"kungfu-cli-darwin-arm64\/runtime\/python\/bin\/python3\.13"[\s\S]*\]/u,
   );
   assert.match(
     signing,

@@ -13,9 +13,9 @@ import {
 
 function fixtureApp() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-cache-fixture-'));
-  const app = path.join(root, 'Kungfu Episodes.app');
+  const app = path.join(root, 'Kungfu.app');
   const cli = path.join(app, 'Contents', 'Resources', 'kungfu', 'kungfu');
-  const gui = path.join(app, 'Contents', 'MacOS', 'Kungfu Episodes');
+  const gui = path.join(app, 'Contents', 'MacOS', 'Kungfu');
   const manifest = path.join(
     app,
     'Contents',

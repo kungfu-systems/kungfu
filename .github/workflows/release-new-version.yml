@@ -338,7 +338,7 @@ jobs:
       publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
       publication-consumer-predicate-id: kungfu.release-admission/v1
       publication-publisher-workflow-path: .github/workflows/release-new-version.yml
-      publication-product: Kungfu Episodes
+      publication-product: Kungfu
       publication-target: github-release:kungfu-systems/kungfu
       publication-package-name: ""
       package-manager: custom
@@ -352,13 +352,13 @@ jobs:
       publish-artifact-kind: kungfu-product
       publish-command: node scripts/buildchain-custom-publish-evidence.mjs
       github-release-payload-patterns: |
-        kungfu-episodes-cli-*.tar.gz
-        kungfu-episodes-cli-*.zip
-        kungfu-episodes-cli-*.qualification.json
-        Kungfu-Episodes-*-macos-arm64.dmg
-        Kungfu-Episodes-*-macos-arm64.zip
-        Kungfu Episodes-*.AppImage
-        Kungfu Episodes Setup *.exe
+        kungfu-cli-*.tar.gz
+        kungfu-cli-*.zip
+        kungfu-cli-*.qualification.json
+        Kungfu-*-macos-arm64.dmg
+        Kungfu-*-macos-arm64.zip
+        Kungfu-*.AppImage
+        Kungfu Setup *.exe
       publication-commit-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/alpha-publication-commit.mjs' || '' }}
       publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
       release-activation-command: ""
@@ -371,7 +371,7 @@ jobs:
       runner-preset: kungfu-v4-native
       required-artifact-count: 5
       release-passport: true
-      release-passport-product-name: Kungfu Episodes
+      release-passport-product-name: Kungfu
       release-passport-kfd-1-witness-jsons: |
         .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/contract-world.witness.json
         .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ needs.promotion-contract.outputs.candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/documentation-pack.witness.json
@@ -450,7 +450,7 @@ jobs:
       publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
       publication-consumer-predicate-id: kungfu.release-admission/v1
       publication-publisher-workflow-path: .github/workflows/release-new-version.yml
-      publication-product: Kungfu Episodes
+      publication-product: Kungfu
       publication-target: github-release:kungfu-systems/kungfu
       publication-package-name: ""
       package-manager: custom
@@ -464,13 +464,13 @@ jobs:
       publish-artifact-kind: kungfu-product
       publish-command: node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs
       github-release-payload-patterns: |
-        kungfu-episodes-cli-*.tar.gz
-        kungfu-episodes-cli-*.zip
-        kungfu-episodes-cli-*.qualification.json
-        Kungfu-Episodes-*-macos-arm64.dmg
-        Kungfu-Episodes-*-macos-arm64.zip
-        Kungfu Episodes-*.AppImage
-        Kungfu Episodes Setup *.exe
+        kungfu-cli-*.tar.gz
+        kungfu-cli-*.zip
+        kungfu-cli-*.qualification.json
+        Kungfu-*-macos-arm64.dmg
+        Kungfu-*-macos-arm64.zip
+        Kungfu-*.AppImage
+        Kungfu Setup *.exe
       publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=${{ inputs.resume-candidate-source-sha }} node .buildchain/publication-controller/scripts/alpha-publication-commit.mjs
       publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
       release-activation-command: ""
@@ -483,7 +483,7 @@ jobs:
       runner-preset: kungfu-v4-native
       required-artifact-count: 5
       release-passport: true
-      release-passport-product-name: Kungfu Episodes
+      release-passport-product-name: Kungfu
       release-passport-kfd-1-witness-jsons: |
         .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/contract-world.witness.json
         .buildchain/release-candidate/payloads/kungfu-linux-x64-${{ inputs.resume-candidate-source-sha }}/product/release/qualification/kfd/source/kfd-1/documentation-pack.witness.json

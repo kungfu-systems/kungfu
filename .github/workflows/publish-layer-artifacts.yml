@@ -194,7 +194,7 @@ jobs:
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" \
             --target "${{ needs.prepare.outputs.source-sha }}" \
-            --title "Kungfu Episodes ${VERSION}" \
+            --title "Kungfu ${VERSION}" \
             --notes "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff qualified release ${VERSION}" \
             --draft=false \
             --prerelease=false \
