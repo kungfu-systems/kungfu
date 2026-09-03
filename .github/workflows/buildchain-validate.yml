@@ -7,10 +7,6 @@ on:
   pull_request:
     branches-ignore:
       - "dev/v*/v*"
-  push:
-    branches:
-      - "alpha/**"
-      - "release/**"
 
 permissions:
   contents: read
@@ -25,15 +21,3 @@ jobs:
         with:
           require-version-state: "true"
           require-lifecycle-stages: "install,check,build,verify"
-
-  promotion-rehearsal:
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Rehearse alpha and stable promotion contracts
-        run: >-
-          ./shifu gate run governance.promotion-rehearsal

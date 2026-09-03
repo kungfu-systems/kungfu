@@ -18,7 +18,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; artifacts `product/release`.
 - **Diagnosis:** `./shifu gate explain product.distribution --profile <profile>`; reproduce with `./shifu gate run product.distribution` on a capable runner.
 - **Cost:** heavy; timeout 7200 seconds.
-- **Current source:** .github/workflows/build.yml (build; alpha or release pull request, or a manual exact-source publish-none macOS candidate under the queue-aware overflow controller); .github/workflows/linux-arm64-alpha-qualification.yml (artifact; alpha or release pull request, or isolated manual Linux ARM64 qualification)
+- **Current source:** .github/workflows/build.yml (build; every alpha pull request; one four-platform Buildchain build and alpha:qualify invocation); .github/workflows/linux-arm64-alpha-qualification.yml (artifact; alpha or release pull request, or isolated manual Linux ARM64 qualification)
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:product.distribution -->
 
@@ -54,6 +54,6 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain product.verify-fuzz --profile <profile>`; reproduce with `./shifu gate run product.verify-fuzz` on a capable runner.
 - **Cost:** heavy; timeout 7200 seconds.
-- **Current source:** .github/workflows/build.yml (build; alpha or release pull request, or a manual exact-source publish-none macOS candidate under the queue-aware overflow controller).
+- **Current source:** .github/workflows/build.yml (build; every alpha pull request; one four-platform Buildchain build and alpha:qualify invocation).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:product.verify-fuzz -->
