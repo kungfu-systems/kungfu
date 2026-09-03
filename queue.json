@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9189,
+  "generation": 9190,
   "fencingCounter": 880,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:6c9cf473e534bf3bc0b4e311efb5eee402daf9c34926be305e36717c273355ad",
@@ -143,8 +143,13 @@
     "issuedAt": "2026-09-03T05:59:51.683Z",
     "expiresAt": "2026-09-03T08:11:10.233Z",
     "fencingToken": "sha256:74c6cca36f54b20b79031ecd41353eeb6cab65133f6099d4f5cdeb1781a171e0",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-03T06:41:10.233Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-03T06:41:10.233Z",
+    "nativeProofRoot": "sha256:8a4194f2472e13c67f4ac5034a3f541db850f4cdb70f0981e43cb6b7e0df314a",
+    "nativeExecutionReceiptRoot": "sha256:1f66f739bb14ecc2c6776aed65d4fb3b270cd199fa205c38a7f11365852d2f5a",
+    "nativeProofReuseRoot": "sha256:291b4487f129248dd494166f1e9effa9a530bcf4ffd3d5486021e84aaec66062",
+    "qualificationReceiptRoot": "sha256:70d92b5e7e48cb5bd5406a08cdc6861f8a6e238310c69afc7e139f171b5059bb",
+    "qualifiedAt": "2026-09-03T06:41:33.565Z"
   },
   "candidates": [
     {
@@ -67178,10 +67183,10 @@
       "sourceWorkflowRunId": 33712463169,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-03T05:49:49.433Z",
-      "updatedAt": "2026-09-03T06:41:10.233Z",
+      "updatedAt": "2026-09-03T06:41:33.565Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".github/CODEOWNERS",
@@ -67285,6 +67290,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-03T06:41:10.233Z",
-  "stateRoot": "sha256:fb60c45dfedfa351a34833cfdd40cdfbeba17f58b361d83248dbb41a9c59b65a"
+  "updatedAt": "2026-09-03T06:41:33.565Z",
+  "stateRoot": "sha256:ae08c6b99fac8f712bf013a01f1cb3783d9eb09efa18f74a23dc6324d87bdb74"
 }
