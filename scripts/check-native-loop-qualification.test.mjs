@@ -19,14 +19,14 @@ import {
   semanticRoot,
 } from '../framework/project-cut/index.mjs';
 import {
+  materializeSettlementPublication,
+  planSettlementPublication,
+} from '../framework/project-cut/publication.mjs';
+import {
   checkNativeLoopQualificationContract,
   sealNativeLoopQualification,
   verifyNativeLoopQualification,
 } from '../framework/project-cut/src/native-loop-qualification.mjs';
-import {
-  materializeSettlementPublication,
-  planSettlementPublication,
-} from '../framework/project-cut/src/publication.mjs';
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
