@@ -87,14 +87,14 @@ function writeMacApplication(root) {
     'dist',
     'desktop',
     'mac-arm64',
-    'Kungfu Episodes.app',
+    'Kungfu.app',
   );
   fs.mkdirSync(path.join(application, 'Contents', 'MacOS'), {
     recursive: true,
   });
   fs.writeFileSync(path.join(application, 'Contents', 'Info.plist'), 'plist\n');
   fs.writeFileSync(
-    path.join(application, 'Contents', 'MacOS', 'Kungfu Episodes'),
+    path.join(application, 'Contents', 'MacOS', 'Kungfu'),
     'binary\n',
   );
   return application;

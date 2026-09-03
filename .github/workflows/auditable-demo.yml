@@ -58,11 +58,11 @@ jobs:
       artifact-name: kungfu
       artifact-name-template: "{artifact}-{platform}-{sha}"
       artifact-paths: |
-        product/dist/cli/kungfu-episodes-cli-linux-x64
+        product/dist/cli/kungfu-cli-linux-x64
       pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo-transport-smoke.json
       pre-upload-transport-smoke-artifact-root: .
       expected-artifacts-json: >-
-        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu","product/dist/cli/kungfu-episodes-cli-linux-x64/auditable-demo-binary.json"]}
+        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/dist/cli/kungfu-cli-linux-x64/kungfu","product/dist/cli/kungfu-cli-linux-x64/auditable-demo-binary.json"]}
       release-candidate: false
       publish-channel: none
       artifact-retention-days: 14

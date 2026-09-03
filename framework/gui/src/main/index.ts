@@ -1152,7 +1152,7 @@ ipcMain.handle(ONBOARDING_SET_CHANNEL, (_event, payload) => {
   return entry;
 });
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
-// action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
+// action, so a real user who installed Kungfu.app can use `kungfu` in a shell.
 function buildMenu() {
   const navigateShell = (request: ShellNavigateRequest) => {
     if (shellWindow && !shellWindow.isDestroyed()) {

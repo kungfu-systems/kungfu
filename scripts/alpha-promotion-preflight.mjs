@@ -259,7 +259,7 @@ export function inspectAuditableDemoFastSentinel({
   requirePattern(
     issues,
     workflow,
-    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
+    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-cli-linux-x64/u,
     'build artifact no longer retains the exact standalone demo distribution',
   );
   requirePattern(

@@ -13,7 +13,7 @@ const {
 
 function packagedAppFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-bundle-audit-'));
-  const app = path.join(root, 'Kungfu Episodes.app');
+  const app = path.join(root, 'Kungfu.app');
   const resources = path.join(app, 'Contents', 'Resources');
   const runtime = path.join(resources, 'kungfu');
   const helper = path.join(

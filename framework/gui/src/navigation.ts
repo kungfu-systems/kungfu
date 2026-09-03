@@ -118,7 +118,7 @@ export function shellSurfaceTitle({
 }): string {
   const fixedTitle = FIXED_SURFACE_TITLE[surface];
   if (fixedTitle) return fixedTitle;
-  if (surface === 'kfx') return activeKfxTitle ?? 'Kungfu Episodes';
+  if (surface === 'kfx') return activeKfxTitle ?? 'Kungfu';
   return projectWorkOpen
     ? `Project · ${currentProjectDisplayName}`
     : 'All Work';

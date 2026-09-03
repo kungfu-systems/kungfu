@@ -40,10 +40,10 @@ jobs:
       artifact-name: kungfu
       artifact-paths: |
         product/release
-        product/dist/cli/kungfu-episodes-cli-linux-x64
+        product/dist/cli/kungfu-cli-linux-x64
       pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo-transport-smoke.json
       pre-upload-transport-smoke-artifact-root: .
-      github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
+      github-artifact-attestation-subject-path: product/release/cli/kungfu-cli-linux-x64.tar.gz
       github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
       github-artifact-attestation-platform-id: linux-x64
       artifact-signing-request-upload-no-proxy: ${{ vars.BUILDCHAIN_ARTIFACT_SIGNING_REQUEST_UPLOAD_NO_PROXY }}
