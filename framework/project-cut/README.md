@@ -5,12 +5,12 @@ doc_type: protocol-guide
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
-period: 2026-09-02
+period: 2026-09-03
 theme: project-cut-public-boundary
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-09-02
-ai_provenance: GPT-5 via Codex on 2026-09-01; updated on 2026-09-02 from checked-in protocol code, boundary manifests, and golden fixtures, with no access to invisible model internals
+last_reviewed: 2026-09-03
+ai_provenance: GPT-5 via Codex on 2026-09-01; updated through 2026-09-03 from checked-in protocol code, boundary manifests, and golden fixtures, with no access to invisible model internals
 ---
 
 # Project Cut protocol contract
@@ -78,10 +78,18 @@ Settlement orchestration and source projection use the repository-stable
 `abandonSettlement`, `inspectSettlement`, `observeSettlementCommit`,
 `prepareSettlement`, `reconcileCommit`, `sourceProjectionAtCommit`,
 `sourceProjectionAtTree`, and `verifySettlement`. Settlement schemas and
-implementation helpers remain private to `src/settlement.mjs`. The remaining
-specialized `src/*` consumers stay compatibility-ratcheted; new consumers
-cannot add another private import without changing the checked boundary
-decision.
+implementation helpers remain private to `src/settlement.mjs`. Protected
+settlement publication uses the repository-stable
+[`publication.mjs`](publication.mjs) sub-entrypoint, which exports only
+`advanceSettlementPublication`, `checkSettlementPublicationContract`,
+`classifySettlementPublicationTrigger`, `inspectSettlementPublication`,
+`materializeSettlementPublication`, `planSettlementPublication`,
+`reconcileSettlementPublication`, and `verifySettlementPublication`.
+Publication schema constants, contract-root helpers, status helpers, bounds,
+and implementation details remain private to `src/publication.mjs`. The
+remaining specialized `src/*` consumers stay compatibility-ratcheted; new
+consumers cannot add another private import without changing the checked
+boundary decision.
 
 The object, composition, and settlement receipts retain their independent
 payload schemas. Consumers that need a common evidence transport can wrap
