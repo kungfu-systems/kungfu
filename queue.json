@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9157,
+  "generation": 9158,
   "fencingCounter": 878,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:e21f4d0104ac886b17cc36666c9b6cbfe992fe9f9ff3cad42ce2be0d3bf15ba1",
@@ -61,8 +61,13 @@
     "issuedAt": "2026-09-03T03:08:33.499Z",
     "expiresAt": "2026-09-03T04:44:03.103Z",
     "fencingToken": "sha256:567c74a25ba1b12e332b4499e4cd51846fbefe532ca5ad44be6056335e65254e",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-03T03:14:03.103Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-03T03:14:03.103Z",
+    "nativeProofRoot": "sha256:a1b5f57b0daba76e9b7fb4f0fb81b98df37a9561afb67d16c4e3fbb882d80acd",
+    "nativeExecutionReceiptRoot": "sha256:03ff1b5ea9cae10d4bc751fa456441f1d093cb02d6aa99acd828f92150dc3e09",
+    "nativeProofReuseRoot": "sha256:32aeca9da84b252d95e2f18d8433224719539435cc1088be083759138055fb17",
+    "qualificationReceiptRoot": "sha256:b330144ff4dd484f88c64f892819ac44ce70c90f34b8521f7010c051f8882e50",
+    "qualifiedAt": "2026-09-03T03:14:29.352Z"
   },
   "candidates": [
     {
@@ -66440,10 +66445,10 @@
       "sourceWorkflowRunId": 33708685484,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-03T03:08:26.752Z",
-      "updatedAt": "2026-09-03T03:14:03.103Z",
+      "updatedAt": "2026-09-03T03:14:29.352Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/support-matrix.json",
@@ -66465,6 +66470,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-03T03:14:03.103Z",
-  "stateRoot": "sha256:b7dd95700fd75589b7ec8508204c95356f86a38e23f863b3073984712e271a96"
+  "updatedAt": "2026-09-03T03:14:29.352Z",
+  "stateRoot": "sha256:d6b94d591f68257b74f1ddfc4a1ff22828903d1fe73a65d4c45d5cef2f0150cb"
 }
