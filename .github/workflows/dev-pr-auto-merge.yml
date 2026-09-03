@@ -703,7 +703,10 @@ jobs:
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
       delivery-priority: ${{ needs.delivery-contract.outputs.priority || 'ordinary' }}
-      warrant-lease-seconds: 5400
+      # The qualified Warrant must remain live across the bounded 120-minute
+      # source retry plus the protected merge-group qualification.  A 90-minute
+      # lease expires deterministically between those two fail-closed stages.
+      warrant-lease-seconds: 14400
       required-status-checks: |-
         Candidate source acceptance / check
       queue-admission-context: Queue admission lease
@@ -1063,7 +1066,9 @@ jobs:
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
       delivery-priority: ${{ needs.delivery-contract.outputs.priority || 'ordinary' }}
-      warrant-lease-seconds: 5400
+      # Preserve the same exact-candidate lease window when the deferred
+      # landing call consumes the already-qualified Warrant.
+      warrant-lease-seconds: 14400
       required-status-checks: |-
         Candidate source acceptance / check
       queue-admission-context: Queue admission lease

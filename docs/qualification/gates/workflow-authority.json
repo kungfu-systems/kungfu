@@ -561,7 +561,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c557513ed3609d1102777f5d9d88c74900e9de92443be15a1445d47f6fc6b4b9",
+          "definitionDigest": "sha256:33ede7c62cd843ae525cad2f0da4589e9aa5f6c1068b916c2fbe35ca7691057d",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad"],
           "steps": []
@@ -581,7 +581,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c00b7b5458f7ed65d20d75aaa1a19aeddb4704c72d83464363d24788750b1064",
+          "definitionDigest": "sha256:cb382de4cdaf2fccd4f6c51d8c3e11e3b4437902d4a55af704f2e659ea2a73f5",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad"],
           "steps": []
