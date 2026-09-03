@@ -17,9 +17,6 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
   workflow, job, and step, including activation digests, permissions,
   Environment, secret/OIDC surfaces, immutable external refs, publication
   class, and qualifying-receipt authority.
-- [Release admission](release-admission.md) binds the current Gate policy to
-  Buildchain's sealed capability, runner provenance, control-plane audit,
-  exact artifact bytes, freshness, channel, and consumer decision.
 - [Measurement coverage](measurement-coverage.md) records the observed
   per-platform `durationMs`, clean source SHA, Gate definition digest, registry
   digest, and retained Shifu receipt for measured Gates.
@@ -47,8 +44,6 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 | `dev-pr` | GitHub-hosted build-free source, governance, docs-path, and Linux Shifu-path checks |
 | `dev-patrol` | manual exact-source three-platform GitHub-hosted full product verify plus advisory external links |
 | `alpha-pr` | four GitHub-hosted full-product lanes, with build/verify/release evidence and conditional membrane and Shifu matrices |
-| `release-pr` | currently the same qualification strength as alpha, with the release publication channel |
-| `release-promotion` | post-merge promotion rehearsal and Buildchain artifact/passport admission |
 | `layer-publication` | post-publication verification of seven immutable public coordinates and exact three-platform evidence |
 | `measurement` | manual three-platform source-bound observation of every task-backed Gate; all selected actions are advisory and it never publishes |
 

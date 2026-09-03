@@ -37,7 +37,6 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Kungfu Agent Patrol on agent-121](agent-patrol-agent-121.md)
 - [Auditable Demo Artifact Pipeline](auditable-demo-artifact-pipeline.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
-- [Local Alpha Publication Debugging](alpha-local-publication-debug.md)
 - [KFD Support Matrix and Source Read-only Check](kfd-support-matrix.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)
 - [KFD Agent Hub 20 Installed-product Qualification](kfd-agent-hub-20.md)

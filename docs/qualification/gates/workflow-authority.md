@@ -18,9 +18,6 @@ one-sided YAML change is drift even when the command text still looks familiar.
   not publish a product or move a release channel.
 - `diagnostic` may update bounded failure reporting, such as the dev patrol
   issue, but never signs a release capability.
-- `release-control` may move a declared channel only after the independent
-  [release-admission predicate](./release-admission.md) returns a fresh scoped
-  capability.
 - `product-publication` is the narrow package, registry, or GitHub Release
   write lane. Evidence upload alone remains `evidence-publication` and does not
   become product authority.
@@ -46,7 +43,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:write | none | 18 |
 | `.github/workflows/affected-native-pr.yml` | `cancel_after_source_failure` | qualification | none | diagnostic | token:write | none | 1 |
 | `.github/workflows/affected-native-pr.yml` | `candidate_buildchain_config` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/affected-native-pr.yml` | `candidate_preflight` | qualification | none | diagnostic | token:read | none | 7 |
+| `.github/workflows/affected-native-pr.yml` | `candidate_preflight` | qualification | none | diagnostic | token:read | none | 6 |
 | `.github/workflows/affected-native-pr.yml` | `dco` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-pr.yml` | `kfd_verifier` | qualification | none | diagnostic | token:write | none | 3 |
 | `.github/workflows/affected-native-pr.yml` | `proof_probe` | qualification | none | diagnostic | token:read | none | 10 |
@@ -65,15 +62,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/aws-us-windows-burst-qualification.yml` | `full` | qualification | none | diagnostic | token:write, oidc | none | 0 |
 | `.github/workflows/aws-us-windows-burst-qualification.yml` | `smoke` | qualification | none | diagnostic | token:write, oidc | none | 0 |
 | `.github/workflows/aws-us-windows-burst-qualification.yml` | `trust` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/build.yml` | `auditable-demo-fast-sentinel` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN+KUNGFU_GITHUB_TOKEN | none | 0 |
-| `.github/workflows/build.yml` | `kungfu-phase-b` | qualification | none | qualifying | token:read | none | 0 |
-| `.github/workflows/build.yml` | `phase-b-package` | qualification | none | diagnostic | token:read | none | 5 |
-| `.github/workflows/build.yml` | `precompute-alpha-publication-tail` | qualification | none | diagnostic | token:read | none | 4 |
-| `.github/workflows/build.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc, repo-secret:KUNGFU_GITHUB_TOKEN | none | 4 |
-| `.github/workflows/build.yml` | `qualification-manifest-set` | qualification | none | qualifying | token:read | none | 3 |
-| `.github/workflows/build.yml` | `windows-fast-sentinel` | qualification | none | diagnostic | token:read | none | 3 |
-| `.github/workflows/buildchain-validate.yml` | `promotion-rehearsal` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `validate` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/cancel-dequeued-merge-group.yml` | `cancel` | qualification | none | diagnostic | token:write, repo-secret:GITHUB_TOKEN | none | 3 |
 | `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 24 |
@@ -120,12 +109,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/python-structure.yml` | `exact-root-ratchet` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/queue-admission-lease.yml` | `admission` | qualification | none | diagnostic | token:read | none | 5 |
-| `.github/workflows/release-new-version.yml` | `alpha-timeline` | qualification | none | diagnostic | token:write | none | 11 |
-| `.github/workflows/release-new-version.yml` | `github-release-latest` | release-control | product | qualifying | token:write | none | 3 |
-| `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
-| `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 9 |
-| `.github/workflows/release-new-version.yml` | `recover` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
-| `.github/workflows/release-new-version.yml` | `recovery-preflight` | qualification | none | diagnostic | token:read | none | 8 |
+| `.github/workflows/release-new-version.yml` | `publish` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 3 |
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:write, oidc | none | 7 |
 | `.github/workflows/release-shifu.yml` | `release` | product-publication | product | none | token:write, repo-secret:GITHUB_TOKEN | `adr0049-production-publication` | 3 |
 | `.github/workflows/report-projection.yml` | `exact-source-projection` | qualification | none | diagnostic | token:read | none | 6 |

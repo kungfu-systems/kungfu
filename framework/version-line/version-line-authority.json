@@ -102,7 +102,6 @@
       "docs/qualification/alpha-ruleset.contract.json",
       "docs/qualification/gates/workflow-bindings.json",
       "docs/qualification/stable-ruleset.contract.json",
-      "framework/release/publication-surfaces.json",
       "framework/version-line/version-line-authority.json",
       "framework/version-line/version-line-projections.json"
     ],

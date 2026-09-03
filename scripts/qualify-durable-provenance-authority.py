@@ -412,7 +412,6 @@ def qualify(output_root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
                 ),
             },
             "failureCampaigns": failures,
-            "normalProtectedNonPublicReleaseRehearsal": contract["releaseRehearsal"],
         },
         "retirement": contract["retirement"],
         "nonClaims": contract["nonClaims"],

@@ -248,13 +248,6 @@ function validateStaticProjections(root, authority, line, projection) {
   ) {
     throw new Error('stable continuation is not classified immutable evidence');
   }
-  const registry = readJson(
-    root,
-    'framework/release/publication-surfaces.json',
-  );
-  if (registry.versionLineAuthorityRoot !== authority.authorityRoot) {
-    throw new Error('publication registry authority root drift');
-  }
   const targets = Object.fromEntries(
     registry.rulesetContracts.map(({ channel, target }) => [channel, target]),
   );

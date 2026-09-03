@@ -5,7 +5,7 @@
     "releases": [
       {
         "cutRoot": "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42",
-        "durabilityReceiptRoot": "sha256:c0d302b65a60319d3ca8f07c317f0570830d75166d8da05e3e29a40c551f8f86",
+        "durabilityReceiptRoot": "sha256:d73b26f216125cc50d03ea189521b5c33c6ae5bd7d44d5ccccc9081de5e1b75d",
         "kernelReceiptRoot": "sha256:068ab99e448900b6452e2ee5948742c994e21d5768c078ce5d04792da02bca3d",
         "objectId": "fact:f4563095b1a14077edc7dab5ec6a7759",
         "refName": "release-provenance/v4.0.0-alpha.1",
@@ -17,7 +17,7 @@
       },
       {
         "cutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
-        "durabilityReceiptRoot": "sha256:5b08f86f57d11e82d634c02008d06c778fb632f85d99b19513c0fb5c17ab08d6",
+        "durabilityReceiptRoot": "sha256:22a51aae360f2e3ce74315c8f495994c958090fb78f299a29f24082e1eaaed99",
         "kernelReceiptRoot": "sha256:ef710cf7f5ddedfc07086528195e67380b9f7dca188992e7146f48966872e5c5",
         "objectId": "fact:8c1705e96209b79344b1722dea6905b1",
         "refName": "release-provenance/v4.0.0-alpha.2",
@@ -29,11 +29,11 @@
       }
     ]
   },
-  "contractRoot": "sha256:3b0ad61c24055b48125015d6ec78d4275db451fd2ec80a2f576e819471af7be2",
+  "contractRoot": "sha256:c4c52fc4cb6141019d4952129f8d689f1eac43b30f4e2a78a658cb209392ee3c",
   "defaultEnabled": true,
   "nativeArtifact": {
     "name": "pykungfu.cpython-313-darwin.so",
-    "root": "sha256:9ab7505bc364955dc8930b6010bb7e39cdb0b8108a63448f90b34da523f8bd42"
+    "root": "sha256:96da5c03fddd0575287c4c731a0b622a1f961604c32a1e94fcd620b0bd22e8a7"
   },
   "nonClaims": [
     "general mutable key-value production eligibility",
@@ -94,7 +94,7 @@
         "status": "passed"
       },
       {
-        "error": "bundle body missing: sha256:0d130dd39cd62b78bfd7fc74eba5a1c6e109a606a450fc76773d1696a9c47c4a",
+        "error": "bundle body missing: sha256:fbd442fb6d8d67f9ba2349afc03fcb908ddaabf6a3123d44a29b07d254f891fd",
         "id": "missing-payload",
         "status": "passed"
       },
@@ -106,15 +106,6 @@
     ],
     "gitOrGitHubReads": 0,
     "historicalCutCount": 2,
-    "normalProtectedNonPublicReleaseRehearsal": {
-      "gate": "governance.promotion-rehearsal",
-      "handMaintainedAllowlist": false,
-      "mode": "normal-protected-non-public",
-      "prooflessFallback": false,
-      "publication": false,
-      "specialPromotionRoute": false,
-      "topologyRequirement": "none"
-    },
     "restoredCutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
     "restoredFsckRoot": "sha256:d004eb075a80e2b9a11f894453f6bd36aa9598f7a47d9cd9052e00f2120f148b",
     "rollback": {
@@ -131,7 +122,7 @@
     "semanticReplayEqual": true,
     "sourceFsckRoot": "sha256:d004eb075a80e2b9a11f894453f6bd36aa9598f7a47d9cd9052e00f2120f148b"
   },
-  "qualificationRoot": "sha256:f2811af12069046ab787fab6b1908f69c0c8cadd5db83d1a99885daafabb3924",
+  "qualificationRoot": "sha256:48716b9dec51c96f07f5d0f007f1dffeb592b7589f7e4d76f5bd44124a50bef3",
   "retirement": {
     "activeModes": {
       "dualRead": "retired",
@@ -152,7 +143,7 @@
     "files": [
       {
         "path": "framework/release/kungfu-durable-provenance-authority.contract.json",
-        "root": "sha256:26adbbf448a1206a671fe7d6a9855edc5349e2db1fc43ce0462364c5b62faa4e"
+        "root": "sha256:459b64176350ddad1d0ec1b56edecb5c57330aeb73a5268a56f9fc3e4a155ec7"
       },
       {
         "path": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
@@ -176,10 +167,10 @@
       },
       {
         "path": "scripts/qualify-durable-provenance-authority.py",
-        "root": "sha256:476873105eb7ceae6a186888af78c8b52aa40e31a393d7bc1d29a350e95071f1"
+        "root": "sha256:adf3d5a15a9c61bc19d0ce55820d3708173dada4c34cae611a052b502afaf2f9"
       }
     ],
-    "sourceSetRoot": "sha256:0306fdbcf0bd8fe758ad456466cf404dd07edc192ed8af1404eca821f49c79a5"
+    "sourceSetRoot": "sha256:2fc69d3e636f1034a4fa28d97f83b1f909e31079c56e55e22c46008dd9f81f9f"
   },
   "status": "production-qualified"
 }
