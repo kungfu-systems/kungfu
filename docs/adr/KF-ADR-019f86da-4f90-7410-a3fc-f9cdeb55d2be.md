@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/3650, https://github.com/kungfu-systems/kungfu/pull/3665]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/3650, https://github.com/kungfu-systems/kungfu/pull/3665, https://github.com/kungfu-systems/kungfu/pull/3690]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/962
-qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json, framework/project-cut/src/settlement.mjs, framework/format/project-cut-canonical-json.mjs, framework/layout.manifest.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-framework-layout.test.mjs]
+qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json, framework/project-cut/src/settlement.mjs, framework/project-cut/publication.mjs, framework/format/project-cut-canonical-json.mjs, framework/layout.manifest.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-project-cut-publication.test.mjs, scripts/check-native-loop-qualification.test.mjs, scripts/check-framework-layout.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,8 +14,8 @@ period: 2026-07-15
 theme: project-cut-v1-canonical-root-source-projection
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-09-02
-ai_provenance: GPT-5 via Codex on 2026-09-02 added the source-boundary, canonical-JSON extraction, and Wave 1 stable-entrypoint import-convergence implementation evidence from the user-authorized framework public-boundary Assignments; protected merge, exact protected-head qualification, and native Assignment seal for pull request 3665 are not yet claimed
+last_reviewed: 2026-09-03
+ai_provenance: GPT-5 via Codex on 2026-09-02 and 2026-09-03 added the source-boundary, canonical-JSON extraction, stable-entrypoint import-convergence, and publication-boundary implementation evidence from the user-authorized framework public-boundary Assignments; protected merge, exact protected-head qualification, and native Assignment seal for pull request 3690 are not yet claimed
 ---
 
 # KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be: Project Cut v1 uses a closed canonical root input and an explicit source projection
@@ -155,6 +155,25 @@ Project Cut export set, protocol schemas, root algorithms, or runtime behavior;
 the framework layout ratchet and existing Project Cut source gates qualify that
 boundary-only claim. Until the pull request is protected-merged and qualified
 at the protected head, this paragraph records proposed delivery evidence only.
+
+## 2026-09-03 publication-boundary implementation evidence
+
+Pull request 3690 proposes a stable source-only publication facade at
+`framework/project-cut/publication.mjs` with exactly eight publication
+operations. Two external consumers move off the private Project Cut
+implementation, and the publication-related deep-import ratchet contracts from
+five to three retained internal or deferred consumers. Schema constants,
+root/status helpers, bounds, and implementation details remain private. The
+framework layout gate, publication contract and behavior tests, native-loop
+qualification, and full source acceptance qualify this boundary-only claim;
+protocol schemas, root algorithms, and publication behavior remain unchanged.
+Until the pull request is protected-merged and qualified at the protected head,
+this paragraph records proposed delivery evidence only.
+
+Pull request 3689 was superseded before merge after its immutable submission
+head proved incomplete for the required ADR delivery evidence. Pull request
+3690 carries the corrected successor head and is the authoritative delivery
+candidate for this boundary stage.
 
 ## Non-claims
 
