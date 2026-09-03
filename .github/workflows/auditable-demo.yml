@@ -6,7 +6,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
-      - alpha/v*/v*
       - release/v*/v*
   workflow_dispatch:
     inputs:

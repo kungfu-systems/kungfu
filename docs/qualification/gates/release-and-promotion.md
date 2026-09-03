@@ -43,21 +43,12 @@ weaken branch protection or enable paid runner campaigns. Shared AWS Windows Bur
 separately governed and disabled unless explicitly activated by their own
 resource authority.
 
-## Exact-source Alpha preflight
+## Manual Alpha preflight diagnostics
 
-Every push to the development channel produces a four-platform
-`kungfu.alpha-promotion-preflight-receipt/v1` before an immutable Alpha pull
-request can enter the expensive Buildchain, embedding, or Shifu matrices. The
-aggregate receipt binds the exact commit and Git tree plus the relevant
-workflow, Gate, toolchain, and policy roots. A seven-day age limit and any root
-drift fail closed.
-
-Receipt reuse is deliberately narrow: it admits only source and early platform
-probes. Signing, notarization, credentials, publication, release artifacts, and
-the full product qualification remain fresh. Required promotion matrices use
-fail-fast and cancel stale runs for the same pull request. The manual Build
-workflow and preflight workflow expose an explicit diagnostic mode that keeps
-all platform lanes running.
+`alpha-promotion-preflight.yml` remains available only as an explicitly
+dispatched diagnostic for investigating platform readiness. It is not triggered
+by development pushes, is not a prerequisite of the Alpha Build workflow, and
+does not issue authority consumed by the publication tail.
 
 ### Topology-independent candidate provenance
 
@@ -180,45 +171,9 @@ retain the 25-minute default.
 - **Evidence:** unified Gate receipt; artifacts `product/release/qualification/adr-release-admissibility.json`.
 - **Diagnosis:** `./shifu gate explain governance.adr-delivery --profile <profile>`; reproduce with `./shifu gate run governance.adr-delivery` on a capable runner.
 - **Cost:** light; timeout 180 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/build.yml (build; alpha or release pull request, or a manual exact-source publish-none macOS candidate under the queue-aware overflow controller). The standalone .github/workflows/adr-release-gate.yml remains manual-only diagnostic evidence.
+- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/build.yml (build; every alpha pull request; one four-platform Buildchain build and alpha:qualify invocation). The standalone .github/workflows/adr-release-gate.yml remains manual-only diagnostic evidence.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.adr-delivery -->
-
-<a id="governance-promotion-rehearsal"></a>
-<!-- gate-doc:governance.promotion-rehearsal -->
-## Promotion contract rehearsal (`governance.promotion-rehearsal`)
-
-- **Problem:** Rehearses alpha and stable promotion admission without publishing.
-- **Protects:** release regressions from becoming an unexplained green profile or release claim.
-- **Action:** `./shifu release:promotion:rehearse -- --github-event --report product/release/qualification/release-promotion-rehearsal.json`
-- **Dependencies:** `gate.catalog`.
-- **Platforms and runner:** linux, macos, windows; capabilities `node`.
-- **Pass:** the structured action exits successfully, required artifacts exist, and the Gate receipt remains current for the source and definition.
-- **Failure or skip:** action failure, timeout, unsupported required capability, dependency failure, or missing required artifact is non-qualifying; advisory mode remains visible.
-- **Evidence:** unified Gate receipt; artifacts `product/release/qualification/release-promotion-rehearsal.json`.
-- **Diagnosis:** `./shifu gate explain governance.promotion-rehearsal --profile <profile>`; reproduce with `./shifu gate run governance.promotion-rehearsal` on a capable runner.
-- **Cost:** light; timeout 180 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/buildchain-validate.yml (promotion-rehearsal; pull requests except dev/v*/v*, or alpha/release channel push); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement).
-- **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
-<!-- /gate-doc:governance.promotion-rehearsal -->
-
-<a id="release-artifact-admission"></a>
-<!-- gate-doc:release.artifact-admission -->
-## Release artifact admission (`release.artifact-admission`)
-
-- **Problem:** Requires build status, three full-product platform payloads, one exact Linux ARM64 Core payload, one authoritative signed and notarized macOS credential-island payload, release passport, and KFD witnesses.
-- **Protects:** release regressions from becoming an unexplained green profile or release claim.
-- **Action:** named handler `kungfu.buildchain.artifact-admission`; execution requires the declared remote controller capability.
-- **Dependencies:** `governance.promotion-rehearsal`.
-- **Platforms and runner:** linux; capabilities `buildchain-release`.
-- **Pass:** the structured action exits successfully, required artifacts exist, and the Gate receipt remains current for the source and definition.
-- **Failure or skip:** action failure, timeout, unsupported required capability, dependency failure, or missing required artifact is non-qualifying; advisory mode remains visible.
-- **Evidence:** unified Gate receipt; no separate artifact is currently required.
-- **Diagnosis:** `./shifu gate explain release.artifact-admission --profile <profile>`; reproduce with `./shifu gate run release.artifact-admission` on a capable runner.
-- **Cost:** heavy; timeout 1800 seconds.
-- **Current source:** .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement); .github/workflows/release-new-version.yml (recover; manual recovery of one verified sealed Alpha candidate without product rebuild).
-- **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
-<!-- /gate-doc:release.artifact-admission -->
 
 ### GitHub product discovery metadata gate
 
@@ -305,5 +260,5 @@ blocking obligation. The executable schema and negative fixtures are in
 - **Diagnosis:** `./shifu gate explain layers.release`; inspect the publication report, discovered host reports, release report, and receipt without rerunning publication.
 - **Cost:** light; timeout 300 seconds.
 - **Current source:** .github/workflows/publish-layer-artifacts.yml (verify-publication; manually executed public layer publication)
-- **Retirement:** remove only after all seven layers leave the layer-publication policy or a replacement Gate preserves exact artifacts, three-platform evidence, and public-coordinate binding. This post-publication Gate is deliberately outside the pre-publication product `release-promotion` profile.
+- **Retirement:** remove only after all seven layers leave the layer-publication policy or a replacement Gate preserves exact artifacts, three-platform evidence, and public-coordinate binding.
 <!-- /gate-doc:layers.release -->

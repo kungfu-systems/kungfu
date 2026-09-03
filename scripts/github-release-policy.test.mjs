@@ -278,7 +278,7 @@ test('release workflows bind product and component metadata explicitly', () => {
     'utf8',
   );
   const alphaPublication = fs.readFileSync(
-    'scripts/alpha-publication-commit.mjs',
+    'scripts/publish-alpha-run.mjs',
     'utf8',
   );
   const componentWorkflow = fs.readFileSync(
@@ -290,12 +290,14 @@ test('release workflows bind product and component metadata explicitly', () => {
     'utf8',
   );
   const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  assert.equal(
-    alphaPublication.match(/applyProductReleaseMetadata\(\{/gu)?.length,
-    2,
-  );
-  assert.match(productWorkflow, /release:github:latest:verify/u);
-  assert.match(productWorkflow, /release:github:metadata:apply-newest/u);
+  assert.match(alphaPublication, /gh\(\[\s*'release',\s*'create'/u);
+  assert.match(alphaPublication, /gh\(\['release', 'upload'/u);
+  assert.match(alphaPublication, /'release',\s*'edit'/u);
+  assert.match(alphaPublication, /'--draft=false'/u);
+  assert.match(alphaPublication, /'--prerelease=false'/u);
+  assert.match(alphaPublication, /'--latest'/u);
+  assert.doesNotMatch(productWorkflow, /release:github:latest:verify/u);
+  assert.doesNotMatch(productWorkflow, /release:github:metadata:apply-newest/u);
   assert.match(
     productWorkflow,
     /Kungfu-\[0-9\]\*\.\[0-9\]\*\.\[0-9\]\*-macos-arm64\.dmg/u,
