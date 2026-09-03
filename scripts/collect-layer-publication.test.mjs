@@ -102,3 +102,21 @@ test('rejects a platform package basename with divergent bytes', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('rejects retired Kungfu Episodes desktop artifact names', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-publish-test-'));
+  try {
+    const input = path.join(root, 'input');
+    completeFixture(input);
+    write(input, 'darwin', 'Kungfu Episodes-4.0.0-alpha.1-arm64.dmg');
+    const result = spawnSync(
+      process.execPath,
+      [RUNNER, '--input', input, '--output', path.join(root, 'output')],
+      { encoding: 'utf8' },
+    );
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /retired desktop product artifact name/u);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

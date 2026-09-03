@@ -39,17 +39,20 @@ function json(root, relative, value) {
   return write(root, relative, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function signingFixture({ updateMetadata = 'latest-mac.yml' } = {}) {
+function signingFixture({
+  updateMetadata = 'latest-mac.yml',
+  finalProductName = 'Kungfu',
+} = {}) {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-macos-release-finalization-'),
   );
   const finalArtifacts = [
     {
-      path: `product/release/Kungfu-${VERSION}-macos-arm64.dmg`,
+      path: `product/release/${finalProductName}-${VERSION}-macos-arm64.dmg`,
       bytes: Buffer.from('signed-and-notarized-dmg'),
     },
     {
-      path: `product/release/Kungfu-${VERSION}-macos-arm64.zip`,
+      path: `product/release/${finalProductName}-${VERSION}-macos-arm64.zip`,
       bytes: Buffer.from('signed-and-notarized-updater-zip'),
     },
   ];
@@ -298,6 +301,20 @@ test('finalization fails closed before deletion when signing source does not mat
         sourceSha: '9'.repeat(40),
       }),
       /credential manifest is not the accepted macOS credential-island output/u,
+    );
+    for (const artifact of fixture.intermediateArtifacts)
+      assert.equal(fs.existsSync(path.join(fixture.root, artifact.path)), true);
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test('finalization rejects retired Kungfu Episodes final artifact names before deletion', async () => {
+  const fixture = signingFixture({ finalProductName: 'Kungfu-Episodes' });
+  try {
+    await assert.rejects(
+      finalizeMacosReleaseArtifacts(options(fixture.root)),
+      /credential manifest must retain exactly one final macOS DMG and ZIP/u,
     );
     for (const artifact of fixture.intermediateArtifacts)
       assert.equal(fs.existsSync(path.join(fixture.root, artifact.path)), true);

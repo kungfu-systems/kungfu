@@ -291,6 +291,9 @@ export function bindPublicationReleaseAssets({
     );
     return match?.[1] || '';
   };
+  const releaseVersion = releaseTag.startsWith('v')
+    ? releaseTag.slice(1)
+    : releaseTag;
   const retainedArtifactMatches = (entry, artifact, authority) => {
     const format = artifactFormat(
       releaseArtifactName(artifact.url, releaseTag),
@@ -303,7 +306,8 @@ export function bindPublicationReleaseAssets({
     if (artifact.kind !== 'desktop') return false;
     if (entry.platform === 'darwin') {
       return (
-        authority.platform === platform && authority.name.startsWith('Kungfu-')
+        authority.platform === platform &&
+        authority.name === `Kungfu-${releaseVersion}-macos-arm64${format}`
       );
     }
     if (entry.platform === 'linux') return format === '.AppImage';

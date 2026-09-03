@@ -26,13 +26,15 @@ function walk(root) {
 
 function classify(file) {
   const name = path.basename(file);
+  if (/^Kungfu(?:[ -])Episodes.*\.(?:dmg|AppImage|exe)$/u.test(name))
+    fail(`retired desktop product artifact name is not publishable: ${name}`);
   if (/^kungfu-tech-.+\.tgz$/.test(name)) return 'npm';
   if (/^kungfu_storage-.+\.whl$/.test(name)) return 'pypi';
   if (/^kungfu-sdk-.+\.crate$/.test(name)) return 'cargo';
   if (/^kungfu-cli-.+\.(?:tar\.gz|zip)$/.test(name)) return 'github';
-  if (/^Kungfu.*\.dmg$/.test(name)) return 'github';
-  if (/^Kungfu.*\.AppImage$/.test(name)) return 'github';
-  if (/^Kungfu.*\.exe$/.test(name)) return 'github';
+  if (/^Kungfu-\d+\.\d+\.\d+.+\.dmg$/u.test(name)) return 'github';
+  if (/^Kungfu-\d+\.\d+\.\d+.+\.AppImage$/u.test(name)) return 'github';
+  if (/^Kungfu Setup \d+\.\d+\.\d+.+\.exe$/u.test(name)) return 'github';
   return '';
 }
 

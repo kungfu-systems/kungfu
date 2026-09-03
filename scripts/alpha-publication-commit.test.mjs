@@ -207,6 +207,60 @@ test('publication binds signed release bytes through retained passport authority
   });
 });
 
+test('publication rejects retired Kungfu Episodes retained macOS authority', () => {
+  const releaseTag = 'v4.0.0-alpha.3';
+  const unsignedDigest = `sha256:${'a'.repeat(64)}`;
+  const signedDigest = `sha256:${'b'.repeat(64)}`;
+  const retiredName = 'Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip';
+  const admission = {
+    manifests: [
+      {
+        platform: 'darwin',
+        architecture: 'arm64',
+        manifest: {
+          artifacts: [
+            {
+              kind: 'desktop',
+              url: `${releaseBase(releaseTag)}/unsigned.zip`,
+              size: 41,
+              digest: unsignedDigest,
+              signature: 'buildchain-retained:pre-signing#desktop',
+            },
+          ],
+        },
+      },
+    ],
+  };
+  assert.throws(
+    () =>
+      bindPublicationReleaseAssets({
+        admission,
+        releaseAssets: [
+          {
+            name: retiredName,
+            state: 'uploaded',
+            size: 42,
+            digest: signedDigest,
+          },
+        ],
+        releaseTag,
+        releasePassport: {
+          artifacts: [
+            {
+              group: 'release',
+              kind: 'release-asset',
+              name: retiredName,
+              platform: 'darwin-arm64',
+              digest: signedDigest,
+              evidence: 'artifact-evidence.json',
+            },
+          ],
+        },
+      }),
+    /release artifact bytes do not resolve to one uploaded asset/u,
+  );
+});
+
 test('publication upgrades local platform evidence through the final passport', () => {
   const sha256 = 'c'.repeat(64);
   const admission = {

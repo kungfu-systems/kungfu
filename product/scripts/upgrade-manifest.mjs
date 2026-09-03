@@ -510,7 +510,8 @@ export function assertUpgradePublicationEligible(
 const MACOS_FINALIZATION_SCHEMA =
   'kungfu.macos-release-artifact-finalization-receipt/v1';
 const EXACT_SHA = /^[0-9a-f]{40}$/u;
-const FINAL_MACOS_ARTIFACT = /^Kungfu-.+-macos-arm64\.(dmg|zip)$/u;
+const FINAL_MACOS_ARTIFACT =
+  /^Kungfu-\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?-macos-arm64\.(dmg|zip)$/u;
 const BUILDER_MACOS_ARTIFACT = /^Kungfu-.+-arm64(?:-mac)?\.(dmg|zip)$/u;
 
 function releaseAssert(condition, message) {
