@@ -25,7 +25,7 @@ import {
 import {
   sourceProjectionAtCommit,
   sourceProjectionAtTree,
-} from '../framework/project-cut/src/settlement.mjs';
+} from '../framework/project-cut/settlement.mjs';
 import { checkProjectCutCompositionContract } from './project-cut-composition-contract.mjs';
 
 const { observeComposition, verifyComposition } = compositionApi;

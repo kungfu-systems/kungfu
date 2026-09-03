@@ -401,7 +401,7 @@ function projectionIncludesBytes(policy, path) {
   );
 }
 
-export function reconcileIncludesBytes(policy, path) {
+function reconcileIncludesBytes(policy, path) {
   return (
     projectionIncludesBytes(policy, path) ||
     path === SETTLEMENT_OUTPUT ||

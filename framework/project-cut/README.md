@@ -72,10 +72,16 @@ and re-exported by this entrypoint. Project Cut continues to own the algorithm
 label, admitted preimages and golden roots. Composition observation and
 verification use the narrow repository-stable
 [`composition.mjs`](composition.mjs) sub-entrypoint, which exports only
-`compositionChanged`, `observeComposition`, and `verifyComposition`. The
-remaining specialized `src/*` consumers stay compatibility-ratcheted; new
-consumers cannot add another private import without changing the checked
-boundary decision.
+`compositionChanged`, `observeComposition`, and `verifyComposition`.
+Settlement orchestration and source projection use the repository-stable
+[`settlement.mjs`](settlement.mjs) sub-entrypoint, which exports only
+`abandonSettlement`, `inspectSettlement`, `observeSettlementCommit`,
+`prepareSettlement`, `reconcileCommit`, `sourceProjectionAtCommit`,
+`sourceProjectionAtTree`, and `verifySettlement`. Settlement schemas and
+implementation helpers remain private to `src/settlement.mjs`. The remaining
+specialized `src/*` consumers stay compatibility-ratcheted; new consumers
+cannot add another private import without changing the checked boundary
+decision.
 
 The object, composition, and settlement receipts retain their independent
 payload schemas. Consumers that need a common evidence transport can wrap
