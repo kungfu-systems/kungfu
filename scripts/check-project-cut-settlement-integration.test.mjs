@@ -17,7 +17,7 @@ import {
   prepareSettlement,
   reconcileCommit,
   verifySettlement,
-} from '../framework/project-cut/src/settlement.mjs';
+} from '../framework/project-cut/settlement.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURE = path.join(

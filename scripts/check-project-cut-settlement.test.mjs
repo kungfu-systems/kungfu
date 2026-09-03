@@ -17,15 +17,16 @@ import {
   canonicalJson,
   semanticRoot,
 } from '../framework/project-cut/index.mjs';
-import {
+import * as settlementApi from '../framework/project-cut/settlement.mjs';
+
+const {
   abandonSettlement,
   inspectSettlement,
   observeSettlementCommit,
   prepareSettlement,
   reconcileCommit,
-  reconcileIncludesBytes,
   verifySettlement,
-} from '../framework/project-cut/src/settlement.mjs';
+} = settlementApi;
 
 const EPISODE_ROOT = `sha256:${'a'.repeat(64)}`;
 const PROJECT_ROOT = `sha256:${'5'.repeat(64)}`;
@@ -66,25 +67,17 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${canonicalJson(value)}\n`);
 }
 
-test('reconcile skips excluded baseline bytes while retaining protocol evidence', () => {
-  assert.equal(
-    reconcileIncludesBytes(
-      SOURCE_PROJECTION_POLICY,
-      '.xinfa/baselines/sha256/example/atlas.json',
-    ),
-    false,
-  );
-  assert.equal(
-    reconcileIncludesBytes(
-      SOURCE_PROJECTION_POLICY,
-      '.kungfu/project-cuts/sha256/aa/example/manifest.json',
-    ),
-    true,
-  );
-  assert.equal(
-    reconcileIncludesBytes(SOURCE_PROJECTION_POLICY, 'src/app.txt'),
-    true,
-  );
+test('settlement entrypoint exposes only the stable repository API', () => {
+  assert.deepEqual(Object.keys(settlementApi).sort(), [
+    'abandonSettlement',
+    'inspectSettlement',
+    'observeSettlementCommit',
+    'prepareSettlement',
+    'reconcileCommit',
+    'sourceProjectionAtCommit',
+    'sourceProjectionAtTree',
+    'verifySettlement',
+  ]);
 });
 
 function bundle(id = 7) {
@@ -508,6 +501,9 @@ test('baseline material stays out of Git and missing material fails visibly', (t
     execute: true,
   });
   assert.equal(published.ok, true);
+  const reconciled = reconcileCommit(root, 'HEAD');
+  assert.equal(reconciled.ok, true, JSON.stringify(reconciled.diagnostics));
+  assert.equal(reconciled.cuts[0].cutRoot, applied.cut.cutRoot);
 
   fs.rmSync(path.join(root, materialPath));
   const missing = observeSettlementCommit(root, applied.statePath, 'HEAD');

@@ -14,7 +14,7 @@ import {
   createProjectCutReceipt,
   semanticRoot,
 } from '../framework/project-cut/index.mjs';
-import { sourceProjectionAtCommit } from '../framework/project-cut/src/settlement.mjs';
+import { sourceProjectionAtCommit } from '../framework/project-cut/settlement.mjs';
 import {
   admitFamilyQueueLease,
   createFamilyQueueLease,
