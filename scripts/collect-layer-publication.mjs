@@ -24,14 +24,17 @@ function walk(root) {
   return files;
 }
 
-function rejectRetiredDesktopArtifact(name) {
-  if (/^Kungfu(?:[ -])Episodes.*\.(?:dmg|AppImage|exe)$/u.test(name))
-    fail(`retired desktop product artifact name is not publishable: ${name}`);
+function rejectRetiredProductArtifact(name) {
+  if (
+    /^Kungfu(?:[ -])Episodes.*\.(?:dmg|AppImage|exe)$/u.test(name) ||
+    /^kungfu-episodes-cli-.*\.(?:tar\.gz|zip|qualification\.json)$/u.test(name)
+  )
+    fail(`retired product artifact name is not publishable: ${name}`);
 }
 
 function classify(file) {
   const name = path.basename(file);
-  rejectRetiredDesktopArtifact(name);
+  rejectRetiredProductArtifact(name);
   if (/^kungfu-tech-.+\.tgz$/.test(name)) return 'npm';
   if (/^kungfu_storage-.+\.whl$/.test(name)) return 'pypi';
   if (/^kungfu-sdk-.+\.crate$/.test(name)) return 'cargo';
