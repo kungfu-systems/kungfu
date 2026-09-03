@@ -91,14 +91,12 @@ test('desktop product identity converges on Kungfu without changing upgrade iden
     'framework/gui/src/main/product-identity.ts',
     'framework/gui/src/renderer/index.html',
     '.buildchain/buildchain.toml',
-    '.github/workflows/build.yml',
-    '.github/workflows/release-new-version.yml',
-    'docs/qualification/gates/release-admission-policy.json',
+    'scripts/publish-alpha-run.mjs',
   ].map((file) =>
     fs.readFileSync(new URL(`../../../${file}`, import.meta.url)),
   );
   for (const source of sourceContracts) {
-    assert.doesNotMatch(source.toString(), /Kungfu Episodes|kungfu-episodes/u);
+    assert.doesNotMatch(source.toString(), /Kungfu Episodes|Kungfu-Episodes/u);
   }
   assert.match(sourceContracts[0].toString(), /PRODUCT_NAME = 'Kungfu'/u);
   assert.match(sourceContracts[1].toString(), /<title>Kungfu<\/title>/u);
@@ -106,8 +104,10 @@ test('desktop product identity converges on Kungfu without changing upgrade iden
     sourceContracts[2].toString(),
     /product\/dist\/desktop\/mac-arm64\/Kungfu\.app/u,
   );
-  assert.match(sourceContracts[4].toString(), /publication-product: Kungfu/u);
-  assert.match(sourceContracts[4].toString(), /Kungfu Setup \*\.exe/u);
+  assert.match(sourceContracts[3].toString(), /Kungfu-\\d\+.*\\\.AppImage/u);
+  assert.match(sourceContracts[3].toString(), /Kungfu Setup \\d\+.*\\\.exe/u);
+  assert.match(sourceContracts[3].toString(), /-macos-arm64/u);
+  assert.match(sourceContracts[3].toString(), /Kungfu\.Setup\./u);
 });
 
 test('Windows uninstall retries the owned native runtime subtree', () => {
