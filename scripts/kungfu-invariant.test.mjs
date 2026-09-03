@@ -98,7 +98,7 @@ function releaseOptions(overrides = {}) {
   return {
     releaseArtifacts: [
       {
-        name: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+        name: 'kungfu-cli-darwin-arm64.tar.gz',
         digest:
           'sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3',
       },
@@ -473,7 +473,7 @@ test('Exit migration release claims bind exact installed witnesses and fail clos
   const wrongPlatform = evaluateExitMigrationReleaseClaims({
     releaseArtifacts: [
       {
-        name: 'kungfu-episodes-cli-linux-x64.tar.gz',
+        name: 'kungfu-cli-linux-x64.tar.gz',
         digest:
           'sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3',
       },

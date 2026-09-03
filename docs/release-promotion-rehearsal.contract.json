@@ -29,7 +29,7 @@
     "required_status_check": "build / Finalize build controller evidence",
     "required_artifact_count": 5,
     "artifact_attestation": {
-      "subject_path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",
+      "subject_path": "product/release/cli/kungfu-cli-linux-x64.tar.gz",
       "signer_sha": "375b2d4b8a904776453773a33b4c4e4556c8c999",
       "platform_id": "linux-x64",
       "policy_json": "auto",

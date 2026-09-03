@@ -1433,7 +1433,7 @@ def test_local_dogfood_residency_binds_product_mainline_profile_and_rollback(
         platform.system(), platform.system().lower()
     )
     registry = tmp_path / ".cache/kungfu/product" / f"{os_name}-{arch}"
-    artifact = tmp_path / "Applications/Kungfu Episodes.app"
+    artifact = tmp_path / "Applications/Kungfu.app"
     runtime = artifact / "Contents/Resources/kungfu"
     upgrade = artifact / "Contents/Resources/upgrade/kungfu-release-manifest.json"
     rollback = registry / "previous-build"

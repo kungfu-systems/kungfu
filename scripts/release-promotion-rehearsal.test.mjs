@@ -216,7 +216,7 @@ test('publication and recovery clear activation commands while preserving public
     );
     assert.match(
       job,
-      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json[\s\S]*Kungfu-Episodes-\*-macos-arm64\.dmg[\s\S]*Kungfu-Episodes-\*-macos-arm64\.zip[\s\S]*Kungfu Episodes-\*\.AppImage[\s\S]*Kungfu Episodes Setup \*\.exe/u,
+      /github-release-payload-patterns:[\s\S]*kungfu-cli-\*\.tar\.gz[\s\S]*kungfu-cli-\*\.zip[\s\S]*kungfu-cli-\*\.qualification\.json[\s\S]*Kungfu-\*-macos-arm64\.dmg[\s\S]*Kungfu-\*-macos-arm64\.zip[\s\S]*Kungfu-\*\.AppImage[\s\S]*Kungfu Setup \*\.exe/u,
       name,
     );
   }

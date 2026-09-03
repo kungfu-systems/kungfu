@@ -128,7 +128,7 @@ silently resolved.
 
 ## Managed Fact Library
 
-Built Kungfu Episodes exposes the same authority through an end-user Fact
+Built Kungfu exposes the same authority through an end-user Fact
 Library. `Fact Manager` is a first-party GUI view; the installed CLI is the
 agent-facing intent surface:
 

@@ -298,13 +298,12 @@ export function bindPublicationReleaseAssets({
     if (!format || artifactFormat(authority.name) !== format) return false;
     const platform = publicPlatform(entry);
     if (artifact.kind === 'cli') {
-      return authority.name === `kungfu-episodes-cli-${platform}${format}`;
+      return authority.name === `kungfu-cli-${platform}${format}`;
     }
     if (artifact.kind !== 'desktop') return false;
     if (entry.platform === 'darwin') {
       return (
-        authority.platform === platform &&
-        authority.name.startsWith('Kungfu-Episodes-')
+        authority.platform === platform && authority.name.startsWith('Kungfu-')
       );
     }
     if (entry.platform === 'linux') return format === '.AppImage';

@@ -29,10 +29,10 @@ function classify(file) {
   if (/^kungfu-tech-.+\.tgz$/.test(name)) return 'npm';
   if (/^kungfu_storage-.+\.whl$/.test(name)) return 'pypi';
   if (/^kungfu-sdk-.+\.crate$/.test(name)) return 'cargo';
-  if (/^kungfu-episodes-cli-.+\.(?:tar\.gz|zip)$/.test(name)) return 'github';
-  if (/Kungfu Episodes.*\.dmg$/.test(name)) return 'github';
-  if (/Kungfu Episodes.*\.AppImage$/.test(name)) return 'github';
-  if (/Kungfu Episodes.*\.exe$/.test(name)) return 'github';
+  if (/^kungfu-cli-.+\.(?:tar\.gz|zip)$/.test(name)) return 'github';
+  if (/^Kungfu.*\.dmg$/.test(name)) return 'github';
+  if (/^Kungfu.*\.AppImage$/.test(name)) return 'github';
+  if (/^Kungfu.*\.exe$/.test(name)) return 'github';
   return '';
 }
 

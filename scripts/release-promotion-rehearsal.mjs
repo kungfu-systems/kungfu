@@ -304,7 +304,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     );
     requirePattern(
       job,
-      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json[\s\S]*Kungfu-Episodes-\*-macos-arm64\.dmg[\s\S]*Kungfu-Episodes-\*-macos-arm64\.zip[\s\S]*Kungfu Episodes-\*\.AppImage[\s\S]*Kungfu Episodes Setup \*\.exe/,
+      /github-release-payload-patterns:[\s\S]*kungfu-cli-\*\.tar\.gz[\s\S]*kungfu-cli-\*\.zip[\s\S]*kungfu-cli-\*\.qualification\.json[\s\S]*Kungfu-\*-macos-arm64\.dmg[\s\S]*Kungfu-\*-macos-arm64\.zip[\s\S]*Kungfu-\*\.AppImage[\s\S]*Kungfu Setup \*\.exe/,
       findings,
       `${label} must retain the exact GitHub Release payloads`,
     );
@@ -549,9 +549,9 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /publication-product: Kungfu Episodes/,
+    /publication-product: Kungfu/,
     findings,
-    'publication authority must bind the Kungfu Episodes product identity',
+    'publication authority must bind the Kungfu product identity',
   );
   requirePattern(
     promote,
@@ -581,7 +581,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json[\s\S]*Kungfu-Episodes-\*-macos-arm64\.dmg[\s\S]*Kungfu-Episodes-\*-macos-arm64\.zip[\s\S]*Kungfu Episodes-\*\.AppImage[\s\S]*Kungfu Episodes Setup \*\.exe/,
+    /github-release-payload-patterns:[\s\S]*kungfu-cli-\*\.tar\.gz[\s\S]*kungfu-cli-\*\.zip[\s\S]*kungfu-cli-\*\.qualification\.json[\s\S]*Kungfu-\*-macos-arm64\.dmg[\s\S]*Kungfu-\*-macos-arm64\.zip[\s\S]*Kungfu-\*\.AppImage[\s\S]*Kungfu Setup \*\.exe/,
     findings,
     'promotion must publish the exact CLI archives and qualification receipts from the PR-stage payload',
   );

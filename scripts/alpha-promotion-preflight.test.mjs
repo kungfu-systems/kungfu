@@ -274,7 +274,7 @@ test('macOS products use Buildchain-native declarative signing', () => {
   );
   assert.match(
     config,
-    /\[\[signing\.artifacts\]\][\s\S]*id = "kungfu-desktop-macos-arm64"[\s\S]*path = "product\/dist\/desktop\/mac-arm64\/Kungfu Episodes\.app"[\s\S]*kind = "app-bundle"[\s\S]*platforms = \["macos-arm64"\][\s\S]*required = true/u,
+    /\[\[signing\.artifacts\]\][\s\S]*id = "kungfu-desktop-macos-arm64"[\s\S]*path = "product\/dist\/desktop\/mac-arm64\/Kungfu\.app"[\s\S]*kind = "app-bundle"[\s\S]*platforms = \["macos-arm64"\][\s\S]*required = true/u,
   );
 });
 

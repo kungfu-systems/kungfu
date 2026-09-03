@@ -137,9 +137,9 @@ test('Windows installer qualification stays below the legacy path budget', () =>
 test('desktop discovery treats a matched app bundle as one artifact root', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-surface-find-'));
   try {
-    const app = path.join(root, 'Kungfu Episodes.app');
+    const app = path.join(root, 'Kungfu.app');
     fs.mkdirSync(
-      path.join(app, 'Contents', 'Frameworks', 'Kungfu Episodes Helper.app'),
+      path.join(app, 'Contents', 'Frameworks', 'Kungfu Helper.app'),
       { recursive: true },
     );
     assert.equal(

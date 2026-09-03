@@ -80,7 +80,7 @@
     "workflowPath": ".github/workflows/.release-candidate-promote.yml",
     "publisherWorkflowPath": ".github/workflows/release-new-version.yml",
     "environment": "none",
-    "product": "Kungfu Episodes",
+    "product": "Kungfu",
     "target": "github-release:kungfu-systems/kungfu",
     "channels": ["alpha", "release"]
   },

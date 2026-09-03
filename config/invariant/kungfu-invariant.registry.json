@@ -3,7 +3,7 @@
   "id": "kungfu-core-invariants",
   "version": 1,
   "contract": "framework/invariant/kungfu-invariant-system.contract.json",
-  "contractRoot": "sha256:27471b86dbb9edd85c3f5720e1b0ab2962d19f66b077ffcda132e5a65741fcd8",
+  "contractRoot": "sha256:314b7647c1b79a9efbedcf81d50008e43ef9381ed99c53ab176e0254e9695d89",
   "checkers": [
     {
       "id": "source-binding",
