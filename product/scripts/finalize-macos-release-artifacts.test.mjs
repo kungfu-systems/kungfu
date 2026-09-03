@@ -45,11 +45,11 @@ function signingFixture({ updateMetadata = 'latest-mac.yml' } = {}) {
   );
   const finalArtifacts = [
     {
-      path: `product/release/Kungfu-Episodes-${VERSION}-macos-arm64.dmg`,
+      path: `product/release/Kungfu-${VERSION}-macos-arm64.dmg`,
       bytes: Buffer.from('signed-and-notarized-dmg'),
     },
     {
-      path: `product/release/Kungfu-Episodes-${VERSION}-macos-arm64.zip`,
+      path: `product/release/Kungfu-${VERSION}-macos-arm64.zip`,
       bytes: Buffer.from('signed-and-notarized-updater-zip'),
     },
   ];
@@ -58,19 +58,19 @@ function signingFixture({ updateMetadata = 'latest-mac.yml' } = {}) {
 
   const intermediateArtifacts = [
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64.dmg`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64.dmg`,
       bytes: Buffer.from('electron-builder-dmg'),
     },
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64.dmg.blockmap`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64.dmg.blockmap`,
       bytes: Buffer.from('dmg-blockmap'),
     },
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64-mac.zip`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64-mac.zip`,
       bytes: Buffer.from('electron-builder-zip'),
     },
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64-mac.zip.blockmap`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64-mac.zip.blockmap`,
       bytes: Buffer.from('zip-blockmap'),
     },
   ];
@@ -311,7 +311,7 @@ test('finalization rejects ambiguous electron-builder archives', async () => {
   try {
     write(
       fixture.root,
-      `product/release/desktop/Kungfu Episodes-${VERSION}-second-arm64.dmg`,
+      `product/release/desktop/Kungfu-${VERSION}-second-arm64.dmg`,
       'unexpected-second-dmg',
     );
     await assert.rejects(

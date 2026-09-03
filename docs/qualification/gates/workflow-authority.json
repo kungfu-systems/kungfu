@@ -220,7 +220,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:14d2078298182124e13cf02b26a3f2fc4d9b41992cc8c94e2b856d489fc6c829",
+          "definitionDigest": "sha256:8a85994e0446eacd43c2ec478fba0cbf78301b2a5767e6c3cd633f7ae603190d",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a"],
           "steps": []
@@ -338,7 +338,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:092a9c8f6f61e64319e4e34fca21e78109e05133ebf968301d8ce34f2fcd74c8",
+          "definitionDigest": "sha256:eeea4731888310716dee66e7f911a2c3311d3bb4ead161f220667ac11756464d",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105"],
           "steps": []
@@ -894,7 +894,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:05a579aed425ab3f19ea8f79bd2ff77b2aaec2e89588f607217f62e5649e3d58",
+          "definitionDigest": "sha256:79729d14424f0f14f70336e0dac8542f3c7d915b2d27d26d324167ac6af052e6",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"],
           "steps": []
@@ -965,10 +965,10 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:07c7dafe5c747dd529489724f1a6084852a902e33607d834261f5b1c87ad9bca",
+          "definitionDigest": "sha256:adea8f5302b3613f7bdd30ae52ceb2beabc57c4b6d9da8adea860262157762e2",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":"adr0049-production-publication"},
           "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"uses:actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","authority":"product-publication","definitionDigest":"sha256:ddb9aff13ce48b26c658b6b4eec1547237c9b1b471a321e31e0702acae574dff"},{"index":2,"label":"uses:actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","authority":"product-publication","definitionDigest":"sha256:d0b72d1fa3b4c9c5d5c79795d1615bafc43067222d53248635445235546db837"},{"index":3,"label":"uses:actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","authority":"product-publication","definitionDigest":"sha256:4f9e6c14ab0c591a4fa97a52328ffed068ac19bc2ec702cdd6da2a4dd80a84e8"},{"index":4,"label":"name:Publish exact npm archives with trusted publishing","authority":"product-publication","definitionDigest":"sha256:098d48a6eb45b4a79c47e7c3af2f726ee1e01952b1cf52f502e1dd84f62939ef"},{"index":5,"label":"id:cargo-state","authority":"product-publication","definitionDigest":"sha256:4786bc5527d0e11a28efc0fa3d45a75f03ca752b9af3e6b20e69713d87ad44e3"},{"index":6,"label":"id:crates-io-auth","authority":"product-publication","definitionDigest":"sha256:e6dc6fd6b2ef3003f9e653ff6bf1399e78e0a34cd2f869c683db7ca56e4c614a"},{"index":7,"label":"name:Publish Cargo SDK","authority":"product-publication","definitionDigest":"sha256:519b0cd45903f787d8216e773361f6410ff4188af80e0c17efc227699746bb86"},{"index":8,"label":"name:Publish exact GitHub product assets","authority":"product-publication","definitionDigest":"sha256:b223b04458b17bf7ed226cd050b706e084bb8341246e8661e028e21b617f8497"},{"index":9,"label":"name:Preserve exact PyPI wheels for isolated publisher job","authority":"product-publication","definitionDigest":"sha256:53e1043d3c704b3d1c5f2913e7fbdac0430d0f45bd9066bad6861e5110e38eb5"}]
+          "steps": [{"index":1,"label":"uses:actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","authority":"product-publication","definitionDigest":"sha256:ddb9aff13ce48b26c658b6b4eec1547237c9b1b471a321e31e0702acae574dff"},{"index":2,"label":"uses:actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","authority":"product-publication","definitionDigest":"sha256:d0b72d1fa3b4c9c5d5c79795d1615bafc43067222d53248635445235546db837"},{"index":3,"label":"uses:actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","authority":"product-publication","definitionDigest":"sha256:4f9e6c14ab0c591a4fa97a52328ffed068ac19bc2ec702cdd6da2a4dd80a84e8"},{"index":4,"label":"name:Publish exact npm archives with trusted publishing","authority":"product-publication","definitionDigest":"sha256:098d48a6eb45b4a79c47e7c3af2f726ee1e01952b1cf52f502e1dd84f62939ef"},{"index":5,"label":"id:cargo-state","authority":"product-publication","definitionDigest":"sha256:4786bc5527d0e11a28efc0fa3d45a75f03ca752b9af3e6b20e69713d87ad44e3"},{"index":6,"label":"id:crates-io-auth","authority":"product-publication","definitionDigest":"sha256:e6dc6fd6b2ef3003f9e653ff6bf1399e78e0a34cd2f869c683db7ca56e4c614a"},{"index":7,"label":"name:Publish Cargo SDK","authority":"product-publication","definitionDigest":"sha256:519b0cd45903f787d8216e773361f6410ff4188af80e0c17efc227699746bb86"},{"index":8,"label":"name:Publish exact GitHub product assets","authority":"product-publication","definitionDigest":"sha256:8b1826b0204878da91ece0a468e5660838c20e3867771da7c362863f1b4a1b17"},{"index":9,"label":"name:Preserve exact PyPI wheels for isolated publisher job","authority":"product-publication","definitionDigest":"sha256:53e1043d3c704b3d1c5f2913e7fbdac0430d0f45bd9066bad6861e5110e38eb5"}]
         },
         {
           "id": "publish-pypi",
@@ -1066,7 +1066,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:00331a40b2b516ca61cd6aad3519ac0d26d6a294c5bf9107e04fc96d69ed0cb6",
+          "definitionDigest": "sha256:145d69908d19c997e3edef099c5dc31dbcecea46c601c639db57958242afcdcb",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha"],
           "steps": []
@@ -1086,7 +1086,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c253f6af5e099dd9821e91032602775ca118de3f55f9af2d9594051e1f6a7cdd",
+          "definitionDigest": "sha256:284f8600b2c665d1201dc1ab1009c90bc87dc60ac120717ed40dfd86cf64e7a8",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha"],
           "steps": []

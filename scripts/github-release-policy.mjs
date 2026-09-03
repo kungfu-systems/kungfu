@@ -162,7 +162,7 @@ function validatePublicationBundle(bundle, { repository, tag }) {
   const version = tag.slice(1);
   if (
     bundle.product?.repository !== repository ||
-    bundle.product?.name !== 'Kungfu Episodes'
+    bundle.product?.name !== 'Kungfu'
   ) {
     fail(`${PUBLICATION_BUNDLE} does not identify the Kungfu product`);
   }

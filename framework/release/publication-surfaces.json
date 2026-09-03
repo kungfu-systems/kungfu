@@ -104,7 +104,7 @@
           "classification": "non-publication",
           "owner": "kungfu-docs",
           "surfaceIds": [],
-          "sourceRoot": "sha256:ef6eea6a5bf57325d6f1d8b9c2eaba911f9ab950cd720300f9fa286619283421"
+          "sourceRoot": "sha256:1f1d3c9e3eb3d6b02fbf320eead876a971d7a52d4fc75e166edb5f527446fb8f"
         },
         {
           "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
@@ -136,7 +136,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:60fac6ea28e32abde8b1ded9847b5659be9bf421417c90919d7db0784009861c"
+          "sourceRoot": "sha256:90a8a7a3c1508ffeb575ad7f72b639ca14f9c7e9b9b5795076a8f5c1aba399a8"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -286,7 +286,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:20618795b9bafbb08a12b41a48fe139549d76f9bedc2d14791d28956a7c4c63a"
+          "sourceRoot": "sha256:25bc8ecfe4a3a454b90d0e0d00ff05d22066c4e294009d942975ea6c7b5aae07"
         },
         {
           "path": ".github/workflows/kungfu-agent-patrol.yml",
@@ -318,7 +318,7 @@
             "portable-format",
             "site-package"
           ],
-          "sourceRoot": "sha256:4cf6a87163b141a7dc77e65c13579767d510b93ba6cf90bc273eadc1fb8c02bd"
+          "sourceRoot": "sha256:a8eda76ebcfa562ae72f464b65942ed4c175d712311ae07551a084763c2aee59"
         },
         {
           "path": ".github/workflows/python-structure.yml",
@@ -343,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:1dbb4b00aa32bb0675709bc52633577208c7e6306665c4071826966782a5bee4"
+          "sourceRoot": "sha256:237677cc1245a3bbec86cd764a1f9c0c4d1f7d29a6a8c8fd81c837f73a955deb"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:284d7b639648708a12b0210c4e3255e06468d84466ec7b4edf0757385edcb642"
+  "registryRoot": "sha256:ee2aaa22c25476bb58a9b69dc166886a434270d1e569c99a35c09ca459d70d35"
 }

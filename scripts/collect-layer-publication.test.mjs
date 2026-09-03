@@ -56,12 +56,12 @@ function completeFixture(root) {
     write(root, platform, 'kungfu-sdk-4.0.0-alpha.1.crate', 'same-crate');
   }
   write(root, 'linux-arm64', 'kungfu-tech-core-linux-arm64-4.0.0-alpha.1.tgz');
-  write(root, 'darwin', 'kungfu-episodes-cli-darwin-arm64.tar.gz');
-  write(root, 'linux', 'kungfu-episodes-cli-linux-x64.tar.gz');
-  write(root, 'win32', 'kungfu-episodes-cli-windows-x64.zip');
-  write(root, 'darwin', 'Kungfu Episodes-4.0.0-alpha.1-arm64.dmg');
-  write(root, 'linux', 'Kungfu Episodes-4.0.0-alpha.1-x86_64.AppImage');
-  write(root, 'win32', 'Kungfu Episodes Setup 4.0.0-alpha.1.exe');
+  write(root, 'darwin', 'kungfu-cli-darwin-arm64.tar.gz');
+  write(root, 'linux', 'kungfu-cli-linux-x64.tar.gz');
+  write(root, 'win32', 'kungfu-cli-windows-x64.zip');
+  write(root, 'darwin', 'Kungfu-4.0.0-alpha.1-arm64.dmg');
+  write(root, 'linux', 'Kungfu-4.0.0-alpha.1-x86_64.AppImage');
+  write(root, 'win32', 'Kungfu Setup 4.0.0-alpha.1.exe');
 }
 
 test('collects the exact 43-file cross-platform publication set', () => {

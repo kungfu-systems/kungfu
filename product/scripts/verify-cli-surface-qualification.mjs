@@ -16,9 +16,9 @@ import {
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const SOURCE_PATTERN = /^[0-9a-f]{40}$/u;
 const MACOS_CLI_JIT_EXECUTABLES = [
-  'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
-  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
-  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+  'kungfu-cli-darwin-arm64/runtime/kungfu',
+  'kungfu-cli-darwin-arm64/runtime/python/bin/python3',
+  'kungfu-cli-darwin-arm64/runtime/python/bin/python3.13',
 ];
 
 function assert(condition, message) {
@@ -220,7 +220,7 @@ export function finalizeSignedCliQualification({
   return rebound;
 }
 
-const ARCHIVE_BASE = 'kungfu-episodes-cli-darwin-arm64';
+const ARCHIVE_BASE = 'kungfu-cli-darwin-arm64';
 const JIT_EXECUTABLES = [
   'runtime/kungfu',
   'runtime/python/bin/python3',

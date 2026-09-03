@@ -57,7 +57,7 @@ function publicationBundle(tag = PRODUCT_TAG) {
   return {
     contract: 'buildchain.release-manifest/v2',
     product: {
-      name: 'Kungfu Episodes',
+      name: 'Kungfu',
       repository: REPOSITORY,
     },
     release: {

@@ -1066,7 +1066,7 @@ mod tests {
         assert!(segment_matches("mac*", "mac-arm64"));
         assert!(segment_matches("mac*", "mac"));
         assert!(!segment_matches("mac*", "windows"));
-        assert!(segment_matches("*.app", "Kungfu Episodes.app"));
+        assert!(segment_matches("*.app", "Kungfu.app"));
         assert!(!segment_matches("*.app", "Kungfu.app.zip"));
         assert!(segment_matches("a*b*c", "aXbYc"));
         assert!(!segment_matches("a*b*c", "aXcYb"));

@@ -496,10 +496,10 @@ mod tests {
         assert!(runtime_build_id_from_json(r#"{"version":"4.0.0"}"#).is_err());
         assert_eq!(
             adjacent_upgrade_manifest(Path::new(
-                "/Applications/Kungfu Episodes.app/Contents/Resources/kungfu/kungfu"
+                "/Applications/Kungfu.app/Contents/Resources/kungfu/kungfu"
             )),
             Some(PathBuf::from(
-                "/Applications/Kungfu Episodes.app/Contents/Resources/upgrade/kungfu-release-manifest.json"
+                "/Applications/Kungfu.app/Contents/Resources/upgrade/kungfu-release-manifest.json"
             ))
         );
     }

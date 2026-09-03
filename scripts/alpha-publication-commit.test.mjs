@@ -173,7 +173,7 @@ test('publication binds signed release bytes through retained passport authority
   };
   const releaseAssets = [
     {
-      name: 'Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip',
+      name: 'Kungfu-4.0.0-alpha.3-macos-arm64.zip',
       state: 'uploaded',
       size: 42,
       digest: signedDigest,
@@ -184,7 +184,7 @@ test('publication binds signed release bytes through retained passport authority
       {
         group: 'release',
         kind: 'release-asset',
-        name: 'Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip',
+        name: 'Kungfu-4.0.0-alpha.3-macos-arm64.zip',
         platform: 'darwin-arm64',
         digest: signedDigest,
         evidence: 'artifact-evidence.json',
@@ -199,11 +199,11 @@ test('publication binds signed release bytes through retained passport authority
   }).manifests[0].manifest.artifacts;
   assert.deepEqual(desktop, {
     kind: 'desktop',
-    url: `${releaseBase(releaseTag)}/Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip`,
+    url: `${releaseBase(releaseTag)}/Kungfu-4.0.0-alpha.3-macos-arm64.zip`,
     size: 42,
     digest: signedDigest,
     signature:
-      'buildchain-retained:artifact-evidence.json#Kungfu-Episodes-4.0.0-alpha.3-macos-arm64.zip',
+      'buildchain-retained:artifact-evidence.json#Kungfu-4.0.0-alpha.3-macos-arm64.zip',
   });
 });
 

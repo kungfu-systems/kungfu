@@ -48,7 +48,7 @@ test('NSIS install retries one empty timeout and retains the exact target', () =
           error.code = 'ETIMEDOUT';
           throw error;
         }
-        fs.writeFileSync(path.join(installRoot, 'Kungfu Episodes.exe'), 'ok');
+        fs.writeFileSync(path.join(installRoot, 'Kungfu.exe'), 'ok');
       },
     });
     assert.equal(calls.length, 2);
@@ -58,7 +58,7 @@ test('NSIS install retries one empty timeout and retains the exact target', () =
       options: { timeout: 42 },
     });
     assert.equal(
-      fs.readFileSync(path.join(installRoot, 'Kungfu Episodes.exe'), 'utf8'),
+      fs.readFileSync(path.join(installRoot, 'Kungfu.exe'), 'utf8'),
       'ok',
     );
   } finally {
@@ -243,9 +243,9 @@ test('one-shot GUI qualification cannot start the durable Agent Session host', (
 test('DMG discovery stops below the matched application bundle', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-installer-find-'));
   try {
-    const app = path.join(root, 'Kungfu Episodes.app');
+    const app = path.join(root, 'Kungfu.app');
     fs.mkdirSync(
-      path.join(app, 'Contents', 'Frameworks', 'Kungfu Episodes Helper.app'),
+      path.join(app, 'Contents', 'Frameworks', 'Kungfu Helper.app'),
       { recursive: true },
     );
     assert.equal(
@@ -267,7 +267,7 @@ test(
   () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-ditto-copy-'));
     try {
-      const source = path.join(root, 'source', 'Kungfu Episodes.app');
+      const source = path.join(root, 'source', 'Kungfu.app');
       const framework = path.join(
         source,
         'Contents',
@@ -284,7 +284,7 @@ test(
         'Versions/Current/Electron Framework',
         path.join(framework, 'Electron Framework'),
       );
-      const destination = path.join(root, 'installed', 'Kungfu Episodes.app');
+      const destination = path.join(root, 'installed', 'Kungfu.app');
       copyMacApplication(source, destination);
       assert.equal(
         fs.readFileSync(

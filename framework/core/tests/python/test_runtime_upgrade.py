@@ -140,7 +140,7 @@ def _reference(build_id: str, state: str = "active") -> dict:
     }
 
 
-def test_release_manifest_accepts_named_artifacts_without_weakening_schema(
+def test_release_manifest_accepts_legacy_named_artifacts_without_weakening_schema(
     tmp_path,
 ):
     source = _source(tmp_path, "runtime-named-artifacts")
