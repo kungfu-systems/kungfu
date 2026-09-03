@@ -18,7 +18,9 @@ import {
   createProjectCutReceipt,
   semanticRoot,
 } from '../framework/project-cut/index.mjs';
-import {
+import * as publicationBoundary from '../framework/project-cut/publication.mjs';
+
+const {
   advanceSettlementPublication,
   checkSettlementPublicationContract,
   classifySettlementPublicationTrigger,
@@ -27,7 +29,7 @@ import {
   planSettlementPublication,
   reconcileSettlementPublication,
   verifySettlementPublication,
-} from '../framework/project-cut/src/publication.mjs';
+} = publicationBoundary;
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -43,6 +45,19 @@ const PROJECT_CUT_FIXTURE = JSON.parse(
   ),
 );
 const CLI = path.join(REPO_ROOT, 'framework/project-cut/bin/project-cut.mjs');
+
+test('publication boundary exposes only the stable operations', () => {
+  assert.deepEqual(Object.keys(publicationBoundary), [
+    'advanceSettlementPublication',
+    'checkSettlementPublicationContract',
+    'classifySettlementPublicationTrigger',
+    'inspectSettlementPublication',
+    'materializeSettlementPublication',
+    'planSettlementPublication',
+    'reconcileSettlementPublication',
+    'verifySettlementPublication',
+  ]);
+});
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();

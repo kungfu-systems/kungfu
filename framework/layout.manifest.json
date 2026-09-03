@@ -354,6 +354,7 @@
         "stableEntrypoints": [
           "framework/project-cut/composition.mjs",
           "framework/project-cut/index.mjs",
+          "framework/project-cut/publication.mjs",
           "framework/project-cut/settlement.mjs"
         ],
         "consumers": [
@@ -380,16 +381,8 @@
             "target": "framework/project-cut/src/native-loop-qualification.mjs"
           },
           {
-            "importer": "scripts/check-native-loop-qualification.test.mjs",
-            "target": "framework/project-cut/src/publication.mjs"
-          },
-          {
             "importer": "scripts/check-project-cut-history.test.mjs",
             "target": "framework/project-cut/src/history.mjs"
-          },
-          {
-            "importer": "scripts/check-project-cut-publication.test.mjs",
-            "target": "framework/project-cut/src/publication.mjs"
           }
         ]
       },
