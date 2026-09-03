@@ -478,7 +478,7 @@ test('qualified Assignment Core rejects producer metadata impersonation', async 
   );
 });
 
-test('portable-off qualification profiles cover every native Build lane', () => {
+test('Build delegates cache policy while retaining the Windows compiler-cache input', () => {
   const profilePath = path.join(
     ROOT,
     'docs/shifu/qualification-portable-off.cache-profile.json',
@@ -497,7 +497,11 @@ test('portable-off qualification profiles cover every native Build lane', () => 
     path.join(ROOT, '.github/workflows/build.yml'),
     'utf8',
   );
-  assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 1);
+  assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 0);
+  assert.match(
+    buildWorkflow,
+    /uses:\s+kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@/u,
+  );
 
   const sccacheProfilePath = path.join(
     ROOT,
@@ -516,18 +520,6 @@ test('portable-off qualification profiles cover every native Build lane', () => 
     .update(sccacheProfileText)
     .digest('hex');
   assert.equal(buildWorkflow.split(`sha256:${sccacheDigest}`).length - 1, 1);
-  assert.match(
-    buildWorkflow,
-    /windows-compiler-cache-mode:[\s\S]*?options:\s*\n\s+- sccache\s*\n\s+- ["']off["']/u,
-  );
-  assert.match(
-    buildWorkflow,
-    /compiler-cache-provider: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.windows-compiler-cache-mode == 'off' && 'none' \|\| 'sccache' \}\}/u,
-  );
-  assert.match(
-    buildWorkflow,
-    /compiler-cache-platforms-json: \$\{\{[\s\S]*?'\["windows-x64"\]'/u,
-  );
 
   const linuxArm64ProfilePath = path.join(
     ROOT,

@@ -86,8 +86,9 @@ test('legacy provenance objects are retired from active release workflows', () =
   const candidate = read('.github/workflows/dev-alpha-candidate-patrol.yml');
   const promotion = read('.github/workflows/release-new-version.yml');
 
+  assert.match(candidate, /check:durable-provenance-authority/u);
+  assert.doesNotMatch(promotion, /check:durable-provenance-authority/u);
   for (const workflow of [candidate, promotion]) {
-    assert.match(workflow, /check:durable-provenance-authority/u);
     assert.doesNotMatch(workflow, /release-provenance-object\.py/u);
     assert.doesNotMatch(workflow, /candidate-provenance/u);
     assert.doesNotMatch(workflow, /promotion-provenance/u);
