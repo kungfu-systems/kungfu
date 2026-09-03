@@ -113,9 +113,21 @@ try {
     ]);
   }
 
+  const downloadedFiles = filesUnder(downloadRoot);
+  const retiredProductArtifact =
+    /^(?:kungfu-episodes-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu(?:[ -])Episodes.*\.(?:dmg|zip|AppImage|exe))$/u;
+  const retiredSource = downloadedFiles.find((sourcePath) =>
+    retiredProductArtifact.test(path.basename(sourcePath)),
+  );
+  if (retiredSource) {
+    throw new Error(
+      `retired product artifact name is not publishable: ${path.basename(retiredSource)}`,
+    );
+  }
+
   const releaseAsset =
-    /^(?:kungfu-episodes-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu Episodes-.*\.AppImage|Kungfu Episodes Setup .*\.exe|Kungfu-Episodes-.*-macos-arm64\.(?:dmg|zip))$/u;
-  const releaseFiles = filesUnder(downloadRoot)
+    /^(?:kungfu-cli-.*\.(?:tar\.gz|zip|qualification\.json)|Kungfu-\d+\.\d+\.\d+.*\.AppImage|Kungfu Setup \d+\.\d+\.\d+.*\.exe|Kungfu-\d+\.\d+\.\d+.*-macos-arm64\.(?:dmg|zip))$/u;
+  const releaseFiles = downloadedFiles
     .filter((sourcePath) => releaseAsset.test(path.basename(sourcePath)))
     .sort((left, right) => {
       const credentialName = credentialArtifact?.name || '';
@@ -126,9 +138,7 @@ try {
     });
   for (const sourcePath of releaseFiles) {
     const sourceName = path.basename(sourcePath);
-    const assetName = sourceName
-      .replace('Kungfu Episodes Setup ', 'Kungfu.Episodes.Setup.')
-      .replace('Kungfu Episodes-', 'Kungfu.Episodes-');
+    const assetName = sourceName.replace('Kungfu Setup ', 'Kungfu.Setup.');
     fs.copyFileSync(sourcePath, path.join(assetsRoot, assetName));
   }
 

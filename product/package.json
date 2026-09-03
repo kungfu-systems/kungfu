@@ -11,7 +11,7 @@
   "private": true,
   "kungfuProduct": {
     "type": "product",
-    "displayName": "Kungfu Episodes",
+    "displayName": "Kungfu",
     "extensions": "dependencies",
     "extensionPackages": [
       "@kungfu-tech/kfx-agent-work-lab-experience",

@@ -521,7 +521,7 @@ function ShellTitleBar({
             fontWeight: 600,
           }}
         >
-          Kungfu Episodes
+          Kungfu
         </div>
         <form
           ref={searchRoot}

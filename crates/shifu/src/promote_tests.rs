@@ -11,9 +11,9 @@ fn qualified_app(slot: &Path) -> BuildEntry {
         worktree: String::new(),
         built_at: "2026-07-24T00:00:00Z".into(),
         kind: "app".into(),
-        artifact: "Kungfu Episodes.app".into(),
+        artifact: "Kungfu.app".into(),
         digest: "digest".into(),
-        cli_archive: "kungfu-episodes-cli-darwin-arm64.tar.gz".into(),
+        cli_archive: "kungfu-cli-darwin-arm64.tar.gz".into(),
         cli_archive_digest: format!("sha256:{}", "a".repeat(64)),
         upgrade_manifest: "kungfu-upgrade.json".into(),
         upgrade_manifest_digest: format!("sha256:{}", "b".repeat(64)),
@@ -33,7 +33,7 @@ fn write_app_manifests(entry: &mut BuildEntry) {
     fs::create_dir_all(resources.join("kungfu")).unwrap();
     fs::create_dir_all(resources.join("upgrade")).unwrap();
     fs::create_dir_all(contents.join("MacOS")).unwrap();
-    fs::write(contents.join("MacOS/Kungfu Episodes"), "executable").unwrap();
+    fs::write(contents.join("MacOS/Kungfu"), "executable").unwrap();
     fs::write(
         resources.join("kungfu/kungfubuildinfo.json"),
         format!(r#"{{"git":{{"revision":"{}"}}}}"#, entry.sha),
@@ -169,7 +169,7 @@ fn current_build_verification_is_independent_of_unrelated_history() {
         selected
             .slot
             .join(&selected.artifact)
-            .join("Contents/MacOS/Kungfu Episodes"),
+            .join("Contents/MacOS/Kungfu"),
         "tampered executable",
     )
     .unwrap();
@@ -216,7 +216,7 @@ fn qualified_app_requires_exact_product_manifests() {
         entry
             .slot
             .join(&entry.artifact)
-            .join("Contents/MacOS/Kungfu Episodes"),
+            .join("Contents/MacOS/Kungfu"),
         "tampered executable",
     )
     .unwrap();
@@ -225,7 +225,7 @@ fn qualified_app_requires_exact_product_manifests() {
         entry
             .slot
             .join(&entry.artifact)
-            .join("Contents/MacOS/Kungfu Episodes"),
+            .join("Contents/MacOS/Kungfu"),
         "executable",
     )
     .unwrap();
@@ -240,7 +240,7 @@ fn qualified_app_requires_exact_product_manifests() {
         entry
             .slot
             .join(&entry.artifact)
-            .join("Contents/MacOS/Kungfu Episodes"),
+            .join("Contents/MacOS/Kungfu"),
     )
     .unwrap();
     assert!(!build_valid(&entry));
@@ -248,7 +248,7 @@ fn qualified_app_requires_exact_product_manifests() {
         entry
             .slot
             .join(&entry.artifact)
-            .join("Contents/MacOS/Kungfu Episodes"),
+            .join("Contents/MacOS/Kungfu"),
         "executable",
     )
     .unwrap();
@@ -401,7 +401,7 @@ fn rollback_coordinate_requires_exact_retained_artifact() {
     fs::write(
         slot.join("meta.env"),
         "KUNGFU_BUILD_SHA='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n\
-         KUNGFU_BUILD_ARTIFACT='Kungfu Episodes.app'\n",
+         KUNGFU_BUILD_ARTIFACT='Kungfu.app'\n",
     )
     .unwrap();
     assert!(!rollback_entry_valid(
@@ -410,7 +410,7 @@ fn rollback_coordinate_requires_exact_retained_artifact() {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     ));
 
-    fs::create_dir_all(slot.join("Kungfu Episodes.app")).unwrap();
+    fs::create_dir_all(slot.join("Kungfu.app")).unwrap();
     assert!(rollback_entry_valid(
         &root,
         "prior-build",
@@ -535,8 +535,8 @@ fn macos_shaped_partial_bundle_is_rejected_and_recovered() {
     .unwrap();
     let install = root.join("install");
     let target = install.join(&source_entry.artifact);
-    let staged = install.join(".Kungfu Episodes.app.shifu-next");
-    let backup = install.join(".Kungfu Episodes.app.shifu-previous");
+    let staged = install.join(".Kungfu.app.shifu-next");
+    let backup = install.join(".Kungfu.app.shifu-previous");
     fs::create_dir_all(staged.join("Contents")).unwrap();
     copy_tree(
         &source.join("Contents/Resources"),
@@ -819,7 +819,7 @@ mod unix {
         let root_dir = host::unique_temp_dir("shifu-installed-adoption").unwrap();
         let registry = root_dir.join("registry");
         let install_dir = root_dir.join("Applications");
-        let app = install_dir.join("Kungfu Episodes.app");
+        let app = install_dir.join("Kungfu.app");
         let resources = app.join("Contents/Resources");
         let native_root = root_dir.join("native-image");
         let source_commit = "1".repeat(40);
@@ -832,7 +832,7 @@ mod unix {
         fs::create_dir_all(resources.join("upgrade")).unwrap();
         fs::create_dir_all(app.join("Contents/MacOS")).unwrap();
         fs::create_dir_all(native_root.join("upgrade")).unwrap();
-        fs::write(app.join("Contents/MacOS/Kungfu Episodes"), "desktop").unwrap();
+        fs::write(app.join("Contents/MacOS/Kungfu"), "desktop").unwrap();
         fs::write(
             resources.join("kungfu/kungfubuildinfo.json"),
             format!(r#"{{"git":{{"revision":"{source_commit}"}}}}"#),

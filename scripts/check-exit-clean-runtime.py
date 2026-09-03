@@ -17,7 +17,6 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE = ROOT / "product" / "release" / "cli"
 WORKER = ROOT / "scripts" / "exit-clean-runtime-worker.py"
@@ -25,7 +24,7 @@ WORKER = ROOT / "scripts" / "exit-clean-runtime-worker.py"
 
 def _latest_artifact() -> Path:
     artifacts = sorted(
-        [*RELEASE.glob("kungfu-episodes-cli-*.tar.gz"), *RELEASE.glob("*.zip")],
+        [*RELEASE.glob("kungfu-cli-*.tar.gz"), *RELEASE.glob("*.zip")],
         key=lambda path: path.stat().st_mtime,
     )
     if not artifacts:

@@ -87,9 +87,9 @@ test('affected-native diagnostics accepts the declarative signing contract', () 
     diagnostics.buildchain.config.validation.signing.artifacts;
   assert.equal(cliArtifact.entitlementsProfile, 'jit-executable-v1');
   assert.deepEqual(cliArtifact.entitlementsPaths, [
-    'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
-    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
-    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+    'kungfu-cli-darwin-arm64/runtime/kungfu',
+    'kungfu-cli-darwin-arm64/runtime/python/bin/python3',
+    'kungfu-cli-darwin-arm64/runtime/python/bin/python3.13',
   ]);
 });
 

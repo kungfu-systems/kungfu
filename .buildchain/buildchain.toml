@@ -55,7 +55,7 @@ command = "node scripts/run-shifu-lifecycle.mjs cache-apply verify"
 
 [lifecycle.signing-finalization]
 # shifu-entry-contract: allow Buildchain's GitHub-hosted finalizer to rebind consumer qualification to imported signed bytes
-command = "node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-darwin-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-darwin-arm64.tar.gz --platform darwin-arm64 --signing-result .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/result.json --signing-receipt .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/receipt.json --signing-provider-evidence .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/provider-evidence.json && node product/scripts/upgrade-manifest.mjs finalize-macos-release-artifacts"
+command = "node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-cli-darwin-arm64.qualification.json --archive product/release/cli/kungfu-cli-darwin-arm64.tar.gz --platform darwin-arm64 --signing-result .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/result.json --signing-receipt .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/receipt.json --signing-provider-evidence .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/provider-evidence.json && node product/scripts/upgrade-manifest.mjs finalize-macos-release-artifacts"
 
 [lifecycle.publish]
 # shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch
@@ -83,21 +83,21 @@ workflows = ["source-acceptance.yml", "buildchain-validate.yml", "dco.yml"]
 
 [[signing.artifacts]]
 id = "kungfu-cli-macos-arm64"
-path = "product/release/cli/kungfu-episodes-cli-darwin-arm64.tar.gz"
+path = "product/release/cli/kungfu-cli-darwin-arm64.tar.gz"
 profile = "auto"
 kind = "archive"
 platforms = ["macos-arm64"]
 required = true
 entitlements_profile = "jit-executable-v1"
 entitlements_paths = [
-  "kungfu-episodes-cli-darwin-arm64/runtime/kungfu",
-  "kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3",
-  "kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13",
+  "kungfu-cli-darwin-arm64/runtime/kungfu",
+  "kungfu-cli-darwin-arm64/runtime/python/bin/python3",
+  "kungfu-cli-darwin-arm64/runtime/python/bin/python3.13",
 ]
 
 [[signing.artifacts]]
 id = "kungfu-desktop-macos-arm64"
-path = "product/dist/desktop/mac-arm64/Kungfu Episodes.app"
+path = "product/dist/desktop/mac-arm64/Kungfu.app"
 profile = "auto"
 kind = "app-bundle"
 platforms = ["macos-arm64"]

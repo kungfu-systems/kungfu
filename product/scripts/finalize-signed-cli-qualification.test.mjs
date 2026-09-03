@@ -30,9 +30,9 @@ const AFTER = `sha256:${'b'.repeat(64)}`;
 const PROVIDER_EVIDENCE = `sha256:${'d'.repeat(64)}`;
 const EVIDENCE_DIGEST = `sha256:${'e'.repeat(64)}`;
 const JIT_EXECUTABLES = [
-  'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
-  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
-  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+  'kungfu-cli-darwin-arm64/runtime/kungfu',
+  'kungfu-cli-darwin-arm64/runtime/python/bin/python3',
+  'kungfu-cli-darwin-arm64/runtime/python/bin/python3.13',
 ];
 
 test('post-sign PTY driver does not leak embedded Node mode into the CLI', () => {
@@ -83,7 +83,7 @@ function qualification() {
     qualified: true,
     label: 'cli-archive',
     identity: {
-      archive: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+      archive: 'kungfu-cli-darwin-arm64.tar.gz',
       archiveSha256: BEFORE,
       sourceCommit: SOURCE,
     },
@@ -158,7 +158,7 @@ function finalize(changes = {}) {
   return finalizeSignedCliQualification({
     report: qualification(),
     expectedPlatform: 'darwin-arm64',
-    archiveName: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+    archiveName: 'kungfu-cli-darwin-arm64.tar.gz',
     archiveSha256: AFTER,
     signingResult: evidence.result,
     signingReceipt: evidence.receipt,
@@ -177,7 +177,7 @@ function runtimeReceipt(changes = {}) {
     architecture: 'arm64',
     sourceCommit: SOURCE,
     archive: {
-      name: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+      name: 'kungfu-cli-darwin-arm64.tar.gz',
       sha256: AFTER,
     },
     checks: {
@@ -212,7 +212,7 @@ test('signed CLI finalization binds the real post-sign runtime receipt', () => {
     report: finalize(),
     signedRuntimeReceipt: runtimeReceipt(),
     expectedPlatform: 'darwin-arm64',
-    archiveName: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+    archiveName: 'kungfu-cli-darwin-arm64.tar.gz',
     archiveSha256: AFTER,
     expectedSourceCommit: SOURCE,
   });
@@ -224,7 +224,7 @@ test('signed CLI finalization binds the real post-sign runtime receipt', () => {
 test('signed CLI finalization rejects a runtime receipt for different archive bytes', () => {
   const signedRuntimeReceipt = runtimeReceipt({
     archive: {
-      name: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+      name: 'kungfu-cli-darwin-arm64.tar.gz',
       sha256: BEFORE,
     },
   });
@@ -234,7 +234,7 @@ test('signed CLI finalization rejects a runtime receipt for different archive by
         report: finalize(),
         signedRuntimeReceipt,
         expectedPlatform: 'darwin-arm64',
-        archiveName: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+        archiveName: 'kungfu-cli-darwin-arm64.tar.gz',
         archiveSha256: AFTER,
         expectedSourceCommit: SOURCE,
       }),

@@ -2,7 +2,7 @@
   "schema": "kungfu-buildchain-kfd-2-product-claims-registry/v1",
   "description": "Kungfu-owned source registry for public KFD-2 release trust claims, rendered and checked by Buildchain.",
   "product": {
-    "name": "Kungfu Episodes",
+    "name": "Kungfu",
     "repository": "kungfu-systems/kungfu",
     "package": "@kungfu-tech/product-kungfu"
   },

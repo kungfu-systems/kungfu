@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "c791b22287be4399a867fbcfdd44f3202e5105ef",
+    "sourceSha": "f948484814e49e458dc8f31bf6061068019b21eb",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:94e3051ed06b5e852b46f3572d28fa36682ee989f6ab4a618993863e8ae33288"
+    "registryDigest": "sha256:e0a727c4e3232bea70bca73cd56cd27d66d67b6797cc162eb8701b8bfb3cd8c9"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "f539612d133b55282057c9722978d62b51f197ffde7ad50fd22d48de8f69e644",
-    "digest": "sha256:94e3051ed06b5e852b46f3572d28fa36682ee989f6ab4a618993863e8ae33288"
+    "sha256": "8ec8f677dbed99158cf94e49ee5c98f29a20fccba9cb566abcf23a069d0828d8",
+    "digest": "sha256:e0a727c4e3232bea70bca73cd56cd27d66d67b6797cc162eb8701b8bfb3cd8c9"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,7 +29,7 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:a44458e25aa7c0f57f4eda9c6ea1d7817411e693d76b05d2d3c67c3c12eaf8fd"
+    "digest": "sha256:7461fe322e3ad2de57f5749e1febe20f94411381d49622f33448d951cc0e3398"
   },
   "expectedArtifactVerification": {
     "witnessJsons": [
@@ -41,13 +41,13 @@
     "generationPhase": "build-before-verify",
     "releasePhase": "consume-sealed-evidence-only"
   },
-  "collaborationInterfaceDigest": "sha256:93f698521628edd3735ba49b856ddee0dcc0e42819abb6f1e59e4e6c9a093c25",
+  "collaborationInterfaceDigest": "sha256:1500fc1d22293ecba28bed5ff466372e832b27f7be51e5e22a881be96dd65b03",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
     "product": {
       "id": "kungfu",
-      "name": "Kungfu Episodes",
+      "name": "Kungfu",
       "repository": "kungfu-systems/kungfu",
       "package": "@kungfu-tech/product-kungfu"
     },
@@ -64,7 +64,7 @@
         "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:a44458e25aa7c0f57f4eda9c6ea1d7817411e693d76b05d2d3c67c3c12eaf8fd"
+      "digest": "sha256:7461fe322e3ad2de57f5749e1febe20f94411381d49622f33448d951cc0e3398"
     },
     "surfaces": [
       {
