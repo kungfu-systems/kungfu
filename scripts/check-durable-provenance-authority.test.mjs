@@ -158,23 +158,17 @@ test('normal release routing no longer evaluates historical parent topology', ()
     '.github/workflows/release-new-version.yml',
   ).toString();
 
+  assert.match(patrol, /check:durable-provenance-authority/u);
   for (const workflow of [patrol, build, promotion]) {
-    assert.match(workflow, /check:durable-provenance-authority/u);
     assert.doesNotMatch(workflow, /git show -s --format=%P/u);
     assert.doesNotMatch(workflow, /candidate-provenance|promotion-provenance/u);
   }
+  assert.doesNotMatch(build, /check:durable-provenance-authority/u);
+  assert.doesNotMatch(promotion, /check:durable-provenance-authority/u);
   assert.doesNotMatch(patrol, /git fetch --no-tags --depth=2/u);
   assert.doesNotMatch(build, /RELEASE_CUT_SOURCE_REF/u);
   assert.doesNotMatch(build, /alphaBaseSha/u);
-  assert.deepEqual(contract.releaseRehearsal, {
-    mode: 'normal-protected-non-public',
-    gate: 'governance.promotion-rehearsal',
-    publication: false,
-    topologyRequirement: 'none',
-    specialPromotionRoute: false,
-    handMaintainedAllowlist: false,
-    prooflessFallback: false,
-  });
+  assert.equal('releaseRehearsal' in contract, false);
   assert.deepEqual(Object.values(contract.retirement.activeModes), [
     'retired',
     'retired',

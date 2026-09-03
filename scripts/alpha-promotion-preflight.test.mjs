@@ -34,12 +34,10 @@ const ROOT_FILES = [
   'docs/qualification/alpha-release-latency.contract.json',
   'docs/qualification/alpha-ruleset.contract.json',
   'docs/qualification/gates/execution-profiles.json',
-  'docs/release-promotion-rehearsal.contract.json',
   'package.json',
   'pnpm-lock.yaml',
   'scripts/alpha-promotion-preflight.mjs',
   '.github/actions/require-alpha-preflight/alpha-macos-overflow.mjs',
-  'scripts/alpha-publication-tail-plan.mjs',
   'scripts/alpha-cache-evidence.mjs',
   'scripts/alpha-release-timeline.mjs',
   'scripts/alpha-release-history.mjs',
@@ -158,30 +156,6 @@ test('early source contracts bypass the platform-specific Shifu bootstrap', () =
     workflow.match(/scripts\/check-upgrade-qualification\.test\.mjs/gu)?.length,
     1,
   );
-});
-
-test('Alpha build lanes reuse one exact-tree source receipt in the product-owned qualifier', () => {
-  const workflow = fs.readFileSync(
-    path.join(process.cwd(), '.github/workflows/build.yml'),
-    'utf8',
-  );
-  assert.match(
-    workflow,
-    /receipt-root: \$\{\{ steps\.receipt\.outputs\.receipt-root \}\}/u,
-  );
-  assert.match(
-    workflow,
-    /source-tree: \$\{\{ steps\.receipt\.outputs\.source-tree \}\}/u,
-  );
-  assert.match(
-    workflow,
-    /cache-apply[^\n]+alpha:qualify[^\n]+--source-only-receipt-root \$\{\{ needs\.preflight\.outputs\.receipt-root \}\}[^\n]+--source-only-source-tree \$\{\{ needs\.preflight\.outputs\.source-tree \}\}/u,
-  );
-  assert.doesNotMatch(
-    workflow,
-    /(?:alpha:qualify' \}\}|release:qualify:candidate) -- --kfd-source-input-root/u,
-  );
-  assert.doesNotMatch(workflow, /verify-substage-evidence-path/u);
 });
 
 test('automatic hosted preflight does not inherit a private Cargo mirror', () => {
@@ -513,87 +487,4 @@ test('auditable-demo fast sentinel rejects Buildchain v3 rendition drift', () =>
     product: fs.readFileSync('product/scripts/dist.mjs', 'utf8'),
   });
   assert.match(issues.join('\n'), /native rendition profiles/u);
-});
-
-test('patrol, normal Alpha builds and sentinels keep one controller authority', () => {
-  const patrol = fs.readFileSync(
-    '.github/workflows/dev-alpha-candidate-patrol.yml',
-    'utf8',
-  );
-  const build = fs.readFileSync('.github/workflows/build.yml', 'utf8');
-  assert.match(
-    patrol,
-    /group: dev-alpha-candidate-patrol-\$\{\{ github\.repository \}\}-\$\{\{ github\.event\.repository\.default_branch \}\}[\s\S]*cancel-in-progress: false/u,
-  );
-  assert.match(
-    patrol,
-    /reactivation-authorized:\s*\$\{\{\s*github\.event_name == 'workflow_dispatch' && inputs\.create-pull-request && inputs\.reactivation-authorized\s*\}\}/u,
-  );
-  assert.match(
-    build,
-    /format\('alpha-promotion-build-\{0\}', github\.event\.pull_request\.base\.ref \|\| github\.ref\)/u,
-  );
-  assert.doesNotMatch(
-    build,
-    /alpha-promotion-build-\{0\}'.*pull_request\.number/u,
-  );
-  assert.match(build, /windows-fast-sentinel:[\s\S]*runs-on: windows-2025/u);
-  assert.match(
-    build,
-    /windows-fast-sentinel:[\s\S]*outputs:[\s\S]*receipt-root:[\s\S]*continuity-input-root:/u,
-  );
-  assert.match(
-    build,
-    /Run real Windows crash and restart continuity sentinel[\s\S]*verify-fast-sentinel/u,
-  );
-  assert.match(
-    build,
-    /KUNGFU_EXACT_SOURCE_SHA:[\s\S]*fast-sentinel --kind windows --source-commit \$env:KUNGFU_EXACT_SOURCE_SHA[\s\S]*verify-fast-sentinel[\s\S]*--source-commit \$env:KUNGFU_EXACT_SOURCE_SHA/u,
-  );
-  assert.doesNotMatch(
-    build.slice(
-      build.indexOf('  windows-fast-sentinel:'),
-      build.indexOf('  auditable-demo-fast-sentinel:'),
-    ),
-    /^\s*GITHUB_SHA:/mu,
-  );
-  assert.match(
-    build,
-    /auditable-demo-fast-sentinel:[\s\S]*runs-on: ubuntu-24\.04/u,
-  );
-  assert.match(
-    build,
-    /needs: \[preflight, windows-fast-sentinel, auditable-demo-fast-sentinel\]/u,
-  );
-  assert.match(
-    build,
-    /fast-sentinels-only:[\s\S]*Run only the exact-source Windows continuity and auditable-demo fast sentinels/u,
-  );
-  assert.match(
-    build,
-    /preflight:[\s\S]*if: \$\{\{ github\.event_name != 'workflow_dispatch' \|\| !inputs\.fast-sentinels-only \}\}/u,
-  );
-  assert.match(
-    build,
-    /windows-fast-sentinel:[\s\S]*always\(\)[\s\S]*inputs\.fast-sentinels-only[\s\S]*needs\.preflight\.result == 'skipped'/u,
-  );
-  assert.match(build, /build:[\s\S]*!inputs\.fast-sentinels-only/u);
-  assert.match(build, /Verify durable release provenance authority/u);
-  assert.match(build, /\.\/shifu check:durable-provenance-authority/u);
-  assert.doesNotMatch(build, /RELEASE_CUT_SOURCE_REF|RELEASE_CUT_SOURCE_SHA/u);
-  assert.doesNotMatch(build, /Verify explicit Release Cut source lock/u);
-  assert.match(
-    build,
-    /buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105[\s\S]*buildchain-contract-expected-channel: alpha[\s\S]*buildchain-contract-expected-major: v3[\s\S]*publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}[\s\S]*publish-anchor-request-json: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef && toJSON/u,
-  );
-  assert.doesNotMatch(build, /inputs\.buildchain-ref/u);
-  assert.match(
-    build,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105/u,
-  );
-  const preBuild = build.slice(0, build.indexOf('\n  build:'));
-  assert.doesNotMatch(
-    preBuild,
-    /actions\/upload-artifact|npm publish|gh release|git tag/iu,
-  );
 });

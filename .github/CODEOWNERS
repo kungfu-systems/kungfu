@@ -12,8 +12,6 @@
 /scripts/check-primitive-catalog.test.mjs @kungfu-origin
 /scripts/check-primitive-authority-boundary.mjs @kungfu-origin
 /scripts/check-primitive-authority-boundary.test.mjs @kungfu-origin
-/scripts/verify-kungfu-release-admission.mjs @kungfu-origin
-/scripts/verify-kungfu-release-admission.test.mjs @kungfu-origin
 /scripts/source-acceptance.mjs @kungfu-origin
 /package.json @kungfu-origin
 /.github/CODEOWNERS @kungfu-origin

@@ -365,16 +365,11 @@
       ]
     },
     {
-      "owner": "release/publication-authority-consumer",
-      "paths": [
-        "scripts/assemble-kungfu-publication-gate.mjs"
-      ]
-    },
-    {
       "owner": "release/github-metadata-policy",
       "paths": [
         "scripts/github-release-policy.mjs",
-        "scripts/github-release-policy.test.mjs"
+        "scripts/github-release-policy.test.mjs",
+        "scripts/publish-alpha-run.mjs"
       ]
     },
     {

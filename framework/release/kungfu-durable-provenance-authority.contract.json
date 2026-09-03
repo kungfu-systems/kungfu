@@ -111,15 +111,6 @@
     ],
     "recovery": "preserve authority, restore an exact copy, fsck, query the pinned Cut, and retry with the same semantic inputs"
   },
-  "releaseRehearsal": {
-    "mode": "normal-protected-non-public",
-    "gate": "governance.promotion-rehearsal",
-    "publication": false,
-    "topologyRequirement": "none",
-    "specialPromotionRoute": false,
-    "handMaintainedAllowlist": false,
-    "prooflessFallback": false
-  },
   "retirement": {
     "activeModes": {
       "dualWrite": "retired",

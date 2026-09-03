@@ -412,8 +412,7 @@
       "role": "repository-tool",
       "boundaryReview": "none",
       "dependencies": [
-        "framework/assignment-capture",
-        "framework/version-line"
+        "framework/assignment-capture"
       ]
     },
     {
