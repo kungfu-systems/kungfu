@@ -170,6 +170,11 @@ protocol schemas, root algorithms, and publication behavior remain unchanged.
 Until the pull request is protected-merged and qualified at the protected head,
 this paragraph records proposed delivery evidence only.
 
+Pull request 3689 was superseded before merge after its immutable submission
+head proved incomplete for the required ADR delivery evidence. Pull request
+3690 carries the corrected successor head and is the authoritative delivery
+candidate for this boundary stage.
+
 ## Non-claims
 
 This decision does not walk Git, create a Project Cut file, write a hook, seal
