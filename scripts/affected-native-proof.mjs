@@ -17,7 +17,7 @@ import {
   requireSha,
 } from '../product/release/affected-native-artifact-lookup.mjs';
 import { runAffectedNativeProofCli } from '../product/release/affected-native-proof-cli.mjs';
-import { parseFamilyQueueLeaseMarker } from './project-cut-merge-queue-admission.mjs';
+import { parseFamilyQueueLeaseMarker } from './project-cut-family-queue-lease.mjs';
 
 export {
   DEFAULT_MAX_AGE_SECONDS,

@@ -10,13 +10,22 @@ import {
   verifyComposition,
 } from '../framework/work/project-cut/composition.mjs';
 import { semanticRoot } from '../framework/work/project-cut/index.mjs';
+import {
+  FAMILY_QUEUE_LEASE_SCHEMA,
+  FAMILY_QUEUE_RELEASE_SCHEMA,
+  familyQueueMarkerFor,
+  parseFamilyQueueLeaseMarker,
+} from './project-cut-family-queue-lease.mjs';
+
+export {
+  FAMILY_QUEUE_LEASE_SCHEMA,
+  FAMILY_QUEUE_MARKER,
+  FAMILY_QUEUE_RELEASE_SCHEMA,
+  parseFamilyQueueLeaseMarker,
+} from './project-cut-family-queue-lease.mjs';
 
 export const MERGE_QUEUE_ADMISSION_SCHEMA =
   'project.cut.merge-queue-admission/v1';
-export const FAMILY_QUEUE_LEASE_SCHEMA = 'project.cut.family-queue-lease/v1';
-export const FAMILY_QUEUE_RELEASE_SCHEMA =
-  'project.cut.family-queue-release/v1';
-export const FAMILY_QUEUE_MARKER = '<!-- kungfu-family-queue-lease:v1 ';
 
 const GIT_MAX_BUFFER = 64 * 1024 * 1024;
 const SHA256_ROOT = /^sha256:[0-9a-f]{64}$/u;
@@ -76,23 +85,6 @@ function uniqueRoots(values, label) {
   return roots;
 }
 
-function markerFor(value) {
-  return `${FAMILY_QUEUE_MARKER}${Buffer.from(
-    JSON.stringify(value),
-    'utf8',
-  ).toString('base64url')} -->`;
-}
-
-function leaseMaterial(lease) {
-  const {
-    marker: _marker,
-    leaseRoot: _leaseRoot,
-    idempotent: _idempotent,
-    ...material
-  } = lease;
-  return material;
-}
-
 export function familyQueueStatusContext(initiativeId) {
   const normalized = requirePattern(
     initiativeId,
@@ -102,32 +94,6 @@ export function familyQueueStatusContext(initiativeId) {
   return `Queue family lease/${semanticRoot({
     initiativeId: normalized,
   }).slice(7, 23)}`;
-}
-
-export function parseFamilyQueueLeaseMarker(text) {
-  const pattern = /<!-- kungfu-family-queue-lease:v1 ([A-Za-z0-9_-]+) -->/gu;
-  let match = null;
-  for (const candidate of String(text || '').matchAll(pattern)) {
-    match = candidate;
-  }
-  if (match === null) return null;
-  let lease;
-  try {
-    lease = JSON.parse(Buffer.from(match[1], 'base64url').toString('utf8'));
-  } catch {
-    throw new Error('family queue lease marker is not valid canonical JSON');
-  }
-  if (lease?.schema !== FAMILY_QUEUE_LEASE_SCHEMA) {
-    throw new Error('unsupported family queue lease marker schema');
-  }
-  const expectedRoot = semanticRoot(leaseMaterial(lease));
-  if (lease.leaseRoot !== expectedRoot) {
-    throw new Error('family queue lease marker root mismatch');
-  }
-  if (lease.marker && lease.marker !== markerFor(leaseMaterial(lease))) {
-    throw new Error('family queue lease marker self-reference is invalid');
-  }
-  return { ...leaseMaterial(lease), leaseRoot: expectedRoot };
 }
 
 export function createFamilyQueueLease(admission, values) {
@@ -209,7 +175,7 @@ export function createFamilyQueueLease(admission, values) {
   return {
     ...material,
     leaseRoot,
-    marker: markerFor({ ...material, leaseRoot }),
+    marker: familyQueueMarkerFor({ ...material, leaseRoot }),
   };
 }
 

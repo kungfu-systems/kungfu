@@ -39,7 +39,6 @@ const TYPED_PYTHON_ROOTS = [
 const isWin = process.platform === 'win32';
 
 /** @typedef {{label: string, command: string, args: string[], cwd?: string, env?: NodeJS.ProcessEnv}} Command */
-
 const SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
 export function readSourceAcceptanceGit(
@@ -942,6 +941,7 @@ export function sourceAcceptancePlan(
               'scripts/kungfu-xinfa-consumer.test.mjs',
               'scripts/check-kungfu-gate-catalog.test.mjs',
               'scripts/affected-native-proof.test.mjs',
+              'scripts/affected-native-proof-bootstrap.test.mjs',
               'scripts/affected-native-semantic-source.test.mjs',
               'scripts/qualified-assignment-core-artifact.test.mjs',
               'crates/xinfa/tooling/check-boundary.test.mjs',
