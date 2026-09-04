@@ -104,7 +104,7 @@
       "required_capabilities": ["inspect", "timeline", "query", "repair", "export"],
       "forbidden_dependencies": [],
       "onboarding": {
-        "commands": ["open Kungfu Episodes"],
+        "commands": ["open Kungfu"],
         "concepts": ["workspace", "episode", "timeline", "query", "verification"]
       }
     },

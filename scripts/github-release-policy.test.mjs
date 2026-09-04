@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   applyNewestProductReleaseMetadata,
@@ -16,6 +20,9 @@ const REPOSITORY = 'kungfu-systems/kungfu';
 const PRODUCT_TAG = 'v4.0.0-alpha.3';
 const PRODUCT_ID = 403;
 const ASSET_URL = `https://github.com/${REPOSITORY}/releases/download/${PRODUCT_TAG}/buildchain.release.json`;
+const PUBLISHER = fileURLToPath(
+  new URL('./publish-alpha-run.mjs', import.meta.url),
+);
 
 function response(data, { status = 200, url = '', headers = {} } = {}) {
   return {
@@ -57,7 +64,7 @@ function publicationBundle(tag = PRODUCT_TAG) {
   return {
     contract: 'buildchain.release-manifest/v2',
     product: {
-      name: 'Kungfu Episodes',
+      name: 'Kungfu',
       repository: REPOSITORY,
     },
     release: {
@@ -298,6 +305,19 @@ test('release workflows bind product and component metadata explicitly', () => {
   assert.match(alphaPublication, /'--latest'/u);
   assert.doesNotMatch(productWorkflow, /release:github:latest:verify/u);
   assert.doesNotMatch(productWorkflow, /release:github:metadata:apply-newest/u);
+  assert.match(alphaPublication, /kungfu-cli-/u);
+  assert.match(alphaPublication, /retired product artifact name/u);
+  assert.match(
+    alphaPublication,
+    /Kungfu-\\d\+\\\.\\d\+\\\.\\d\+\.\*-macos-arm64/u,
+  );
+  assert.doesNotMatch(productWorkflow, /Kungfu-\*-macos-arm64\.(?:dmg|zip)/u);
+  assert.match(alphaPublication, /Kungfu Setup /u);
+  assert.match(alphaPublication, /Kungfu\.Setup\./u);
+  assert.doesNotMatch(
+    alphaPublication,
+    /Kungfu Episodes Setup|Kungfu Episodes-|Kungfu-Episodes-/u,
+  );
   assert.match(
     packageJson.scripts['release:github:latest:verify'],
     /github-release-policy\.mjs verify-latest/u,
@@ -309,4 +329,79 @@ test('release workflows bind product and component metadata explicitly', () => {
   assert.match(layerWorkflow, /--prerelease=false/u);
   assert.match(layerWorkflow, /--latest(?:\s|\\|$)/u);
   assert.match(layerWorkflow, /release:github:metadata:apply/u);
+});
+
+test('Alpha publisher rejects retired artifacts before creating a release', () => {
+  const retiredArtifacts = [
+    'kungfu-episodes-cli-darwin-arm64.tar.gz',
+    'Kungfu-Episodes-4.0.0-alpha.6-macos-arm64.zip',
+    'Kungfu Episodes-4.0.0-alpha.6-macos-arm64.zip',
+  ];
+  for (const retiredArtifact of retiredArtifacts) {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kungfu-alpha-publisher-'),
+    );
+    try {
+      const bin = path.join(root, 'bin');
+      const calls = path.join(root, 'gh-calls.jsonl');
+      fs.mkdirSync(bin, { recursive: true });
+      const fakeGh = path.join(bin, 'gh');
+      fs.writeFileSync(
+        fakeGh,
+        `#!/usr/bin/env node
+const fs = require('node:fs');
+const path = require('node:path');
+const args = process.argv.slice(2);
+fs.appendFileSync(process.env.FAKE_GH_CALLS, JSON.stringify(args) + '\\n');
+if (args[0] === 'api' && args[1].includes('/actions/runs/')) {
+  if (args[1].endsWith('/artifacts?per_page=100')) console.log(JSON.stringify({ artifacts: [] }));
+  else console.log(JSON.stringify({ conclusion: 'success' }));
+  process.exit(0);
+}
+if (args[0] === 'run' && args[1] === 'download') {
+  const destination = args[args.indexOf('--dir') + 1];
+  fs.mkdirSync(destination, { recursive: true });
+  if (args.includes('--pattern')) {
+    fs.writeFileSync(path.join(destination, 'release-candidate-passport.json'), JSON.stringify({
+      target: { version: '4.0.0-alpha.6' },
+      platformMatrix: [{ artifactName: 'darwin-artifacts' }],
+      pullRequest: { number: 3694 }
+    }));
+  } else {
+    fs.writeFileSync(path.join(destination, 'Kungfu-4.0.0-alpha.6-macos-arm64.dmg'), 'desktop');
+    fs.writeFileSync(path.join(destination, process.env.FAKE_RETIRED_ARTIFACT), 'retired');
+  }
+  process.exit(0);
+}
+console.error('unexpected fake gh call: ' + JSON.stringify(args));
+process.exit(97);
+`,
+      );
+      fs.chmodSync(fakeGh, 0o755);
+      const result = spawnSync(process.execPath, [PUBLISHER, '123'], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GH_REPO: REPOSITORY,
+          FAKE_GH_CALLS: calls,
+          FAKE_RETIRED_ARTIFACT: retiredArtifact,
+          PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
+          RUNNER_TEMP: root,
+        },
+      });
+      assert.equal(result.status, 1, retiredArtifact);
+      assert.match(result.stderr, /retired product artifact name/u);
+      const invoked = fs
+        .readFileSync(calls, 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line));
+      assert.equal(
+        invoked.some((args) => args[0] === 'release'),
+        false,
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
 });

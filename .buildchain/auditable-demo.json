@@ -8,8 +8,8 @@
   },
   "artifact": {
     "platformId": "linux-x64",
-    "binaryPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu",
-    "metadataPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/auditable-demo-binary.json",
+    "binaryPath": "product/dist/cli/kungfu-cli-linux-x64/kungfu",
+    "metadataPath": "product/dist/cli/kungfu-cli-linux-x64/auditable-demo-binary.json",
     "metadataContract": "kungfu.declarative-demo-binary/v1",
     "runtimeDependencies": []
   },

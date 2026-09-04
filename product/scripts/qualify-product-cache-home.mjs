@@ -14,7 +14,7 @@ const DEFAULT_APP = path.join(
   'dist',
   'desktop',
   'mac-arm64',
-  'Kungfu Episodes.app',
+  'Kungfu.app',
 );
 const WORK_DESIGN_FIXTURE = path.join(
   ROOT,
@@ -199,7 +199,7 @@ export function qualifyProductCacheHome(options = {}) {
   const verifySignature =
     options.verifySignature ?? process.platform === 'darwin';
   const cli = path.join(app, 'Contents', 'Resources', 'kungfu', 'kungfu');
-  const gui = path.join(app, 'Contents', 'MacOS', 'Kungfu Episodes');
+  const gui = path.join(app, 'Contents', 'MacOS', 'Kungfu');
   const manifest = path.join(
     app,
     'Contents',

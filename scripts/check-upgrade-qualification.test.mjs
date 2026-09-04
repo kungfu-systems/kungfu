@@ -266,7 +266,7 @@ test('Windows Alpha native evidence accepts exact unsigned PE bytes', () => {
       'product',
       'dist',
       'desktop',
-      'Kungfu Episodes.exe',
+      'Kungfu.exe',
     );
     fs.mkdirSync(path.dirname(installer), { recursive: true });
     fs.mkdirSync(path.dirname(executable), { recursive: true });

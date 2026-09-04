@@ -296,11 +296,11 @@ test('manual media publication runs only the Linux x64 product path', () => {
 test('the exact same-run artifact contains the standalone demo distribution', () => {
   assert.match(
     workflowText,
-    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
+    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-cli-linux-x64/u,
   );
   assert.equal(
     scenario.artifact.binaryPath,
-    'product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu',
+    'product/dist/cli/kungfu-cli-linux-x64/kungfu',
   );
   assert.equal(
     scenario.artifact.metadataContract,

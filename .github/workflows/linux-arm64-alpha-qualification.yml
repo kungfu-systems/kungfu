@@ -76,10 +76,10 @@ jobs:
       rustup-update-root: https://rsproxy.cn/rustup
       artifact-name: kungfu-hub-cli
       artifact-paths: |
-        product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz
-        product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json
+        product/release/cli/kungfu-cli-linux-arm64.tar.gz
+        product/release/cli/kungfu-cli-linux-arm64.qualification.json
       expected-artifacts-json: >-
-        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz","product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json"]}
+        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/release/cli/kungfu-cli-linux-arm64.tar.gz","product/release/cli/kungfu-cli-linux-arm64.qualification.json"]}
       require-install: true
       install-command: >-
         sudo apt-get update -y &&
@@ -91,8 +91,8 @@ jobs:
       require-verify: true
       verify-command: >-
         node product/scripts/verify-cli-surface-qualification.mjs
-        --qualification product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json
-        --archive product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz
+        --qualification product/release/cli/kungfu-cli-linux-arm64.qualification.json
+        --archive product/release/cli/kungfu-cli-linux-arm64.tar.gz
         --platform linux-arm64
       # GitHub-hosted ARM64 has a cold VM and no persistent workspace cache.
       # Keep this budget independent from the self-hosted common matrix until

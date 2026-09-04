@@ -337,13 +337,13 @@ test('desktop finalization binds installer bytes and stays fail-closed locally',
       architecture: 'x64',
       revision: '2'.repeat(40),
     });
-    const artifact = path.join(f.root, 'Kungfu Episodes Setup.exe');
+    const artifact = path.join(f.root, 'Kungfu Setup.exe');
     const output = path.join(f.root, 'release', 'manifest.json');
     fs.writeFileSync(artifact, 'installer');
     const release = finalizeDesktopUpgradeManifest({
       bundledManifest,
       desktopArtifact: artifact,
-      artifactUrl: 'https://example.invalid/Kungfu-Episodes-Setup.exe',
+      artifactUrl: 'https://example.invalid/Kungfu-Setup.exe',
       output,
     });
     assert.equal(release.artifacts.at(-1).size, 9);
@@ -393,8 +393,8 @@ test('desktop local tree bytes are part of the exact Release Cut', () => {
       architecture: 'arm64',
       revision: '4'.repeat(40),
     });
-    const updater = path.join(f.root, 'Kungfu Episodes.zip');
-    const app = path.join(f.root, 'Kungfu Episodes.app');
+    const updater = path.join(f.root, 'Kungfu.zip');
+    const app = path.join(f.root, 'Kungfu.app');
     fs.writeFileSync(updater, 'desktop-updater');
     fs.mkdirSync(path.join(app, 'Contents'), { recursive: true });
     fs.writeFileSync(path.join(app, 'Contents', 'product.bin'), 'first');
@@ -402,7 +402,7 @@ test('desktop local tree bytes are part of the exact Release Cut', () => {
       bundledManifest,
       desktopArtifact: updater,
       localArtifact: app,
-      artifactUrl: 'https://example.invalid/Kungfu-Episodes.zip',
+      artifactUrl: 'https://example.invalid/Kungfu.zip',
       output: path.join(f.root, 'first.json'),
     });
     fs.writeFileSync(path.join(app, 'Contents', 'product.bin'), 'second');
@@ -410,7 +410,7 @@ test('desktop local tree bytes are part of the exact Release Cut', () => {
       bundledManifest,
       desktopArtifact: updater,
       localArtifact: app,
-      artifactUrl: 'https://example.invalid/Kungfu-Episodes.zip',
+      artifactUrl: 'https://example.invalid/Kungfu.zip',
       output: path.join(f.root, 'second.json'),
     });
     assert.equal(first.localArtifact.format, 'directory');

@@ -219,7 +219,7 @@
         "content-addressed-file",
         "rocksdb"
       ],
-      "artifactPattern": "^kungfu-episodes-cli-(darwin-arm64|linux-x64|linux-arm64|windows-x64)\\.(tar\\.gz|zip)$",
+      "artifactPattern": "^kungfu-cli-(darwin-arm64|linux-x64|linux-arm64|windows-x64)\\.(tar\\.gz|zip)$",
       "acceptedAdr": {
         "path": "docs/adr/KF-ADR-019f86da-4f90-7008-b154-d488eb39d844.md",
         "decisionStatus": "accepted",

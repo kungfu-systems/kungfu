@@ -3,7 +3,7 @@
   "contract": "kungfu-upstream-kfd-aggregate",
   "product": {
     "id": "kungfu",
-    "name": "Kungfu Episodes",
+    "name": "Kungfu",
     "repository": "kungfu-systems/kungfu"
   },
   "source": {
@@ -160,7 +160,7 @@
       "status": "supported",
       "mode": "release-claims",
       "source": ".buildchain/kfd/kfd-2/registry.json",
-      "sha256": "sha256:e495ca231cedfd2bcd3e9642b06c92336dc900ac03b3a40846b8d4b9660173fa",
+      "sha256": "sha256:902de3b45ca4847832b63968bf2f2080eda56689fe74a7a34716d8d510335a48",
       "claimCount": 4,
       "claimsCommand": "kungfu sdk kfd 2 claims --json",
       "releasePassportInput": "--kfd-2-claim-json",

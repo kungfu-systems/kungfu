@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-kfd-3-surface-registry",
   "product": {
     "id": "kungfu",
-    "name": "Kungfu Episodes",
+    "name": "Kungfu",
     "repository": "kungfu-systems/kungfu",
     "package": "@kungfu-tech/product-kungfu"
   },
@@ -73,7 +73,7 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:dafb239eaf905b7db48daa8edb62f3215281dd4daa970e87acfe139387b1bc16"
+    "digest": "sha256:963c9b96bbbbcef5991e1802341ebd24e938af71f06f11e8c97ae861f348645e"
   },
   "surfaces": [
     {

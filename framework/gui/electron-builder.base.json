@@ -1,6 +1,6 @@
 {
   "appId": "com.kungfu.app",
-  "productName": "Kungfu Episodes",
+  "productName": "Kungfu",
   "asar": false,
   "npmRebuild": false,
   "beforePack": "./scripts/before-pack.cjs",
