@@ -34,9 +34,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const Ajv2020 = optionalAjv2020();
 const readJson = (relative) =>
   JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
-const registry = readJson('framework/invariant/kungfu-invariant.registry.json');
+const registry = readJson(
+  'framework/spec/invariant/kungfu-invariant.registry.json',
+);
 const contract = readJson(
-  'framework/invariant/kungfu-invariant-system.contract.json',
+  'framework/spec/invariant/kungfu-invariant-system.contract.json',
 );
 
 test('fixture binary discovery resolves executables through PATH', () => {
@@ -603,7 +605,7 @@ test('successor gate rejects silent semantic change and requires model/refinemen
 test('schemas reject unknown verdicts and tampered receipt roots', () => {
   if (Ajv2020) {
     const schema = readJson(
-      'framework/invariant/schema/invariant-evidence-v1.schema.json',
+      'framework/spec/invariant/schema/invariant-evidence-v1.schema.json',
     );
     const validate = new Ajv2020({
       strict: false,

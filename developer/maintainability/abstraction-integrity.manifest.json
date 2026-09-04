@@ -1,0 +1,396 @@
+{
+  "schema": "kungfu.python-structure-governance-manifest/v1",
+  "baselinePath": "developer/maintainability/abstraction-integrity.baseline.json",
+  "legacyReportPath": "developer/maintainability/abstraction-integrity-report.json",
+  "sourceRoots": {
+    "production": [
+      "framework/core/src/python"
+    ],
+    "test": [
+      "framework/core/tests/python"
+    ]
+  },
+  "limits": {
+    "newProductionModulePhysicalLines": 1000,
+    "oversizedPhysicalLines": 1000,
+    "giantPhysicalLines": 2000,
+    "aggregateHeadroomPercent": 5,
+    "minimumOwnedDefinitions": 2,
+    "minimumSubstantiveModulePhysicalLines": 120
+  },
+  "aggregates": [
+    {
+      "id": "kungfu-flat-root",
+      "prefix": "framework/core/src/python/kungfu/",
+      "recursive": false
+    },
+    {
+      "id": "kungfu-cli",
+      "prefix": "framework/core/src/python/kungfu/cli/",
+      "recursive": true
+    },
+    {
+      "id": "kungfu-runtime-family",
+      "prefix": "framework/core/src/python/kungfu/runtime_",
+      "recursive": true
+    }
+  ],
+  "forbiddenStronglyConnectedComponents": [
+    [
+      "kungfu.runtime_broker",
+      "kungfu.runtime_service"
+    ]
+  ],
+  "publicImports": [
+    "kungfu.exit_bundle.ProductReleaseHistoryError",
+    "kungfu.exit_bundle.ProjectCutExitError",
+    "kungfu.project_cut_exit.ProjectCutExitError",
+    "kungfu.runtime_broker.RuntimeLeaseManager",
+    "kungfu.runtime_broker.RuntimeLifecycleError",
+    "kungfu.runtime_broker.NativeReadinessAuthority",
+    "kungfu.runtime_service.ProcessRuntimeHost"
+  ],
+  "typedSeams": [
+    "kungfu.product_release_history.ProductReleaseHistoryPort",
+    "kungfu.project_cut_exit.ProjectCutExitPort",
+    "kungfu.initiative_family.typed_v2.InitiativeFamilyV1Port",
+    "kungfu.assignment_lifecycle.ports.AssignmentEventSink",
+    "kungfu.assignment_lifecycle.ports.AssignmentRuntime",
+    "kungfu.assignment_lifecycle.ports.AssignmentRuntimePort",
+    "kungfu.assignment_lifecycle.ports.AssignmentAdvancePort",
+    "kungfu.assignment_start.StartPlanPort",
+    "kungfu.assignment_start.AssignmentAdmissionPort",
+    "kungfu.assignment_start.StartRequest",
+    "kungfu.assignment_start.StartServices",
+    "kungfu.assignment_review_lifecycle.ReviewRequest",
+    "kungfu.assignment_review_lifecycle.ReviewPlanPort",
+    "kungfu.assignment_review_lifecycle.ReviewServices",
+    "kungfu.assignment_close.CloseRequest",
+    "kungfu.assignment_close.CloseServices",
+    "kungfu.assignment_evidence.EvidenceServices",
+    "kungfu.runtime_ports.RuntimeProcessHost",
+    "kungfu.runtime_ports.RuntimeDrainHost",
+    "kungfu.runtime_ports.RuntimeReadinessAuthority",
+    "kungfu.runtime_ports.RuntimeLeaseClock"
+  ],
+  "ownership": [
+    {
+      "owner": "core/python-assignment-start-review",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_lifecycle/__init__.py",
+        "framework/core/src/python/kungfu/assignment_lifecycle/ports.py",
+        "framework/core/src/python/kungfu/assignment_start.py",
+        "framework/core/src/python/kungfu/assignment_review_lifecycle.py"
+      ]
+    },
+    {
+      "owner": "core/python-assignment-close-evidence",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_close.py",
+        "framework/core/src/python/kungfu/assignment_evidence.py",
+        "framework/core/src/python/kungfu/cli/commands/assignment_session.py",
+        "framework/core/src/python/kungfu/cli/commands/assignment_review/__init__.py"
+      ]
+    },
+    {
+      "owner": "core/python-assignment-binding-provenance",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_provenance/__init__.py"
+      ]
+    },
+    {
+      "owner": "core/python-release-history",
+      "paths": [
+        "framework/core/src/python/kungfu/product_release_history.py"
+      ]
+    },
+    {
+      "owner": "release/provenance-object",
+      "paths": [
+        "framework/core/src/python/kungfu/release_provenance/__init__.py",
+        "framework/core/src/python/kungfu/release_provenance/_v1_graph.py",
+        "scripts/release-provenance-object.py",
+        "scripts/temporal-provenance-cutover.py"
+      ]
+    },
+    {
+      "owner": "core/python-project-cut-exit",
+      "paths": [
+        "framework/core/src/python/kungfu/project_cut_exit.py"
+      ]
+    },
+    {
+      "owner": "core/python-project-tour",
+      "paths": [
+        "framework/core/src/python/kungfu/project_tour/orchestration.py"
+      ]
+    },
+    {
+      "owner": "core/python-initiative-family",
+      "paths": [
+        "framework/core/src/python/kungfu/initiative_family/__init__.py",
+        "framework/core/src/python/kungfu/initiative_family/canonical.py",
+        "framework/core/src/python/kungfu/initiative_family/typed_v2.py"
+      ]
+    },
+    {
+      "owner": "core/python-runtime-contracts",
+      "paths": [
+        "framework/core/src/python/kungfu/runtime_contract.py",
+        "framework/core/src/python/kungfu/runtime_paths.py",
+        "framework/core/src/python/kungfu/runtime_ports.py"
+      ]
+    },
+    {
+      "owner": "core/python-runtime-lifecycle",
+      "paths": [
+        "framework/core/src/python/kungfu/runtime_leases.py",
+        "framework/core/src/python/kungfu/runtime_state.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-first-value",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/first_value.py",
+        "framework/core/src/python/kungfu/cli/commands/agent_first_value_entry.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-advisory-policy",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/advisory.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-work-lab-evidence",
+      "paths": [
+        "framework/core/src/python/kungfu/agent_work_lab_evidence.py"
+      ]
+    },
+    {
+      "owner": "product/agent-first-value-qualification",
+      "paths": [
+        "scripts/qualify-agent-first-value-codex.mjs"
+      ]
+    },
+    {
+      "owner": "core/python-runtime-service-config",
+      "paths": [
+        "framework/core/src/python/kungfu/runtime_service_config.py"
+      ]
+    },
+    {
+      "owner": "agent-session/contract-console-lifecycle",
+      "paths": [
+        "framework/agent-session/src/session-contract.mjs",
+        "framework/agent-session/src/session-lifecycle-service.mjs",
+        "framework/agent-session/src/work-console-model.mjs"
+      ]
+    },
+    {
+      "owner": "agent-session/native-transport",
+      "paths": [
+        "framework/agent-session/src/capsule-transport-runtime.mjs",
+        "framework/agent-session/src/mock-provider.mjs",
+        "framework/agent-session/src/native-interactive-client.mjs"
+      ]
+    },
+    {
+      "owner": "agent-session/work-lease-projection",
+      "paths": [
+        "framework/agent-session/src/active-work-lease.mjs",
+        "framework/agent-session/src/work-attention.mjs",
+        "framework/agent-session/src/work-projection-service.mjs"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-native-execution",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/managed_run.py",
+        "framework/core/src/python/kungfu/agent/native_launch.py",
+        "framework/core/src/python/kungfu/agent/provider_bootstrap.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-run-interface",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/context_surface.py",
+        "framework/core/src/python/kungfu/agent/provider_output.py",
+        "framework/core/src/python/kungfu/agent/run_intent.py",
+        "framework/core/src/python/kungfu/agent/work_projection.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-runtime-profile",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/runtime_profile_catalog.py",
+        "framework/core/src/python/kungfu/agent/runtime_profile_store.py",
+        "framework/core/src/python/kungfu/agent/verification_probe.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-contract",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/session_contract.py",
+        "framework/core/src/python/kungfu/agent/session_evidence.py"
+      ]
+    },
+    {
+      "owner": "tui/native-project-work-session",
+      "paths": [
+        "framework/tui/src/work-window/project-work-session-state.ts",
+        "framework/tui/src/work-window/project-work-session-view.tsx"
+      ]
+    },
+    {
+      "owner": "tui/session-workbench",
+      "paths": [
+        "framework/tui/src/session-workbench-state.ts",
+        "framework/tui/src/session-workbench-view.tsx"
+      ]
+    },
+    {
+      "owner": "core/python-workspace-federation-read-model",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_graph.py",
+        "framework/core/src/python/kungfu/_workspace/federation.py",
+        "framework/core/src/python/kungfu/workspace_federation.py",
+        "framework/core/src/python/kungfu/workspace_federation_projection.py"
+      ]
+    },
+    {
+      "owner": "core/python-workspace-locator-continuation",
+      "paths": [
+        "framework/core/src/python/kungfu/_workspace/catalog.py",
+        "framework/core/src/python/kungfu/_workspace/continuation.py",
+        "framework/core/src/python/kungfu/_workspace/io.py",
+        "framework/core/src/python/kungfu/workspace.py"
+      ]
+    },
+    {
+      "owner": "core/python-distribution-update-policy",
+      "paths": [
+        "framework/core/src/python/kungfu/_distribution_update/cli.py",
+        "framework/core/src/python/kungfu/_distribution_update/download.py",
+        "framework/core/src/python/kungfu/distribution_update.py",
+        "framework/core/src/python/kungfu/distribution_update_planning.py",
+        "framework/core/src/python/kungfu/distribution_update_policy.py"
+      ]
+    },
+    {
+      "owner": "core/python-kfx-service-contract",
+      "paths": [
+        "framework/core/src/python/kungfu/storage/kfx_service.py"
+      ]
+    },
+    {
+      "owner": "core/python-profile-sdk",
+      "paths": [
+        "framework/core/src/python/kungfu/profile_sdk_kfd3.py",
+        "framework/core/src/python/kungfu/profile_sdk_source.py",
+        "framework/core/src/python/kungfu/profile_sdk_support.py"
+      ]
+    },
+    {
+      "owner": "shifu/python-structure-entry",
+      "paths": [
+        "scripts/check-code-complexity.mjs",
+        "scripts/check-code-complexity.test.mjs"
+      ]
+    },
+    {
+      "owner": "shifu/python-structure-oracle",
+      "paths": [
+        "scripts/check-python-structure.py",
+        "scripts/check-python-structure.test.py"
+      ]
+    },
+    {
+      "owner": "framework/core/data-protection-qualification",
+      "paths": [
+        "scripts/durable-history-qualification.mjs"
+      ]
+    },
+    {
+      "owner": "delivery/dev-warrant-consumer",
+      "paths": [
+        "scripts/dev-delivery-warrant-input.mjs"
+      ]
+    },
+    {
+      "owner": "shifu/native-source-acquisition",
+      "paths": [
+        "crates/shifu/src/source.rs"
+      ]
+    },
+    {
+      "owner": "shifu/promotion-catalog",
+      "paths": [
+        "crates/shifu/src/promote_catalog.rs"
+      ]
+    },
+    {
+      "owner": "shifu/promotion-desktop-filesystem",
+      "paths": [
+        "crates/shifu/src/promote_desktop_fs.rs"
+      ]
+    },
+    {
+      "owner": "core/python-agent-documentation-cli",
+      "paths": [
+        "framework/core/src/python/kungfu/cli/commands/agent_docs.py"
+      ]
+    },
+    {
+      "owner": "shifu/portable-atlas-bundle",
+      "paths": [
+        "scripts/portable-atlas-bundle.mjs"
+      ]
+    },
+    {
+      "owner": "shifu/conan-cache",
+      "paths": [
+        "scripts/shifu-conan-hit-evidence.mjs",
+        "scripts/shifu-conan-hit-evidence.test.mjs",
+        "scripts/shifu-conan-legacy.mjs",
+        "scripts/shifu-conan-legacy.test.mjs"
+      ]
+    },
+    {
+      "owner": "runtime/runtime-surface-provenance",
+      "paths": [
+        "framework/core/src/python/kungfu/execution_surface/authority.py",
+        "framework/tui/src/runtime-surface.ts",
+        "scripts/qualify-runtime-surface.mjs"
+      ]
+    },
+    {
+      "owner": "release/github-metadata-policy",
+      "paths": [
+        "scripts/github-release-policy.mjs",
+        "scripts/github-release-policy.test.mjs",
+        "scripts/publish-alpha-run.mjs"
+      ]
+    },
+    {
+      "owner": "core/python-kfx-authoring",
+      "paths": [
+        "framework/core/src/python/kungfu/cli/commands/kfx_authoring.py",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/__init__.py",
+        "framework/core/src/python/kungfu/kfx_authoring/__init__.py",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/kfx-host.d.ts",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/sandbox-launcher.d.ts",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/service-authz.d.ts",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/service-webhook-host.mjs",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/types.d.ts"
+      ]
+    },
+    {
+      "owner": "shifu/kfx-authoring-generator",
+      "paths": [
+        "scripts/generate-kfx-authoring-kit.mjs"
+      ]
+    }
+  ],
+  "exceptions": []
+}

@@ -29,7 +29,7 @@ function run(label, command, args, options = {}) {
 
 run('coordinator and native entry contracts', process.execPath, [
   '--test',
-  'framework/action/action-loop-begin.test.mjs',
+  'framework/work/action/action-loop-begin.test.mjs',
 ]);
 
 const hasNativeBinding =

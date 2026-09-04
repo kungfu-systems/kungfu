@@ -10,7 +10,7 @@ import { checkEpisodeAdmissionContract } from './episode-admission-contract.mjs'
 
 const SOURCE_ROOT = path.resolve(import.meta.dirname, '..');
 const FILES = [
-  'framework/episode-admission/episode-admission.contract.json',
+  'framework/core/episode-admission/episode-admission.contract.json',
   'framework/core/src/libkungfu/src/runtime/storage/episode_admission.cpp',
   'framework/core/src/python/kungfu/storage/service.py',
   'framework/api/src/capability/storage.ts',
@@ -44,7 +44,7 @@ test('removing destination authority fails closed', (t) => {
   const root = fixture(t);
   const file = path.join(
     root,
-    'framework/episode-admission/episode-admission.contract.json',
+    'framework/core/episode-admission/episode-admission.contract.json',
   );
   const contract = JSON.parse(fs.readFileSync(file, 'utf8'));
   contract.mutationBoundary.destinationDecides = false;
@@ -59,7 +59,7 @@ test('widening the simulated remote adapter fails closed', (t) => {
   const root = fixture(t);
   const file = path.join(
     root,
-    'framework/episode-admission/episode-admission.contract.json',
+    'framework/core/episode-admission/episode-admission.contract.json',
   );
   const contract = JSON.parse(fs.readFileSync(file, 'utf8'));
   contract.remoteBoundary.encryptionRequired = false;

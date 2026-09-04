@@ -8,9 +8,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH =
-  'framework/hub-starter/kungfu-hub-starter-docker.contract.json';
+  'product/hub-starter/kungfu-hub-starter-docker.contract.json';
 const SCHEMA_PATH =
-  'framework/hub-starter/schema/kungfu-hub-starter-docker-concept-v1.schema.json';
+  'product/hub-starter/schema/kungfu-hub-starter-docker-concept-v1.schema.json';
 const ADR_ID = 'KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042';
 
 function issue(code, detail) {

@@ -318,6 +318,7 @@ function copyWorkProfileConformance(
   const source = path.join(
     repositoryRoot,
     'framework',
+    'work',
     'work-profile-conformance',
   );
   fs.cpSync(source, destination, { recursive: true });
@@ -355,6 +356,7 @@ function copyWorkDesignRuntime(
     path.join(
       repositoryRoot,
       'framework',
+      'work',
       'work-design-preflight',
       'work-design-runtime.json',
     ),
@@ -366,6 +368,26 @@ function copyWorkDesignRuntime(
     const target = workDesignRuntimePath(destination, relative);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(source, target);
+  }
+  for (const dependency of workDesignRuntimePackageDependencies(
+    repositoryRoot,
+  )) {
+    const packageRoot = path.join(
+      destination,
+      'node_modules',
+      ...dependency.name.split('/'),
+    );
+    for (const relative of dependency.files) {
+      const source = path.join(
+        repositoryRoot,
+        'framework',
+        dependency.source,
+        ...relative.split('/'),
+      );
+      const target = path.join(packageRoot, ...relative.split('/'));
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(source, target);
+    }
   }
 }
 
@@ -402,6 +424,7 @@ function workDesignRuntimeFiles(
   const manifestPath = path.join(
     repositoryRoot,
     'framework',
+    'work',
     'work-design-preflight',
     'work-design-runtime.json',
   );
@@ -409,7 +432,8 @@ function workDesignRuntimeFiles(
   if (
     manifest.schema !== 'kungfu.work-design.runtime-closure/v1' ||
     typeof manifest.entrypoint !== 'string' ||
-    !Array.isArray(manifest.files)
+    !Array.isArray(manifest.files) ||
+    !Array.isArray(manifest.packageDependencies)
   )
     throw new Error('[freeze] invalid Work Design runtime closure manifest');
   const declared = new Set(manifest.files);
@@ -419,6 +443,11 @@ function workDesignRuntimeFiles(
     );
   const discovered = new Set();
   const pending = [manifest.entrypoint];
+  const packageNames = new Set(
+    workDesignRuntimePackageDependencies(repositoryRoot).map(
+      (dependency) => dependency.name,
+    ),
+  );
   const frameworkRoot = path.resolve(repositoryRoot, 'framework');
   while (pending.length) {
     const relative = pending.pop();
@@ -436,7 +465,16 @@ function workDesignRuntimeFiles(
     const source = fs.readFileSync(sourcePath, 'utf8');
     discovered.add(relative);
     for (const specifier of staticEsmSpecifiers(source)) {
-      if (!specifier.startsWith('.')) continue;
+      if (!specifier.startsWith('.')) {
+        if (specifier.startsWith('@kungfu-tech/')) {
+          const packageName = specifier.split('/').slice(0, 2).join('/');
+          if (!packageNames.has(packageName))
+            throw new Error(
+              `[freeze] undeclared Work Design package dependency: ${specifier}`,
+            );
+        }
+        continue;
+      }
       const dependency = path.posix.normalize(
         path.posix.join(path.posix.dirname(relative), specifier),
       );
@@ -453,6 +491,80 @@ function workDesignRuntimeFiles(
       `[freeze] unreachable Work Design runtime files: ${extras.sort().join(', ')}`,
     );
   return [...discovered].sort();
+}
+
+/**
+ * Validate the npm-shaped packages required by the installed Work Design
+ * runtime. These are staged under node_modules rather than flattened into the
+ * relative ESM closure, preserving the same public imports used in source.
+ *
+ * @param {string} repositoryRoot
+ * @returns {{name: string, source: string, files: string[]}[]}
+ */
+function workDesignRuntimePackageDependencies(
+  repositoryRoot = path.resolve(CORE, '..', '..'),
+) {
+  const manifest = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        repositoryRoot,
+        'framework',
+        'work',
+        'work-design-preflight',
+        'work-design-runtime.json',
+      ),
+      'utf8',
+    ),
+  );
+  if (!Array.isArray(manifest.packageDependencies))
+    throw new Error('[freeze] invalid Work Design package dependencies');
+  const frameworkRoot = path.resolve(repositoryRoot, 'framework');
+  const seen = new Set();
+  return manifest.packageDependencies.map(
+    (/** @type {Record<string, unknown>} */ dependency) => {
+      if (
+        !dependency ||
+        typeof dependency.name !== 'string' ||
+        !/^@[^/]+\/[^/]+$/u.test(dependency.name) ||
+        typeof dependency.source !== 'string' ||
+        !Array.isArray(dependency.files) ||
+        !dependency.files.includes('package.json') ||
+        seen.has(dependency.name)
+      )
+        throw new Error('[freeze] invalid Work Design package dependency');
+      seen.add(dependency.name);
+      const sourceRoot = path.resolve(
+        frameworkRoot,
+        ...dependency.source.split('/'),
+      );
+      if (!sourceRoot.startsWith(`${frameworkRoot}${path.sep}`))
+        throw new Error(
+          `[freeze] invalid Work Design package source: ${dependency.source}`,
+        );
+      for (const relative of dependency.files) {
+        const source = path.resolve(sourceRoot, ...relative.split('/'));
+        if (
+          !source.startsWith(`${sourceRoot}${path.sep}`) ||
+          !fs.statSync(source).isFile()
+        )
+          throw new Error(
+            `[freeze] invalid Work Design package file: ${dependency.name}/${relative}`,
+          );
+      }
+      const packageJson = JSON.parse(
+        fs.readFileSync(path.join(sourceRoot, 'package.json'), 'utf8'),
+      );
+      if (packageJson.name !== dependency.name)
+        throw new Error(
+          `[freeze] Work Design package name mismatch: ${dependency.name}`,
+        );
+      return {
+        name: dependency.name,
+        source: dependency.source,
+        files: dependency.files,
+      };
+    },
+  );
 }
 
 /** @param {string} source */
@@ -1061,7 +1173,7 @@ function assembleTree(bt) {
   // the registry-free verifier.  The assembled product copies Python sources
   // directly, so it must make the same package-data promise explicitly.
   fs.copyFileSync(
-    path.join(CORE, '..', 'exit', 'kungfu-exit-bundle.contract.json'),
+    path.join(CORE, 'exit', 'kungfu-exit-bundle.contract.json'),
     path.join(layout.sitePackages, 'kungfu', 'exit_bundle.contract.json'),
   );
   copyWorkProfileConformance(
@@ -1272,6 +1384,7 @@ module.exports = {
   copyFirstPartyProfile,
   copyWorkDesignRuntime,
   workDesignRuntimeFiles,
+  workDesignRuntimePackageDependencies,
   workDesignRuntimePath,
   copyWorkProfileConformance,
   documentationAtlasSource,

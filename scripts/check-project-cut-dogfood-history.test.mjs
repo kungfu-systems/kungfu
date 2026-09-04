@@ -10,13 +10,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const contract = readJson(
-  'framework/data-protection/project-cut-dogfood-history.contract.json',
+  'framework/core/data-protection/project-cut-dogfood-history.contract.json',
 );
 const parent = readJson(
-  'framework/data-protection/kungfu-data-protection.contract.json',
+  'framework/core/data-protection/kungfu-data-protection.contract.json',
 );
 const exitContract = readJson(
-  'framework/exit/kungfu-exit-bundle.contract.json',
+  'framework/core/exit/kungfu-exit-bundle.contract.json',
 );
 
 test('binds Project Cut history to one owner adapter and four frozen roots', () => {

@@ -6,7 +6,7 @@ import test from 'node:test';
 import {
   fetchPublicWarrantQueue,
   runNativeExecutionUnderWarrant,
-} from '../framework/dev-delivery/native-execution-under-warrant.mjs';
+} from '../developer/dev-delivery/native-execution-under-warrant.mjs';
 
 const HEAD = '1'.repeat(40);
 const TOKEN = `sha256:${'2'.repeat(64)}`;

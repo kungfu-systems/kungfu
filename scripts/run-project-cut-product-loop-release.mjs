@@ -119,7 +119,7 @@ export function runProjectCutProductLoopRelease({
   const contract = loadProjectCutProductLoopReleaseContract(
     path.join(
       root,
-      'framework/work-loop/project-cut-product-loop.release-contract.json',
+      'framework/work/work-loop/project-cut-product-loop.release-contract.json',
     ),
   );
   const evidence = readJson(evidenceFile.absolute, 'evidence');

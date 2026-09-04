@@ -10,7 +10,7 @@ import { checkWorkspaceContinuationContract } from './workspace-continuation-con
 
 const SOURCE_ROOT = path.resolve(import.meta.dirname, '..');
 const FILES = [
-  'framework/episode-provider/workspace-continuation.contract.json',
+  'framework/work/episode-provider/workspace-continuation.contract.json',
   'framework/core/src/python/kungfu/workspace.py',
   'framework/core/src/python/kungfu/_workspace/continuation.py',
   'framework/gui/src/main/workspace-selection.ts',
@@ -42,7 +42,7 @@ test('missing explicit continuation action fails closed', (t) => {
   const root = fixture(t);
   const file = path.join(
     root,
-    'framework/episode-provider/workspace-continuation.contract.json',
+    'framework/work/episode-provider/workspace-continuation.contract.json',
   );
   const contract = JSON.parse(fs.readFileSync(file, 'utf8'));
   contract.actions = contract.actions.filter(

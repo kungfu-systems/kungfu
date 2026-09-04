@@ -22,7 +22,7 @@ test('electron-builder projections are deterministic and current', () => {
   const result = spawnSync(
     process.execPath,
     [
-      'framework/maintainability/semantic-amplification.mjs',
+      'developer/maintainability/semantic-amplification.mjs',
       '--electron-builder-config-check',
     ],
     { cwd: ROOT, encoding: 'utf8' },

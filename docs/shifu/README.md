@@ -44,7 +44,7 @@ execution; Shifu owns how the task is executed after source checkout.
   and verification-receipt schemas retain exact source,
   project-authority, and Xinfa selection roots without executing nodes or
   acquiring Assignment or Work Control authority. Kungfu's compiler seam in
-  [`framework/production-graph/compiler/index.mjs`](../../framework/production-graph/compiler/index.mjs)
+  [`developer/production-graph/compiler/index.mjs`](../../developer/production-graph/compiler/index.mjs)
   accepts only an exact checkout, canonical authority roots and opaque IDs,
   and a source-matched verified Xinfa selection. Its polyglot fixture retains
   Cargo, pnpm, GYP, uv, Conan, CMake, wheel, freezer, KFX, TUI, GUI, product,

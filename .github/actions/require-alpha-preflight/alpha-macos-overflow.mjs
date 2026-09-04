@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readAuthority } from '../../../framework/version-line/version-line-authority.mjs';
+import { readAuthority } from '../../../product/version-line/version-line-authority.mjs';
 
 export const OVERFLOW_RECEIPT_SCHEMA = 'kungfu.alpha-macos-overflow-receipt/v1';
 export const RUNNER_AVAILABILITY_SCHEMA = 'kungfu.runner-availability/v1';

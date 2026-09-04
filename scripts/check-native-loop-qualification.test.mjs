@@ -11,33 +11,36 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/index.mjs';
+} from '../framework/work/project-cut/index.mjs';
 import {
   materializeSettlementPublication,
   planSettlementPublication,
-} from '../framework/project-cut/publication.mjs';
+} from '../framework/work/project-cut/publication.mjs';
 import {
   checkNativeLoopQualificationContract,
   sealNativeLoopQualification,
   verifyNativeLoopQualification,
-} from '../framework/project-cut/src/native-loop-qualification.mjs';
+} from '../framework/work/project-cut/src/native-loop-qualification.mjs';
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-const CLI = path.join(REPO_ROOT, 'framework/project-cut/bin/project-cut.mjs');
+const CLI = path.join(
+  REPO_ROOT,
+  'framework/work/project-cut/bin/project-cut.mjs',
+);
 const PROJECT_CUT_FIXTURE = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
     ),
     'utf8',
   ),

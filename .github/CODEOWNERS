@@ -3,9 +3,9 @@
 # Primitive authority and the gates that keep its intake, projections, and
 # runtime consumers closed. These explicit entries remain even though the
 # repository-wide owner currently resolves to the same reviewer.
-/framework/incubation/incubation-passport.registry.json @kungfu-origin
-/framework/incubation/schema/incubation-passport-registry-v1.schema.json @kungfu-origin
-/framework/primitive/ @kungfu-origin
+/framework/spec/incubation/incubation-passport.registry.json @kungfu-origin
+/framework/spec/incubation/schema/incubation-passport-registry-v1.schema.json @kungfu-origin
+/framework/spec/primitive/ @kungfu-origin
 /config/primitive/ @kungfu-origin
 /scripts/generate-primitive-catalog.mjs @kungfu-origin
 /scripts/new-primitive.mjs @kungfu-origin
@@ -19,7 +19,7 @@
 
 # Release npm inventory, Core platform payload, and trusted publisher are one
 # protected distribution boundary.
-/framework/release/npm-package-registry.json @kungfu-origin
+/product/release/npm-package-registry.json @kungfu-origin
 /framework/core/core-platform-package.contract.json @kungfu-origin
 /.github/workflows/publish-layer-artifacts.yml @kungfu-origin
 

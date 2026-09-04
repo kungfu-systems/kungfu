@@ -23,18 +23,18 @@
     "root_protocol": "sha256:opaque-bytes/v1",
     "sources": [
       {
-        "path": "framework/format/conformance/portable-format-vectors/index.json",
+        "path": "framework/spec/format/conformance/portable-format-vectors/index.json",
         "root": "sha256:c675ea10be9691fe610bc0c229217c4e9cd68fcc8ef05b8b75a6d9a81a3ec8fd"
       },
       {
-        "path": "framework/format/conformance/portable-format-vectors/v2/release.json",
+        "path": "framework/spec/format/conformance/portable-format-vectors/v2/release.json",
         "root": "sha256:1b1e5fd58124f05f3ac7cc05b0e7fbbad8f8272b80bb0fa0592f3c9d95df9bc9"
       }
     ]
   },
   "release": {
     "declared_root": "sha256:bd03705e65b8df296329e65753a577d5d4aee34a929e5e889ba20c95f9b3463d",
-    "path": "framework/format/conformance/portable-format-vectors/v2/release.json",
+    "path": "framework/spec/format/conformance/portable-format-vectors/v2/release.json",
     "previous_release_root": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
     "source_root": "sha256:1b1e5fd58124f05f3ac7cc05b0e7fbbad8f8272b80bb0fa0592f3c9d95df9bc9"
   },

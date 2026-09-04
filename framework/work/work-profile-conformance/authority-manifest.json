@@ -1,0 +1,158 @@
+{
+  "schema": "kungfu.work-profile-conformance-authority-bundle/v1",
+  "files": [
+    {
+      "path": ".buildchain/alpha-contract-lock.json",
+      "sha256": "sha256:a937f67a7c0493bbbef2e1a9175dd29ca48d3858b1a3f0b9e460d2252f96b6bb"
+    },
+    {
+      "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+      "sha256": "sha256:d3e701dc88e9ac22cf0ab851814d061dc30102f83ad9c9af9a11cadf2b22f2d9"
+    },
+    {
+      "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp",
+      "sha256": "sha256:44a7f63db956e2754a7d36e66852d10766d5d7103f6febbc51d3f8f6e218066f"
+    },
+    {
+      "path": "framework/storage/generated/work-lifecycle-v1.js",
+      "sha256": "sha256:33d1adb42d90b742a46950cf61801ef96955ce27b735dfb2eacc66388efb46f7"
+    },
+    {
+      "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+      "sha256": "sha256:fdc38b484a22b48cfbd6ac3db2ee15164010aa06e25cb475aa72bfe4c04a6c59"
+    },
+    {
+      "path": "framework/work/action/action-geometry.contract.json",
+      "sha256": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793"
+    },
+    {
+      "path": "framework/work/action/action-loop-begin.mjs",
+      "sha256": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364"
+    },
+    {
+      "path": "framework/work/action/action-loop-fixtures.json",
+      "sha256": "sha256:21e6e3366a01c428c44d17c8462ce81fc30cd5b4eca1966a90ce0069db3d8f84"
+    },
+    {
+      "path": "framework/work/action/action-loop-qualification-adapters.mjs",
+      "sha256": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5"
+    },
+    {
+      "path": "framework/work/action/action-loop-settle.mjs",
+      "sha256": "sha256:00b57021ec80bea62f422e7a5db5250819f31eca9428ede763d53c48f9939406"
+    },
+    {
+      "path": "framework/work/action/action-loop.contract.json",
+      "sha256": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe"
+    },
+    {
+      "path": "framework/work/action/action-loop.mjs",
+      "sha256": "sha256:76903bf8d3b5a9408b6a804f011416c1bcfb4b85c68a4d266acee9bf9c14e10a"
+    },
+    {
+      "path": "framework/work/agent-work/evidence/kfd-7/backend-migration.json",
+      "sha256": "sha256:010c067c6a69f3f3ce7b7b8b614c543ff46efe03c7feae964049311f3fd2cc36"
+    },
+    {
+      "path": "framework/work/agent-work/evidence/kfd-7/cold-start-continuation.json",
+      "sha256": "sha256:3e707743ceba9a39a31de4d0a2b7df99a474c4a9b4e5b85213bed45ce0ac9966"
+    },
+    {
+      "path": "framework/work/agent-work/evidence/kfd-7/export-import-rebuild.json",
+      "sha256": "sha256:6c1f21d0a87feea500b56f8845a9651dae29ea7be1520720642416561886d764"
+    },
+    {
+      "path": "framework/work/agent-work/kungfu-agent-work-domain-profile.contract.json",
+      "sha256": "sha256:89b99615674e0e89d66e2389e8ddffe4ed86358cfa343165e1210be1a6dccb85"
+    },
+    {
+      "path": "framework/work/agent-work/role-schemas/atlas.schema.json",
+      "sha256": "sha256:00516c07e553e66a23732c0e1fb05ed1f052e25a7f1babe4fb0bb77c27631929"
+    },
+    {
+      "path": "framework/work/agent-work/role-schemas/episode.schema.json",
+      "sha256": "sha256:42f7171fdad5c43162749065cdb74eed174121b1f9497e1e933f24299b09f7a3"
+    },
+    {
+      "path": "framework/work/agent-work/role-schemas/fact.schema.json",
+      "sha256": "sha256:a7bf1af8fc22d60d909b0de9591ed724c65aa87aaa11869d457c3d3666233426"
+    },
+    {
+      "path": "framework/work/agent-work/role-schemas/pursuit.schema.json",
+      "sha256": "sha256:705f541dec68b8f18aa4b3968e0db83a4dc8ff53331b0e772999a3054cb8db7b"
+    },
+    {
+      "path": "framework/work/agent-work/role-schemas/warrant.schema.json",
+      "sha256": "sha256:ece2cf9cfdcbf95ca8a0e79d83105a4e57d91fedc1dcf6ab32af329f6268daaf"
+    },
+    {
+      "path": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "sha256": "sha256:cf6db729809a470d5d01f522f6b47a1e9a2b1c6637812d0b86a6a072bb6fa835"
+    },
+    {
+      "path": "framework/work/work-loop/work-api.contract.json",
+      "sha256": "sha256:9e4be72571e6a16194e0cbff4ea9a057dced54d0a822eb550fb5db49ca3c1480"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/kfd-7-product-gate.json",
+      "sha256": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/reference-scenarios.json",
+      "sha256": "sha256:f193a9cdeb9471fc0624c3d38e78bde04714aef2c25a113d85c775c874a99624"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/retained-witnesses.json",
+      "sha256": "sha256:a3c6c1aebb19603e400281bf68574901dfa2bd627ebb7355fac2ad766bd51e5a"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/week-day-domain-profile.json",
+      "sha256": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/week-day-role-schemas/atlas.schema.json",
+      "sha256": "sha256:462afc7e1db6f3a932ac7c6bcc70048a35474af284dfa9cbb1c8a5135833fe91"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/week-day-role-schemas/episode.schema.json",
+      "sha256": "sha256:71ae24472925893f4157e5ffcdcc617f67f6685b1167ab07ade334661159cb40"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/week-day-role-schemas/fact.schema.json",
+      "sha256": "sha256:9f502ad056b9eb81662ea3942c85656c2648c7175c90bb09a752ce373ed9f7a4"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/week-day-role-schemas/pursuit.schema.json",
+      "sha256": "sha256:f889cbf1328083be63518c0a2cf3bff5344216178ff3299241b224102f6b03a7"
+    },
+    {
+      "path": "framework/work/work-profile-conformance/qualification/week-day-role-schemas/warrant.schema.json",
+      "sha256": "sha256:32f55ab7b72cb3c880432995b30ca33884b2ee359b9bc1c1532aaa12562e252f"
+    },
+    {
+      "path": "tests/fixtures/domain-profile-authoring/course-production/domain-profile.json",
+      "sha256": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f"
+    },
+    {
+      "path": "tests/fixtures/domain-profile-authoring/course-production/schemas/course-brief.schema.json",
+      "sha256": "sha256:a12254a994d2676a475223977d02f0d8e40df9a2ab4b83f2fc71a74606480ec7"
+    },
+    {
+      "path": "tests/fixtures/domain-profile-authoring/course-production/schemas/course-goal.schema.json",
+      "sha256": "sha256:3f0b9aad8f7c06e5c12533e309f535c6dee2a136107747af94d99f307785b527"
+    },
+    {
+      "path": "tests/fixtures/domain-profile-authoring/course-production/schemas/course-map.schema.json",
+      "sha256": "sha256:3247a5bfecc9995437c1bebe0bd6f8a46ada7707523243380c2908df1a9b646d"
+    },
+    {
+      "path": "tests/fixtures/domain-profile-authoring/course-production/schemas/production-session.schema.json",
+      "sha256": "sha256:1d08a0fb91180867c33991f690e4185d71416e131526683b0a842bba825aea46"
+    },
+    {
+      "path": "tests/fixtures/domain-profile-authoring/course-production/schemas/release-approval.schema.json",
+      "sha256": "sha256:132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
+    }
+  ],
+  "bundleRoot": "sha256:188a08269777416e46be73a853c6c91c1f0f5caf8f28fe4aabeb3132b5052384"
+}

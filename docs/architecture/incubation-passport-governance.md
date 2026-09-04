@@ -7,7 +7,7 @@ authority. The governing decision is
 [KF-ADR-019f8fb8](../adr/KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c.md).
 
 The executable contract is
-[`incubation-passport.contract.json`](../../framework/incubation/incubation-passport.contract.json).
+[`incubation-passport.contract.json`](../../framework/spec/incubation/incubation-passport.contract.json).
 Its versioned registry, schemas, exact known-issue baseline, checker, and golden
 negative cases are adjacent to the contract or under `tests/fixtures`.
 
@@ -29,7 +29,7 @@ to existing authorities and evidence; they do not copy or supersede them.
 Machine-readable primitive artifacts carry a `kungfu.primitive.*` or
 `kungfu.primitive-*` schema plus a matching `primitiveId`. Source acceptance
 discovers those markers across the complete repository and joins them back to
-the sole intake; moving a file outside `framework/primitive/` does not make it
+the sole intake; moving a file outside `framework/spec/primitive/` does not make it
 unmanaged.
 
 `framework/core/schema-authority.json` remains the authority for Hana and

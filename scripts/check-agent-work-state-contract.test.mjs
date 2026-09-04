@@ -12,7 +12,7 @@ import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const Ajv2020 = optionalAjv2020();
 const validateAgentWorkProfile = Ajv2020
-  ? (await import('../framework/agent-work/validate-profile.mjs'))
+  ? (await import('../framework/work/agent-work/validate-profile.mjs'))
       .validateAgentWorkProfile
   : null;
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
@@ -29,15 +29,17 @@ const canonicalJson = (value) => {
 };
 
 const contract = readJson(
-  'framework/agent-work/kungfu-agent-work-state.contract.json',
+  'framework/work/agent-work/kungfu-agent-work-state.contract.json',
 );
 const actionGeometry = readJson(
-  'framework/action/action-geometry.contract.json',
+  'framework/work/action/action-geometry.contract.json',
 );
 const domainProfile = readJson(
-  'framework/agent-work/kungfu-agent-work-domain-profile.contract.json',
+  'framework/work/agent-work/kungfu-agent-work-domain-profile.contract.json',
 );
-const registry = readJson('framework/contract/kungfu-contracts.registry.json');
+const registry = readJson(
+  'framework/spec/contract/kungfu-contracts.registry.json',
+);
 const commands = readJson(
   'framework/core/src/python/kungfu/agent/commands.json',
 );
@@ -46,11 +48,13 @@ const kfd3 = readJson(
 );
 const kfd2 = readJson('.buildchain/kfd/kfd-2/registry.json');
 const canonicalPolicy = readJson(
-  'framework/contract/kungfu-agent-first-canonical-policy.json',
+  'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
 );
-const fixtureManifest = readJson('framework/agent-work/fixtures/manifest.json');
+const fixtureManifest = readJson(
+  'framework/work/agent-work/fixtures/manifest.json',
+);
 const continuityFixtures = readJson(
-  'framework/agent-work/fixtures/continuity-evidence-cases.json',
+  'framework/work/agent-work/fixtures/continuity-evidence-cases.json',
 );
 
 test('registers one layered Agent Work contract with bounded claims', () => {
@@ -67,7 +71,7 @@ test('registers one layered Agent Work contract with bounded claims', () => {
   );
   assert.equal(
     entry.source,
-    'framework/agent-work/kungfu-agent-work-state.contract.json',
+    'framework/work/agent-work/kungfu-agent-work-state.contract.json',
   );
   assert.equal(entry.weldedSurface, 'agent-work-state-contract');
   const policyEntry = canonicalPolicy.surfaces.find(
@@ -75,7 +79,9 @@ test('registers one layered Agent Work contract with bounded claims', () => {
   );
   const sourceRoot = `sha256:${crypto
     .createHash('sha256')
-    .update(read('framework/agent-work/kungfu-agent-work-state.contract.json'))
+    .update(
+      read('framework/work/agent-work/kungfu-agent-work-state.contract.json'),
+    )
     .digest('hex')}`;
   assert.ok(policyEntry);
   assert.equal(policyEntry.source.sha256, sourceRoot);
@@ -142,7 +148,9 @@ test('validates Profile shape and cross-object semantics from one contract', (t)
   );
 
   for (const fixture of fixtureManifest.cases) {
-    const profile = readJson(`framework/agent-work/fixtures/${fixture.path}`);
+    const profile = readJson(
+      `framework/work/agent-work/fixtures/${fixture.path}`,
+    );
     const result = validateAgentWorkProfile(contract, profile);
     assert.equal(
       result.ok,
@@ -167,13 +175,13 @@ test('separates Action Geometry from the Agent Work Domain Profile by exact root
 
   const geometryRoot = `sha256:${crypto
     .createHash('sha256')
-    .update(read('framework/action/action-geometry.contract.json'))
+    .update(read('framework/work/action/action-geometry.contract.json'))
     .digest('hex')}`;
   const profileRoot = `sha256:${crypto
     .createHash('sha256')
     .update(
       read(
-        'framework/agent-work/kungfu-agent-work-domain-profile.contract.json',
+        'framework/work/agent-work/kungfu-agent-work-domain-profile.contract.json',
       ),
     )
     .digest('hex')}`;
@@ -221,9 +229,9 @@ test('proves context payload alone cannot determine action validity', (t) => {
   }
   const [authorizedPath, deniedPath] = fixtureManifest.contextInsufficiencyPair;
   const authorized = readJson(
-    `framework/agent-work/fixtures/${authorizedPath}`,
+    `framework/work/agent-work/fixtures/${authorizedPath}`,
   );
-  const denied = readJson(`framework/agent-work/fixtures/${deniedPath}`);
+  const denied = readJson(`framework/work/agent-work/fixtures/${deniedPath}`);
 
   assert.equal(
     authorized.atlases[0].contextPayloadRoot,
@@ -342,7 +350,7 @@ test('human and agent routes point to the same contract authority', () => {
   }
   assert.match(
     human,
-    /framework\/agent-work\/kungfu-agent-work-state\.contract\.json/,
+    /framework\/work\/agent-work\/kungfu-agent-work-state\.contract\.json/,
   );
   assert.match(human, /Keep the work when the chat ends\./);
   assert.match(human, /does not pass `FO10`/);

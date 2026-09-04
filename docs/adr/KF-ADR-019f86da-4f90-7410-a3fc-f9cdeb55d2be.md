@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/3650, https://github.com/kungfu-systems/kungfu/pull/3665, https://github.com/kungfu-systems/kungfu/pull/3691]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/962
-qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json, framework/project-cut/src/settlement.mjs, framework/project-cut/publication.mjs, framework/format/project-cut-canonical-json.mjs, framework/layout.manifest.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-project-cut-publication.test.mjs, scripts/check-native-loop-qualification.test.mjs, scripts/check-framework-layout.test.mjs]
+qualification_refs: [framework/work/project-cut/fixtures/golden/project-cut-v1.json, framework/work/project-cut/fixtures/negative/cases-v1.json, framework/work/project-cut/src/settlement.mjs, framework/work/project-cut/publication.mjs, framework/spec/format/project-cut-canonical-json.mjs, framework/layout.manifest.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-project-cut-publication.test.mjs, scripts/check-native-loop-qualification.test.mjs, scripts/check-framework-layout.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -136,7 +136,7 @@ is not consulted when resolving semantic parents.
 
 Pull request 3650 supersedes pull request 3645 and moves the canonical JSON
 implementation behind the shared
-`framework/format` source boundary so Evidence and Project Cut no longer form a
+`framework/spec/format` source boundary so Evidence and Project Cut no longer form a
 source dependency cycle. Project Cut remains the protocol owner: the extracted
 helper preserves the frozen canonical JSON algorithm, and existing golden-root,
 receipt, settlement, and explicit before/after compatibility checks continue to
@@ -146,8 +146,8 @@ package ownership. This is implementation evidence for the existing decision,
 not a new Project Cut version or a new public package contract.
 
 Pull request 3665 proposes the first stable-entrypoint import-convergence wave:
-44 exact cross-directory consumers move from `framework/project-cut/src/project-cut.mjs`
-to `framework/project-cut/index.mjs`, while the retained private-import ratchet
+44 exact cross-directory consumers move from `framework/work/project-cut/src/project-cut.mjs`
+to `framework/work/project-cut/index.mjs`, while the retained private-import ratchet
 contracts from 56 to 12. The remaining 12 imports are deliberate internal or
 deferred consumers in settlement, composition, publication, history,
 native-loop qualification, and receipt evidence. The change does not alter the
@@ -159,7 +159,7 @@ at the protected head, this paragraph records proposed delivery evidence only.
 ## 2026-09-03 publication-boundary implementation evidence
 
 Pull request 3691 proposes a stable source-only publication facade at
-`framework/project-cut/publication.mjs` with exactly eight publication
+`framework/work/project-cut/publication.mjs` with exactly eight publication
 operations. Two external consumers move off the private Project Cut
 implementation, and the publication-related deep-import ratchet contracts from
 five to three retained internal or deferred consumers. Schema constants,

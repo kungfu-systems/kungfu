@@ -242,8 +242,8 @@ An ordinary patch release that publishes no comparative claim does not rerun
 the matched long-task comparison merely for Buildchain admission. The normal
 release profile still enforces `FO9`, `FO10`, and every other applicable
 blocking obligation. The executable schema and negative fixtures are in
-`framework/agent-work/kungfu-agent-work-state.contract.json` and
-`framework/agent-work/fixtures/continuity-evidence-cases.json`.
+`framework/work/agent-work/kungfu-agent-work-state.contract.json` and
+`framework/work/agent-work/fixtures/continuity-evidence-cases.json`.
 
 <a id="layers-release"></a>
 <!-- gate-doc:layers.release -->

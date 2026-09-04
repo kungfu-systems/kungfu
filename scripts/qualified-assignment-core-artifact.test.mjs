@@ -15,18 +15,18 @@ import {
   downloadHttpArtifact,
   materializeQualifiedCoreBundle,
   resolveShifuCachedTool,
-} from '../framework/assignment-capture/qualified-assignment-core-consumer.mjs';
+} from '../framework/work/assignment-capture/qualified-assignment-core-consumer.mjs';
 import {
   appendQualifiedCoreUsage,
   qualifiedCoreUsageObservation,
   summarizeQualifiedCoreUsage,
-} from '../framework/assignment-capture/qualified-assignment-core-observability.mjs';
+} from '../framework/work/assignment-capture/qualified-assignment-core-observability.mjs';
 import {
   REQUIRED_ROWS,
   qualifiedCoreArtifactName,
   qualifiedCorePlatformMatrix,
   qualifiedCorePlatformRow,
-} from '../framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
+} from '../framework/work/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
 import {
   promoteQualifiedCoreCandidate,
   qualifiedCoreCheckoutRoots,
@@ -34,7 +34,7 @@ import {
   sealQualifiedCoreCandidate,
   validateQualifiedCoreCandidate,
   verifyQualifiedCoreBundle,
-} from '../framework/release/qualified-assignment-core-artifact.mjs';
+} from '../product/release/qualified-assignment-core-artifact.mjs';
 import {
   createDeliveryAttempt,
   createDeliveryBinding,
@@ -324,10 +324,10 @@ function compatibilityCheckoutFixture(temporary) {
     'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
     'docs/shifu/qualified-assignment-core-platform-matrix.json',
     'scripts/check-shifu-cache-contract.mjs',
-    'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
-    'framework/assignment-capture/qualified-assignment-core-observability.mjs',
-    'framework/release/qualified-assignment-core-artifact.mjs',
-    'framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs',
+    'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
+    'framework/work/assignment-capture/qualified-assignment-core-observability.mjs',
+    'product/release/qualified-assignment-core-artifact.mjs',
+    'framework/work/assignment-capture/qualified-assignment-core-platform-matrix.mjs',
   ];
   const listed = spawnSync('git', ['ls-files', '-z', '--', ...pathspecs], {
     cwd: ROOT,
@@ -1211,7 +1211,7 @@ test('usage ledger publishes immutable concurrent observations and reports malfo
   const moduleUrl = pathToFileURL(
     path.join(
       ROOT,
-      'framework/assignment-capture/qualified-assignment-core-observability.mjs',
+      'framework/work/assignment-capture/qualified-assignment-core-observability.mjs',
     ),
   ).href;
   const worker = [
@@ -1348,7 +1348,7 @@ test('usage status reads only the bounded cache root and reports current checkou
     [
       path.join(
         ROOT,
-        'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+        'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
       ),
       'status',
       '--repository-root',
@@ -1481,7 +1481,7 @@ test('consumer CLI emits one source-build diagnosis and durable fallback observa
   const result = spawnSync(
     process.execPath,
     [
-      'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+      'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
       'materialize',
       '--repository-root',
       repositoryRoot,
@@ -2139,7 +2139,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /framework\/release\/qualified-assignment-core-artifact\.mjs promote[\s\S]*--target-commit "\$TARGET_SHA"[\s\S]*--protected-ref "\$GITHUB_REF"[\s\S]*--merge-group-run-id "\$\{\{ steps\.producer\.outputs\.run-id \}\}"[\s\S]*--producer-run-id "\$\{\{ steps\.qualified_core_producer\.outputs\.run-id \}\}"[\s\S]*--producer-event push[\s\S]*--producer-workflow-path \.github\/workflows\/dev-post-merge-advisory\.yml[\s\S]*--delivery-attempt/u,
+    /product\/release\/qualified-assignment-core-artifact\.mjs promote[\s\S]*--target-commit "\$TARGET_SHA"[\s\S]*--protected-ref "\$GITHUB_REF"[\s\S]*--merge-group-run-id "\$\{\{ steps\.producer\.outputs\.run-id \}\}"[\s\S]*--producer-run-id "\$\{\{ steps\.qualified_core_producer\.outputs\.run-id \}\}"[\s\S]*--producer-event push[\s\S]*--producer-workflow-path \.github\/workflows\/dev-post-merge-advisory\.yml[\s\S]*--delivery-attempt/u,
   );
   assert.match(
     promotionWorkflow,

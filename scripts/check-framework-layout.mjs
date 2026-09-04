@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST_PATH = 'framework/layout.manifest.json';
-const RELEASE_REGISTRY_PATH = 'framework/release/npm-package-registry.json';
+const RELEASE_REGISTRY_PATH = 'product/release/npm-package-registry.json';
 const SOURCE_EXTENSIONS = new Set([
   '.cjs',
   '.cts',
@@ -30,6 +30,10 @@ const IGNORED_DIRECTORIES = new Set([
   'node_modules',
 ]);
 const DISTRIBUTIONS = new Set(['npm-package', 'source-only']);
+const SOURCE_ONLY_POLICIES = new Set([
+  'allow-source-only',
+  'forbid-source-only',
+]);
 const ROLES = new Set([
   'contract-root',
   'internal-library',
@@ -362,6 +366,13 @@ export function collectFrameworkLayoutIssues({
         `releaseRegistry must reference ${RELEASE_REGISTRY_PATH}`,
       ),
     );
+  if (!SOURCE_ONLY_POLICIES.has(manifest.sourceOnlyPolicy))
+    issues.push(
+      issue(
+        'source-only-policy',
+        'sourceOnlyPolicy must be allow-source-only or forbid-source-only',
+      ),
+    );
   if (new Set(entryPaths).size !== entryPaths.length)
     issues.push(
       issue('duplicate-path', 'framework entries contain duplicate paths'),
@@ -396,6 +407,16 @@ export function collectFrameworkLayoutIssues({
         issue(
           'distribution',
           `${entry.path || '<unknown>'} has an invalid distribution`,
+        ),
+      );
+    if (
+      manifest.sourceOnlyPolicy === 'forbid-source-only' &&
+      entry.distribution === 'source-only'
+    )
+      issues.push(
+        issue(
+          'source-only-forbidden',
+          `${entry.path || '<unknown>'} must move to a real package or leave framework`,
         ),
       );
     if (!ROLES.has(entry.role))

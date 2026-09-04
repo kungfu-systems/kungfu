@@ -75,7 +75,7 @@ class PythonStructureGovernanceTest(unittest.TestCase):
         fixtures = json.loads(
             (
                 ROOT
-                / "framework/maintainability/python-structure-negative-fixtures.json"
+                / "developer/maintainability/python-structure-negative-fixtures.json"
             ).read_text(encoding="utf-8")
         )
         self.assertEqual(

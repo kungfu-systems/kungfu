@@ -6,8 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { classifyReport } from '../framework/agent-patrol/classify.mjs';
-import { selectPatrolPlan } from '../framework/agent-patrol/select.mjs';
+import { classifyReport } from '../developer/agent-patrol/classify.mjs';
+import { selectPatrolPlan } from '../developer/agent-patrol/select.mjs';
 import {
   auditArtifacts,
   buildTrend,
@@ -16,7 +16,7 @@ import {
   jsonRoot,
   storeCapabilityReceipt,
   validateCapabilityReceipt,
-} from '../framework/agent-repository-work/report.mjs';
+} from '../framework/work/agent-repository-work/report.mjs';
 
 const IMAGE =
   'ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3';
@@ -69,7 +69,7 @@ function passingReport(elapsedMilliseconds = 1_000) {
     },
     warrant: {
       agentAZeroModification: true,
-      writablePaths: ['framework/agent-patrol/classify.mjs'],
+      writablePaths: ['developer/agent-patrol/classify.mjs'],
     },
     oracle: {
       passed: true,

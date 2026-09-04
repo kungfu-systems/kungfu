@@ -1,30 +1,30 @@
 {
   "entries": [
     {
-      "compatibility_owner": "framework/fact",
+      "compatibility_owner": "framework/core/fact",
       "identity_domain": "logical Fact ids, immutable version roots, Cut roots, and ref transition ids",
       "protocol_id": "kungfu.fact-cut-kernel.contract/v1",
-      "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+      "source": "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
       "source_role": "fact-object-cut-and-admission-semantics",
-      "source_root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd",
+      "source_root": "sha256:988681dda098c27bcd3436872aa420b955c8bf387331c371bc6a7043484afd20",
       "version_axis": "Fact record schema and Cut protocol"
     },
     {
-      "compatibility_owner": "framework/fact",
+      "compatibility_owner": "framework/core/fact",
       "identity_domain": "canonical root of one exact typed Fact record",
       "protocol_id": "kungfu.fact-root.canonical/v2",
-      "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+      "source": "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
       "source_role": "portable-canonical-Fact-root-preimage",
-      "source_root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd",
+      "source_root": "sha256:988681dda098c27bcd3436872aa420b955c8bf387331c371bc6a7043484afd20",
       "version_axis": "Fact root canonicalization protocol"
     },
     {
-      "compatibility_owner": "framework/episode",
+      "compatibility_owner": "framework/core/episode",
       "identity_domain": "Episode identity, sealed content identity, causal closure, and capability set",
       "protocol_id": "kungfu.episode-invariants.contract/v1",
-      "source": "framework/episode/kungfu-episode-invariants.contract.json",
+      "source": "framework/core/episode/kungfu-episode-invariants.contract.json",
       "source_role": "Episode-object-lifecycle-and-qualification-semantics",
-      "source_root": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293",
+      "source_root": "sha256:02e0edf31ccad5bb22a5a61f75af6e8c03cc09f4abdc5af9fa9289a4a2e15330",
       "version_axis": "Episode invariant and qualification contract"
     },
     {
@@ -78,7 +78,7 @@
       "protocol_id": "kungfu.layered-api-encoding-boundary.contract/v1",
       "source": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
       "source_role": "Hana-POD-versus-FlatBuffers-payload-schema-ownership",
-      "source_root": "sha256:5d57d352c43d5ab8cfcef545437d68ad4150109494d98ac3874ffda7da6071eb",
+      "source_root": "sha256:aac64b8bc1814ec81f4fa3df6defa31727734cde2473584efca6f7ffdcaf7662",
       "version_axis": "payload schema owner and protocol-selected encoding"
     },
     {
@@ -116,16 +116,16 @@
     "root_protocol": "sha256:opaque-bytes/v1",
     "sources": [
       {
-        "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:382655b514b0d5a0e60dcc70d70e7356ab5a3c752e6130055638b9dda23541f4"
+        "path": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+        "root": "sha256:ffe4cdaeaf748b086b68ac43c5c7bbe32e0b97a46566f5dc328b605ecd9867e3"
       },
       {
-        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-        "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
+        "path": "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
+        "root": "sha256:988681dda098c27bcd3436872aa420b955c8bf387331c371bc6a7043484afd20"
       },
       {
-        "path": "framework/episode/kungfu-episode-invariants.contract.json",
-        "root": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293"
+        "path": "framework/core/episode/kungfu-episode-invariants.contract.json",
+        "root": "sha256:02e0edf31ccad5bb22a5a61f75af6e8c03cc09f4abdc5af9fa9289a4a2e15330"
       },
       {
         "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/episode_manifest_types.h",
@@ -149,7 +149,7 @@
       },
       {
         "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-        "root": "sha256:5d57d352c43d5ab8cfcef545437d68ad4150109494d98ac3874ffda7da6071eb"
+        "root": "sha256:aac64b8bc1814ec81f4fa3df6defa31727734cde2473584efca6f7ffdcaf7662"
       },
       {
         "path": "framework/spec/schema/manifest.schema.json",

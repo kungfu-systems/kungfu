@@ -1,0 +1,317 @@
+{
+  "schema": "kungfu.work-profile-generated-evidence/v1",
+  "generator": "framework/work/work-profile-conformance/generate-qualification.mjs",
+  "actionLoop": {
+    "repeat": {
+      "schema": "kungfu.work-profile-runtime-behavior-witness/v1",
+      "case": "repeat",
+      "status": "passed",
+      "implementation": [
+        {
+          "evidenceRoot": "sha256:76903bf8d3b5a9408b6a804f011416c1bcfb4b85c68a4d266acee9bf9c14e10a",
+          "evidencePath": "framework/work/action/action-loop.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364",
+          "evidencePath": "framework/work/action/action-loop-begin.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:00b57021ec80bea62f422e7a5db5250819f31eca9428ede763d53c48f9939406",
+          "evidencePath": "framework/work/action/action-loop-settle.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5",
+          "evidencePath": "framework/work/action/action-loop-qualification-adapters.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe",
+          "evidencePath": "framework/work/action/action-loop.contract.json",
+          "evidencePointer": null
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "code": "already-settled"
+      },
+      "actual": {
+        "schema": "kungfu.action-loop.recovery-result/v0",
+        "ok": true,
+        "code": "already-settled",
+        "state": "settled",
+        "nextStep": null,
+        "acceptedReceiptRoots": [
+          "sha256:21cbe580d1977a1fcdc1c471cdf98ae75eac0ac55409507b62872de79e10aeb2",
+          "sha256:3535dbb05f8667161a03daf4463f1719bf97f9ac11aa7ae7b3b5d1696a3a29c5",
+          "sha256:692befca68cbec5eab68f08e49965bc6823cf74ddb035ea97d554dfd38302690",
+          "sha256:c8819702259281ef00b9a2ce00f149f00e02d88e7cb5e2c4432b7afe7f355e6d",
+          "sha256:5c1d0b111d19a1856024105239a3f486c65130ae5e6df6f0d303358d304c243a",
+          "sha256:c11bcfe6543b05eeb6eb78833fdc0221fd7c6ebc9e9b8d2fba66b984de5f8a2a"
+        ]
+      }
+    },
+    "crash": {
+      "schema": "kungfu.work-profile-runtime-behavior-witness/v1",
+      "case": "crash",
+      "status": "passed",
+      "implementation": [
+        {
+          "evidenceRoot": "sha256:76903bf8d3b5a9408b6a804f011416c1bcfb4b85c68a4d266acee9bf9c14e10a",
+          "evidencePath": "framework/work/action/action-loop.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364",
+          "evidencePath": "framework/work/action/action-loop-begin.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:00b57021ec80bea62f422e7a5db5250819f31eca9428ede763d53c48f9939406",
+          "evidencePath": "framework/work/action/action-loop-settle.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5",
+          "evidencePath": "framework/work/action/action-loop-qualification-adapters.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe",
+          "evidencePath": "framework/work/action/action-loop.contract.json",
+          "evidencePointer": null
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "code": "resume",
+        "nextStep": "seal-episode"
+      },
+      "actual": {
+        "schema": "kungfu.action-loop.recovery-result/v0",
+        "ok": true,
+        "code": "resume",
+        "state": "running",
+        "nextStep": "seal-episode",
+        "acceptedReceiptRoots": [
+          "sha256:21cbe580d1977a1fcdc1c471cdf98ae75eac0ac55409507b62872de79e10aeb2",
+          "sha256:3535dbb05f8667161a03daf4463f1719bf97f9ac11aa7ae7b3b5d1696a3a29c5"
+        ]
+      }
+    },
+    "interrupted": {
+      "schema": "kungfu.work-profile-runtime-behavior-witness/v1",
+      "case": "interrupted",
+      "status": "passed",
+      "implementation": [
+        {
+          "evidenceRoot": "sha256:76903bf8d3b5a9408b6a804f011416c1bcfb4b85c68a4d266acee9bf9c14e10a",
+          "evidencePath": "framework/work/action/action-loop.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364",
+          "evidencePath": "framework/work/action/action-loop-begin.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:00b57021ec80bea62f422e7a5db5250819f31eca9428ede763d53c48f9939406",
+          "evidencePath": "framework/work/action/action-loop-settle.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5",
+          "evidencePath": "framework/work/action/action-loop-qualification-adapters.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe",
+          "evidencePath": "framework/work/action/action-loop.contract.json",
+          "evidencePointer": null
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "code": "resume",
+        "nextStep": "open-episode"
+      },
+      "actual": {
+        "schema": "kungfu.action-loop.recovery-result/v0",
+        "ok": true,
+        "code": "resume",
+        "state": "bound",
+        "nextStep": "open-episode",
+        "acceptedReceiptRoots": [
+          "sha256:21cbe580d1977a1fcdc1c471cdf98ae75eac0ac55409507b62872de79e10aeb2"
+        ]
+      }
+    },
+    "stale": {
+      "schema": "kungfu.work-profile-runtime-behavior-witness/v1",
+      "case": "stale",
+      "status": "passed",
+      "implementation": [
+        {
+          "evidenceRoot": "sha256:76903bf8d3b5a9408b6a804f011416c1bcfb4b85c68a4d266acee9bf9c14e10a",
+          "evidencePath": "framework/work/action/action-loop.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364",
+          "evidencePath": "framework/work/action/action-loop-begin.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:00b57021ec80bea62f422e7a5db5250819f31eca9428ede763d53c48f9939406",
+          "evidencePath": "framework/work/action/action-loop-settle.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5",
+          "evidencePath": "framework/work/action/action-loop-qualification-adapters.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe",
+          "evidencePath": "framework/work/action/action-loop.contract.json",
+          "evidencePointer": null
+        }
+      ],
+      "expected": {
+        "ok": false,
+        "code": "stale-ref"
+      },
+      "actual": {
+        "schema": "kungfu.action-loop.recovery-result/v0",
+        "ok": false,
+        "code": "stale-ref",
+        "message": "the Fact ref differs from expected-old"
+      }
+    },
+    "warrant-revoked": {
+      "schema": "kungfu.work-profile-runtime-behavior-witness/v1",
+      "case": "warrant-revoked",
+      "status": "passed",
+      "implementation": [
+        {
+          "evidenceRoot": "sha256:76903bf8d3b5a9408b6a804f011416c1bcfb4b85c68a4d266acee9bf9c14e10a",
+          "evidencePath": "framework/work/action/action-loop.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364",
+          "evidencePath": "framework/work/action/action-loop-begin.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:00b57021ec80bea62f422e7a5db5250819f31eca9428ede763d53c48f9939406",
+          "evidencePath": "framework/work/action/action-loop-settle.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5",
+          "evidencePath": "framework/work/action/action-loop-qualification-adapters.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe",
+          "evidencePath": "framework/work/action/action-loop.contract.json",
+          "evidencePointer": null
+        }
+      ],
+      "expected": {
+        "ok": false,
+        "code": "warrant-revoked"
+      },
+      "actual": {
+        "schema": "kungfu.action-loop.recovery-result/v0",
+        "ok": false,
+        "code": "warrant-revoked",
+        "message": "the bound Warrant is revoked"
+      }
+    },
+    "external-effect": {
+      "schema": "kungfu.work-profile-runtime-behavior-witness/v1",
+      "case": "external-effect",
+      "status": "passed",
+      "implementation": [
+        {
+          "evidenceRoot": "sha256:76903bf8d3b5a9408b6a804f011416c1bcfb4b85c68a4d266acee9bf9c14e10a",
+          "evidencePath": "framework/work/action/action-loop.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364",
+          "evidencePath": "framework/work/action/action-loop-begin.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:00b57021ec80bea62f422e7a5db5250819f31eca9428ede763d53c48f9939406",
+          "evidencePath": "framework/work/action/action-loop-settle.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5",
+          "evidencePath": "framework/work/action/action-loop-qualification-adapters.mjs",
+          "evidencePointer": null
+        },
+        {
+          "evidenceRoot": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe",
+          "evidencePath": "framework/work/action/action-loop.contract.json",
+          "evidencePointer": null
+        }
+      ],
+      "expected": {
+        "ok": false,
+        "code": "external-effect-unknown",
+        "nextStep": "inspect-external-effect"
+      },
+      "actual": {
+        "schema": "kungfu.action-loop.recovery-result/v0",
+        "ok": false,
+        "code": "external-effect-unknown",
+        "message": "an external effect lacks an accepted receipt",
+        "nextStep": "inspect-external-effect"
+      }
+    }
+  },
+  "adapterNegative": {
+    "schema": "kungfu.action-loop.adapter-negative-witness/v0",
+    "case": "forged-receipt-root",
+    "status": "passed",
+    "expectedCode": "invalid-adapter-receipt",
+    "actualCode": "invalid-adapter-receipt",
+    "writeOccurred": false
+  },
+  "kfd7": {
+    "provider-switch": {
+      "path": "framework/work/agent-work/evidence/kfd-7/backend-migration.json",
+      "category": "backend-migration",
+      "checks": [
+        "storage-backend-switch-delegation-declared",
+        "five-role-identity-conservation-witness",
+        "file-rocksdb-file-rollback"
+      ]
+    },
+    "projection-rebuild": {
+      "path": "framework/work/agent-work/evidence/kfd-7/export-import-rebuild.json",
+      "category": "export-import-rebuild",
+      "checks": [
+        "projection-rebuild-from-native-journal",
+        "qualified-fact-export-import-bundle",
+        "tampered-bundle-fails-before-write"
+      ]
+    },
+    "recovery": {
+      "path": "framework/work/agent-work/evidence/kfd-7/cold-start-continuation.json",
+      "category": "cold-start-continuation",
+      "checks": [
+        "fresh-home-bootstrap-action",
+        "clean-home-continuation-from-qualified-export",
+        "clean-home-next-revision"
+      ]
+    }
+  }
+}

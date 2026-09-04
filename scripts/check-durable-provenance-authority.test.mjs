@@ -8,7 +8,7 @@ import test from 'node:test';
 
 const ROOT = process.cwd();
 const CONTRACT_PATH =
-  'framework/release/kungfu-durable-provenance-authority.contract.json';
+  'product/release/kungfu-durable-provenance-authority.contract.json';
 const REPORT_PATH =
   'docs/qualification/evidence/durable-provenance-authority/v1/report.json';
 const BUNDLE_PATH =

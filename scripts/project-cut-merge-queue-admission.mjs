@@ -8,8 +8,8 @@ import {
   compositionChanged,
   observeComposition,
   verifyComposition,
-} from '../framework/project-cut/composition.mjs';
-import { semanticRoot } from '../framework/project-cut/index.mjs';
+} from '../framework/work/project-cut/composition.mjs';
+import { semanticRoot } from '../framework/work/project-cut/index.mjs';
 
 export const MERGE_QUEUE_ADMISSION_SCHEMA =
   'project.cut.merge-queue-admission/v1';

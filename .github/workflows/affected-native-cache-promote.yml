@@ -521,7 +521,7 @@ jobs:
                 --dir "$candidate"
               # Promotion runs only on an exact protected-dev push.
               # shifu-entry-contract: allow binding the verified merge-group delivery after Gate
-              node framework/release/qualified-assignment-core-artifact.mjs promote \
+              node product/release/qualified-assignment-core-artifact.mjs promote \
                 --repository-root . \
                 --bundle "$candidate" \
                 --output-dir "$output" \
@@ -582,7 +582,7 @@ jobs:
                 fi
                 reusable="$candidate/promoted"
                 reusable_output="$candidate/output"
-                if ! node framework/release/qualified-assignment-core-artifact.mjs reuse \
+                if ! node product/release/qualified-assignment-core-artifact.mjs reuse \
                   --repository-root . \
                   --bundle "$candidate/bundle" \
                   --output-dir "$reusable" \
@@ -664,7 +664,7 @@ jobs:
           (
             cd "$first_checkout"
             # shifu-entry-contract: allow direct consumer qualification before its cached Core can activate Shifu Work Control
-            env KUNGFU_QUALIFIED_CORE_BUNDLE="$bundle" KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+            env KUNGFU_QUALIFIED_CORE_BUNDLE="$bundle" KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/work/assignment-capture/qualified-assignment-core-consumer.mjs \
                 materialize --repository-root "$PWD"
             file framework/core/dist/kungfu/pykungfu.cpython-313-x86_64-linux-gnu.so |
               grep -q 'ELF 64-bit'
@@ -685,11 +685,11 @@ jobs:
           (
             cd "$second_checkout"
             # shifu-entry-contract: allow direct local-CAS qualification before its cached Core can activate Shifu Work Control
-            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" KUNGFU_QUALIFIED_CORE_GITHUB=0 node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" KUNGFU_QUALIFIED_CORE_GITHUB=0 node framework/work/assignment-capture/qualified-assignment-core-consumer.mjs \
                 materialize --repository-root "$PWD"
             ./shifu work --help >/dev/null
             # shifu-entry-contract: allow direct post-activation observation of the bounded consumer qualification cache
-            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/work/assignment-capture/qualified-assignment-core-consumer.mjs \
                 status --repository-root "$PWD" --json |
               jq -e '
                 .currentCheckout.eligible == true
@@ -772,7 +772,7 @@ jobs:
             $env:KUNGFU_QUALIFIED_CORE_BUNDLE = $bundle
             $env:KUNGFU_QUALIFIED_CORE_CACHE_ROOT = $cacheRoot
             # shifu-entry-contract: allow direct consumer qualification before its cached Core can activate Shifu Work Control
-            node framework\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $firstCheckout
+            node framework\work\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $firstCheckout
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $runtime = Join-Path $firstCheckout "framework\core\dist\kungfu"
             $nativeFiles = @(
@@ -808,12 +808,12 @@ jobs:
             $env:KUNGFU_QUALIFIED_CORE_CACHE_ROOT = $cacheRoot
             $env:KUNGFU_QUALIFIED_CORE_GITHUB = "0"
             # shifu-entry-contract: allow direct local-CAS qualification before its cached Core can activate Shifu Work Control
-            node framework\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $secondCheckout
+            node framework\work\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $secondCheckout
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             cmd /d /c shifu.cmd work --help
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             # shifu-entry-contract: allow direct post-activation observation of the bounded consumer qualification cache
-            $statusJson = node framework\assignment-capture\qualified-assignment-core-consumer.mjs status --repository-root $secondCheckout --json
+            $statusJson = node framework\work\assignment-capture\qualified-assignment-core-consumer.mjs status --repository-root $secondCheckout --json
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $status = $statusJson | ConvertFrom-Json
             if (

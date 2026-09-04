@@ -12,8 +12,9 @@ import { contentRoot } from './check-format-migration-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const BASELINE_INDEX_PATH =
-  'framework/format/compatibility/v4-alpha/index.json';
-const MIGRATION_PATH = 'framework/format/kungfu-format-migration.contract.json';
+  'framework/spec/format/compatibility/v4-alpha/index.json';
+const MIGRATION_PATH =
+  'framework/spec/format/kungfu-format-migration.contract.json';
 
 function readJson(root, relative) {
   return JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));

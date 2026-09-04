@@ -6,8 +6,8 @@
     {
       "role": "claim-source",
       "kind": "file",
-      "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-      "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa"
+      "path": "framework/work/agent-work/kungfu-agent-work-state.contract.json",
+      "sha256": "b9b8569a9c2b8315cfa156c99d0fb0690b5386e2438a15ce73f596de473cc553"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "f686ca8c1ec7fb1796c4df5f105da8c274b3b5618a4e128896b665d47839db4c"
+        "sha256": "752dc3bc729a01e10508653a383e0323c9aeb02d15ea04a6691b79ae42fbb3e5"
       },
       "description": "Accepted role-separation decision and bounded P17 qualification boundary."
     },
@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/check-agent-work-state-contract.test.mjs",
-        "sha256": "1e91331147a84659540a425e5ef1fd8c7d44543208edf85e072b7511c386b366"
+        "sha256": "ef45e3390b7522fcf606a22ac8e89b67e1ce3754511322131218568c1c54420e"
       },
       "description": "Source, package, KFD-2, KFD-3, and continuity evidence-boundary checks."
     },
@@ -33,7 +33,7 @@
       "type": "file",
       "pointer": {
         "kind": "file",
-        "path": "framework/agent-work/fixtures/continuity-evidence-cases.json",
+        "path": "framework/work/agent-work/fixtures/continuity-evidence-cases.json",
         "sha256": "0c8890d688bd2e46389772a486347ca0827a6156cba6501e15ba9a922c9e165e"
       },
       "description": "Positive profiles and fail-closed smoke-as-FO10, missing-baseline, and animation-without-report cases."
@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-        "sha256": "243df94d5ce449aa3031f84981ebd79d867de39f3b11c84f31caa4490a3b4c5e"
+        "sha256": "1faeb835810571104f143247cd7c67ee1c1ce0e945bfdb4ea695cd3039a1cdd9"
       },
       "description": "Runtime CLI parity and fail-closed contract-schema checks."
     },
@@ -58,24 +58,24 @@
     }
   ],
   "hashes": {
-    "registrySha256": "9d40a24a16a791a7d1cc57ce1444e82427af90e8459a390cecffbe5bde91b723",
-    "sourceSha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa",
+    "registrySha256": "902de3b45ca4847832b63968bf2f2080eda56689fe74a7a34716d8d510335a48",
+    "sourceSha256": "b9b8569a9c2b8315cfa156c99d0fb0690b5386e2438a15ce73f596de473cc553",
     "evidenceSha256": [
       {
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "f686ca8c1ec7fb1796c4df5f105da8c274b3b5618a4e128896b665d47839db4c"
+        "sha256": "752dc3bc729a01e10508653a383e0323c9aeb02d15ea04a6691b79ae42fbb3e5"
       },
       {
         "path": "scripts/check-agent-work-state-contract.test.mjs",
-        "sha256": "1e91331147a84659540a425e5ef1fd8c7d44543208edf85e072b7511c386b366"
+        "sha256": "ef45e3390b7522fcf606a22ac8e89b67e1ce3754511322131218568c1c54420e"
       },
       {
-        "path": "framework/agent-work/fixtures/continuity-evidence-cases.json",
+        "path": "framework/work/agent-work/fixtures/continuity-evidence-cases.json",
         "sha256": "0c8890d688bd2e46389772a486347ca0827a6156cba6501e15ba9a922c9e165e"
       },
       {
         "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-        "sha256": "243df94d5ce449aa3031f84981ebd79d867de39f3b11c84f31caa4490a3b4c5e"
+        "sha256": "1faeb835810571104f143247cd7c67ee1c1ce0e945bfdb4ea695cd3039a1cdd9"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
@@ -84,16 +84,16 @@
     ],
     "artifactSha256": [
       {
-        "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa"
+        "path": "framework/work/agent-work/kungfu-agent-work-state.contract.json",
+        "sha256": "b9b8569a9c2b8315cfa156c99d0fb0690b5386e2438a15ce73f596de473cc553"
       }
     ]
   },
   "artifacts": [
     {
       "name": "agent-work-state-contract",
-      "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-      "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa",
+      "path": "framework/work/agent-work/kungfu-agent-work-state.contract.json",
+      "sha256": "b9b8569a9c2b8315cfa156c99d0fb0690b5386e2438a15ce73f596de473cc553",
       "expectedPackagePath": "config/kungfu-agent-work-state.contract.json"
     }
   ],

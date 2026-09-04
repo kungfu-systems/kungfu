@@ -12,7 +12,7 @@ import {
   dockerArgs,
   dockerIsRootless,
   validateDockerHost,
-} from '../framework/agent-repository-work/opencode-docker-proxy.mjs';
+} from '../framework/work/agent-repository-work/opencode-docker-proxy.mjs';
 import {
   classifyFailure,
   parseInvestigationClaim,
@@ -20,7 +20,7 @@ import {
   runExperiment,
   runtimeProfile,
   validateExperimentReport,
-} from '../framework/agent-repository-work/run.mjs';
+} from '../framework/work/agent-repository-work/run.mjs';
 import {
   REPOSITORY_WORK_FIXTURES,
   SYNTHETIC_REPOSITORY_WORK_FIXTURES,
@@ -138,7 +138,7 @@ test('real module snapshot is content-rooted, seeded, and independently repairab
   const reference = qualifyReferenceRealModuleSnapshot({ fixture });
   assert.equal(reference.passed, true);
   assert.deepEqual(reference.changedPaths, [
-    'framework/agent-patrol/classify.mjs',
+    'developer/agent-patrol/classify.mjs',
   ]);
   assert.equal(reference.checks.visible.passed, true);
   assert.equal(reference.checks.hidden.passed, true);
@@ -155,7 +155,7 @@ test('real module snapshot external oracle rejects protected-path changes', () =
     const materialized = materializeRealModuleSnapshot(workspace, { fixture });
     applyRealModuleSnapshotReferenceRepair(workspace);
     fs.appendFileSync(
-      path.join(workspace, 'framework/agent-patrol/select.mjs'),
+      path.join(workspace, 'developer/agent-patrol/select.mjs'),
       '\n// out-of-scope mutation\n',
     );
     const report = verifyRealModuleSnapshotWorkspace(workspace, {
@@ -164,7 +164,7 @@ test('real module snapshot external oracle rejects protected-path changes', () =
     });
     assert.equal(report.passed, false);
     assert.deepEqual(report.scopeViolations, [
-      'framework/agent-patrol/select.mjs',
+      'developer/agent-patrol/select.mjs',
     ]);
   } finally {
     fs.rmSync(workspace, { recursive: true, force: true });

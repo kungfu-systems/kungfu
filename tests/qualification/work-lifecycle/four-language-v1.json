@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.work-lifecycle.four-language-fixture/v1",
-  "operationSet": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+  "operationSet": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
   "operationSetRoot": "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3",
   "request": {
     "operationId": "work.lifecycle.cut.verify/v1",

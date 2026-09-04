@@ -116,7 +116,7 @@ test('catalog is a deterministic projection with nine required primitives', () =
   assert.equal(catalog.relationGraph.catalogAuthoredEdges, false);
   const contractRegistry = JSON.parse(
     fs.readFileSync(
-      path.join(ROOT, 'framework/contract/kungfu-contracts.registry.json'),
+      path.join(ROOT, 'framework/spec/contract/kungfu-contracts.registry.json'),
       'utf8',
     ),
   );
@@ -188,7 +188,7 @@ test('machine-marked primitive artifact outside managed roots fails closed', (t)
     path.join(os.tmpdir(), 'kungfu-primitive-artifact-'),
   );
   t.after(() => fs.rmSync(root, { force: true, recursive: true }));
-  const relativePath = 'framework/action/hidden-primitive.contract.json';
+  const relativePath = 'framework/work/action/hidden-primitive.contract.json';
   fs.mkdirSync(path.dirname(path.join(root, relativePath)), {
     recursive: true,
   });
@@ -214,7 +214,7 @@ test('machine-marked primitive artifact outside managed roots fails closed', (t)
       declaredArtifacts: new Map(),
     }),
     [
-      'unregistered-machine-artifact:framework/action/hidden-primitive.contract.json',
+      'unregistered-machine-artifact:framework/work/action/hidden-primitive.contract.json',
     ],
   );
 });
@@ -222,22 +222,24 @@ test('machine-marked primitive artifact outside managed roots fails closed', (t)
 test('declared primitive artifacts require a matching machine marker', () => {
   assert.deepEqual(
     primitiveArtifactClosureIssues({
-      managedFiles: ['framework/primitive/contracts/example.contract.json'],
+      managedFiles: [
+        'framework/spec/primitive/contracts/example.contract.json',
+      ],
       discoveredArtifacts: [
         {
-          path: 'framework/primitive/contracts/example.contract.json',
+          path: 'framework/spec/primitive/contracts/example.contract.json',
           primitiveId: 'other',
           schema: 'kungfu.primitive.contract/v1',
         },
       ],
       declaredArtifacts: new Map([
-        ['framework/primitive/contracts/example.contract.json', 'example'],
-        ['framework/primitive/sdk-slots/example.json', 'example'],
+        ['framework/spec/primitive/contracts/example.contract.json', 'example'],
+        ['framework/spec/primitive/sdk-slots/example.json', 'example'],
       ]),
     }),
     [
-      'artifact-primitive-mismatch:framework/primitive/contracts/example.contract.json:other:example',
-      'declared-artifact-missing-marker:framework/primitive/sdk-slots/example.json',
+      'artifact-primitive-mismatch:framework/spec/primitive/contracts/example.contract.json:other:example',
+      'declared-artifact-missing-marker:framework/spec/primitive/sdk-slots/example.json',
     ],
   );
 });
@@ -352,15 +354,15 @@ test('birth scaffold starts at the passport and makes no maturity claim', () => 
   assert.equal(
     JSON.parse(
       scaffold.files.get(
-        'framework/primitive/contracts/example-primitive.contract.json',
+        'framework/spec/primitive/contracts/example-primitive.contract.json',
       ),
     ).primitiveId,
     'example-primitive',
   );
   assert.deepEqual([...scaffold.files.keys()].sort(), [
-    'framework/primitive/contracts/example-primitive.contract.json',
-    'framework/primitive/operation-slots/example-primitive.json',
-    'framework/primitive/sdk-slots/example-primitive.json',
+    'framework/spec/primitive/contracts/example-primitive.contract.json',
+    'framework/spec/primitive/operation-slots/example-primitive.json',
+    'framework/spec/primitive/sdk-slots/example-primitive.json',
     'tests/fixtures/primitive/example-primitive/vectors.json',
   ]);
 });
@@ -496,7 +498,7 @@ test('Primitive write receipt binds actor, context, catalog transition, and path
     }),
     scaffoldApplier: ({ write }) => {
       writes.push(write);
-      return ['framework/incubation/incubation-passport.registry.json'];
+      return ['framework/spec/incubation/incubation-passport.registry.json'];
     },
   });
   assert.deepEqual(writes, [false, true]);
@@ -505,6 +507,6 @@ test('Primitive write receipt binds actor, context, catalog transition, and path
   assert.equal(receipt.catalog.beforeRoot, `sha256:${'1'.repeat(64)}`);
   assert.equal(receipt.catalog.afterRoot, `sha256:${'2'.repeat(64)}`);
   assert.deepEqual(receipt.paths, [
-    'framework/incubation/incubation-passport.registry.json',
+    'framework/spec/incubation/incubation-passport.registry.json',
   ]);
 });

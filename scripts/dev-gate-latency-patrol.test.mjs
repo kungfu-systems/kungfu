@@ -5,12 +5,12 @@ import test from 'node:test';
 import {
   classifyLatencyReport,
   classifyMonitorFailure,
-} from '../framework/dev-gate-latency-patrol/classify.mjs';
-import { captureLatencyFindings } from '../framework/dev-gate-latency-patrol/dogfood-capture.mjs';
+} from '../developer/dev-gate-latency-patrol/classify.mjs';
+import { captureLatencyFindings } from '../developer/dev-gate-latency-patrol/dogfood-capture.mjs';
 import {
   discoverProtectedBranches,
   selectMonitoredBranches,
-} from '../framework/dev-gate-latency-patrol/select.mjs';
+} from '../developer/dev-gate-latency-patrol/select.mjs';
 
 const ROOT_A = `sha256:${'a'.repeat(64)}`;
 const ROOT_B = `sha256:${'b'.repeat(64)}`;

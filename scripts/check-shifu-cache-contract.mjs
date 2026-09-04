@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { qualifiedCorePlatformMatrix } from '../framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
+import { qualifiedCorePlatformMatrix } from '../framework/work/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
 import { publicUvLockViolations } from './shifu-uv-cache-adapter.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

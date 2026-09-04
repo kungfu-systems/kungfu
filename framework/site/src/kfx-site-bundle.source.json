@@ -162,7 +162,7 @@
     },
     {
       "id": "npm-release-package-registry",
-      "path": "framework/release/npm-package-registry.json",
+      "path": "product/release/npm-package-registry.json",
       "role": "npm-release-inventory",
       "maturity": "pre-release",
       "status": "implemented",

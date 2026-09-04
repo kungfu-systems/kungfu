@@ -20,7 +20,7 @@ struct registered_contract {
 // (kungfu.contract) so the C++ layer reuses the same registry and roots rather
 // than minting a second registry:
 //   - registry path: $KUNGFU_CONTRACT_REGISTRY, else the nearest
-//     framework/contract/<file> or config/<file> found by walking upward from
+//     framework/spec/contract/<file> or config/<file> found by walking upward from
 //     search_base and the current directory.
 //   - contract path: the registry entry's env override, else the nearest
 //     source/artifact/config path found by walking upward.

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { semanticRoot } from '../framework/project-cut/index.mjs';
+import { semanticRoot } from '../framework/work/project-cut/index.mjs';
 import {
   WORK_DESIGN_OUTCOME_HISTORY_RECORD_SCHEMA,
   buildOpeningEstimateBinding,
@@ -15,8 +15,8 @@ import {
   verifyWorkDesignAdvice,
   verifyWorkDesignDisposition,
   workDesignAdvisoryBoundary,
-} from '../framework/work-design-advisor/src/work-design-advisor.mjs';
-import { checkWorkDesignAdvisorContract } from '../framework/work-design-advisor/tooling/work-design-advisor-contract.mjs';
+} from '../framework/work/work-design-advisor/src/work-design-advisor.mjs';
+import { checkWorkDesignAdvisorContract } from '../framework/work/work-design-advisor/tooling/work-design-advisor-contract.mjs';
 
 const AS_OF = '2026-07-29T10:00:00Z';
 const INTENT_ROOT = semanticRoot({ objective: 'bounded-advisory-work-design' });

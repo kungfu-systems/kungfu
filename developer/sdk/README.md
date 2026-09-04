@@ -131,10 +131,10 @@ overwriting them. It proves that the SDK can resolve the single KFD-1 registry
 and reproduce the registered surfaces as canonical JSON evidence:
 
 ```sh
-kungfu sdk contract adopt config --source framework/config/kungfu-config.contract.json --json
+kungfu sdk contract adopt config --source framework/core/config/kungfu-config.contract.json --json
 kungfu sdk contract adopt kfx --source framework/kfx/kungfu-kfx.contract.json --json
 kungfu sdk contract adopt skill --source framework/skill/kungfu-skill.contract.json --json
-kungfu sdk contract adopt runtime --source framework/runtime/kungfu-runtime.contract.json --json
+kungfu sdk contract adopt runtime --source framework/core/runtime/kungfu-runtime.contract.json --json
 
 kungfu sdk contract render config --check --json
 kungfu sdk contract render kfx --check --json
@@ -153,13 +153,13 @@ When a maintainer explicitly wants the SDK to write, two commands are available:
 
 ```sh
 kungfu sdk contract render <surface> --write --json
-kungfu sdk contract add <surface> [--source framework/contract/<surface>.contract.json] --json
+kungfu sdk contract add <surface> [--source framework/spec/contract/<surface>.contract.json] --json
 ```
 
 `render --write` canonicalizes the registered source contract file and reports
 the previous and new hashes. `contract add` creates a minimal source contract
 and appends the matching registry entry. It also writes a deterministic
-`framework/contract/fixtures/<surface>.contract-evidence.json` fixture that a
+`framework/spec/contract/fixtures/<surface>.contract-evidence.json` fixture that a
 future release gate can compare with `contract evidence`.
 
 `contract evidence [surface] --json` is read-only local evidence for KFD-1. It

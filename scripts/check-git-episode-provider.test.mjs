@@ -17,12 +17,12 @@ import {
   inspectEpisodeProviderTemps,
   recoverGitEpisodeLease,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
 import {
   canonicalJson,
   semanticRoot,
   sha256Bytes,
-} from '../framework/project-cut/index.mjs';
+} from '../framework/work/project-cut/index.mjs';
 
 const ROOT = 'a'.repeat(64);
 const Ajv2020 = optionalAjv2020();
@@ -124,36 +124,36 @@ test('public schemas close producer bytes without claiming the native root', () 
   const validateManifest = ajv
     ? ajv.compile(
         readJson(
-          'framework/episode-provider/schema/git-workspace-manifest-v1.schema.json',
+          'framework/work/episode-provider/schema/git-workspace-manifest-v1.schema.json',
         ),
       )
     : null;
   const validateSegment = ajv
     ? ajv.compile(
         readJson(
-          'framework/episode-provider/schema/git-workspace-segment-v1.schema.json',
+          'framework/work/episode-provider/schema/git-workspace-segment-v1.schema.json',
         ),
       )
     : null;
   const validateQualification = ajv
     ? ajv.compile(
         readJson(
-          'framework/episode-provider/schema/episode-qualification-v1.schema.json',
+          'framework/work/episode-provider/schema/episode-qualification-v1.schema.json',
         ),
       )
     : null;
   const validateProvider = ajv
     ? ajv.compile(
         readJson(
-          'framework/episode-provider/schema/git-workspace-provider-contract-v1.schema.json',
+          'framework/work/episode-provider/schema/git-workspace-provider-contract-v1.schema.json',
         ),
       )
     : null;
   const providerContract = readJson(
-    'framework/episode-provider/git-workspace-provider.contract.json',
+    'framework/work/episode-provider/git-workspace-provider.contract.json',
   );
   const cases = readJson(
-    'framework/episode-provider/fixtures/schema-cases-v1.json',
+    'framework/work/episode-provider/fixtures/schema-cases-v1.json',
   );
   assert.deepEqual(cases.positive, [
     'provider-contract',

@@ -10,7 +10,7 @@ import {
   digest,
   enrichIssue,
   protectedBaselineIssues,
-} from '../framework/maintainability/complexity-governance.mjs';
+} from '../developer/maintainability/complexity-governance.mjs';
 import {
   baselineChangedPaths,
   classify,
@@ -53,7 +53,7 @@ test('retired complexity signing residues fail closed with exact identifiers', (
   const audit = complexitySigningResidueAudit([
     { path: 'docs/history.md', bytes: bytes(retiredKey) },
     {
-      path: 'framework/maintainability/code-complexity-policy.json',
+      path: 'developer/maintainability/code-complexity-policy.json',
       bytes: bytes(retiredField),
     },
   ]);
@@ -281,7 +281,7 @@ test('advisory crossings are dispositioned without obscuring mainline budget', (
       advisoryDispositions: {
         [warning.path]: {
           action: 'decomposed-evidence-reader',
-          extractedPaths: ['framework/maintainability/evidence-reader.mjs'],
+          extractedPaths: ['developer/maintainability/evidence-reader.mjs'],
           residualResponsibility: 'one bounded producer',
         },
         'scripts/resolved.mjs': {
@@ -721,7 +721,7 @@ test('protected baseline refresh requires one exact deterministic transition', (
   };
   const candidatePolicy = {
     ...protectedPolicy,
-    baselinePath: 'framework/maintainability/code-complexity-baseline.json',
+    baselinePath: 'developer/maintainability/code-complexity-baseline.json',
   };
   const value = {
     schema: protectedPolicy.baselineGovernance.transitionSchema,

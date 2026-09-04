@@ -111,7 +111,7 @@ export function buildCompatibilityManifest({ root, includeGui }) {
     ),
     upgrade_contract: component(
       root,
-      'framework/upgrade/kungfu-upgrade.contract.json',
+      'product/upgrade/kungfu-upgrade.contract.json',
     ),
     sdk_fixture: component(
       root,

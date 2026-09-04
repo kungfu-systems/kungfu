@@ -22,6 +22,7 @@ const {
   firstPartyProfileFilter,
   requireAssemblySelector,
   workDesignRuntimeFiles,
+  workDesignRuntimePackageDependencies,
   workDesignRuntimePath,
 } = require(path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'));
 const SELECTOR = JSON.parse(
@@ -32,6 +33,7 @@ const INSTALLED_PREFLIGHT_REQUEST = JSON.parse(
     path.join(
       ROOT,
       'framework',
+      'work',
       'work-design-preflight',
       'fixtures',
       'installed-preflight-request.json',
@@ -222,6 +224,7 @@ function executeWorkDesignRuntime(root, request) {
   const entry = path.join(
     root,
     'framework',
+    'work',
     'work-design-preflight',
     'tooling',
     'work-design-preflight.mjs',
@@ -255,6 +258,7 @@ test('freeze assembly executes the complete isolated Work Design runtime closure
         path.join(
           ROOT,
           'framework',
+          'work',
           'work-design-preflight',
           'work-design-runtime.json',
         ),
@@ -262,9 +266,8 @@ test('freeze assembly executes the complete isolated Work Design runtime closure
       ),
     ).files,
   );
-  assert.ok(files.includes('format/project-cut-canonical-json.mjs'));
-  assert.ok(files.includes('project-cut/index.mjs'));
-  assert.ok(files.includes('project-cut/src/json-scanner.mjs'));
+  assert.ok(files.includes('work/project-cut/index.mjs'));
+  assert.ok(files.includes('work/project-cut/src/json-scanner.mjs'));
   for (const relative of files) {
     const source = path.join(ROOT, 'framework', relative);
     const installed = path.join(temporary, 'framework', relative);
@@ -274,6 +277,23 @@ test('freeze assembly executes the complete isolated Work Design runtime closure
       fs.readFileSync(source),
       relative,
     );
+  }
+  for (const dependency of workDesignRuntimePackageDependencies(ROOT)) {
+    for (const relative of dependency.files) {
+      const source = path.join(ROOT, 'framework', dependency.source, relative);
+      const installed = path.join(
+        temporary,
+        'node_modules',
+        ...dependency.name.split('/'),
+        relative,
+      );
+      assert.equal(
+        fs.existsSync(installed),
+        true,
+        `${dependency.name}/${relative}`,
+      );
+      assert.deepEqual(fs.readFileSync(installed), fs.readFileSync(source));
+    }
   }
   const before = runtimeSnapshot(temporary);
   const automatic = executeWorkDesignRuntime(
@@ -306,7 +326,14 @@ test('isolated Work Design runtime fails when a declared dependency is missing',
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
   copyWorkDesignRuntime(temporary, ROOT);
   fs.rmSync(
-    path.join(temporary, 'framework', 'project-cut', 'src', 'json-scanner.mjs'),
+    path.join(
+      temporary,
+      'framework',
+      'work',
+      'project-cut',
+      'src',
+      'json-scanner.mjs',
+    ),
   );
   const result = executeWorkDesignRuntime(
     temporary,
@@ -321,14 +348,20 @@ test('Work Design assembly rejects an undeclared static ESM dependency', (t) => 
     path.join(os.tmpdir(), 'kungfu-work-design-closure-'),
   );
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
-  const preflight = path.join(temporary, 'framework', 'work-design-preflight');
+  const preflight = path.join(
+    temporary,
+    'framework',
+    'work',
+    'work-design-preflight',
+  );
   fs.mkdirSync(path.join(preflight, 'tooling'), { recursive: true });
   fs.writeFileSync(
     path.join(preflight, 'work-design-runtime.json'),
     `${JSON.stringify({
       schema: 'kungfu.work-design.runtime-closure/v1',
-      entrypoint: 'work-design-preflight/tooling/entry.mjs',
-      files: ['work-design-preflight/tooling/entry.mjs'],
+      entrypoint: 'work/work-design-preflight/tooling/entry.mjs',
+      files: ['work/work-design-preflight/tooling/entry.mjs'],
+      packageDependencies: [],
     })}\n`,
   );
   fs.writeFileSync(
@@ -337,19 +370,19 @@ test('Work Design assembly rejects an undeclared static ESM dependency', (t) => 
   );
   assert.throws(
     () => workDesignRuntimeFiles(temporary),
-    /undeclared Work Design runtime dependency: project-cut\/src\/new-dependency\.mjs/u,
+    /undeclared Work Design runtime dependency: work\/project-cut\/src\/new-dependency\.mjs/u,
   );
 });
 
 test('Work Design manifest coordinates map to native POSIX and Windows paths', () => {
-  const coordinate = 'project-cut/src/json-scanner.mjs';
+  const coordinate = 'work/project-cut/src/json-scanner.mjs';
   assert.equal(
     workDesignRuntimePath('/product', coordinate, path.posix),
-    '/product/framework/project-cut/src/json-scanner.mjs',
+    '/product/framework/work/project-cut/src/json-scanner.mjs',
   );
   assert.equal(
     workDesignRuntimePath('C:\\product', coordinate, path.win32),
-    'C:\\product\\framework\\project-cut\\src\\json-scanner.mjs',
+    'C:\\product\\framework\\work\\project-cut\\src\\json-scanner.mjs',
   );
 });
 

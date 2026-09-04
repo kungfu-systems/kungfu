@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 
-import { canonicalJson } from '../framework/project-cut/index.mjs';
+import { canonicalJson } from '../framework/work/project-cut/index.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

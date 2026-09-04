@@ -87,8 +87,8 @@
     "authority": {
       "layout": "docs/adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md",
       "portableGuide": "docs/architecture/kungfu-format-contract.md",
-      "episodeProvider": "framework/episode-provider/git-workspace-provider.contract.json",
-      "protectedPublication": "framework/project-cut/publication.contract.json"
+      "episodeProvider": "framework/work/episode-provider/git-workspace-provider.contract.json",
+      "protectedPublication": "framework/work/project-cut/publication.contract.json"
     }
   },
   "requiredIntentIds": [

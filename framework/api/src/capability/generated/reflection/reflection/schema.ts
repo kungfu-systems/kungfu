@@ -4,10 +4,10 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { Enum } from '../reflection/enum.js';
-import { Object_ } from '../reflection/object.js';
-import { SchemaFile } from '../reflection/schema-file.js';
-import { Service } from '../reflection/service.js';
+import { Enum } from './enum.js';
+import { Object_ } from './object.js';
+import { SchemaFile } from './schema-file.js';
+import { Service } from './service.js';
 
 
 export class Schema {

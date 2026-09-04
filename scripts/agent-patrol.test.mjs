@@ -10,11 +10,11 @@ import {
   classifyReport,
   jsonRoot,
   parseArgs as parseClassificationArgs,
-} from '../framework/agent-patrol/classify.mjs';
+} from '../developer/agent-patrol/classify.mjs';
 import {
   captureFinding,
   parseArgs as parseDogfoodCaptureArgs,
-} from '../framework/agent-patrol/dogfood-capture.mjs';
+} from '../developer/agent-patrol/dogfood-capture.mjs';
 import {
   DAILY_LIGHT_SCHEDULE,
   MONTHLY_QUALIFICATION_SCHEDULE,
@@ -22,7 +22,7 @@ import {
   WEEKLY_REAL_SNAPSHOT_SCHEDULE,
   parseArgs as parseSelectionArgs,
   selectPatrolPlan,
-} from '../framework/agent-patrol/select.mjs';
+} from '../developer/agent-patrol/select.mjs';
 
 const IMAGE =
   'ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3';

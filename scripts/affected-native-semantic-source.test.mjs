@@ -88,7 +88,7 @@ test('delivery attempt sealing preserves the verified dev delta plan', () => {
     'utf8',
   );
   const proofCliSource = fs.readFileSync(
-    path.join(ROOT, 'framework/release/affected-native-proof-cli.mjs'),
+    path.join(ROOT, 'product/release/affected-native-proof-cli.mjs'),
     'utf8',
   );
   assert.match(

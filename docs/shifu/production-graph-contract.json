@@ -128,7 +128,7 @@
   },
   "coreProductionSubgraph": {
     "contract": "docs/shifu/core-production-subgraph-contract.json",
-    "compiler": "framework/production-graph/core-subgraph/index.mjs",
+    "compiler": "developer/production-graph/core-subgraph/index.mjs",
     "profile": "journal",
     "orderedNodes": [
       "dependency-bootstrap",
@@ -146,7 +146,7 @@
   },
   "nativeBuildLoweringExploration": {
     "contract": "docs/shifu/native-build-lowering-contract.json",
-    "implementation": "framework/production-graph/native-build-lowering/index.mjs",
+    "implementation": "developer/production-graph/native-build-lowering/index.mjs",
     "profile": "journal",
     "node": "native-build",
     "backend": "bazel",

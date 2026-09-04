@@ -15,16 +15,16 @@ import {
   semanticRoot,
   verifyProjectCut,
   verifyProjectCutReceipt,
-} from '../framework/project-cut/index.mjs';
+} from '../framework/work/project-cut/index.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURE_PATH = path.join(
   ROOT,
-  'framework/agent-work/fixtures/continuity-pilot-v1.json',
+  'framework/work/agent-work/fixtures/continuity-pilot-v1.json',
 );
 const PROJECT_CUT_CONTRACT = JSON.parse(
   fs.readFileSync(
-    path.join(ROOT, 'framework/project-cut/project-cut.contract.json'),
+    path.join(ROOT, 'framework/work/project-cut/project-cut.contract.json'),
     'utf8',
   ),
 );
@@ -137,7 +137,7 @@ function pythonKungfu(args, { home, configHome, cwd, timeout = 120_000 }) {
         KF_CONFIG_HOME: configHome,
         KUNGFU_CONFIG_CONTRACT: path.join(
           ROOT,
-          'framework/config/kungfu-config.contract.json',
+          'framework/core/config/kungfu-config.contract.json',
         ),
       },
     },

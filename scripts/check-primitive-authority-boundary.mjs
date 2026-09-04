@@ -39,8 +39,8 @@ const GOVERNED_SOURCES = new Map([
     {
       role: 'sole-derived-projection-generator',
       required: [
-        /framework\/incubation\/incubation-passport\.registry\.json/u,
-        /framework\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
+        /framework\/spec\/incubation\/incubation-passport\.registry\.json/u,
+        /framework\/spec\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
         /config\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
         /primitive_catalog_v2\.hpp/u,
       ],
@@ -53,7 +53,7 @@ const GOVERNED_SOURCES = new Map([
       role: 'sole-passport-authoring-entrypoint',
       required: [/primitiveDeclarations/u, /runPrimitiveAuthoring/u],
       forbidden: [
-        /framework\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
+        /framework\/spec\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
         /config\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
       ],
     },
@@ -93,7 +93,7 @@ const GOVERNED_SOURCES = new Map([
     {
       role: 'read-only-kfd5-candidate-reference',
       required: [
-        /framework\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
+        /framework\/spec\/primitive\/kungfu-primitive-catalog\.contract\.json/u,
       ],
       forbidden: [
         /incubation-passport/u,

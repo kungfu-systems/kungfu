@@ -43,7 +43,7 @@
       "implementation": {
         "status": "implemented",
         "surfaces": [
-          "framework/contract/kungfu-contracts.registry.json"
+          "framework/spec/contract/kungfu-contracts.registry.json"
         ]
       },
       "verification": {
@@ -54,8 +54,8 @@
             "sha256": "sha256:5c78dfce2dc1eaefb6ad32dd90ad5eff6a59619836f1c3c82859c9683618ed89"
           },
           {
-            "path": "framework/contract/kungfu-contracts.registry.json",
-            "sha256": "sha256:b59f7069e8b9c203918012ab3b0f57daafb10218a9c8a6dbef218aabc46272e1"
+            "path": "framework/spec/contract/kungfu-contracts.registry.json",
+            "sha256": "sha256:2e21dfb4d89529167f79ca6e33959e3fbdbe5004a44447744ee16eebd7d341cd"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:a27c44b45324c3b8b9a9863daeae5be9bc1d74381bb7374ea4e9342ce4b51f26"
+            "sha256": "sha256:26d81867575e89cac31f646cb2ea99be7fdd6d9ef76c76aa320824dae249cdfe"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:8ec8f677dbed99158cf94e49ee5c98f29a20fccba9cb566abcf23a069d0828d8"
+            "sha256": "sha256:39e17c164d9fc4bba02de1a91f906588c9b1b48938e327b276a20c804b96ab9a"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-            "sha256": "sha256:afb1faf5b52c929774cf34c45918ba1986b07e6df20e2bce19890c7e559b5bef"
+            "sha256": "sha256:8e493b847dbc9bd320b3f5bb5d670092d666dabfd6063e7f3330f3d66531f81a"
           }
         ]
       },
@@ -249,8 +249,8 @@
           "framework/core/src/python/kungfu/assignment_orchestration.py",
           "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
           "docs/architecture/primitive-management-plane.md",
-          "framework/incubation/incubation-passport.registry.json",
-          "framework/primitive/kungfu-primitive-catalog.contract.json"
+          "framework/spec/incubation/incubation-passport.registry.json",
+          "framework/spec/primitive/kungfu-primitive-catalog.contract.json"
         ]
       },
       "verification": {
@@ -266,15 +266,15 @@
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
-            "sha256": "sha256:487177ad3247adbfed6fd1ccdecf7c31a7a6c93387bfba98af41cf1256426bcb"
+            "sha256": "sha256:5fcb5a5a1fe313dc9c1e6ef7866dd465cd6690e78793741f133b4510dc9284e4"
           },
           {
-            "path": "framework/incubation/incubation-passport.registry.json",
-            "sha256": "sha256:8ae1dc223e1f8b050f8f5872c9d2839dd1c6a86089314a74ca59acb209281271"
+            "path": "framework/spec/incubation/incubation-passport.registry.json",
+            "sha256": "sha256:f0854ccb9ae82e5de3d8413814a77802198754b5b476e8fdaa3a6f8845d878b5"
           },
           {
-            "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:1c13c2aea7332c71f216f67cbd926b100f0214d5636856ac2d4457d7d8762dbf"
+            "path": "framework/spec/primitive/kungfu-primitive-catalog.contract.json",
+            "sha256": "sha256:0f554a5d9c23967cc74fa2db07e947e24ee3c37099c4317a72590ecd1b077dd5"
           }
         ]
       },
@@ -322,22 +322,22 @@
       "precursorEvidence": {
         "status": "non-conforming-evidence",
         "surfaces": [
-          "framework/work-design-advisor/work-design-advisor.contract.json",
-          "framework/work-design-policy-replay/work-design-policy-replay.contract.json",
-          "framework/project-cut/README.md"
+          "framework/work/work-design-advisor/work-design-advisor.contract.json",
+          "framework/work/work-design-policy-replay/work-design-policy-replay.contract.json",
+          "framework/work/project-cut/README.md"
         ],
         "evidenceRoots": [
           {
-            "path": "framework/work-design-advisor/work-design-advisor.contract.json",
+            "path": "framework/work/work-design-advisor/work-design-advisor.contract.json",
             "sha256": "sha256:bbfd014adb84bfce90e20f39978a3cd6129d9c57a56f4564783273db69eb1614"
           },
           {
-            "path": "framework/work-design-policy-replay/work-design-policy-replay.contract.json",
+            "path": "framework/work/work-design-policy-replay/work-design-policy-replay.contract.json",
             "sha256": "sha256:caa4f7d38d7efeef985453267d355c2a4dda3737eb83a4bfd5f6cdfbc6f4bc4e"
           },
           {
-            "path": "framework/project-cut/README.md",
-            "sha256": "sha256:048e945ec202d4472c35ed5373bae5105f7dbe8f346aa00cf2b3f81045357c6b"
+            "path": "framework/work/project-cut/README.md",
+            "sha256": "sha256:c7a41bde45ff4813717645ecd9b91181f4b57d6304b82e6640523f59ddad02bc"
           }
         ],
         "missingGates": [
@@ -384,7 +384,7 @@
       "implementation": {
         "status": "implemented",
         "surfaces": [
-          "framework/agent-work/kungfu-kfd-7-action-contract.json",
+          "framework/work/agent-work/kungfu-kfd-7-action-contract.json",
           "framework/core/architecture/kfd7-release-passport.json"
         ]
       },
@@ -392,11 +392,11 @@
         "status": "passed",
         "evidenceRoots": [
           {
-            "path": "framework/agent-work/kungfu-kfd-7-release-gate.json",
-            "sha256": "sha256:6487665537ca0acde2ef130dbbf76bcc0476acf148253d302d9d6a2fd0abd812"
+            "path": "framework/work/agent-work/kungfu-kfd-7-release-gate.json",
+            "sha256": "sha256:f0313250b1914d69ac1fbdc849458879d0d6d763e63300fa30677f92e8e9b4e6"
           },
           {
-            "path": "framework/agent-work/evidence/kfd-7/kfd-verifier.json",
+            "path": "framework/work/agent-work/evidence/kfd-7/kfd-verifier.json",
             "sha256": "sha256:dc1742cd0192870c4dd20a0f519ba2b1717149ab66cbd55d1deaacc1e7f3e4d2"
           },
           {
@@ -440,14 +440,14 @@
       "implementation": {
         "status": "partial",
         "surfaces": [
-          "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json"
+          "framework/work/agent-work/evidence/kfd-7/atlas-staleness-loss.json"
         ]
       },
       "verification": {
         "status": "non-conforming-evidence",
         "evidenceRoots": [
           {
-            "path": "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+            "path": "framework/work/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
             "sha256": "sha256:df945b2e695457ab021b0d56633086b73c837f71841eb409c6ea70276908e5d1"
           }
         ]
@@ -486,14 +486,14 @@
       "implementation": {
         "status": "partial",
         "surfaces": [
-          "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json"
+          "framework/work/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json"
         ]
       },
       "verification": {
         "status": "non-conforming-evidence",
         "evidenceRoots": [
           {
-            "path": "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
+            "path": "framework/work/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
             "sha256": "sha256:7f18af674c5636a515daea74931b4bc7c0372ba38a74c38e1b0bb20b3072bc67"
           }
         ]
@@ -673,14 +673,14 @@
       "implementation": {
         "status": "partial",
         "surfaces": [
-          "framework/project-cut/project-cut.contract.json"
+          "framework/work/project-cut/project-cut.contract.json"
         ]
       },
       "verification": {
         "status": "non-conforming-evidence",
         "evidenceRoots": [
           {
-            "path": "framework/project-cut/project-cut.contract.json",
+            "path": "framework/work/project-cut/project-cut.contract.json",
             "sha256": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee"
           }
         ]

@@ -6,8 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CONTRACT = 'framework/upgrade/kungfu-upgrade-qualification.contract.json';
-const UPGRADE_CONTRACT = 'framework/upgrade/kungfu-upgrade.contract.json';
+const CONTRACT = 'product/upgrade/kungfu-upgrade-qualification.contract.json';
+const UPGRADE_CONTRACT = 'product/upgrade/kungfu-upgrade.contract.json';
 
 export class UpgradeQualificationError extends Error {
   constructor(code, message) {

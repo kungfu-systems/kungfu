@@ -15,18 +15,18 @@ import { factKernelNativeInvocation } from './run-fact-kernel-native-tests.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH =
-  'framework/invariant/kungfu-invariant-system.contract.json';
-const REGISTRY_PATH = 'framework/invariant/kungfu-invariant.registry.json';
+  'framework/spec/invariant/kungfu-invariant-system.contract.json';
+const REGISTRY_PATH = 'framework/spec/invariant/kungfu-invariant.registry.json';
 const REGISTRY_SCHEMA_PATH =
-  'framework/invariant/schema/invariant-registry-v1.schema.json';
+  'framework/spec/invariant/schema/invariant-registry-v1.schema.json';
 const EVIDENCE_SCHEMA_PATH =
-  'framework/invariant/schema/invariant-evidence-v1.schema.json';
+  'framework/spec/invariant/schema/invariant-evidence-v1.schema.json';
 const PASSPORT_SCHEMA_PATH =
-  'framework/invariant/schema/invariant-passport-v1.schema.json';
+  'framework/spec/invariant/schema/invariant-passport-v1.schema.json';
 const OBJECT_SCHEMA_PATH =
-  'framework/invariant/schema/episode-object-receipt-v1.schema.json';
+  'framework/spec/invariant/schema/episode-object-receipt-v1.schema.json';
 const SUCCESSOR_SCHEMA_PATH =
-  'framework/invariant/schema/invariant-successor-v1.schema.json';
+  'framework/spec/invariant/schema/invariant-successor-v1.schema.json';
 const EPISODE_INPUT_SCHEMA_PATH =
   'framework/core/tests/qualification/episode/schemas/episode-qualification-v1.schema.json';
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
@@ -515,7 +515,7 @@ export function synchronizeRegistryRoots(registry = readJson(REGISTRY_PATH)) {
 }
 
 function synchronizePackagedArtifacts(write = false) {
-  const centralPath = 'framework/contract/kungfu-contracts.registry.json';
+  const centralPath = 'framework/spec/contract/kungfu-contracts.registry.json';
   const central = readJson(centralPath);
   const entry = central.contracts.find(
     (item) => item.surface === 'invariant-system',
@@ -567,7 +567,7 @@ function synchronizePackagedArtifacts(write = false) {
       );
     const policySource = path.join(
       ROOT,
-      'framework/contract/kungfu-agent-first-canonical-policy.json',
+      'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
     );
     const policyArtifact = path.join(
       ROOT,
@@ -1274,7 +1274,7 @@ export function qualifyEpisodeObject(subject, options = {}) {
   const validate = ajv().compile(readJson(EPISODE_INPUT_SCHEMA_PATH));
   const schemaIssues = validate(subject) ? [] : validationErrors(validate);
   const contract = readJson(
-    'framework/episode/kungfu-episode-invariants.contract.json',
+    'framework/core/episode/kungfu-episode-invariants.contract.json',
   );
   const checker = readJson(EPISODE_INPUT_SCHEMA_PATH);
   const evidenceStates = Object.values(subject.evidence || {}).map(
@@ -1351,7 +1351,9 @@ export function verifyEpisodeObjectReceipt(receipt, subject) {
   if (
     receipt.contractRoot !==
     digest(
-      readJson('framework/episode/kungfu-episode-invariants.contract.json'),
+      readJson(
+        'framework/core/episode/kungfu-episode-invariants.contract.json',
+      ),
     )
   )
     issues.push('stale-contract');

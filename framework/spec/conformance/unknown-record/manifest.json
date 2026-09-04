@@ -20,6 +20,6 @@
   "causal_chain_verified": true,
   "capture_boundary": {
     "unknown_records": "preserve byte-for-byte without claiming to decode",
-    "authority": "portable-bundle behavior only; retained journal-wire authority lives in framework/format/conformance/portable-format-vectors"
+    "authority": "portable-bundle behavior only; retained journal-wire authority lives in framework/spec/format/conformance/portable-format-vectors"
   }
 }

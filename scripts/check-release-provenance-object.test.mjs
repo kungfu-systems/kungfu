@@ -10,8 +10,7 @@ import test from 'node:test';
 const read = (path) => fs.readFileSync(path, 'utf8');
 const readJson = (path) => JSON.parse(read(path));
 
-const contractPath =
-  'framework/release/kungfu-release-provenance.contract.json';
+const contractPath = 'product/release/kungfu-release-provenance.contract.json';
 const artifactPath = 'config/release/kungfu-release-provenance.contract.json';
 const contract = readJson(contractPath);
 const ROOT = process.cwd();
@@ -67,7 +66,7 @@ test('release provenance is a welded KFR2 semantic contract', () => {
   assert.equal(read(contractPath), read(artifactPath));
 
   const sourceRegistry = readJson(
-    'framework/contract/kungfu-contracts.registry.json',
+    'framework/spec/contract/kungfu-contracts.registry.json',
   );
   const runtimeRegistry = readJson('config/kungfu-contracts.registry.json');
   assert.deepEqual(sourceRegistry, runtimeRegistry);

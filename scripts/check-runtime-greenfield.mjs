@@ -96,7 +96,7 @@ const RETIREMENT_EXCLUDED_ROOTS = [
   '.kungfu/',
   '.xinfa/',
   'docs/qualification/evidence/',
-  'framework/maintainability/',
+  'developer/maintainability/',
 ];
 const RETIREMENT_SELF_DESCRIPTION_FILES = new Set([
   'scripts/check-runtime-greenfield.mjs',

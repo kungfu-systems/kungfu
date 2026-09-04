@@ -106,7 +106,7 @@ enforces nothing.
 First add read-only existing-surface adoption:
 
 ```sh
-kungfu sdk contract adopt config --source framework/config/kungfu-config.contract.json --json
+kungfu sdk contract adopt config --source framework/core/config/kungfu-config.contract.json --json
 kungfu sdk contract adopt kfx --source framework/kfx/kungfu-kfx.contract.json --json
 kungfu sdk contract adopt skill --source framework/skill/kungfu-skill.contract.json --json
 kungfu sdk contract render config --check --json
@@ -151,7 +151,7 @@ kungfu sdk contract audit --json
 ```
 
 `policy` renders the agent-readable policy file shipped from
-`framework/contract/kungfu-agent-first-canonical-policy.json` to
+`framework/spec/contract/kungfu-agent-first-canonical-policy.json` to
 `config/kungfu-agent-first-canonical-policy.json`. The SDK imports KFD standard
 metadata from `@kungfu-tech/kfd` and JSON formatting plus KFD-1 witness
 normalization from `@kungfu-tech/buildchain`; Kungfu does not redefine the

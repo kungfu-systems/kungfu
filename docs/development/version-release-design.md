@@ -324,7 +324,7 @@ ADR and whether residual risk deserves a waiver. See
 and the [document metadata contract](document-metadata.md).
 
 The gate also evaluates
-`framework/deprecation/deprecation-registry.json`. ADR delivery waivers do not
+`developer/deprecation/deprecation-registry.json`. ADR delivery waivers do not
 waive deprecation debt. At the first eligible Alpha or stable release, an
 applicable entry must have qualified removal evidence, explicit restored
 support, or an exact native Warrant projection whose date and release bounds

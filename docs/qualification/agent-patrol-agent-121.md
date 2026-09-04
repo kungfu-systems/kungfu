@@ -46,7 +46,7 @@ off agent-120, which remains the Dev build primary.
   only for the three-trial monthly or candidate qualification
 - Credentials: none admitted to the model or Dogfood payload
 
-`framework/agent-patrol/select.mjs` owns the trigger-to-plan contract. The
+`developer/agent-patrol/select.mjs` owns the trigger-to-plan contract. The
 lightweight mode always runs `incident-board-lease-v1` with a 600-second
 per-session timeout. The deeper mode runs two fixtures with a 900-second
 per-session timeout and rotates the starting fixture from the stable GitHub
@@ -69,7 +69,7 @@ committed manifest binds every tracked regular file by mode, bytes, lines, and
 SHA256 plus one canonical tree root. The materializer reads the exact protected
 commit through Git, verifies the manifest, copies no `.git` metadata, and then
 applies one deterministic regression to
-`framework/agent-patrol/classify.mjs`.
+`developer/agent-patrol/classify.mjs`.
 
 Agent A remains read-only. Agent B may change only that one module. The visible
 test checks stable Finding identity across volatile large numeric run IDs; a
@@ -98,12 +98,12 @@ Dev/release gate, or run fork pull-request code.
 | Missing, malformed, mismatched, or unrooted evidence | red | fail closed; do not invent a Finding |
 | Dogfood profile, lookup, capture, or receipt failure | red | fail closed |
 
-`framework/agent-patrol/classify.mjs` computes a stable failure fingerprint from
+`developer/agent-patrol/classify.mjs` computes a stable failure fingerprint from
 the experiment identity, pinned runtime, failure category, and a normalized
 message root. Volatile content roots, commit hashes, absolute paths, and large
 numeric identifiers do not create new identities.
 
-`framework/agent-patrol/dogfood-capture.mjs` owns the only mutation path. It:
+`developer/agent-patrol/dogfood-capture.mjs` owns the only mutation path. It:
 
 1. ensures the dedicated persistent project workspace;
 2. recovers the exact Dogfood Profile root through its plan/apply contract;
@@ -116,7 +116,7 @@ receipt states `issueAdmitted: false`.
 
 ## Capability Receipts and qualification
 
-`framework/agent-repository-work/report.mjs` converts each validated report,
+`framework/work/agent-repository-work/report.mjs` converts each validated report,
 classification, and Dogfood receipt into one
 `kungfu.agent-patrol.capability-receipt/v1`. The canonical receipt binds:
 
@@ -226,7 +226,7 @@ For the real module lane, also verify:
 1. `mode=real-snapshot` selected exactly one fixture;
 2. the report bound the protected `sourceHead` and committed `sourceTreeRoot`;
 3. the OpenCode image ran the visible Node test in both fresh sessions;
-4. only `framework/agent-patrol/classify.mjs` changed;
+4. only `developer/agent-patrol/classify.mjs` changed;
 5. visible and hidden checks passed; and
 6. the Capability Receipt separated functional, scope, and exactness states;
 7. replaying identical receipt bytes returned `already-present`; and

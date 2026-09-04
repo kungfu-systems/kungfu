@@ -11,9 +11,9 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 export const PASSPORT_REGISTRY =
-  'framework/incubation/incubation-passport.registry.json';
+  'framework/spec/incubation/incubation-passport.registry.json';
 export const CATALOG_SOURCE =
-  'framework/primitive/kungfu-primitive-catalog.contract.json';
+  'framework/spec/primitive/kungfu-primitive-catalog.contract.json';
 export const CATALOG_ARTIFACT =
   'config/primitive/kungfu-primitive-catalog.contract.json';
 export const CATALOG_HEADER =
@@ -22,10 +22,10 @@ export const CATALOG_HEADER =
 const FACETS = Object.freeze({
   vocabulary: 'docs/vocabulary.registry.json',
   incubationPassports: PASSPORT_REGISTRY,
-  kfd1Contracts: 'framework/contract/kungfu-contracts.registry.json',
-  invariants: 'framework/invariant/kungfu-invariant.registry.json',
+  kfd1Contracts: 'framework/spec/contract/kungfu-contracts.registry.json',
+  invariants: 'framework/spec/invariant/kungfu-invariant.registry.json',
   workLifecycle:
-    'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
+    'framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
   languageBoundary:
     'framework/core/architecture/layered-api-encoding-boundary.contract.json',
 });
@@ -40,9 +40,9 @@ const PRIMITIVE_CATALOG_SCHEMA = 'kungfu.primitive-catalog/v2';
 const CPP_LITERAL_MAX_BYTES = 8 * 1024;
 const PRIMITIVE_ARTIFACT_SCHEMA = /^kungfu\.primitive(?:[.-])/u;
 const MANAGED_PREFIXES = Object.freeze([
-  'framework/primitive/contracts/',
-  'framework/primitive/operation-slots/',
-  'framework/primitive/sdk-slots/',
+  'framework/spec/primitive/contracts/',
+  'framework/spec/primitive/operation-slots/',
+  'framework/spec/primitive/sdk-slots/',
   'tests/fixtures/primitive/',
 ]);
 const CLASSIFICATION_FAMILIES = new Set([

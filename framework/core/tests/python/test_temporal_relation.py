@@ -9,8 +9,8 @@ from kungfu.storage import fact_root_canonical as temporal_relation
 
 ROOT = Path(__file__).resolve().parents[4]
 FIXTURE = ROOT / "tests/fixtures/temporal-relation-contract/cases.json"
-CONTRACT = ROOT / "framework/fact/kungfu-fact-cut-kernel.contract.json"
-KFR2 = ROOT / "framework/fact/kungfu-fact-root-canonical-v2.json"
+CONTRACT = ROOT / "framework/core/fact/kungfu-fact-cut-kernel.contract.json"
+KFR2 = ROOT / "framework/core/fact/kungfu-fact-root-canonical-v2.json"
 
 
 def _root(label):

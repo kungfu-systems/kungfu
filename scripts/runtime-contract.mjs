@@ -9,6 +9,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH = path.join(
   ROOT,
   'framework',
+  'core',
   'runtime',
   'kungfu-runtime.contract.json',
 );
@@ -559,7 +560,13 @@ export async function checkRuntimeContract(root = ROOT) {
   const fixtureRoot = path.join(root, path.relative(ROOT, FIXTURE_ROOT));
   const contract = readJson(contractPath);
   const registry = readJson(
-    path.join(root, 'framework', 'contract', 'kungfu-contracts.registry.json'),
+    path.join(
+      root,
+      'framework',
+      'spec',
+      'contract',
+      'kungfu-contracts.registry.json',
+    ),
   );
   if (contract.schema !== 'kungfu.runtime.contract/v1')
     throw new Error('runtime contract schema mismatch');
@@ -570,7 +577,10 @@ export async function checkRuntimeContract(root = ROOT) {
   );
   if (!registryEntry)
     throw new Error('runtime contract is not registered in KFD-1');
-  if (registryEntry.source !== 'framework/runtime/kungfu-runtime.contract.json')
+  if (
+    registryEntry.source !==
+    'framework/core/runtime/kungfu-runtime.contract.json'
+  )
     throw new Error('runtime registry source mismatch');
 
   const capabilityIds = list(contract.capabilities).map((item) => item.id);

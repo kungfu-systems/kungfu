@@ -12,10 +12,10 @@ import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 const ROOT = repositoryRoot(import.meta.url);
 const ENVELOPE_SCHEMA_PATH =
-  'framework/registry/schema/registry-envelope-v1.schema.json';
+  'framework/spec/registry/schema/registry-envelope-v1.schema.json';
 export const ENVELOPE_PATHS = [
-  'framework/registry/contract.registry-envelope.json',
-  'framework/registry/invariant.registry-envelope.json',
+  'framework/spec/registry/contract.registry-envelope.json',
+  'framework/spec/registry/invariant.registry-envelope.json',
 ];
 export const CONTRACT_ENVELOPE_PATH = ENVELOPE_PATHS[0];
 

@@ -12,7 +12,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const POLICY = path.join(HERE, 'policy.json');
 const NPM_PACKAGE_REGISTRY = path.join(
   HERE,
-  '../../../../framework/release/npm-package-registry.json',
+  '../../../../product/release/npm-package-registry.json',
 );
 const EXPECTED_NPM_PACKAGE_COUNT = JSON.parse(
   fs.readFileSync(NPM_PACKAGE_REGISTRY, 'utf8'),

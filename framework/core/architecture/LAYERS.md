@@ -131,7 +131,7 @@ authority; this architecture contract does not own a second ledger.
 
 | Contract | Registry | Contributed entries |
 | --- | --- | --- |
-| `../deprecation/deprecation-lifecycle.contract.json` | `../deprecation/deprecation-registry.json` | `core.yijinjing.boolean-mmap-adapters` |
+| `../../developer/deprecation/deprecation-lifecycle.contract.json` | `../../developer/deprecation/deprecation-registry.json` | `core.yijinjing.boolean-mmap-adapters` |
 
 ## Navigation
 

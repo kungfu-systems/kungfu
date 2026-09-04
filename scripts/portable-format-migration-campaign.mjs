@@ -65,7 +65,7 @@ export function runPortableFormatMigrationCampaign(repoRoot = ROOT) {
     fs.readFileSync(
       path.join(
         repoRoot,
-        'framework/format/kungfu-format-migration.contract.json',
+        'framework/spec/format/kungfu-format-migration.contract.json',
       ),
       'utf8',
     ),

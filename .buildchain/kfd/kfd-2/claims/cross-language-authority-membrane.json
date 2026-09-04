@@ -6,8 +6,8 @@
     {
       "role": "claim-source",
       "kind": "file",
-      "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "sha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063"
+      "path": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "sha256": "cf6db729809a470d5d01f522f6b47a1e9a2b1c6637812d0b86a6a072bb6fa835"
     }
   ],
   "machineEvidence": [
@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/check-native-authority-membrane.test.mjs",
-        "sha256": "92c11028398ff041fa39402e8c8dafc181dd9f428c4f86f4e11a9337b80bee70"
+        "sha256": "79cd49995902dc760cbf4c84bb6696487813a7ae5cf18a12fe09c9c32000ea88"
       },
       "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
     },
@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-        "sha256": "9f68398f076a690e8009fb1012fdcdf16c2ab6ad4afdbd985c35e699292a65b6"
+        "sha256": "63d2d41ee2f9aaa55fe23e49919cdea11c5aab3085a9051a9f815844179c0286"
       },
       "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
     },
@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "tests/qualification/layers/sdk/run.mjs",
-        "sha256": "85d79cc690fbc2a5f05f16cec6fa17c30b67791f8c781c68eee89db00535cefe"
+        "sha256": "00581d7d1bc595afa604f77d92ba4a9d538ce2905afad8f49afe3c950367dd57"
       },
       "description": "Installed C++, Python, Node.js, and Rust SDK qualification against one exact native runtime."
     },
@@ -61,14 +61,14 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-        "sha256": "1d89fcf741abd3b597ea531719881121eadfc0bdb33ff3c13bfcfc1ab7d74297"
+        "sha256": "77803df07eb3e0d75f30b89b13e28f4d26c5be7a7e42e6319e87d8b84793755f"
       },
       "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
     }
   ],
   "hashes": {
-    "registrySha256": "9d40a24a16a791a7d1cc57ce1444e82427af90e8459a390cecffbe5bde91b723",
-    "sourceSha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063",
+    "registrySha256": "902de3b45ca4847832b63968bf2f2080eda56689fe74a7a34716d8d510335a48",
+    "sourceSha256": "cf6db729809a470d5d01f522f6b47a1e9a2b1c6637812d0b86a6a072bb6fa835",
     "evidenceSha256": [
       {
         "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
@@ -76,15 +76,15 @@
       },
       {
         "path": "scripts/check-native-authority-membrane.test.mjs",
-        "sha256": "92c11028398ff041fa39402e8c8dafc181dd9f428c4f86f4e11a9337b80bee70"
+        "sha256": "79cd49995902dc760cbf4c84bb6696487813a7ae5cf18a12fe09c9c32000ea88"
       },
       {
         "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-        "sha256": "9f68398f076a690e8009fb1012fdcdf16c2ab6ad4afdbd985c35e699292a65b6"
+        "sha256": "63d2d41ee2f9aaa55fe23e49919cdea11c5aab3085a9051a9f815844179c0286"
       },
       {
         "path": "tests/qualification/layers/sdk/run.mjs",
-        "sha256": "85d79cc690fbc2a5f05f16cec6fa17c30b67791f8c781c68eee89db00535cefe"
+        "sha256": "00581d7d1bc595afa604f77d92ba4a9d538ce2905afad8f49afe3c950367dd57"
       },
       {
         "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
@@ -92,21 +92,21 @@
       },
       {
         "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-        "sha256": "1d89fcf741abd3b597ea531719881121eadfc0bdb33ff3c13bfcfc1ab7d74297"
+        "sha256": "77803df07eb3e0d75f30b89b13e28f4d26c5be7a7e42e6319e87d8b84793755f"
       }
     ],
     "artifactSha256": [
       {
-        "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063"
+        "path": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+        "sha256": "cf6db729809a470d5d01f522f6b47a1e9a2b1c6637812d0b86a6a072bb6fa835"
       }
     ]
   },
   "artifacts": [
     {
       "name": "work-lifecycle-operation-matrix",
-      "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "sha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063",
+      "path": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "sha256": "cf6db729809a470d5d01f522f6b47a1e9a2b1c6637812d0b86a6a072bb6fa835",
       "expectedPackagePath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
     }
   ],

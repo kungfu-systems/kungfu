@@ -22,7 +22,7 @@ def _resolve_action_entry():
             return os.path.realpath(candidate)
     directory = binding_dir
     for _ in range(8):
-        candidate = os.path.join(directory, "framework", "action", "action.mjs")
+        candidate = os.path.join(directory, "framework", "work", "action", "action.mjs")
         if os.path.isfile(candidate):
             return os.path.realpath(candidate)
         parent = os.path.dirname(directory)

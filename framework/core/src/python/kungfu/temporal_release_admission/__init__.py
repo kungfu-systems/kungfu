@@ -763,7 +763,7 @@ def verify_rollback(
     ):
         issues.append("rollback-boundary-mismatch")
     if admission_contract.get("rollback") != {
-        "contract": "framework/release/kungfu-temporal-release-rollback.contract.json",
+        "contract": "product/release/kungfu-temporal-release-rollback.contract.json",
         "normalAdmissionEligible": False,
         "invocation": "offline-explicit-only",
     }:

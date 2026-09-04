@@ -9,6 +9,7 @@ const ROOT = path.resolve(__dirname, '..');
 const REGISTRY_SOURCE = path.join(
   ROOT,
   'framework',
+  'spec',
   'contract',
   'kungfu-contracts.registry.json',
 );

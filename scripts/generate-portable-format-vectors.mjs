@@ -8,11 +8,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const V1_VECTOR_ROOT = path.join(
   ROOT,
-  'framework/format/conformance/portable-format-vectors/v1/bytes',
+  'framework/spec/format/conformance/portable-format-vectors/v1/bytes',
 );
 export const V2_VECTOR_ROOT = path.join(
   ROOT,
-  'framework/format/conformance/portable-format-vectors/v2/bytes',
+  'framework/spec/format/conformance/portable-format-vectors/v2/bytes',
 );
 export const VECTOR_ROOT = V1_VECTOR_ROOT;
 

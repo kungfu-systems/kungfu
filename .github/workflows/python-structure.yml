@@ -10,8 +10,8 @@ on:
     paths:
       - "framework/core/src/python/**"
       - "framework/core/tests/python/**"
-      - "framework/maintainability/abstraction-integrity*.json"
-      - "framework/maintainability/python-structure-negative-fixtures.json"
+      - "developer/maintainability/abstraction-integrity*.json"
+      - "developer/maintainability/python-structure-negative-fixtures.json"
       - "scripts/check-code-complexity*.mjs"
       - "scripts/check-python-structure*.py"
       - ".github/workflows/python-structure.yml"

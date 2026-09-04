@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_PATH = Path("framework/maintainability/abstraction-integrity.manifest.json")
+MANIFEST_PATH = Path("developer/maintainability/abstraction-integrity.manifest.json")
 PYTHON_SOURCE_ROOT = "framework/core/src/python"
 GIT_TIMEOUT_SECONDS = float(os.environ.get("KUNGFU_GIT_COMMAND_TIMEOUT_SECONDS", "10"))
 

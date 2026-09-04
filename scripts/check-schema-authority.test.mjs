@@ -49,7 +49,7 @@ test('repository inventory matches production sources', () => {
 test('every declared contract schema is frozen by the central artifact registry', () => {
   const registry = JSON.parse(
     fs.readFileSync(
-      path.join(ROOT, 'framework/contract/kungfu-contracts.registry.json'),
+      path.join(ROOT, 'framework/spec/contract/kungfu-contracts.registry.json'),
       'utf8',
     ),
   );

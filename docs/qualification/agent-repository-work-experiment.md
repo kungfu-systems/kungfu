@@ -44,12 +44,12 @@ tracked regular files whose mode, size, line count, and SHA256 match the
 manifest, verifies a canonical tree root, copies the slice into a disposable
 workspace without Git metadata, and applies one deterministic mutation:
 large numeric failure identifiers stop being normalized in
-`framework/agent-patrol/classify.mjs`.
+`developer/agent-patrol/classify.mjs`.
 
 The visible regression checks that two failures differing only in volatile run
 IDs resolve to one Finding identity. The external hidden verifier repeats that
 boundary with different identifiers and paths. Agent A receives a read-only
-mount; Agent B may modify only `framework/agent-patrol/classify.mjs`; the
+mount; Agent B may modify only `developer/agent-patrol/classify.mjs`; the
 reference root and all other snapshot paths remain protected. This makes the
 result evidence about a real Kungfu module slice while retaining deterministic
 completion authority.
