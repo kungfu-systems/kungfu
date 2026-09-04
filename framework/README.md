@@ -5,87 +5,54 @@ doc_type: architecture-guide
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
-period: 2026-09-02
-theme: framework-layout-governance
+period: 2026-09-04
+theme: framework-package-ownership
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-09-02
-ai_provenance: GPT-5 via Codex on 2026-09-01; updated on 2026-09-02 from checked-in source and repository contracts, with no access to invisible model internals
+last_reviewed: 2026-09-04
+ai_provenance: GPT-5 via Codex on 2026-09-04; based on checked-in source, package manifests, and the user-approved owner convergence; no claim about unpublished release evidence
 ---
 
-# Framework layout and package boundaries
+# Framework package ownership
 
-`framework/` is an architecture root, not a synonym for an npm workspace
-package. Its immediate directories currently have two distribution classes:
+Every immediate directory under `framework/` is a real npm workspace package.
+The framework root contains durable build-on boundaries; repository tools and
+product assembly live under `developer/` and `product/` instead of pretending
+to be packages.
 
-- `npm-package`: a directory with `package.json` whose package identity is also
-  present in [`release/npm-package-registry.json`](release/npm-package-registry.json);
-- `source-only`: checked-in contracts, internal libraries or repository tools
-  that deliberately have no independent npm package identity.
+The authoritative classification is
+[`layout.manifest.json`](layout.manifest.json). The layout gate verifies that
+every immediate directory has `package.json`, matches the public npm registry,
+and that no source-only framework root can be reintroduced.
 
-The authoritative, complete classification is
-[`layout.manifest.json`](layout.manifest.json). The repository gate checks that
-every immediate directory is classified exactly once, that source-only roots do
-not silently acquire `package.json`, and that npm-package entries match the npm
-release registry. A root `workspaces` glob may discover directories, but it does
-not turn a directory without `package.json` into a package.
+## Semantic owners
 
-## Current inventory
+| Owner | Responsibility | Owned protocol and implementation groups |
+| --- | --- | --- |
+| `@kungfu-tech/spec` | Portable declarations, schemas, registries, compatibility and conformance material | `format`, `contract`, `registry`, `invariant`, `primitive`, `incubation` |
+| `@kungfu-tech/core` | Native facts, episodes, runtime admission, persistence, exit and data protection | `config`, `fact`, `episode`, `episode-admission`, `runtime`, `exit`, `data-protection`, `workspace-federation` |
+| `@kungfu-tech/work` | Domain-neutral Work semantics and pure composition above Core | `agent-work`, `initiative-assignment`, `work-lifecycle`, `work-loop`, `profile`, Action Geometry, Assignment Runtime, Evidence, Project Cut and their repository-internal helpers |
 
-The manifest classifies all 56 immediate directories: 10 npm packages and 46
-source-only roots. Their architectural roles are independent of distribution:
+`@kungfu-tech/spec` can distribute deterministic projections of Core and Work
+contracts, but it cannot redefine their semantics. `@kungfu-tech/work` owns no
+native writer, journal, storage engine or lease authority; those remain in
+Core. Higher product and API layers compose these packages without becoming a
+second authority.
 
-| Role | Count | Meaning |
-| --- | ---: | --- |
-| `runtime-package` | 10 | Released build-on or reference runtime surface |
-| `contract-root` | 23 | Schemas, contracts, fixtures, vectors and adjacent validators |
-| `internal-library` | 14 | Reusable repository source without an independent package boundary |
-| `repository-tool` | 9 | Development, governance, qualification or release automation |
+## Non-framework owners
 
-The ten current npm packages are `agent-session`, `api`, `core`, `gui`, `kfx`,
-`site`, `skill`, `spec`, `storage` and `tui`. This list is a projection of the
-manifest and release registry, not a naming convention for future directories.
+- `developer/` owns patrol, dogfood capture, deprecation, delivery,
+  maintainability, Production Graph and report-projection tooling.
+- `product/` owns Hub Starter, release/version-line automation, upgrade
+  contracts and product qualification contracts.
 
-Each manifest entry also records cross-directory dependencies discovered from
-single-literal relative paths in checked-in JavaScript and TypeScript source.
-This is a lexical repository-coupling map across production code, tests and
-tooling. It is not by itself a public API graph or proof of runtime coupling.
-
-## Completed public-boundary decisions
-
-Wave 1 completed the four queued decisions. All remain `source-only`: a stable
-repository entrypoint is not an npm identity, and compatibility follows the
-repository train unless an explicit future package decision proves otherwise.
-
-| Boundary | Disposition | Stable seam | Declared consumers | Migration boundary |
-| --- | --- | --- | --- | --- |
-| `action` | `repository-stable` | `action/index.mjs` | `work-profile-conformance` | The sole cross-directory code consumer now uses the index; other Action artifacts remain contract/package data rather than npm exports. |
-| `assignment-runtime` | `embedded-public-protocol` | `assignment-runtime/index.mjs`, the v1 contract and envelope schema | Core CLI/Agent, API, GUI and Work Dashboard | The protocol stays public through existing runtime products; no separate package, writer or transport is created. |
-| `evidence` | `repository-stable` | `evidence/index.mjs` and its envelope schema | Project Cut and source qualification | New code uses the index; envelope identity is unchanged and no independent release is introduced. |
-| `project-cut` | `repository-stable` | `project-cut/index.mjs` for the frozen core protocol; narrow `composition.mjs`, `settlement.mjs`, and `publication.mjs` sub-entrypoints | Assignment Capture, Core, Cut, Episode Provider, maintainability/work-design tooling and scripts | Composition, settlement, and protected-publication consumers use stable source-only seams. The remaining specialized `src/*` imports are an exact non-growing ratchet; new consumers must use a declared stable seam or first make a new boundary decision. |
-
-The Evidence/Project Cut source cycle is removed by keeping the one canonical
-JSON/root implementation in
-[`format/project-cut-canonical-json.mjs`](format/project-cut-canonical-json.mjs).
-Project Cut re-exports those functions for compatibility and still owns the
-root protocol and preimages. Evidence and Project Cut depend on the neutral
-format implementation; only Project Cut depends on Evidence for receipt
-envelopes. Golden root and receipt fixtures guard byte compatibility.
-
-For every completed boundary, the manifest declares its stable entrypoints,
-consumer scopes and exact legacy deep imports. The layout gate fails closed for
-a missing entrypoint or consumer, a completed-boundary dependency cycle, a new
-private import, a stale or duplicate ratchet entry, or accidental package and
-release-registry drift.
+Historical evidence can retain the path it observed. Active source, tests,
+registries and documentation must use the current owner paths.
 
 ## Verification
 
-Run the focused check through the repository entrypoint:
-
 ```sh
 ./shifu check:framework-layout
+./shifu check:npm-package-registry
+./shifu check:source
 ```
-
-The same validator and its negative tests are part of `./shifu check:source`, so
-an unclassified directory, an accidental package boundary or dependency-map
-drift fails the protected source gate.

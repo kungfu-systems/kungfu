@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CORE = path.join(ROOT, 'framework', 'core');
-const POLICY_PATH = 'framework/maintainability/cpp-safety-policy.json';
+const POLICY_PATH = 'developer/maintainability/cpp-safety-policy.json';
 
 const SANITIZER_TARGETS = Object.freeze([
   'yijinjing_mmap_tests',

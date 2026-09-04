@@ -4,8 +4,8 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { KeyValue } from '../reflection/key-value.js';
-import { RPCCall } from '../reflection/rpccall.js';
+import { KeyValue } from './key-value.js';
+import { RPCCall } from './rpccall.js';
 
 
 export class Service {

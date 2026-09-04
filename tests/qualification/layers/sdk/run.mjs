@@ -32,9 +32,7 @@ const WORK_LIFECYCLE_FIXTURE = path.join(
 );
 const WORK_LIFECYCLE_CONTRACT = path.join(
   ROOT,
-  'framework',
-  'work-lifecycle',
-  'work-lifecycle-native.contract.json',
+  'framework/work/work-lifecycle/work-lifecycle-native.contract.json',
 );
 const PYTHON_CALL = path.join(DIR, 'python-call.py');
 const NODE_CALL = path.join(DIR, 'node-call.cjs');
@@ -422,7 +420,7 @@ function stageQualificationProfile(root) {
   );
   fs.mkdirSync(path.dirname(actionGeometry), { recursive: true });
   fs.copyFileSync(
-    path.join(ROOT, 'framework', 'action', 'action-geometry.contract.json'),
+    path.join(ROOT, 'framework/work/action/action-geometry.contract.json'),
     actionGeometry,
   );
   if (!fs.existsSync(registry) || !fs.existsSync(actionGeometry))

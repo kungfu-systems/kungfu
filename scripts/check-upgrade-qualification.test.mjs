@@ -25,7 +25,7 @@ const CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
       ROOT,
-      'framework/upgrade/kungfu-upgrade-qualification.contract.json',
+      'product/upgrade/kungfu-upgrade-qualification.contract.json',
     ),
     'utf8',
   ),

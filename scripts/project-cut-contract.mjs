@@ -14,7 +14,7 @@ import {
   verifyProjectCut,
   verifyProjectCutReceipt,
   verifySourceProjection,
-} from '../framework/project-cut/index.mjs';
+} from '../framework/work/project-cut/index.mjs';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -47,7 +47,7 @@ function setPath(value, dottedPath, replacement, remove = false) {
 export function loadProjectCutFixture(root = DEFAULT_ROOT) {
   const fixture = readJson(
     root,
-    'framework/project-cut/fixtures/golden/project-cut-v1.json',
+    'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
   );
   const { policy, projection } = buildSourceProjection(
     fixture.sourceProjectionInput,
@@ -102,12 +102,12 @@ function applyNegativeCase(base, item) {
 export function computeProjectCutContractRoots(root = DEFAULT_ROOT) {
   const contract = readJson(
     root,
-    'framework/project-cut/project-cut.contract.json',
+    'framework/work/project-cut/project-cut.contract.json',
   );
   const files = contract.schemaBundle.files.map((relative) => ({
     path: relative,
     root: semanticRoot(
-      readJson(root, path.join('framework/project-cut', relative)),
+      readJson(root, path.join('framework/work/project-cut', relative)),
     ),
   }));
   const schemaRoot = semanticRoot({
@@ -136,7 +136,7 @@ export function checkProjectCutContract(root = DEFAULT_ROOT) {
     );
   const defaultPolicy = readJson(
     root,
-    'framework/project-cut/default-source-projection-policy.json',
+    'framework/work/project-cut/default-source-projection-policy.json',
   );
   const { policyRoot: _declaredPolicyRoot, ...policyPreimage } = defaultPolicy;
   if (semanticRoot(policyPreimage) !== defaultPolicy.policyRoot)
@@ -189,7 +189,7 @@ export function checkProjectCutContract(root = DEFAULT_ROOT) {
   const schemas = Object.fromEntries(
     roots.contract.schemaBundle.files.map((relative) => [
       relative,
-      readJson(root, path.join('framework/project-cut', relative)),
+      readJson(root, path.join('framework/work/project-cut', relative)),
     ]),
   );
   const invalidCut = structuredClone(base.cut);
@@ -215,7 +215,7 @@ export function checkProjectCutContract(root = DEFAULT_ROOT) {
   }
   const negative = readJson(
     root,
-    'framework/project-cut/fixtures/negative/cases-v1.json',
+    'framework/work/project-cut/fixtures/negative/cases-v1.json',
   );
   for (const item of negative.cases) {
     const result = applyNegativeCase(base, item);

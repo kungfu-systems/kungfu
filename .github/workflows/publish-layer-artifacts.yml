@@ -110,7 +110,7 @@ jobs:
           # shifu-entry-contract: allow dependency-free publication preflight before the launcher is installed
           node scripts/preflight-layer-publication.mjs \
             --manifest publication/manifest.json \
-            --npm-registry framework/release/npm-package-registry.json \
+            --npm-registry product/release/npm-package-registry.json \
             --version "${{ steps.version.outputs.version }}" \
             --repo "$GITHUB_REPOSITORY" \
             --tag "${{ inputs.release-tag }}" \
@@ -249,7 +249,7 @@ jobs:
           node scripts/verify-layer-publication.mjs \
             --evidence product/release/qualification/publication-set/evidence \
             --manifest product/release/qualification/publication-set/publication/manifest.json \
-            --npm-registry framework/release/npm-package-registry.json \
+            --npm-registry product/release/npm-package-registry.json \
             --repo "$GITHUB_REPOSITORY" \
             --tag "${{ inputs.release-tag }}" \
             --version "${{ needs.prepare.outputs.version }}" \

@@ -7,7 +7,7 @@ a composed boundary from silently substituting for another.
 
 The frozen contract is shipped as
 `config/kungfu-runtime-surface.contract.json`; its source is
-`framework/runtime/kungfu-runtime-surface.contract.json`. KFD-1 contract audit
+`framework/core/runtime/kungfu-runtime-surface.contract.json`. KFD-1 contract audit
 requires the two files to remain byte-for-byte equal.
 
 ## Surface classes

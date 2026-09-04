@@ -9,22 +9,22 @@ import test from 'node:test';
 
 import { createDiagnosticsArtifact } from '@kungfu-tech/buildchain-alpha/diagnostics';
 
-import { createExecutionAdmissionDecision } from '../framework/production-graph/admission/index.mjs';
+import { createExecutionAdmissionDecision } from '../developer/production-graph/admission/index.mjs';
 import {
   checkProductionGraphContract,
   materializeExecutionAdmissionFixture,
-} from '../framework/production-graph/check.mjs';
+} from '../developer/production-graph/check.mjs';
 import {
   contractRoot,
   createPlan,
   fileRoot,
   rooted,
   semanticRoot,
-} from '../framework/production-graph/contract.mjs';
+} from '../developer/production-graph/contract.mjs';
 import {
   runProductionGraphShadow,
   verifyProductionGraphShadowInput,
-} from '../framework/production-graph/contract.mjs';
+} from '../developer/production-graph/contract.mjs';
 import { observeNativeToolchain } from './affected-native-proof.mjs';
 import {
   affectedNativeWorkflowSdkProjection,
@@ -517,7 +517,7 @@ test('standalone execution admission verifies the live checkout cut', async (t) 
   const result = spawnSync(
     process.execPath,
     [
-      'framework/production-graph/admission/index.mjs',
+      'developer/production-graph/admission/index.mjs',
       '--request',
       fixture.options.executionAdmissionRequest,
     ],
@@ -724,7 +724,7 @@ test('graph feedback CLI preserves artifacts and keeps human and JSON facts alig
     ]),
   );
   const baseArgs = [
-    'framework/production-graph/feedback/index.mjs',
+    'developer/production-graph/feedback/index.mjs',
     '--graph',
     fixture.options.graph,
     '--plan',

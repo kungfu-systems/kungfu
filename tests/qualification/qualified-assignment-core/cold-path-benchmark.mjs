@@ -9,8 +9,8 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 
-import { consumeQualifiedCoreForCheckout } from '../../../framework/assignment-capture/qualified-assignment-core-consumer.mjs';
-import { summarizeQualifiedCoreUsage } from '../../../framework/assignment-capture/qualified-assignment-core-observability.mjs';
+import { consumeQualifiedCoreForCheckout } from '../../../framework/work/assignment-capture/qualified-assignment-core-consumer.mjs';
+import { summarizeQualifiedCoreUsage } from '../../../framework/work/assignment-capture/qualified-assignment-core-observability.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
@@ -245,7 +245,7 @@ async function main() {
         consumerModuleRoot: digest(
           fs.readFileSync(
             new URL(
-              '../../../framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+              '../../../framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
               import.meta.url,
             ),
           ),

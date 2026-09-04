@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../framework/project-cut/index.mjs';
+import { semanticRoot } from '../framework/work/project-cut/index.mjs';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -27,12 +27,12 @@ function loadAjv2020() {
 }
 
 export function computeProjectCutHistoryRoots(root = DEFAULT_ROOT) {
-  const contractPath = 'framework/project-cut/history.contract.json';
+  const contractPath = 'framework/work/project-cut/history.contract.json';
   const contract = readJson(root, contractPath);
   const files = contract.schemaBundle.files.map((relative) => ({
     path: relative,
     root: semanticRoot(
-      readJson(root, path.join('framework/project-cut', relative)),
+      readJson(root, path.join('framework/work/project-cut', relative)),
     ),
   }));
   const schemaRoot = semanticRoot({
@@ -65,7 +65,7 @@ export function checkProjectCutHistoryContract(root = DEFAULT_ROOT) {
   if (Ajv2020) {
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     const schemas = roots.contract.schemaBundle.files.map((relative) =>
-      readJson(root, path.join('framework/project-cut', relative)),
+      readJson(root, path.join('framework/work/project-cut', relative)),
     );
     for (const schema of schemas) ajv.addSchema(schema);
     for (const schema of schemas) ajv.getSchema(schema.$id);

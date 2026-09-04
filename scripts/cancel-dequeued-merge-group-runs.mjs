@@ -13,7 +13,7 @@ import { pathToFileURL } from 'node:url';
 import {
   affectedNativeEvidenceBinding as bindAffectedNativeEvidence,
   readZipMembers,
-} from '../framework/maintainability/delivery-evidence.mjs';
+} from '../developer/maintainability/delivery-evidence.mjs';
 import { verifyCachePromotionAuthority } from './affected-native-proof.mjs';
 import {
   parseFamilyQueueLeaseMarker,
@@ -33,7 +33,7 @@ export {
   reconstructDeliveryEvidence,
   roundAttempt,
   summarizeDeliveryEvidence,
-} from '../framework/maintainability/delivery-evidence.mjs';
+} from '../developer/maintainability/delivery-evidence.mjs';
 
 const ACTIVE_STATUSES = [
   'queued',

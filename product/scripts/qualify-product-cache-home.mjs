@@ -19,6 +19,7 @@ const DEFAULT_APP = path.join(
 const WORK_DESIGN_FIXTURE = path.join(
   ROOT,
   'framework',
+  'work',
   'work-design-preflight',
   'fixtures',
   'installed-preflight-request.json',

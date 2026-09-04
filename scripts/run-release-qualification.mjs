@@ -15,7 +15,7 @@ import {
   resolveKfdSourcePlatform,
   sealKfdPrebuiltLayerArtifacts,
   sealKfdSourceEvidence,
-} from '../framework/release/kfd-candidate-evidence.mjs';
+} from '../product/release/kfd-candidate-evidence.mjs';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   lifecycleEnvironment,

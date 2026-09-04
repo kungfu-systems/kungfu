@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.initiative-assignment.root-vectors/v1",
   "protocolId": "kungfu.initiative-assignment.root/v1",
-  "contract": "framework/initiative-assignment/kungfu-initiative-assignment-root-v1.json",
+  "contract": "framework/work/initiative-assignment/kungfu-initiative-assignment-root-v1.json",
   "accepted": [
     {
       "id": "initiative-native-minimum",

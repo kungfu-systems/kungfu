@@ -25,12 +25,12 @@ on:
       - "**/*.tsx"
       - "**/*.rs"
       - "framework/core/architecture/layers.json"
-      - "framework/maintainability/**"
+      - "developer/maintainability/**"
       - "scripts/check-code-complexity*.mjs"
       - "scripts/check-python-structure*.py"
-      - "framework/maintainability/function-risk*.json"
-      - "framework/maintainability/function-risk*.mjs"
-      - "framework/report-projection/**"
+      - "developer/maintainability/function-risk*.json"
+      - "developer/maintainability/function-risk*.mjs"
+      - "developer/report-projection/**"
       - ".github/workflows/report-projection.yml"
   merge_group:
     types: [checks_requested]

@@ -199,10 +199,10 @@ export function primitiveScaffold({
   ]) {
     if (!value) throw new Error(`${option} is required`);
   }
-  const contractPath = `framework/primitive/contracts/${id}.contract.json`;
+  const contractPath = `framework/spec/primitive/contracts/${id}.contract.json`;
   const vectorPath = `tests/fixtures/primitive/${id}/vectors.json`;
-  const operationPath = `framework/primitive/operation-slots/${id}.json`;
-  const sdkPath = `framework/primitive/sdk-slots/${id}.json`;
+  const operationPath = `framework/spec/primitive/operation-slots/${id}.json`;
+  const sdkPath = `framework/spec/primitive/sdk-slots/${id}.json`;
   const passport = {
     id: `kungfu.primitive.${id}`,
     subject: `${name} primitive incubation`,

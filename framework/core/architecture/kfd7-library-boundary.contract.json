@@ -9,10 +9,10 @@
     "inventory": "docs/architecture/kfd7-library-boundary.md",
     "layerRegistry": "framework/core/architecture/layers.json",
     "bootstrapAdmissionPolicy": "framework/core/architecture/libkungfu-symbol-policy.json",
-    "factContract": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-    "agentWorkContract": "framework/agent-work/kungfu-agent-work-state.contract.json",
-    "actionGeometryContract": "framework/action/action-geometry.contract.json",
-    "agentWorkDomainProfile": "framework/agent-work/kungfu-agent-work-domain-profile.contract.json",
+    "factContract": "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
+    "agentWorkContract": "framework/work/agent-work/kungfu-agent-work-state.contract.json",
+    "actionGeometryContract": "framework/work/action/action-geometry.contract.json",
+    "agentWorkDomainProfile": "framework/work/agent-work/kungfu-agent-work-domain-profile.contract.json",
     "embedderOperationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json"
   },
   "layers": [

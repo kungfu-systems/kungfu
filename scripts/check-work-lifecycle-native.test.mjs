@@ -11,11 +11,11 @@ import { verifyGeneratedOutputRoots } from './generate-work-lifecycle-sdk.mjs';
 const read = (file) => fs.readFileSync(file, 'utf8');
 const matrix = JSON.parse(
   read(
-    'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
+    'framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
   ),
 );
 const contract = JSON.parse(
-  read('framework/work-lifecycle/work-lifecycle-native.contract.json'),
+  read('framework/work/work-lifecycle/work-lifecycle-native.contract.json'),
 );
 
 test('native Work lifecycle contract is a lossless projection of the operation matrix', () => {

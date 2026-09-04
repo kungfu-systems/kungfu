@@ -5,7 +5,7 @@ adr_id: KF-ADR-019f86da-4f90-7a1f-a527-7bb8db2ceb1c
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1114, https://github.com/kungfu-systems/kungfu/pull/1118, https://github.com/kungfu-systems/kungfu/pull/1120, https://github.com/kungfu-systems/kungfu/pull/1124, https://github.com/kungfu-systems/kungfu/pull/1134, https://github.com/kungfu-systems/kungfu/pull/2336, https://github.com/kungfu-systems/kungfu/pull/2348, https://github.com/kungfu-systems/kungfu/pull/2349, https://github.com/kungfu-systems/kungfu/pull/2354]
-qualification_refs: [framework/action/action-loop.contract.json, framework/action/action-loop.mjs, framework/action/action-loop-begin.mjs, framework/action/action-loop-settle.mjs, framework/core/src/python/kungfu/agent/action_loop.py, framework/core/tests/python/test_action_loop_adapter.py, framework/action/action-loop-fixtures.json, framework/action/action-loop-contract.test.mjs, framework/action/action-loop-begin.test.mjs, framework/action/action-loop-settle.test.mjs, scripts/run-action-loop-native-authority-tests.mjs, framework/action/action-loop-qualification-adapters.mjs, framework/work-profile-conformance/qualification/kfd-7-product-gate.json]
+qualification_refs: [framework/work/action/action-loop.contract.json, framework/work/action/action-loop.mjs, framework/work/action/action-loop-begin.mjs, framework/work/action/action-loop-settle.mjs, framework/core/src/python/kungfu/agent/action_loop.py, framework/core/tests/python/test_action_loop_adapter.py, framework/work/action/action-loop-fixtures.json, framework/work/action/action-loop-contract.test.mjs, framework/work/action/action-loop-begin.test.mjs, framework/work/action/action-loop-settle.test.mjs, scripts/run-action-loop-native-authority-tests.mjs, framework/work/action/action-loop-qualification-adapters.mjs, framework/work/work-profile-conformance/qualification/kfd-7-product-gate.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -29,7 +29,7 @@ ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository contracts, nat
   [KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390](KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390.md),
   [KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b](KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b.md)
 - Contract:
-  [`action-loop.contract.json`](../../framework/action/action-loop.contract.json)
+  [`action-loop.contract.json`](../../framework/work/action/action-loop.contract.json)
 
 ## Context
 

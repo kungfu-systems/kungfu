@@ -21,10 +21,9 @@ export type AttachedAgentSessionHost = Readonly<
   }
 >;
 
-export function detachedAgentSessionPaths(runtimeDir: string): Omit<
-  DetachedAgentSessionHost,
-  'invoke'
->;
+export function detachedAgentSessionPaths(
+  runtimeDir: string,
+): Omit<DetachedAgentSessionHost, 'invoke'>;
 
 export function prepareAgentSessionNodePty(options: {
   runtimeDir: string;

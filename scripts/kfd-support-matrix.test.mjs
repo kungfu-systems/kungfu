@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { resolveKfd10AdopterWitnessPath } from '../framework/release/kfd-adopter-release.mjs';
+import { resolveKfd10AdopterWitnessPath } from '../product/release/kfd-adopter-release.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'kfd-support-matrix.mjs');
@@ -33,7 +33,7 @@ test('keeps post-cut KFD-10 adopter evidence out of legacy sealed candidates', (
         status: 'non-conforming-evidence',
         evidenceRoots: [
           {
-            path: 'framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json',
+            path: 'framework/work/agent-work/evidence/kfd-7/warrant-decay-revocation.json',
           },
         ],
       },
@@ -165,8 +165,8 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
       'docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json',
       'framework/core/tests/python/test_assignment_orchestration.py',
       'docs/architecture/primitive-management-plane.md',
-      'framework/incubation/incubation-passport.registry.json',
-      'framework/primitive/kungfu-primitive-catalog.contract.json',
+      'framework/spec/incubation/incubation-passport.registry.json',
+      'framework/spec/primitive/kungfu-primitive-catalog.contract.json',
     ],
   );
   const kfd6 = BASE.rows.find((row) => row.key === 'kfd-6');
@@ -175,9 +175,9 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
   assert.equal(kfd6.verification.status, 'none');
   assert.equal(kfd6.precursorEvidence.status, 'non-conforming-evidence');
   assert.deepEqual(kfd6.precursorEvidence.surfaces, [
-    'framework/work-design-advisor/work-design-advisor.contract.json',
-    'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
-    'framework/project-cut/README.md',
+    'framework/work/work-design-advisor/work-design-advisor.contract.json',
+    'framework/work/work-design-policy-replay/work-design-policy-replay.contract.json',
+    'framework/work/project-cut/README.md',
   ]);
   assert.equal(kfd6.releaseQualification.shippedSupport, false);
   const kfd10 = BASE.rows.find((row) => row.key === 'kfd-10');

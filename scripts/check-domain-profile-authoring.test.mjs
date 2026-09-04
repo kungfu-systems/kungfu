@@ -176,10 +176,10 @@ test('fails closed on unsigned or unqualified activation evidence', () => {
 
 test('registers one byte-identical canonical contract artifact', () => {
   const registry = readJson(
-    'framework/contract/kungfu-contracts.registry.json',
+    'framework/spec/contract/kungfu-contracts.registry.json',
   );
   const policy = readJson(
-    'framework/contract/kungfu-agent-first-canonical-policy.json',
+    'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
   );
   const entry = registry.contracts.find(
     (candidate) => candidate.surface === 'domain-profile-authoring',

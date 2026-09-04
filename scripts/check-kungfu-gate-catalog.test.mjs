@@ -44,7 +44,7 @@ function fixture() {
     'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
     'docs/qualification/gates',
     'docs/qualification/evidence/kungfu-temporal-release-admission-facts.json',
-    'framework/primitive/kungfu-primitive-catalog.contract.json',
+    'framework/spec/primitive/kungfu-primitive-catalog.contract.json',
     'config/primitive/kungfu-primitive-catalog.contract.json',
     'docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json',
     'docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json',

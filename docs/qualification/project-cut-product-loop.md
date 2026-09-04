@@ -135,7 +135,7 @@ Qualification must test both limits:
 ## Evidence contract
 
 The machine-readable contract is
-[`project-cut-product-loop.release-contract.json`](../../framework/work-loop/project-cut-product-loop.release-contract.json).
+[`project-cut-product-loop.release-contract.json`](../../framework/work/work-loop/project-cut-product-loop.release-contract.json).
 It freezes the target Gate id as `product.project-cut-loop`, the complete case
 inventory, cross-platform and cross-surface scope, third-party profile proof,
 and fail-closed admission rules. A verifier rejects incomplete reports,

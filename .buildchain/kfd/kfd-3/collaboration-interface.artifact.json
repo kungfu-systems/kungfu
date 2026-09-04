@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "f539612d133b55282057c9722978d62b51f197ffde7ad50fd22d48de8f69e644",
-    "digest": "sha256:94e3051ed06b5e852b46f3572d28fa36682ee989f6ab4a618993863e8ae33288"
+    "sha256": "b8d24586ec8f52d5460b1180ac2bea1a82717713845db8339f6c259d10a9cae2",
+    "digest": "sha256:3718cb25623e5e5dbbe6efd2fd428daa6251307ea4428ed2a76bc613fc56e927"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -26,9 +26,9 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:a44458e25aa7c0f57f4eda9c6ea1d7817411e693d76b05d2d3c67c3c12eaf8fd"
+    "digest": "sha256:dafb239eaf905b7db48daa8edb62f3215281dd4daa970e87acfe139387b1bc16"
   },
-  "collaborationInterfaceDigest": "sha256:93f698521628edd3735ba49b856ddee0dcc0e42819abb6f1e59e4e6c9a093c25",
+  "collaborationInterfaceDigest": "sha256:6f1c5b1f9a2a4510f003f62891ae27e912a2993314cd3624bcf592f22eea0dfe",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -1814,8 +1814,8 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "developer/sdk/src/sdk-contract.js",
-      "evidencePath": "framework/contract/kungfu-agent-first-canonical-policy.json",
-      "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "evidencePath": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
+      "artifactPath": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
@@ -1834,8 +1834,8 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "developer/sdk/src/sdk-contract.js",
-      "evidencePath": "framework/contract/kungfu-contracts.registry.json",
-      "artifactPath": "framework/contract/kungfu-contracts.registry.json",
+      "evidencePath": "framework/spec/contract/kungfu-contracts.registry.json",
+      "artifactPath": "framework/spec/contract/kungfu-contracts.registry.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",

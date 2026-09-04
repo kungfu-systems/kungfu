@@ -17,7 +17,7 @@ from kungfu.storage.fact_root_canonical import record_root
 
 ROOT = Path(__file__).resolve().parents[4]
 FIXTURE = ROOT / "tests/fixtures/release-provenance-object/cases.json"
-CONTRACT = ROOT / "framework/release/kungfu-release-provenance.contract.json"
+CONTRACT = ROOT / "product/release/kungfu-release-provenance.contract.json"
 
 
 def _fixture():

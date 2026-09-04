@@ -1,7 +1,7 @@
 # Domain Profile authoring contract
 
 The machine authority for this document is
-[kungfu-domain-profile-authoring.contract.json](../../framework/profile/kungfu-domain-profile-authoring.contract.json).
+[kungfu-domain-profile-authoring.contract.json](../../framework/work/profile/kungfu-domain-profile-authoring.contract.json).
 The reference KFX Profile Suite source package is generated from that contract.
 Edit the contract, not the generated example or this document.
 

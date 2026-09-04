@@ -42,7 +42,13 @@ const sdkKfd2ReleaseClaims = JSON.parse(
 const sdkKfd2ClaimCount = sdkKfd2ReleaseClaims.claims.length;
 const contractRegistry = JSON.parse(
   readFileSync(
-    join(repoRoot, 'framework', 'contract', 'kungfu-contracts.registry.json'),
+    join(
+      repoRoot,
+      'framework',
+      'spec',
+      'contract',
+      'kungfu-contracts.registry.json',
+    ),
     'utf8',
   ),
 );
@@ -93,7 +99,7 @@ test('stable SDK dispatcher rejects an unknown command without an internal error
 
 function makeContractRepo(t) {
   const root = mkdtempSync(join(tmpdir(), 'kungfu-sdk-contract-'));
-  const contractDir = join(root, 'framework', 'contract');
+  const contractDir = join(root, 'framework', 'spec', 'contract');
   mkdirSync(contractDir, { recursive: true });
   writeFileSync(
     join(contractDir, 'kungfu-contracts.registry.json'),
@@ -127,11 +133,11 @@ test('keeps stable and dev Buildchain KFD metadata on their declared lines', () 
 });
 
 for (const [surface, source] of [
-  ['config', 'framework/config/kungfu-config.contract.json'],
+  ['config', 'framework/core/config/kungfu-config.contract.json'],
   ['kfx', 'framework/kfx/kungfu-kfx.contract.json'],
   ['skill', 'framework/skill/kungfu-skill.contract.json'],
-  ['runtime', 'framework/runtime/kungfu-runtime.contract.json'],
-  ['upgrade', 'framework/upgrade/kungfu-upgrade.contract.json'],
+  ['runtime', 'framework/core/runtime/kungfu-runtime.contract.json'],
+  ['upgrade', 'product/upgrade/kungfu-upgrade.contract.json'],
 ]) {
   test(`adopts the registered ${surface} source contract file`, () => {
     const data = runJson([
@@ -220,7 +226,7 @@ test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', 
   assert.equal(data.metadata.kfdPackage.version, buildchainKfdVersion);
   assert.equal(
     data.canonicalPolicy.path,
-    'framework/contract/kungfu-agent-first-canonical-policy.json',
+    'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
   );
   assert.match(data.contractWorld.digest, /^sha256:[0-9a-f]{64}$/);
   assert.deepEqual(
@@ -266,7 +272,7 @@ test('packages the agent-first canonical policy through the contract registry he
       (artifact) =>
         artifact.label === 'agent-first canonical policy' &&
         artifact.source ===
-          'framework/contract/kungfu-agent-first-canonical-policy.json' &&
+          'framework/spec/contract/kungfu-agent-first-canonical-policy.json' &&
         artifact.artifact === 'config/kungfu-agent-first-canonical-policy.json',
     ),
   );
@@ -614,12 +620,15 @@ test('adds a new contract source and registry entry in a repo fixture', (t) => {
   assert.equal(data.schema, 'kungfu.sdk.contract-add/v1');
   assert.equal(data.ok, true);
   assert.equal(data.surface, 'demo-surface');
-  assert.equal(data.source, 'framework/contract/demo-surface.contract.json');
+  assert.equal(
+    data.source,
+    'framework/spec/contract/demo-surface.contract.json',
+  );
   assert.equal(data.artifact, 'config/demo-surface.contract.json');
   assert.equal(data.env, 'KUNGFU_DEMO_SURFACE_CONTRACT');
   assert.equal(
     data.fixture.path,
-    'framework/contract/fixtures/demo-surface.contract-evidence.json',
+    'framework/spec/contract/fixtures/demo-surface.contract-evidence.json',
   );
   assert.equal(data.fixture.schema, 'kungfu.sdk.contract-drift-fixture/v1');
   assert.match(data.fixture.hash, /^sha256:[0-9a-f]{64}$/);
@@ -639,7 +648,13 @@ test('adds a new contract source and registry entry in a repo fixture', (t) => {
   assert.match(fixture.expected.sourceHash, /^sha256:[0-9a-f]{64}$/);
   const registry = JSON.parse(
     readFileSync(
-      join(root, 'framework', 'contract', 'kungfu-contracts.registry.json'),
+      join(
+        root,
+        'framework',
+        'spec',
+        'contract',
+        'kungfu-contracts.registry.json',
+      ),
       'utf8',
     ),
   );

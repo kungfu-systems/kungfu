@@ -67,8 +67,8 @@
   "qualifiedAssignmentCoreTransport": {
     "artifactAuthority": "docs/shifu/artifact-contract.json#qualifiedAssignmentCore",
     "platformMatrix": "docs/shifu/qualified-assignment-core-platform-matrix.json",
-    "consumer": "framework/assignment-capture/qualified-assignment-core-consumer.mjs",
-    "usageLedger": "framework/assignment-capture/qualified-assignment-core-observability.mjs",
+    "consumer": "framework/work/assignment-capture/qualified-assignment-core-consumer.mjs",
+    "usageLedger": "framework/work/assignment-capture/qualified-assignment-core-observability.mjs",
     "automaticEntry": "./shifu work",
     "localCas": "${KUNGFU_QUALIFIED_CORE_CACHE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/qualified-core/v1}",
     "providers": [

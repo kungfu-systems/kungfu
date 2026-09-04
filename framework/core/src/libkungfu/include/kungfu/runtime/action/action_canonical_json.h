@@ -26,7 +26,7 @@ private:
   std::string code_;
 };
 
-// Native implementation of framework/action/action-canonical-json-v1.json.
+// Native implementation of framework/work/action/action-canonical-json-v1.json.
 // Only the closed interoperable JSON domain is admitted; every float and every
 // integer outside signed 64-bit fails before identity-bearing bytes exist.
 [[nodiscard]] std::string action_canonical_json(const nlohmann::json &value);

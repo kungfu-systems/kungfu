@@ -7,7 +7,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { parse } from 'yaml';
-import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
+import { activeProjection } from '../product/version-line/version-line-authority.mjs';
 
 const ROOT = process.cwd();
 const BUILD_WORKFLOW = path.join(ROOT, '.github', 'workflows', 'build.yml');

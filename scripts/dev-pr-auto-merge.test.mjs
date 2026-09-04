@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNativeUnderWarrant } from '../framework/dev-delivery/native-under-warrant.mjs';
+import { runNativeUnderWarrant } from '../developer/dev-delivery/native-under-warrant.mjs';
 
 const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
@@ -538,7 +538,7 @@ test('two-phase native adapter fails closed on a native shard failure', async (t
 
 test('native Warrant worker remains credentialless', () => {
   const nativeWorker = fs.readFileSync(
-    'framework/dev-delivery/native-under-warrant.mjs',
+    'developer/dev-delivery/native-under-warrant.mjs',
     'utf8',
   );
   assert.doesNotMatch(

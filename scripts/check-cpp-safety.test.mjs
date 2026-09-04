@@ -61,7 +61,7 @@ test('the checked-in boundary inventory classifies every manual lifetime and rei
   const policy = JSON.parse(
     fs.readFileSync(
       new URL(
-        '../framework/maintainability/cpp-safety-policy.json',
+        '../developer/maintainability/cpp-safety-policy.json',
         import.meta.url,
       ),
       'utf8',

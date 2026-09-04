@@ -16,7 +16,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const contract = readJson(
-  'framework/data-protection/durable-history-qualification.contract.json',
+  'framework/core/data-protection/durable-history-qualification.contract.json',
 );
 const corpus = readJson(contract.campaigns.corpus);
 
@@ -69,7 +69,7 @@ test('binds every required failure campaign to a real exact test', () => {
 
 test('full and thin claims cannot collapse into one status', () => {
   const exitContract = readJson(
-    'framework/exit/kungfu-exit-bundle.contract.json',
+    'framework/core/exit/kungfu-exit-bundle.contract.json',
   );
   assert.equal(exitContract.modeSemantics.full.required.completeForScope, true);
   assert.equal(exitContract.modeSemantics.thin.required.materialMissing, true);
@@ -176,7 +176,7 @@ test('bounded claim preserves privacy and deferred evidence boundaries', () => {
 });
 
 test('human guide exposes the same gate and bounded non-claims', () => {
-  const guide = read('framework/data-protection/README.md');
+  const guide = read('framework/core/data-protection/README.md');
   assert.match(guide, /.\/shifu check:durable-history-qualification/u);
   assert.match(guide, /source-qualified/u);
   assert.match(guide, /does\s+not qualify the installed product/u);

@@ -10,7 +10,7 @@ import {
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
   verifyReleaseArtifactRoot,
-} from '../framework/release/kfd-candidate-evidence.mjs';
+} from '../product/release/kfd-candidate-evidence.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

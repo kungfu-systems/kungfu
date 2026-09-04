@@ -8,7 +8,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { extractFunctions } from '../framework/maintainability/function-risk.mjs';
+import { extractFunctions } from '../developer/maintainability/function-risk.mjs';
 import { checkerArgs, pythonCommand } from './check-code-complexity.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -17,7 +17,7 @@ const readJson = (relative) =>
 
 test('Python structure manifest covers the exact production and test roots', () => {
   const manifest = readJson(
-    'framework/maintainability/abstraction-integrity.manifest.json',
+    'developer/maintainability/abstraction-integrity.manifest.json',
   );
   assert.deepEqual(manifest.sourceRoots, {
     production: ['framework/core/src/python'],
@@ -30,7 +30,7 @@ test('Python structure manifest covers the exact production and test roots', () 
 
 test('anti-gaming corpus covers every required rejection family', () => {
   const fixtures = readJson(
-    'framework/maintainability/python-structure-negative-fixtures.json',
+    'developer/maintainability/python-structure-negative-fixtures.json',
   );
   assert.deepEqual(
     new Set(fixtures.cases.map((item) => item.expected)),
@@ -68,7 +68,7 @@ test('Python anti-gaming oracle rejects every negative fixture', () => {
 
 test('Agent Python responsibility map conserves exact targets and reduced risk', () => {
   const map = readJson(
-    'framework/maintainability/agent-python-responsibility-map.json',
+    'developer/maintainability/agent-python-responsibility-map.json',
   );
   const structure = spawnSync(
     pythonCommand(),
@@ -78,7 +78,7 @@ test('Agent Python responsibility map conserves exact targets and reduced risk',
   assert.equal(structure.status, 0, structure.stderr || structure.stdout);
   const layers = readJson('framework/core/architecture/layers.json');
   const ownership = readJson(
-    'framework/maintainability/abstraction-integrity.manifest.json',
+    'developer/maintainability/abstraction-integrity.manifest.json',
   ).ownership;
   const metrics = (bytes, pathname) => {
     const functions = extractFunctions(
@@ -135,7 +135,7 @@ test('Agent Python responsibility checker fails closed on a missing owner source
 
 test('Python runtime responsibility owners reduce module size and conserve business risk', () => {
   const map = readJson(
-    'framework/maintainability/python-runtime-responsibility-map.json',
+    'developer/maintainability/python-runtime-responsibility-map.json',
   );
   const checker = spawnSync(
     pythonCommand(),

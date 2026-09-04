@@ -53,7 +53,7 @@ function expectedCounts(entries, expectedNpmCount) {
 function readExpectedNpmCount() {
   const npmRegistry = JSON.parse(
     fs.readFileSync(
-      path.resolve('framework/release/npm-package-registry.json'),
+      path.resolve('product/release/npm-package-registry.json'),
       'utf8',
     ),
   );

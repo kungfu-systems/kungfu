@@ -13,7 +13,9 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const fixture = readJson(
   'tests/fixtures/runtime-surface-integration/cases.json',
 );
-const contract = readJson('framework/runtime/kungfu-runtime.contract.json');
+const contract = readJson(
+  'framework/core/runtime/kungfu-runtime.contract.json',
+);
 const definitions = contract.valueSchemaBundle.$defs;
 
 const typeProgram = ts.createProgram(

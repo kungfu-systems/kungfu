@@ -68,6 +68,6 @@
     "url": "https://github.com/kungfu-systems/kungfu.git"
   },
   "devDependencies": {
-    "@kungfu-tech/buildchain": "3.0.0"
+    "@kungfu-tech/buildchain": "3.0.9-alpha.17"
   }
 }

@@ -2027,13 +2027,13 @@
       "detected": true,
       "enforced": false,
       "sourcePath": "developer/sdk/src/sdk-contract.js",
-      "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
-      "evidencePath": "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "artifactPath": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
+      "evidencePath": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "developer/sdk/src/sdk-contract.js",
-        "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
-        "digest": "sha256:f6e793be041bdcf91dae51b3d7bc9af29491c216633becf9222f83295daa348e"
+        "artifactPath": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
+        "digest": "sha256:4f05566560d8407a8f96c4e0873851b33f5229844c1b20778e594d231f1b6693"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2050,13 +2050,13 @@
       "detected": true,
       "enforced": false,
       "sourcePath": "developer/sdk/src/sdk-contract.js",
-      "artifactPath": "framework/contract/kungfu-contracts.registry.json",
-      "evidencePath": "framework/contract/kungfu-contracts.registry.json",
+      "artifactPath": "framework/spec/contract/kungfu-contracts.registry.json",
+      "evidencePath": "framework/spec/contract/kungfu-contracts.registry.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "developer/sdk/src/sdk-contract.js",
-        "artifactPath": "framework/contract/kungfu-contracts.registry.json",
-        "digest": "sha256:b3eb2717d367dc59fd4a39d434d24dd3e5b074298f772d7ec16bc58bb02da635"
+        "artifactPath": "framework/spec/contract/kungfu-contracts.registry.json",
+        "digest": "sha256:fc92bb0485cac978a038d67dd50a501bb0e47297cb294811dab0850d7ce26fef"
       },
       "kfd2Trust": {
         "status": "unknown",

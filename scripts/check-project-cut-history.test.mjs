@@ -12,12 +12,12 @@ import {
   buildProjectCut,
   canonicalJson,
   semanticRoot,
-} from '../framework/project-cut/index.mjs';
+} from '../framework/work/project-cut/index.mjs';
 import {
   observeHistory,
   reconcileHistory,
   verifyHistoryObservation,
-} from '../framework/project-cut/src/history.mjs';
+} from '../framework/work/project-cut/src/history.mjs';
 import { checkProjectCutHistoryContract } from './project-cut-history-contract.mjs';
 
 const REPO_ROOT = path.resolve(
@@ -28,12 +28,15 @@ const FIXTURE = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
     ),
     'utf8',
   ),
 );
-const CLI = path.join(REPO_ROOT, 'framework/project-cut/bin/project-cut.mjs');
+const CLI = path.join(
+  REPO_ROOT,
+  'framework/work/project-cut/bin/project-cut.mjs',
+);
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();

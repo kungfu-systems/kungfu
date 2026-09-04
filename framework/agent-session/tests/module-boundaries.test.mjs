@@ -55,7 +55,7 @@ test('Work Control actions do not depend on Agent Session lifecycle', () => {
   assert.doesNotMatch(assignment, /native_work_bound/u);
 
   const contract = JSON.parse(
-    source('framework/product/project-work-agent.contract.json'),
+    source('product/contracts/project-work-agent.contract.json'),
   );
   assert.match(contract.firstLayer.agentExecution.workOwns, /no WorkConsole/u);
   assert.match(

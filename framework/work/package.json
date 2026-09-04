@@ -1,0 +1,50 @@
+{
+  "name": "@kungfu-tech/work",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.5",
+  "description": "Portable Kungfu Work protocols and pure lifecycle composition without native writer authority",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./action": "./action/index.mjs",
+    "./assignment-runtime": "./assignment-runtime/index.mjs",
+    "./evidence": "./evidence/index.mjs",
+    "./project-cut": "./project-cut/index.mjs",
+    "./project-cut/composition": "./project-cut/composition.mjs",
+    "./project-cut/settlement": "./project-cut/settlement.mjs",
+    "./project-cut/publication": "./project-cut/publication.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "README.md",
+    "action/",
+    "agent-work/",
+    "assignment-runtime/",
+    "cut/",
+    "evidence/",
+    "initiative-assignment/",
+    "profile/",
+    "project-cut/",
+    "work-lifecycle/",
+    "work-loop/"
+  ],
+  "scripts": {
+    "test": "node --test package-boundary.test.mjs action/*.test.mjs assignment-runtime/*.test.mjs"
+  },
+  "dependencies": {
+    "@kungfu-tech/spec": "workspace:*",
+    "ajv": "8.20.0"
+  },
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  }
+}

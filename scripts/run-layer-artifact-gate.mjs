@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { restoreKfdPrebuiltLayerArtifact } from '../framework/release/kfd-candidate-evidence.mjs';
+import { restoreKfdPrebuiltLayerArtifact } from '../product/release/kfd-candidate-evidence.mjs';
 import { runShifuWithCache } from './run-shifu-lifecycle.mjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 

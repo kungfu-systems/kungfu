@@ -1,0 +1,252 @@
+{
+  "schema": "kungfu.format-migration.contract/v1",
+  "id": "kungfu-format-migration",
+  "version": 1,
+  "decision": "docs/adr/KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429.md",
+  "compositionAuthority": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+  "requiredReader": "framework/spec/format/kungfu-required-reader.contract.json",
+  "rule": "Compatibility is evaluated per protocol axis. A supported cold-path migration creates a successor identity and a receipt; unsupported and downgrade edges fail before any authority change.",
+  "status": {
+    "negotiation": "implemented",
+    "migrationPlanner": "implemented",
+    "referenceSuccessor": "implemented",
+    "repairProtocol": "implemented",
+    "disposableWorkspaceCampaign": "qualified",
+    "realWorkspaceMutation": "not-implemented"
+  },
+  "compatibilityTuple": {
+    "requiredAxes": [
+      "journalEpoch",
+      "workspaceLayout",
+      "recordSchemas",
+      "payloadSchemas",
+      "rootProtocols",
+      "bundleManifest",
+      "capabilities"
+    ],
+    "comparison": "exact-owned-axis-plus-declared-directed-edges",
+    "semverRole": "display-and-package-pickup-only",
+    "unknownAxis": "reject",
+    "unknownRequiredMember": "migration-required",
+    "unknownOptionalMember": "read-degraded"
+  },
+  "currentTuple": {
+    "journalEpoch": "kungfu.journal.container/e3b24c8d",
+    "workspaceLayout": "kungfu.workspace.episode-layout/v1",
+    "recordSchemas": {
+      "episodeManifest": "kungfu.episode.manifest/v1",
+      "manifestCatalog": "kungfu.storage.manifest-catalog/v1",
+      "factCut": "kungfu.fact-cut-kernel.contract/v1"
+    },
+    "payloadSchemas": {
+      "closedKernel": "hana-pod-owned/v1",
+      "openDomain": "flatbuffers-single-schema-owner/v1"
+    },
+    "rootProtocols": {
+      "factRoot": "kungfu.fact-root.canonical/v2",
+      "opaqueBytes": "sha256:opaque-bytes/v1"
+    },
+    "bundleManifest": "libkungfu:spec:manifest:1",
+    "capabilities": [
+      "preservation",
+      "inspection",
+      "structural-verification",
+      "semantic-verification",
+      "canonical-fold",
+      "admission",
+      "execution"
+    ]
+  },
+  "readerOutcomeMap": {
+    "exact": {
+      "readerOutcome": "read",
+      "reason": "FORMAT_EXACT",
+      "nextAction": "continue"
+    },
+    "optional-unknown": {
+      "readerOutcome": "read-degraded",
+      "reason": "FORMAT_OPTIONAL_UNKNOWN",
+      "nextAction": "preserve-and-report"
+    },
+    "supported-edge": {
+      "readerOutcome": "migration-required",
+      "reason": "FORMAT_SUPPORTED_MIGRATION",
+      "nextAction": "run-explicit-cold-path-migration"
+    },
+    "unsupported-edge": {
+      "readerOutcome": "migration-required",
+      "reason": "FORMAT_UNSUPPORTED_EDGE",
+      "nextAction": "install-compatible-reader-or-export"
+    },
+    "downgrade": {
+      "readerOutcome": "reject",
+      "reason": "FORMAT_DOWNGRADE_REFUSED",
+      "nextAction": "use-a-reader-that-supports-the-source"
+    },
+    "malformed": {
+      "readerOutcome": "reject",
+      "reason": "FORMAT_TUPLE_MALFORMED",
+      "nextAction": "preserve-source-and-inspect"
+    }
+  },
+  "migrationGraph": {
+    "directed": true,
+    "implicitReverseEdges": false,
+    "hotPathAdapters": false,
+    "edges": [
+      {
+        "id": "fact-root-v1-to-v2",
+        "axis": "rootProtocols.factRoot",
+        "from": "sha256-length-framed-fields-v1",
+        "to": "kungfu.fact-root.canonical/v2",
+        "mode": "explicit-cold-path",
+        "identityEffect": "successor",
+        "sourceEvidence": "retained-exact-source-record-and-v1-root",
+        "targetEvidence": "canonical-v2-preimage-and-successor-root",
+        "transformer": "target-protocol-owned-with-reference-receipt/v1",
+        "reverse": "unsupported"
+      }
+    ]
+  },
+  "migrationOperation": {
+    "requestSchema": "kungfu.format-migration.request/v1",
+    "planSchema": "kungfu.format-migration.plan/v1",
+    "receiptSchema": "kungfu.format-migration.receipt/v1",
+    "requiredRequestFields": [
+      "operationId",
+      "edgeId",
+      "sourceProtocol",
+      "targetProtocol",
+      "sourceRoot",
+      "successorRoot",
+      "sourceEvidenceRoots",
+      "transformationEvidenceRoots"
+    ],
+    "writeBoundary": "The reference layer validates and binds a successor root already proved by the target protocol; it never computes a target-protocol root from migration metadata. A real writer must durably admit the receipt and successor under its owning protocol.",
+    "receiptBindings": [
+      "operationId",
+      "requestRoot",
+      "edgeId",
+      "sourceProtocol",
+      "targetProtocol",
+      "sourceRoot",
+      "successorRoot",
+      "sourceEvidenceRoots",
+      "transformationEvidenceRoot"
+    ],
+    "identityRule": "The successor root is never relabeled as equal to the source root. Equality is allowed only when an owning verbatim protocol proves exact byte and semantic equivalence.",
+    "outcomeUnknown": "Query by operationId. Return the exact admitted receipt when requestRoot matches; otherwise fail closed.",
+    "idempotence": "The same operationId and requestRoot returns the exact same receipt. Reusing an operationId for a different requestRoot is rejected."
+  },
+  "repair": {
+    "structuralRepair": {
+      "allowedWhen": [
+        "damage is bounded and recorded",
+        "replacement bytes are proved by retained checksums or content roots",
+        "unknown source bytes remain retained",
+        "a successor and receipt are created"
+      ],
+      "identityEffect": "successor",
+      "requiredReceiptFields": [
+        "damageEvidenceRoots",
+        "sourceRoot",
+        "successorRoot",
+        "recoveredRanges",
+        "unrecoveredRanges"
+      ]
+    },
+    "semanticMigration": {
+      "allowedWhen": "one declared directed migration edge owns the complete semantic transformation",
+      "forbiddenClaim": "Structural reconstruction alone never proves semantic compatibility."
+    },
+    "unprovableRecovery": {
+      "outcome": "reject",
+      "code": "E_REPAIR_SEMANTIC_RECOVERY_UNPROVEN",
+      "authorityChanged": false
+    },
+    "evidenceRule": "Damage observations, source bytes, and failure evidence are append-only inputs to the successor receipt; repair never deletes or rewrites them."
+  },
+  "errorDictionary": [
+    {
+      "code": "E_MIGRATION_TUPLE_MALFORMED",
+      "meaning": "The compatibility tuple is missing an axis or has an invalid member shape.",
+      "writeOccurred": false
+    },
+    {
+      "code": "E_MIGRATION_UNSUPPORTED_EDGE",
+      "meaning": "No declared directed edge owns the requested protocol change.",
+      "writeOccurred": false
+    },
+    {
+      "code": "E_MIGRATION_DOWNGRADE_REFUSED",
+      "meaning": "The request would traverse a reverse or explicitly refused edge.",
+      "writeOccurred": false
+    },
+    {
+      "code": "E_MIGRATION_OPERATION_ID_REUSED",
+      "meaning": "An operation id was reused with a different request root.",
+      "writeOccurred": false
+    },
+    {
+      "code": "E_MIGRATION_SOURCE_ROOT_INVALID",
+      "meaning": "The source identity is not one exact sha256 content root.",
+      "writeOccurred": false
+    },
+    {
+      "code": "E_MIGRATION_EVIDENCE_MISSING",
+      "meaning": "Required retained source or transformation evidence is absent.",
+      "writeOccurred": false
+    },
+    {
+      "code": "E_REPAIR_DAMAGE_EVIDENCE_MISSING",
+      "meaning": "A repair was requested without retained damage evidence.",
+      "writeOccurred": false
+    },
+    {
+      "code": "E_REPAIR_SEMANTIC_RECOVERY_UNPROVEN",
+      "meaning": "Available structural evidence cannot prove the missing semantics.",
+      "writeOccurred": false
+    }
+  ],
+  "implementationBindings": {
+    "composition": {
+      "source": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+      "compatibilityMarker": "\"semanticMigration\": \"creates-a-successor-identity-or-an-explicit-mapping-receipt\""
+    },
+    "reader": {
+      "source": "framework/spec/format/kungfu-required-reader.contract.json",
+      "outcomeMarker": "\"migration-required\""
+    },
+    "factRoot": {
+      "source": "framework/core/fact/kungfu-fact-root-canonical-v2.json",
+      "protocolMarker": "\"id\": \"kungfu.fact-root.canonical/v2\"",
+      "legacyMarker": "\"compatibility\": \"sha256-length-framed-fields-v1 remains a legacy reader protocol and is never reinterpreted as v2.\""
+    }
+  },
+  "qualification": {
+    "checker": "scripts/check-format-migration-contract.mjs",
+    "tests": "scripts/check-format-migration-contract.test.mjs",
+    "disposableCampaign": "scripts/portable-format-migration-campaign.mjs",
+    "requiredScenarios": [
+      "exact-current-tuple",
+      "supported-forward-edge",
+      "unsupported-edge-before-write",
+      "reverse-edge-before-write",
+      "successor-root-not-source-relabel",
+      "same-operation-idempotence",
+      "operation-id-conflict",
+      "outcome-unknown-reconciliation",
+      "structural-repair-retains-damage",
+      "semantic-repair-refusal",
+      "disposable-preview-no-op-success-refusal-interruption-retry-recovery"
+    ]
+  },
+  "nonClaims": [
+    "This contract does not mutate a real user .kungfu workspace.",
+    "This contract does not introduce a hidden journal hot-path adapter.",
+    "This contract does not declare pre-v4 journal compatibility.",
+    "This contract does not claim byte equality between legacy and canonical Fact roots.",
+    "This contract does not invent missing facts or semantics.",
+    "This contract does not make package semver a format compatibility algorithm."
+  ]
+}

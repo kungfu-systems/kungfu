@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH =
-  'framework/release/kungfu-trademark-public-use.contract.json';
+  'product/release/kungfu-trademark-public-use.contract.json';
 const EXACT_MARK = 'Kungfu UNGFU™';
 const PRINCIPLE = 'Never Guess. Facts Unfold.';
 const OWNER = 'Kungfu Origin Technology Limited';

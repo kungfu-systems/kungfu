@@ -9,7 +9,7 @@ import { parseDocument } from './readonly-source-toolchain.mjs';
 const WORKFLOW_ROOT = '.github/workflows';
 const GATE_PROFILE_WORKFLOW = '/.github/workflows/.gate-profile.yml@';
 const WARRANTED_NATIVE_ACTION =
-  './.github/actions/native-execution-under-warrant';
+  '.github/actions/native-execution-under-warrant';
 const GATE_COMMAND =
   /(?:^|[\n;]|&&|\|\|)\s*(\.\/shifu|\.\\shifu\.cmd)\s+gate\s+run(?:\s+("[^"]*"|'[^']*'|[^\s;&|]+))?([^\n;]*?)(?=$|\n|;|&&|\|\|)/g;
 

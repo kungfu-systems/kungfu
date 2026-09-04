@@ -650,8 +650,8 @@
       }
     ],
     "deprecation_authority": {
-      "contract": "../deprecation/deprecation-lifecycle.contract.json",
-      "registry": "../deprecation/deprecation-registry.json",
+      "contract": "../../developer/deprecation/deprecation-lifecycle.contract.json",
+      "registry": "../../developer/deprecation/deprecation-registry.json",
       "contributions": [
         "core.yijinjing.boolean-mmap-adapters"
       ]

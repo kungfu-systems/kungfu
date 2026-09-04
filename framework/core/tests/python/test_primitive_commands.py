@@ -13,7 +13,7 @@ from kungfu.cli.commands import primitive
 REPO_ROOT = Path(__file__).parents[4]
 CATALOG = json.loads(
     (
-        REPO_ROOT / "framework/primitive/kungfu-primitive-catalog.contract.json"
+        REPO_ROOT / "framework/spec/primitive/kungfu-primitive-catalog.contract.json"
     ).read_text(encoding="utf-8")
 )
 

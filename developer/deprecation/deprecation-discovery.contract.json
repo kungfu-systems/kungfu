@@ -1,0 +1,96 @@
+{
+  "$schema": "kungfu.deprecation-discovery-contract/v1",
+  "schema": "kungfu.deprecation-discovery.contract/v1",
+  "projectionSchema": "kungfu.deprecation-inventory/v1",
+  "bindingToken": "kungfu-deprecation:<entry-id>#<marker-id>",
+  "authority": {
+    "lifecycleContract": "developer/deprecation/deprecation-lifecycle.contract.json",
+    "registry": "developer/deprecation/deprecation-registry.json",
+    "rule": "Discovery proves that a live marker has one registry identity. It does not authorize removal or replace lifecycle settlement."
+  },
+  "dialects": [
+    {
+      "id": "cpp-deprecated-attribute",
+      "kind": "text",
+      "roots": ["framework", "extensions"],
+      "extensions": [".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"]
+    },
+    {
+      "id": "python-deprecation-warning",
+      "kind": "text",
+      "roots": ["framework", "extensions"],
+      "extensions": [".py"]
+    },
+    {
+      "id": "js-ts-jsdoc",
+      "kind": "text",
+      "roots": ["framework", "extensions", "scripts"],
+      "extensions": [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
+    },
+    {
+      "id": "persisted-schema-protocol",
+      "kind": "text",
+      "roots": ["framework", "extensions"],
+      "extensions": [".fbs", ".proto"]
+    },
+    {
+      "id": "document-frontmatter",
+      "kind": "document",
+      "roots": ["docs"],
+      "extensions": [".md"]
+    },
+    {
+      "id": "cli-structured-compatibility",
+      "kind": "structured"
+    },
+    {
+      "id": "kfx-structured-compatibility",
+      "kind": "structured"
+    },
+    {
+      "id": "artifact-structured-compatibility",
+      "kind": "structured"
+    }
+  ],
+  "structuredSources": [
+    {
+      "dialect": "cli-structured-compatibility",
+      "match": "exact",
+      "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+      "pointer": "/aliases",
+      "mode": "array-records"
+    },
+    {
+      "dialect": "kfx-structured-compatibility",
+      "match": "basename",
+      "roots": ["extensions"],
+      "basename": "kungfu.kfx.json",
+      "pointer": "/deprecation",
+      "mode": "optional-record"
+    },
+    {
+      "dialect": "artifact-structured-compatibility",
+      "match": "suffix",
+      "roots": ["product", "contracts", "artifacts"],
+      "suffix": ".artifact.json",
+      "pointer": "/deprecation",
+      "mode": "optional-record"
+    }
+  ],
+  "exclusions": [
+    {
+      "classification": "generated-code",
+      "match": "prefix",
+      "path": "framework/api/src/capability/generated/",
+      "dialects": ["js-ts-jsdoc", "persisted-schema-protocol"],
+      "reason": "Generated reflection vocabulary is rebuilt from schema authority and is not an authored compatibility promise."
+    },
+    {
+      "classification": "historical-evidence",
+      "match": "exact",
+      "path": "docs/research/libkungfu-embedding-membrane-spike.md",
+      "dialects": ["document-frontmatter"],
+      "reason": "The document is retained superseded spike evidence and has no live executable surface."
+    }
+  ]
+}

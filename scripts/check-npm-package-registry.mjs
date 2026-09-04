@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REGISTRY_PATH = path.join(
   ROOT,
-  'framework',
+  'product',
   'release',
   'npm-package-registry.json',
 );
@@ -222,9 +222,9 @@ export function loadComponentDistributionInputs(root = ROOT) {
   return {
     contract: readJson(
       root,
-      'framework/release/component-distribution.contract.json',
+      'product/release/component-distribution.contract.json',
     ),
-    npmRegistry: readJson(root, 'framework/release/npm-package-registry.json'),
+    npmRegistry: readJson(root, 'product/release/npm-package-registry.json'),
     corePackage: readJson(root, 'framework/core/package.json'),
     shifuCargo: readText(root, 'crates/shifu/Cargo.toml'),
     shifuSource: readText(root, 'crates/shifu/src/main.rs'),

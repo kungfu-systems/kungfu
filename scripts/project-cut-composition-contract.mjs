@@ -6,12 +6,13 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../framework/project-cut/index.mjs';
+import { semanticRoot } from '../framework/work/project-cut/index.mjs';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
+const PROJECT_CUT_ROOT = 'framework/work/project-cut';
 const require = createRequire(import.meta.url);
 
 function readJson(root, relative) {
@@ -21,13 +22,11 @@ function readJson(root, relative) {
 export function computeProjectCutCompositionRoots(root = DEFAULT_ROOT) {
   const contract = readJson(
     root,
-    'framework/project-cut/composition.contract.json',
+    `${PROJECT_CUT_ROOT}/composition.contract.json`,
   );
   const files = contract.schemaBundle.files.map((relative) => ({
     path: relative,
-    root: semanticRoot(
-      readJson(root, path.join('framework/project-cut', relative)),
-    ),
+    root: semanticRoot(readJson(root, path.join(PROJECT_CUT_ROOT, relative))),
   }));
   const schemaRoot = semanticRoot({
     schema: 'project.cut.composition-schema-bundle/v1',
@@ -57,7 +56,7 @@ export function checkProjectCutCompositionContract(root = DEFAULT_ROOT) {
     const Ajv2020 = require('ajv/dist/2020.js').default;
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     for (const relative of roots.contract.schemaBundle.files)
-      ajv.compile(readJson(root, path.join('framework/project-cut', relative)));
+      ajv.compile(readJson(root, path.join(PROJECT_CUT_ROOT, relative)));
   } catch (error) {
     if (error?.code !== 'MODULE_NOT_FOUND') throw error;
   }

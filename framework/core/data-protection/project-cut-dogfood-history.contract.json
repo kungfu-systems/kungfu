@@ -1,0 +1,149 @@
+{
+  "schema": "kungfu.project-cut-dogfood-history.contract/v1",
+  "id": "kungfu-project-cut-dogfood-history",
+  "version": 1,
+  "status": "source-qualified",
+  "parentContract": {
+    "path": "framework/core/data-protection/kungfu-data-protection.contract.json",
+    "id": "kungfu-durable-history-data-protection",
+    "version": 1
+  },
+  "authority": {
+    "kind": "composition-and-routing-contract",
+    "projectCutOwner": "Project Cut protocol",
+    "assignmentOwner": "Kungfu Native Assignment and Work Control over native Fact and Episode authority",
+    "dogfoodOwner": "kungfu.dogfood-feedback Profile over native Fact Library and Episode authority",
+    "publicationOwner": "protected Git projection of already settled native evidence",
+    "rule": "The composition preserves and verifies owner roots; external coordinator records, Shifu state, Git refs, caches, and publication coordinates remain rebuildable pointers and never become semantic authority."
+  },
+  "exitComposition": {
+    "projectCutMember": {
+      "kind": "project-cut-v1",
+      "schema": "kungfu.project-cut.history-bundle/v1",
+      "protocol": "project-cut-history-portability/v1",
+      "identityRoot": "primaryCutRoot",
+      "contentRoot": "bundleRoot"
+    },
+    "nativeAssignmentMembers": [
+      "fact-authority-v2",
+      "fact-library-v1",
+      "episode-v1"
+    ],
+    "dogfoodMembers": [
+      "profile-source-v1",
+      "fact-library-v1",
+      "episode-v1"
+    ],
+    "singularity": "Every member delegates to its declared owner verifier. The Exit manifest inventories roots and capabilities only."
+  },
+  "projectCutIdentity": {
+    "requiredRoots": [
+      "cutRoot",
+      "serializationRoot",
+      "artifactDigest",
+      "receiptRoot"
+    ],
+    "relations": {
+      "predecessor": "primary Project Cut parentCutRoots",
+      "successor": "verified successor manifests whose parentCutRoots contain primaryCutRoot"
+    },
+    "settlementStates": [
+      "settled-unpublished",
+      "published"
+    ],
+    "publication": "Each retained kungfu.settlement-publication.manifest/v1 verifies its manifestRoot and selects at least one bundled Cut. Publication never decides Work completion.",
+    "loss": "Project Cut omissions, conflicts, and unknowns are retained exactly; a thin member remains inventory-only and degraded."
+  },
+  "projectionBoundaries": [
+    {
+      "surface": "Shifu Assignment state and publication runtime state",
+      "classification": "observer-projection",
+      "rebuildFrom": "native Fact/Episode query plus tracked Project Cut and protected publication manifests"
+    },
+    {
+      "surface": "Git branch, worktree, and cache coordinates",
+      "classification": "cache-rebuildable",
+      "rebuildFrom": "portable package roots and exact protected publication receipts"
+    }
+  ],
+  "modeSemantics": {
+    "full": {
+      "material": "exact Project Cut/receipt bytes, successor bytes, protected publication manifests, and separately composed native Work/Dogfood authority members",
+      "capabilities": [
+        "inspect",
+        "verify-inventory",
+        "verify-content",
+        "materialize"
+      ],
+      "import": "validate all roots and destination bytes before any write, then materialize exact bytes into a clean project data-home layout and postflight"
+    },
+    "thin": {
+      "material": "none",
+      "capabilities": [
+        "inspect",
+        "verify-inventory"
+      ],
+      "import": "forbidden",
+      "state": "degraded"
+    }
+  },
+  "migration": {
+    "defaultMode": "validate-only",
+    "execute": "explicit-authorization-required-by-exit-composer",
+    "sourceRetention": "the package retains exact tracked bytes; original worktree and build cache are not recovery inputs",
+    "destinationPreflight": "same identity with different bytes rejects before any write",
+    "idempotence": "same roots and bytes return already_present",
+    "successorRule": "identity-changing schema or protocol evolution requires a new protocol and mapping receipt; old roots keep their original verifier"
+  },
+  "privacy": {
+    "included": [
+      "owner semantic roots",
+      "exact public or internal Project Cut artifacts",
+      "typed protected publication manifests",
+      "explicit omissions, conflicts, and unknowns"
+    ],
+    "excluded": [
+      "credentials",
+      "provider authentication state",
+      "hidden reasoning",
+      "raw private prompts",
+      "full transcripts",
+      "unbounded terminal bytes",
+      "absolute user or worktree paths"
+    ]
+  },
+  "falsifiers": [
+    "Atlas or Shifu projection claims Assignment, Dogfood, Cut, or publication semantic authority",
+    "a Project Cut member omits one of the four required roots",
+    "a successor does not name the primary Cut as a parent",
+    "a mutable branch or pull-request number substitutes for a rooted publication manifest",
+    "an unqualified Episode or owner receipt is admitted as protected success",
+    "an absolute private path enters the portable member",
+    "a thin member materializes or claims continuation",
+    "recovery requires the original worktree, build cache, Atlas card, or Shifu runtime projection"
+  ],
+  "qualification": {
+    "gate": "./shifu check:project-cut-dogfood-history",
+    "contractTest": "scripts/check-project-cut-dogfood-history.test.mjs",
+    "nativeTests": [
+      "framework/core/tests/python/test_exit_bundle.py::test_project_cut_history_member_survives_source_removal",
+      "framework/core/tests/python/test_exit_bundle.py::test_project_cut_history_member_rejects_thin_and_diverged_destinations",
+      "framework/core/tests/python/test_exit_bundle.py::test_dogfood_profile_facts_roundtrip_through_native_exit_members"
+    ],
+    "requiredCases": [
+      "full-export-clean-import",
+      "thin-export-degraded",
+      "unknown-member",
+      "root-tamper",
+      "successor-mismatch",
+      "publication-root-tamper",
+      "private-path-leakage",
+      "projection-only-recovery"
+    ]
+  },
+  "nonClaims": [
+    "No real user home is read, migrated, or garbage-collected by qualification.",
+    "No physical-media durability, backup, replication, or distributed consensus guarantee is made.",
+    "No installed Product, cross-platform release, or public support window is qualified by this source adapter."
+  ]
+}

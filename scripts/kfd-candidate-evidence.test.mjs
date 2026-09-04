@@ -19,7 +19,7 @@ import {
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
   verifyReleaseArtifactRoot,
-} from '../framework/release/kfd-candidate-evidence.mjs';
+} from '../product/release/kfd-candidate-evidence.mjs';
 
 const SOURCE_SHA = 'a'.repeat(40);
 const SOURCE_TREE = 'b'.repeat(40);

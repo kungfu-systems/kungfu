@@ -38,8 +38,11 @@ share one reading order.
 
 ## Authority graph
 
-The source of truth remains under `framework/format` and each listed protocol
+The source of truth remains under `framework/spec/format` and each listed protocol
 owner. This package generates eight projections:
+
+Cross-domain invariant declarations are documented in the
+[invariant system reference](invariant/README.md).
 
 | Artifact | Meaning |
 | --- | --- |

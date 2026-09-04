@@ -303,7 +303,7 @@
     "negotiation": "major-schema-exact-minor-capability-subset"
   },
   "historyProtection": {
-    "contract": "framework/data-protection/work-agent-history.contract.json",
+    "contract": "framework/core/data-protection/work-agent-history.contract.json",
     "sessionAttemptState": "session-activity-only",
     "semanticAdmissionReceipt": null,
     "processExitSettlesWork": false,

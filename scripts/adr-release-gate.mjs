@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { auditDeprecations } from '../framework/deprecation/deprecation-lifecycle.mjs';
+import { auditDeprecations } from '../developer/deprecation/deprecation-lifecycle.mjs';
 import { classifyAdrIdentity, inspectAdrRecordPath } from './adr-identity.mjs';
 import {
   readMetadataContract,

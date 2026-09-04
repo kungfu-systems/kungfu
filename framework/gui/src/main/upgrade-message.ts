@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import upgradeContract from '../../../upgrade/kungfu-upgrade.contract.json';
+import upgradeContract from '../../../../product/upgrade/kungfu-upgrade.contract.json';
 
 export const UPGRADE_GUIDE_URL =
   'https://www.kungfu.tech/docs/guides/upgrading';

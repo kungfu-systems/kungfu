@@ -47,24 +47,24 @@
     "root_protocol": "sha256:opaque-bytes/v1",
     "sources": [
       {
-        "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:382655b514b0d5a0e60dcc70d70e7356ab5a3c752e6130055638b9dda23541f4"
+        "path": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+        "root": "sha256:ffe4cdaeaf748b086b68ac43c5c7bbe32e0b97a46566f5dc328b605ecd9867e3"
       },
       {
-        "path": "framework/format/kungfu-required-reader.contract.json",
-        "root": "sha256:ead20b4326409b708dba138aeb79b2f4e3b5c1c58c83dfd57a790aebf19ac25d"
+        "path": "framework/spec/format/kungfu-required-reader.contract.json",
+        "root": "sha256:37cbdb6caf55766b8d81fef2f0e1178386abd832a6595f15bc6f5fe3f13d7036"
       },
       {
-        "path": "framework/format/kungfu-format-migration.contract.json",
-        "root": "sha256:141f9477875682175b015dadd32852f69765c52aa196221f344878092c60492b"
+        "path": "framework/spec/format/kungfu-format-migration.contract.json",
+        "root": "sha256:5daf848cbecd01049336a6d33f029eac2f9498ed747122d7091882360f32c380"
       },
       {
-        "path": "framework/format/compatibility/v4-alpha/index.json",
-        "root": "sha256:322c2a19a169cfc91923d3804b9db683371088f8691b999c778f04496d1f4ae6"
+        "path": "framework/spec/format/compatibility/v4-alpha/index.json",
+        "root": "sha256:49acdcfca27af68463e2819a190fd9d3df268c7ac5b9f2a8a65c76fd11a67139"
       },
       {
-        "path": "framework/format/compatibility/v4-alpha/releases/4.0.0-alpha.2.json",
-        "root": "sha256:b6c0343cb81fb628fc8c224ff89359fa98e457ebccbf60bde9810719d999ea1a"
+        "path": "framework/spec/format/compatibility/v4-alpha/releases/4.0.0-alpha.5.json",
+        "root": "sha256:fc0bc6d3fb368d70387dcca78d517b15e7cb89bdd52d7ae208a3678444541c46"
       }
     ]
   },
@@ -121,27 +121,27 @@
   "v4_alpha_baseline": {
     "append_policy": "released baselines are immutable; every successor binds the previous release root and declares every changed authority source",
     "format_line": "v4-alpha",
-    "latest_release": "4.0.0-alpha.2",
-    "latest_release_root": "sha256:297d25fa8b38b57ef7c43ab94096f266d1e8a88e48c81f86064d82b7c41cce55",
+    "latest_release": "4.0.0-alpha.5",
+    "latest_release_root": "sha256:b79b0228bdb566d8f721430c5d81bf897db59f151a690d82f1838e0bdc38ef17",
     "source_bindings": [
       {
         "axis": "composition",
-        "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:d6be3712e8f3a191024d3742120927e12186dd1a5ca6a7b8c72f95498512c975"
+        "path": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+        "root": "sha256:ffe4cdaeaf748b086b68ac43c5c7bbe32e0b97a46566f5dc328b605ecd9867e3"
       },
       {
         "axis": "requiredReader",
-        "path": "framework/format/kungfu-required-reader.contract.json",
-        "root": "sha256:ead20b4326409b708dba138aeb79b2f4e3b5c1c58c83dfd57a790aebf19ac25d"
+        "path": "framework/spec/format/kungfu-required-reader.contract.json",
+        "root": "sha256:37cbdb6caf55766b8d81fef2f0e1178386abd832a6595f15bc6f5fe3f13d7036"
       },
       {
         "axis": "migrationRepair",
-        "path": "framework/format/kungfu-format-migration.contract.json",
-        "root": "sha256:141f9477875682175b015dadd32852f69765c52aa196221f344878092c60492b"
+        "path": "framework/spec/format/kungfu-format-migration.contract.json",
+        "root": "sha256:5daf848cbecd01049336a6d33f029eac2f9498ed747122d7091882360f32c380"
       },
       {
         "axis": "retainedConformance",
-        "path": "framework/format/conformance/portable-format-vectors/index.json",
+        "path": "framework/spec/format/conformance/portable-format-vectors/index.json",
         "root": "sha256:c675ea10be9691fe610bc0c229217c4e9cd68fcc8ef05b8b75a6d9a81a3ec8fd"
       }
     ],

@@ -19,11 +19,11 @@ export const GENERATOR_PATH =
   'scripts/materialize-work-lifecycle-operation-matrix.mjs';
 export const GENERATOR_HELPER_PATH = 'scripts/lib/sdk-generator.mjs';
 export const MATRIX_PATH =
-  'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json';
+  'framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json';
 export const CUT_CATALOG_PATH =
-  'framework/project-cut/work-lifecycle.contract.json';
+  'framework/work/project-cut/work-lifecycle.contract.json';
 export const EPISODE_CATALOG_PATH =
-  'framework/episode/native-operation-catalog.contract.json';
+  'framework/core/episode/native-operation-catalog.contract.json';
 
 const MANAGED_LAYERS = new Set(['cut', 'episode']);
 const SEMANTIC_FIELDS = [

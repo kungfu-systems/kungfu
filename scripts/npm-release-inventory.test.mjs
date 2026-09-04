@@ -24,7 +24,7 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const registry = JSON.parse(
   fs.readFileSync(
-    path.join(root, 'framework/release/npm-package-registry.json'),
+    path.join(root, 'product/release/npm-package-registry.json'),
     'utf8',
   ),
 );
@@ -69,11 +69,11 @@ async function writePackedFixture(file, manifest, body = 'same') {
   await write;
 }
 
-test('all 33 packages are public and exactly 23 use portable workspace packing', () => {
+test('all 34 packages are public and exactly 24 use portable workspace packing', () => {
   assert.deepEqual(collectPublishabilityIssues({ root, registry }), []);
-  assert.equal(registry.packages.length, 33);
-  assert.equal(bulkWorkspaceEntries(registry).length, 23);
-  assert.equal(registry.trustedPublishing.exactArtifactPackages.length, 33);
+  assert.equal(registry.packages.length, 34);
+  assert.equal(bulkWorkspaceEntries(registry).length, 24);
+  assert.equal(registry.trustedPublishing.exactArtifactPackages.length, 34);
 });
 
 test('private and non-public workspace packages fail closed', (t) => {
@@ -118,12 +118,12 @@ test('the staged npm set must contain one exact archive for every package', () =
   }));
   assert.equal(
     validateStagedNpmArtifacts({ artifacts }, registry, version).size,
-    33,
+    34,
   );
   artifacts.pop();
   assert.throws(
     () => validateStagedNpmArtifacts({ artifacts }, registry, version),
-    /expected 33 npm artifacts, found 32/u,
+    /expected 34 npm artifacts, found 33/u,
   );
 });
 

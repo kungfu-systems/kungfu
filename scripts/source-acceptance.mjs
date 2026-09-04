@@ -572,7 +572,7 @@ export function sourceAcceptancePlan(
   const deleted = new Set(deletedFiles);
   const materialFiles = files.filter((file) => !deleted.has(file));
   const settlementPublicationPresent = fs.existsSync(
-    path.join(ROOT, 'framework/project-cut/publication.contract.json'),
+    path.join(ROOT, 'framework/work/project-cut/publication.contract.json'),
   );
   const coldReadOnlySourceAcceptance =
     process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1';
@@ -585,7 +585,7 @@ export function sourceAcceptancePlan(
       : [
           [
             'Shifu Production Graph contract',
-            'framework/production-graph/check.mjs',
+            'developer/production-graph/check.mjs',
           ],
         ]),
     [
@@ -656,7 +656,7 @@ export function sourceAcceptancePlan(
     ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
     [
       'changed-code function-risk ratchet and advisory projection',
-      'framework/maintainability/function-risk-ratchet.mjs',
+      'developer/maintainability/function-risk-ratchet.mjs',
       '--base',
       evidenceBaseCommit,
     ],
@@ -670,7 +670,7 @@ export function sourceAcceptancePlan(
         ]),
     [
       'semantic amplification and task graph',
-      'framework/maintainability/semantic-amplification.mjs',
+      'developer/maintainability/semantic-amplification.mjs',
       '--check',
     ],
     [
@@ -717,7 +717,7 @@ export function sourceAcceptancePlan(
     ],
     [
       'deprecation lifecycle authority',
-      'framework/deprecation/deprecation-lifecycle.mjs',
+      'developer/deprecation/deprecation-lifecycle.mjs',
       '--as-of',
       '2026-08-28',
     ],
@@ -725,7 +725,7 @@ export function sourceAcceptancePlan(
       ? [
           [
             'changed deprecation surface enrollment',
-            'framework/deprecation/deprecation-lifecycle.mjs',
+            'developer/deprecation/deprecation-lifecycle.mjs',
             '--as-of',
             '2026-08-28',
             ...files.flatMap((file) => ['--changed-file', file]),
@@ -740,19 +740,19 @@ export function sourceAcceptancePlan(
     ['Project Cut history contract', 'scripts/check-project-cut-history.mjs'],
     [
       'Work history selector contract',
-      'framework/work-history-selector/tooling/check-work-history-selector.mjs',
+      'framework/work/work-history-selector/tooling/check-work-history-selector.mjs',
     ],
     [
       'Work design advisor contract',
-      'framework/work-design-advisor/tooling/check-work-design-advisor.mjs',
+      'framework/work/work-design-advisor/tooling/check-work-design-advisor.mjs',
     ],
     [
       'Work design policy replay contract',
-      'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
+      'framework/work/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
     ],
     [
       'Work design work-design contract',
-      'framework/work-design-preflight/tooling/check-work-design-preflight.mjs',
+      'framework/work/work-design-preflight/tooling/check-work-design-preflight.mjs',
     ],
     [
       'Project Cut composition contract',
@@ -762,7 +762,7 @@ export function sourceAcceptancePlan(
       ? [
           [
             'Project Cut settlement publication contract',
-            'framework/project-cut/bin/project-cut.mjs',
+            'framework/work/project-cut/bin/project-cut.mjs',
             'publication-contract-check',
             '--json',
           ],
@@ -791,7 +791,7 @@ export function sourceAcceptancePlan(
     ],
     [
       'Work Profile conformance gate',
-      'framework/work-profile-conformance/work-profile-conformance.mjs',
+      'framework/work/work-profile-conformance/work-profile-conformance.mjs',
       '--check',
       '--json',
     ],
@@ -914,10 +914,10 @@ export function sourceAcceptancePlan(
               'scripts/kungfu-workflow-authority.test.mjs',
               'scripts/code-complexity-budget.test.mjs',
               'scripts/check-code-complexity.test.mjs',
-              'framework/report-projection/authority.test.mjs',
-              'framework/maintainability/function-risk.test.mjs',
-              'framework/maintainability/semantic-amplification.test.mjs',
-              'framework/maintainability/terminal-evidence-matrix.test.mjs',
+              'developer/report-projection/authority.test.mjs',
+              'developer/maintainability/function-risk.test.mjs',
+              'developer/maintainability/semantic-amplification.test.mjs',
+              'developer/maintainability/terminal-evidence-matrix.test.mjs',
               ...(coldReadOnlySourceAcceptance
                 ? []
                 : ['scripts/readonly-agent-bootstrap.test.mjs']),
@@ -926,7 +926,7 @@ export function sourceAcceptancePlan(
               'scripts/check-shifu-cache-contract.test.mjs',
               ...(coldReadOnlySourceAcceptance
                 ? []
-                : ['framework/production-graph/check.test.mjs']),
+                : ['developer/production-graph/check.test.mjs']),
               'scripts/check-health-diagnostics-contract.test.mjs',
               'scripts/shifu-cache-runtime.test.mjs',
               'scripts/shifu-conan-hit-evidence.test.mjs',
@@ -962,7 +962,7 @@ export function sourceAcceptancePlan(
               'scripts/check-agent-session-contract.test.mjs',
               'scripts/check-cli-catalog-parity.test.mjs',
               'scripts/check-kfx-site-impact.test.mjs',
-              'framework/deprecation/deprecation-surface-discovery.test.mjs',
+              'developer/deprecation/deprecation-surface-discovery.test.mjs',
               'scripts/check-fact-cut-kernel-contract.test.mjs',
               'scripts/check-temporal-relation-contract.test.mjs',
               'scripts/check-release-provenance-object.test.mjs',
@@ -979,7 +979,7 @@ export function sourceAcceptancePlan(
               'scripts/check-layered-api-encoding-boundary.test.mjs',
               'scripts/check-work-lifecycle-native.test.mjs',
               'scripts/check-work-lifecycle-operation-matrix.test.mjs',
-              'framework/work-profile-conformance/work-profile-conformance.test.mjs',
+              'framework/work/work-profile-conformance/work-profile-conformance.test.mjs',
               'scripts/check-project-work-agent-product.test.mjs',
               'scripts/registry-envelope.test.mjs',
               'scripts/check-kfd-agent-runtime-boundary.mjs',
@@ -998,7 +998,7 @@ export function sourceAcceptancePlan(
                 : []),
               'scripts/project-cut-merge-queue-admission.test.mjs',
               'scripts/check-workspace-continuation.test.mjs',
-              'framework/assignment-capture/assignment-capture.test.mjs',
+              'framework/work/assignment-capture/assignment-capture.test.mjs',
               'scripts/run-continuity-pilot.test.mjs',
               'scripts/check-episode-admission-contract.test.mjs',
               'framework/agent-session/tests/capsule-host.test.mjs',

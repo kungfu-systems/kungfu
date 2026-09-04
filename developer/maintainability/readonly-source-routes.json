@@ -1,0 +1,256 @@
+{
+  "schema": "kungfu.readonly-source-route-inventory/v1",
+  "status": "terminal-closure",
+  "classifications": [
+    "read-only-source",
+    "read-only-installed",
+    "explicit-materialization"
+  ],
+  "routes": [
+    {
+      "id": "source-acceptance",
+      "command": "./shifu check:source",
+      "classification": "read-only-source",
+      "implementation": "scripts/source-acceptance.mjs",
+      "runtimeImplementation": "scripts/readonly-source-toolchain.mjs",
+      "writerOwner": "source-acceptance-runtime",
+      "transitiveWriters": [
+        "disposable OS test directories only"
+      ],
+      "deniedCheckoutWriters": [
+        "_tmp_*",
+        ".buildchain/diagnostics/*.tmp-*",
+        ".pnpm-store/**",
+        "generated-fixtures/**",
+        "nested-task-output/**"
+      ],
+      "recovery": "move disposable writes to the declared OS runtime root; run legitimate materialization in an isolated worktree and exclude it from ./shifu check:source",
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-status",
+      "command": "./shifu kfd status [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-query",
+      "command": "./shifu kfd query [KFD-N] [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-check",
+      "command": "./shifu kfd check [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-query-compatibility",
+      "command": "./shifu kfd:query [KFD-N] [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-check-compatibility",
+      "command": "./shifu kfd:support-matrix:check [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "core-architecture-query",
+      "command": "./shifu core:architecture",
+      "classification": "read-only-source",
+      "implementation": "framework/core/architecture/query-health.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "core-architecture-health",
+      "command": "./shifu core:architecture:health",
+      "classification": "read-only-source",
+      "implementation": "framework/core/architecture/query-health.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "invariant-list",
+      "command": "./shifu invariant:verify -- --list",
+      "classification": "read-only-source",
+      "implementation": "scripts/kungfu-invariant-discovery.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "complexity-query",
+      "command": "./shifu maintainability:complexity",
+      "classification": "read-only-source",
+      "implementation": "scripts/code-complexity-budget.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "python-structure-query",
+      "command": "./shifu maintainability:python-structure",
+      "classification": "read-only-source",
+      "implementation": "scripts/check-code-complexity.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "function-risk-query",
+      "command": "./shifu maintainability:function-risk --json",
+      "classification": "read-only-source",
+      "implementation": "developer/maintainability/function-risk.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "amplification-query",
+      "command": "./shifu maintainability:amplification",
+      "classification": "read-only-source",
+      "implementation": "developer/maintainability/semantic-amplification.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "maintainability-task-graph",
+      "command": "./shifu maintainability:query",
+      "classification": "read-only-source",
+      "implementation": "developer/maintainability/semantic-amplification.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "work-design-preflight-preflight",
+      "command": "./shifu work-design:preflight",
+      "classification": "read-only-source",
+      "implementation": "framework/work/work-design-preflight/tooling/work-design-preflight.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "work-design-feedback",
+      "command": "./shifu work-design:feedback",
+      "classification": "read-only-source",
+      "implementation": "framework/work/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "documentation-readonly-checkout",
+      "command": "./shifu docs:check:readonly",
+      "classification": "explicit-materialization",
+      "implementation": "scripts/run-docs-readonly.mjs",
+      "transitiveWriters": [
+        "declared external documentation tool cache and manifest mirror"
+      ],
+      "network": true,
+      "dependencyInstallation": true
+    },
+    {
+      "id": "documentation-material-qualification",
+      "command": "node scripts/run-documentation-material-tests.mjs",
+      "classification": "read-only-source",
+      "implementation": "scripts/run-documentation-material-tests.mjs",
+      "transitiveWriters": [
+        "disposable OS test directories only"
+      ],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "agent-brief",
+      "command": "kungfu agent brief",
+      "classification": "read-only-installed",
+      "implementation": "framework/core/src/python/kungfu/cli/commands/agent.py",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "agent-status",
+      "command": "kungfu agent status --target <agent> --json",
+      "classification": "read-only-installed",
+      "implementation": "framework/core/src/python/kungfu/cli/commands/agent.py",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "agent-runtime-list",
+      "command": "kungfu agent runtime list --json",
+      "classification": "read-only-installed",
+      "implementation": "framework/core/src/python/kungfu/cli/commands/agent.py",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "agent-session-list",
+      "command": "kungfu agent session list --json",
+      "classification": "read-only-installed",
+      "implementation": "framework/core/src/python/kungfu/cli/commands/agent.py",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "agent-work-inspect",
+      "command": "kungfu agent work inspect --ref <ref> --json",
+      "classification": "read-only-installed",
+      "implementation": "framework/core/src/python/kungfu/cli/commands/agent.py",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "documentation-bundle-materialization",
+      "command": "node scripts/build-documentation-material-bundle.mjs --output <outside-checkout>",
+      "classification": "explicit-materialization",
+      "implementation": "scripts/build-documentation-material-bundle.mjs",
+      "transitiveWriters": [
+        "caller-selected output root"
+      ],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "product-freeze",
+      "command": "./shifu freeze",
+      "classification": "explicit-materialization",
+      "implementation": "framework/core/.gyp/run-freeze.js",
+      "transitiveWriters": [
+        "declared build and distribution roots"
+      ],
+      "network": false,
+      "dependencyInstallation": false
+    }
+  ]
+}

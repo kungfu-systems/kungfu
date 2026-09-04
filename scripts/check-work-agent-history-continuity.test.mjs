@@ -17,7 +17,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const contract = readJson(
-  'framework/data-protection/work-agent-history.contract.json',
+  'framework/core/data-protection/work-agent-history.contract.json',
 );
 const ROOT_VALUE = `sha256:${'a'.repeat(64)}`;
 
@@ -172,7 +172,7 @@ test('surface copy and runtime reports expose the activity versus history bounda
     tuiEntrypoint: read('framework/tui/src/main.tsx'),
     runner: read('framework/core/src/python/kungfu/agent/run_agent.py'),
     session: read('framework/agent-session/kungfu-agent-session.contract.json'),
-    product: read('framework/product/project-work-agent.contract.json'),
+    product: read('product/contracts/project-work-agent.contract.json'),
   };
   assert.match(
     sources.cli,
