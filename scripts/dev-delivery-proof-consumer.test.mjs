@@ -412,4 +412,8 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
     aggregate,
     /name: Install pinned Buildchain proof runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts/u,
   );
+  assert.match(
+    aggregate,
+    /name: Install source workspace dependencies[\s\S]*\.\/shifu install --frozen-lockfile[\s\S]*name: Project exact PR qualification into Buildchain Source Proof/u,
+  );
 });
