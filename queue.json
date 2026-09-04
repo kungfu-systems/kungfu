@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9279,
+  "generation": 9280,
   "fencingCounter": 889,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:a4e9a078ebd001c64f6f492b4891f7c39cec9559fd8c0b41be0842e542ae8714",
@@ -51,8 +51,13 @@
     "issuedAt": "2026-09-04T03:57:48.984Z",
     "expiresAt": "2026-09-04T08:03:11.731Z",
     "fencingToken": "sha256:326f72be054ec5355c4cca9021364f3c87d5645825024d6dd132fc7af5f3cabd",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-04T04:03:11.731Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-04T04:03:11.731Z",
+    "nativeProofRoot": "sha256:b469e6c614a147e159ef11e498dccfdfc2f309c7eb3c6cbd65a3a72df40abed4",
+    "nativeExecutionReceiptRoot": "sha256:73501a8385653ec3a48758eb360486e6eb27ed0f7f1780d3e8f63fdd7e05394a",
+    "nativeProofReuseRoot": "sha256:12d72e304e21d91029b81f91d6a0feb36bbc117ba3fcdd76be7e6adccc0b82bb",
+    "qualificationReceiptRoot": "sha256:7b7f5241fe3ab126c3476f93aae522fcf8a843ca4ede10374750c5b57edaa31b",
+    "qualifiedAt": "2026-09-04T04:03:36.911Z"
   },
   "candidates": [
     {
@@ -68742,10 +68747,10 @@
       "sourceWorkflowRunId": 33834571512,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-04T03:57:44.423Z",
-      "updatedAt": "2026-09-04T04:03:11.731Z",
+      "updatedAt": "2026-09-04T04:03:36.911Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "crates/shifu/src/promote_desktop.rs",
@@ -68757,6 +68762,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-04T04:03:11.731Z",
-  "stateRoot": "sha256:85306eaf5506f9545abb4b36939a902afd49c37c3e34510ef4f344328170806f"
+  "updatedAt": "2026-09-04T04:03:36.911Z",
+  "stateRoot": "sha256:3680e2c665eaf2b7ca417a60bc1dc2ee69c03767712ce63e1eca3b728ba23f3a"
 }
