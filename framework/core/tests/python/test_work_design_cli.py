@@ -10,6 +10,18 @@ from kungfu.cli.commands import kfc
 from kungfu.cli.commands import work_design  # noqa: F401
 
 
+def test_work_design_preflight_entry_uses_packaged_owner_coordinate():
+    entry = work_design._preflight_entry()
+
+    assert entry.parts[-5:] == (
+        "framework",
+        "work",
+        "work-design-preflight",
+        "tooling",
+        "work-design-preflight.mjs",
+    )
+
+
 def test_work_design_preflight_routes_to_product_owned_libnode(tmp_path):
     request = tmp_path / "request.json"
     history = tmp_path / "history.json"
