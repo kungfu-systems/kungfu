@@ -4,12 +4,12 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
 import {
   compositionChanged,
   observeComposition,
   verifyComposition,
-} from '../framework/work/project-cut/composition.mjs';
-import { semanticRoot } from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut/composition';
 import {
   FAMILY_QUEUE_LEASE_SCHEMA,
   FAMILY_QUEUE_RELEASE_SCHEMA,

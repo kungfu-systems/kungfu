@@ -6,12 +6,12 @@
 // (sandbox.ts). Headless, macOS only (Seatbelt); run.sh skips elsewhere.
 import { execSync, spawn } from 'node:child_process';
 
-import { createCapabilityHost } from '../../../framework/api/src/capability/sandbox.ts';
+import { createCapabilityHost } from '@kungfu-tech/api/capability/sandbox';
 import {
   isOsSandboxSupported,
   osSandboxCommand,
-} from '../../../framework/api/src/capability/sandbox-launcher.ts';
-import { serveSubprocessCapabilities } from '../../../framework/api/src/capability/subprocess.ts';
+} from '@kungfu-tech/api/capability/sandbox-launcher';
+import { serveSubprocessCapabilities } from '@kungfu-tech/api/capability/subprocess';
 
 if (!isOsSandboxSupported()) {
   console.error('skipped: no os sandbox on this platform (macOS Seatbelt / Linux bwrap)');

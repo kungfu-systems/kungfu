@@ -7,7 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { validateExperimentReport } from '../../framework/work/agent-repository-work/report.mjs';
+import { validateExperimentReport } from '@kungfu-tech/work/agent-repository-work/report';
 
 const CLASSIFICATION_SCHEMA = 'kungfu.agent-patrol.classification/v1';
 const FINDING_INTENT_SCHEMA = 'kungfu.agent-patrol.finding-intent/v1';

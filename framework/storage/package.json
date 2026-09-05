@@ -25,5 +25,13 @@
   "scripts": {
     "build": "node package-artifacts.mjs --validate",
     "pack": "node package-artifacts.mjs"
+  },
+  "devDependencies": {
+    "@kungfu-tech/workspaces": "workspace:*"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./generated/work-lifecycle-v1": "./generated/work-lifecycle-v1.js",
+    "./package.json": "./package.json"
   }
 }

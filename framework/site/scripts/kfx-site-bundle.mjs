@@ -86,7 +86,9 @@ function assertUnique(values, label) {
 function assertRelativeSourcePath(sourcePath) {
   assert(
     typeof sourcePath === 'string' &&
-      /^(?:docs|framework|extensions)\//u.test(sourcePath) &&
+      /^(?:(?:docs|framework|extensions)\/|product\/release\/npm-package-registry\.json$)/u.test(
+        sourcePath,
+      ) &&
       !path.isAbsolute(sourcePath) &&
       !sourcePath.split(/[\\/]/u).includes('..') &&
       !sourcePath.startsWith('framework/site/'),

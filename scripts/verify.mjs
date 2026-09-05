@@ -42,7 +42,7 @@ import {
   assertLibwasmArtifact,
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
-} from '../product/scripts/libwasm-artifact.mjs';
+} from '@kungfu-tech/product-kungfu/tooling/libwasm-artifact';
 import { sourceMypyCommand } from './source-acceptance.mjs';
 
 const __filename = fileURLToPath(import.meta.url);

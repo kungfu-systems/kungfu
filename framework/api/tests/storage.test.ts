@@ -131,8 +131,9 @@ test('GUI and Agent storage edge preserve the published Buildchain KFX projectio
   const fixture = JSON.parse(
     fs.readFileSync(
       new URL(
-        '../../core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json',
-        import.meta.url,
+        import.meta.resolve(
+          '@kungfu-tech/core/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json',
+        ),
       ),
       'utf8',
     ),

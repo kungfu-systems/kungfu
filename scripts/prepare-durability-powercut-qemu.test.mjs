@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
 
-import { createPowerCutPlan } from '../framework/core/tests/qualification/durability/powercut_plan.mjs';
+import { createPowerCutPlan } from '@kungfu-tech/core/testing/qualification/durability/powercut_plan';
 import { preparationView } from './prepare-durability-powercut-qemu.mjs';
 
 const input = {

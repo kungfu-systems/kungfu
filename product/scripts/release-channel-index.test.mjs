@@ -9,7 +9,7 @@ import test from 'node:test';
 
 import Ajv2020 from 'ajv/dist/2020.js';
 
-import { qualificationContentRoot } from '../../scripts/upgrade-qualification.mjs';
+import { qualificationContentRoot } from '@kungfu-tech/workspaces/tooling/upgrade-qualification';
 
 import {
   buildChannelIndex,

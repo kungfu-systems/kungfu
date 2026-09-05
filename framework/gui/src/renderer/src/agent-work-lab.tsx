@@ -17,14 +17,14 @@ import {
   mono,
   panelStyle,
 } from '@kungfu-tech/kfx';
-import React from 'react';
-import { createPortal } from 'react-dom';
 import {
   AGENT_WORK_LAB_CHECKS,
   AGENT_WORK_LAB_SUITE,
   type AgentWorkLabCaseId,
   agentWorkLabRecommendation,
-} from '../../../../../extensions/agent-work-lab/experience/src/index.js';
+} from '@kungfu-tech/kfx-agent-work-lab-experience';
+import React from 'react';
+import { createPortal } from 'react-dom';
 
 export function shouldOpenAgentWorkLab(
   startupSurface: string,

@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import {
   createShellNavigationHandler,
@@ -13,6 +14,8 @@ import {
   visibleCoreSurface,
 } from './navigation.ts';
 import type { ShellNavigateRequest } from './sandbox/channels.ts';
+
+const require = createRequire(import.meta.url);
 
 const source = readFileSync(
   new URL('./renderer/src/main.tsx', import.meta.url),
@@ -27,17 +30,11 @@ const projectsPanelSource = readFileSync(
   'utf8',
 );
 const workViewSource = readFileSync(
-  new URL(
-    '../../../extensions/work-dashboard/src/view/index.tsx',
-    import.meta.url,
-  ),
+  require.resolve('@kungfu-tech/kfx-view-work-dashboard/view/index'),
   'utf8',
 );
 const profileManagerSource = readFileSync(
-  new URL(
-    '../../../extensions/system/kfx-manager/src/view/index.tsx',
-    import.meta.url,
-  ),
+  require.resolve('@kungfu-tech/kfx-view-kfx-manager/view/index'),
   'utf8',
 );
 

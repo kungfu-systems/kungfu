@@ -37,6 +37,11 @@ jobs:
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: "24"
+      - name: Install declared proof bootstrap workspace packages
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+          node scripts/install-proof-bootstrap-packages.mjs
       - name: Resolve exact cache promotion target
         id: target
         env:

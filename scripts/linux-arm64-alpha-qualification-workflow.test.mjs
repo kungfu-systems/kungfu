@@ -6,8 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { activeProjection } from '@kungfu-tech/product-kungfu/version-line/version-line-authority';
 import { parse } from 'yaml';
-import { activeProjection } from '../product/version-line/version-line-authority.mjs';
 
 const ROOT = process.cwd();
 const BUILD_WORKFLOW = path.join(ROOT, '.github', 'workflows', 'build.yml');

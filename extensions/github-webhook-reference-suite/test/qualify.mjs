@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-await import('../github-webhook-ingress/test/qualify.mjs');
-await import('../github-dogfood-bridge/test/qualify.mjs');
+await import('@kungfu-tech/kfx-github-webhook-ingress/test/qualify');
+await import('@kungfu-tech/kfx-github-dogfood-bridge/test/qualify');
 
 const suiteRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const actualAgent = JSON.parse(

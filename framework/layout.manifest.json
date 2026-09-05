@@ -31,7 +31,9 @@
       "role": "runtime-package",
       "boundaryReview": "none",
       "packageName": "@kungfu-tech/agent-session",
-      "dependencies": []
+      "dependencies": [
+        "framework/core"
+      ]
     },
     {
       "path": "framework/api",
@@ -54,6 +56,7 @@
       "packageName": "@kungfu-tech/core",
       "dependencies": [
         "framework/agent-session",
+        "framework/tui",
         "framework/work"
       ]
     },
@@ -64,7 +67,12 @@
       "boundaryReview": "none",
       "packageName": "@kungfu-tech/gui",
       "dependencies": [
-        "framework/kfx"
+        "framework/agent-session",
+        "framework/api",
+        "framework/core",
+        "framework/kfx",
+        "framework/skill",
+        "framework/tui"
       ]
     },
     {
@@ -73,7 +81,9 @@
       "role": "runtime-package",
       "boundaryReview": "none",
       "packageName": "@kungfu-tech/kfx",
-      "dependencies": []
+      "dependencies": [
+        "framework/api"
+      ]
     },
     {
       "path": "framework/site",
@@ -81,7 +91,9 @@
       "role": "runtime-package",
       "boundaryReview": "none",
       "packageName": "@kungfu-tech/site",
-      "dependencies": []
+      "dependencies": [
+        "framework/spec"
+      ]
     },
     {
       "path": "framework/skill",
@@ -114,7 +126,10 @@
       "boundaryReview": "none",
       "packageName": "@kungfu-tech/tui",
       "dependencies": [
-        "framework/agent-session"
+        "framework/agent-session",
+        "framework/api",
+        "framework/core",
+        "framework/kfx"
       ]
     },
     {
@@ -123,7 +138,9 @@
       "role": "runtime-package",
       "boundaryReview": "none",
       "packageName": "@kungfu-tech/work",
-      "dependencies": []
+      "dependencies": [
+        "framework/spec"
+      ]
     }
   ]
 }

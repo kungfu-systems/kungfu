@@ -1,0 +1,48 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:78d38d1f13e72170bc2bcd2bebc30c741b5bf57629b9c7fee866985a2f1b280f",
+  "issue_kind": "grandfathered-file-grew",
+  "paths_or_scope": [
+    "pnpm-lock.yaml"
+  ],
+  "budget_classes": [
+    "declarative-schema-or-table:declarative"
+  ],
+  "baseline_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10143,
+      "contentRoot": "sha256:e0b1c89fd08dce937aca85194b9621787958b6d7021e70cba297cbe947822ef0"
+    }
+  ],
+  "current_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10345,
+      "contentRoot": "sha256:31760e02c99956210c15ee48fe977b92142577d04b9da0e21339a668b960e8d6"
+    }
+  ],
+  "allowed_delta": 202,
+  "owner": "kungfu/repository-contract",
+  "responsibility_boundary": "One pnpm lockfile records the declared workspace package dependency graph. This request covers only the exact generated lockfile required by the framework package-boundary migration.",
+  "cohesion_rationale": "The added workspace links replace implicit relative imports; they introduce no new external package resolutions. The single lockfile must remain reproducible under frozen install.",
+  "rejected_split_alternatives": [
+    "Omitting workspace dependencies preserves the undeclared consumption defect.",
+    "Splitting or manually compressing the generated lockfile would undermine package-manager reproducibility."
+  ],
+  "affected_tests_and_qualification": [
+    "./shifu sync",
+    "./shifu check:package-boundaries",
+    "./shifu check:source",
+    "./shifu exec node scripts/qualify-work-package.mjs",
+    "Candidate source acceptance / check; protected exact-head review; Delivery Warrant; merge_group"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-09-05-kungfu-framework-package-boundaries#declared-workspace-dependencies"
+}

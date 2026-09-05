@@ -42,6 +42,10 @@
     "sorted-btree": "1.8.1"
   },
   "devDependencies": {
+    "@kungfu-tech/agent-session": "workspace:*",
+    "@kungfu-tech/core": "workspace:*",
+    "@kungfu-tech/gui": "workspace:*",
+    "@kungfu-tech/tui": "workspace:*",
     "@types/find-root": "^1.1.2",
     "@types/fs-extra": "^9.0.13",
     "@types/minimist": "^1.2.5",
@@ -51,6 +55,11 @@
   "exports": {
     ".": "./src/capability/index.ts",
     "./capability": "./src/capability/index.ts",
+    "./capability/profile": "./src/capability/profile.ts",
+    "./capability/sandbox": "./src/capability/sandbox.ts",
+    "./capability/sandbox-launcher": "./src/capability/sandbox-launcher.ts",
+    "./capability/subprocess": "./src/capability/subprocess.ts",
+    "./package.json": "./package.json",
     "./query": "./src/capability/query.ts"
   }
 }

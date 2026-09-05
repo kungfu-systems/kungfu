@@ -15,7 +15,7 @@ import {
   semanticRoot,
   verifyProjectCut,
   verifyProjectCutReceipt,
-} from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURE_PATH = path.join(

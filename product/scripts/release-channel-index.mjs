@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { qualificationContentRoot } from '../../scripts/upgrade-qualification.mjs';
+import { qualificationContentRoot } from '@kungfu-tech/workspaces/tooling/upgrade-qualification';
 
 export const CHANNEL_INDEX_SCHEMA = 'kungfu.release-channel-index/v1';
 
