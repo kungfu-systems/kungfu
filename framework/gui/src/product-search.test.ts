@@ -264,8 +264,9 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
   assert.match(source, /onOpenAllWork=\{\(\) => openWorkSurface\(\)\}/);
   assert.match(
     source,
-    /const retainedSurfaceProps[\s\S]*work: runtime\.assignmentRuntime \? \([\s\S]*<ProjectWorkControlView[\s\S]*projects=\{projects\}[\s\S]*assignmentRuntime=\{runtime\.assignmentRuntime\}/,
+    /const retainedSurfaceProps[\s\S]*work: \([\s\S]*<ProjectWorkControlView[\s\S]*projects=\{projects\}[\s\S]*assignmentRuntime=\{runtime\.assignmentRuntime\}/,
   );
+  assert.match(workViewSource, /Work Runtime unavailable · observer-only/);
   assert.match(
     projectsPanelSource,
     /visible === 'core-work' \|\| retained\.has\('core-work'\)/,

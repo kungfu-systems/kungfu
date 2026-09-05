@@ -128,6 +128,14 @@ export type AgentFirstEntry = {
   cliInstalled: boolean;
 };
 
+export type InitialProductSurface = 'onboarding' | 'projects' | 'work';
+
+export function shouldBootRuntimeForInitialSurface(
+  surface: InitialProductSurface,
+): boolean {
+  return surface === 'work';
+}
+
 type LabOnboardingRouteOptions = {
   state: KungfuOnboardingState;
   persist: (state: KungfuOnboardingState) => Promise<void>;
@@ -136,7 +144,7 @@ type LabOnboardingRouteOptions = {
 };
 
 export function deferredAgentWorkStartup(
-  surface: 'onboarding' | 'projects' | 'work',
+  surface: InitialProductSurface,
   runtimeDir: string,
 ): AgentWorkLabStartupRoute {
   const [reasonCode, message] = (
