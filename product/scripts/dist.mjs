@@ -1032,6 +1032,115 @@ export function copyTree(source, target, options = {}) {
   return true;
 }
 
+function findInstalledWorkDesignRuntimeManifest(source) {
+  const manifests = [];
+  const pending = [source];
+  while (pending.length > 0) {
+    const directory = pending.pop();
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (
+        ['node_modules', 'build', '.venv', '__pycache__'].includes(entry.name)
+      )
+        continue;
+      const child = path.join(directory, entry.name);
+      const manifest = path.join(child, 'work-design-runtime.json');
+      if (entry.name === 'work_design_runtime' && fs.existsSync(manifest))
+        manifests.push(manifest);
+      pending.push(child);
+    }
+  }
+  if (manifests.length !== 1)
+    throw new Error(
+      `expected one installed Work Design runtime manifest, found ${manifests.length}`,
+    );
+  return manifests[0];
+}
+
+function readInstalledWorkDesignPackageDependencies(manifestPath) {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (
+    manifest.schema !== 'kungfu.work-design.runtime-closure/v1' ||
+    !Array.isArray(manifest.packageDependencies)
+  )
+    throw new Error('invalid installed Work Design runtime closure manifest');
+  return manifest.packageDependencies;
+}
+
+function validateInstalledWorkDesignPackageDependency(dependency, seen) {
+  if (
+    !dependency ||
+    typeof dependency.name !== 'string' ||
+    !/^@[^/]+\/[^/]+$/u.test(dependency.name) ||
+    !Array.isArray(dependency.files) ||
+    dependency.files.length === 0 ||
+    seen.has(dependency.name)
+  )
+    throw new Error('invalid installed Work Design package dependency');
+  seen.add(dependency.name);
+}
+
+function copyInstalledWorkDesignPackageDependency(
+  dependency,
+  runtimeRoot,
+  targetRuntimeRoot,
+) {
+  const packageCoordinate = dependency.name.split('/');
+  for (const relative of dependency.files) {
+    if (
+      typeof relative !== 'string' ||
+      path.isAbsolute(relative) ||
+      relative.split(/[\\/]/u).includes('..')
+    )
+      throw new Error(
+        `invalid installed Work Design package file: ${dependency.name}/${relative}`,
+      );
+    const sourceFile = path.join(
+      runtimeRoot,
+      'node_modules',
+      ...packageCoordinate,
+      ...relative.split('/'),
+    );
+    if (!fs.existsSync(sourceFile) || !fs.statSync(sourceFile).isFile())
+      throw new Error(
+        `missing installed Work Design package file: ${dependency.name}/${relative}`,
+      );
+    const targetFile = path.join(
+      targetRuntimeRoot,
+      'node_modules',
+      ...packageCoordinate,
+      ...relative.split('/'),
+    );
+    fs.mkdirSync(path.dirname(targetFile), { recursive: true });
+    fs.copyFileSync(sourceFile, targetFile);
+  }
+}
+
+function copyInstalledWorkDesignPackageClosure(source, target) {
+  const manifestPath = findInstalledWorkDesignRuntimeManifest(source);
+  const dependencies = readInstalledWorkDesignPackageDependencies(manifestPath);
+  const runtimeRoot = path.dirname(manifestPath);
+  const targetRuntimeRoot = path.join(
+    target,
+    path.relative(source, runtimeRoot),
+  );
+  const seen = new Set();
+  for (const dependency of dependencies) {
+    validateInstalledWorkDesignPackageDependency(dependency, seen);
+    copyInstalledWorkDesignPackageDependency(
+      dependency,
+      runtimeRoot,
+      targetRuntimeRoot,
+    );
+  }
+}
+
+export function stageCoreRuntimeForCli(source, target) {
+  copyTree(source, target);
+  copyInstalledWorkDesignPackageClosure(source, target);
+  return true;
+}
+
 export function stageNodePtyForCli(
   source,
   target,
@@ -1521,14 +1630,22 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
   kungfuBin,
   env,
   run = runInstalledKungfu,
+  home: requestedHome,
+  userHome: requestedUserHome,
+  workspace: requestedWorkspace,
+  requestPath: requestedRequestPath,
 }) {
-  const home = path.join(installRoot, '.assignment-admission-home');
-  const userHome = path.join(installRoot, '.assignment-admission-user-home');
-  const workspace = path.join(installRoot, 'assignment-admission-workspace');
-  const requestPath = path.join(
-    installRoot,
-    'assignment-admission-request.json',
-  );
+  const home =
+    requestedHome || path.join(installRoot, '.assignment-admission-home');
+  const userHome =
+    requestedUserHome ||
+    path.join(installRoot, '.assignment-admission-user-home');
+  const workspace =
+    requestedWorkspace ||
+    path.join(installRoot, 'assignment-admission-workspace');
+  const requestPath =
+    requestedRequestPath ||
+    path.join(installRoot, 'assignment-admission-request.json');
   const initiativeId = 'installed-product-qualification';
   const assignmentId = 'installed-product-admission-smoke';
   const retentionPolicy = 'explicit-expiry-retain-bytes-v1';
@@ -1610,6 +1727,14 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       'installed kungfu Assignment admission returned invalid evidence',
     );
   }
+  return {
+    captured,
+    admitted,
+    home,
+    userHome,
+    workspace,
+    requestPath,
+  };
 }
 export function smokeCliProductArchive({ archivePath, archiveBase }) {
   return buildchainLogger.spanSync(
@@ -2000,7 +2125,10 @@ function buildCliProduct(esbuildRuntime) {
       fs.mkdirSync(stageRoot, { recursive: true });
       fs.mkdirSync(CLI_RELEASE_DIR, { recursive: true });
 
-      copyTree(CORE_DIST, path.join(stageRoot, layout.runtimeDirectory));
+      stageCoreRuntimeForCli(
+        CORE_DIST,
+        path.join(stageRoot, layout.runtimeDirectory),
+      );
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
       stageNodePtyForCli(
