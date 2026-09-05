@@ -317,8 +317,21 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
-    /\.head\.repo\.full_name == \$repository[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
+    /\.base\.repo\.full_name == \$repository[\s\S]*\.head\.repo\.full_name \| type == "string" and length > 0[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
   );
+  assert.match(
+    bridge,
+    /source_head_repository="\$\(jq -er '\.head\.repo\.full_name' "\$live_pr"\)"/u,
+  );
+  assert.equal(
+    (
+      bridge.match(
+        /\.head_repository\.full_name == \$sourceHeadRepository/gu,
+      ) || []
+    ).length,
+    2,
+  );
+  assert.doesNotMatch(bridge, /\.head_repository\.full_name == \$repository/u);
   assert.match(
     bridge,
     /check_name=affected-native%20%2F%20linux&filter=latest&per_page=100/u,
@@ -382,6 +395,20 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
+});
+
+test('source workflow repository follows the exact live PR head repository', () => {
+  const qualifies = (liveHeadRepository, sourceRunRepository) =>
+    typeof liveHeadRepository === 'string' &&
+    liveHeadRepository.length > 0 &&
+    sourceRunRepository === liveHeadRepository;
+
+  assert.equal(
+    qualifies('kungfu-systems/kungfu', 'kungfu-systems/kungfu'),
+    true,
+  );
+  assert.equal(qualifies('dongkeren/kungfu', 'dongkeren/kungfu'), true);
+  assert.equal(qualifies('dongkeren/kungfu', 'kungfu-systems/kungfu'), false);
 });
 
 test('Dev delivery fails closed to fenced native execution without a v3 receipt', () => {
