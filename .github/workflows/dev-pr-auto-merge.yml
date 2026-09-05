@@ -835,11 +835,13 @@ jobs:
             --arg branch "$TARGET_BRANCH" \
             --arg head "$EXPECTED_HEAD" \
             '.base.repo.full_name == $repository
+             and (.head.repo.full_name | type == "string" and length > 0)
              and .head.sha == $head
              and .base.ref == $branch
              and .state == "open"' \
             "$live_pr" >/dev/null
 
+          source_head_repository="$(jq -er '.head.repo.full_name' "$live_pr")"
           native_root="$(jq -er '.warrant.nativeProofRoot' "$warrant")"
           qualification_root="$(jq -er '.receiptRoot' "$warrant")"
           state_root="$(jq -er '.after.stateRoot' "$warrant")"
@@ -848,14 +850,14 @@ jobs:
           source_run_prior="$evidence/source-workflow-run-prior.json"
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$source_run_prior"
           jq -e \
-            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceHeadRepository "$source_head_repository" \
             --arg head "$EXPECTED_HEAD" \
             --argjson sourceRun "$SOURCE_RUN_ID" \
             '.id == $sourceRun
              and .name == "Core affected native"
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
-             and .head_repository.full_name == $repository
+             and .head_repository.full_name == $sourceHeadRepository
              and .head_sha == $head
              and .status == "completed"
              and (.conclusion == "failure" or .conclusion == "success")
@@ -926,7 +928,7 @@ jobs:
           fi
 
           jq -e \
-            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceHeadRepository "$source_head_repository" \
             --arg head "$EXPECTED_HEAD" \
             --argjson sourceRun "$SOURCE_RUN_ID" \
             --argjson expectedAttempt "$expected_attempt" \
@@ -934,7 +936,7 @@ jobs:
              and .name == "Core affected native"
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
-             and .head_repository.full_name == $repository
+             and .head_repository.full_name == $sourceHeadRepository
              and .head_sha == $head
              and .run_attempt == $expectedAttempt
              and .status == "completed"

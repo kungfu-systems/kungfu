@@ -47,6 +47,7 @@ function completeFixture(root) {
     'site',
     'skill',
     'tui',
+    'work',
   ])
     write(root, 'linux', `kungfu-tech-${packageName}-4.0.0-alpha.1.tgz`);
   for (const platform of ['darwin-arm64', 'linux-x64', 'win32-x64']) {
@@ -64,7 +65,7 @@ function completeFixture(root) {
   write(root, 'win32', 'Kungfu Setup 4.0.0-alpha.1.exe');
 }
 
-test('collects the exact 43-file cross-platform publication set', () => {
+test('collects the exact 44-file cross-platform publication set', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-publish-test-'));
   try {
     const input = path.join(root, 'input');
@@ -79,7 +80,12 @@ test('collects the exact 43-file cross-platform publication set', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(output, 'manifest.json'), 'utf8'),
     );
-    assert.equal(manifest.artifacts.length, 43);
+    assert.equal(manifest.artifacts.length, 44);
+    assert.ok(
+      manifest.artifacts.some(
+        ({ name }) => name === 'kungfu-tech-work-4.0.0-alpha.1.tgz',
+      ),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
