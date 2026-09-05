@@ -67,3 +67,19 @@ test('protected Project Cut replay materializes its declared Work dependency clo
     /name: Check out protected consumer adapter[\s\S]*name: Install protected Work consumer dependencies[\s\S]*corepack pnpm install --filter '@kungfu-tech\/work\.\.\.' --prod --frozen-lockfile --ignore-scripts[\s\S]*name: Produce exact Project Cut replay proof/u,
   );
 });
+
+test('protected Warrant binds repository authority to the PR base for fork heads', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/dev-pr-auto-merge.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /test "\$GITHUB_REPOSITORY" = "\$\(jq -r '\.base\.repo\.full_name' "\$pull_request"\)"/u,
+  );
+  assert.match(
+    workflow,
+    /'\.base\.repo\.full_name == \$repository[\s\S]*and \.head\.sha == \$head/u,
+  );
+  assert.doesNotMatch(workflow, /\.head\.repo\.full_name == \$repository/u);
+});

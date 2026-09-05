@@ -602,7 +602,7 @@ jobs:
           qualification_output=.buildchain/dev-delivery-input/project-cut-qualification.log
           proof=.buildchain/dev-delivery-input/project-cut-proof.json
 
-          test "$GITHUB_REPOSITORY" = "$(jq -r '.head.repo.full_name' "$pull_request")"
+          test "$GITHUB_REPOSITORY" = "$(jq -r '.base.repo.full_name' "$pull_request")"
           test "$TARGET_BRANCH" = "$(jq -r '.base.ref' "$pull_request")"
           test "$EXPECTED_HEAD" = "$(jq -r '.head.sha' "$pull_request")"
           current_base="$(git rev-parse 'HEAD^{commit}')"
@@ -834,7 +834,7 @@ jobs:
             --arg repository "$GITHUB_REPOSITORY" \
             --arg branch "$TARGET_BRANCH" \
             --arg head "$EXPECTED_HEAD" \
-            '.head.repo.full_name == $repository
+            '.base.repo.full_name == $repository
              and .head.sha == $head
              and .base.ref == $branch
              and .state == "open"' \
