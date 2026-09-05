@@ -10,7 +10,6 @@ import pytest
 
 from kungfu import assignment_graph
 from kungfu import workspace_federation as federation
-from kungfu import workspace_federation_observer as federation_observer
 from kungfu import workspace_federation_projection as federation_projection
 from kungfu.workspace import (
     WorkspaceIdentity,
@@ -35,10 +34,7 @@ from kungfu.workspace_federation import (
     verify_federation_query,
     verify_dogfood_gate_receipt,
 )
-from kungfu.workspace_federation_observer import (
-    _observer_state_advanced,
-    _runtime_signal,
-)
+from kungfu.workspace_federation_observer import _runtime_signal
 import kungfu.cli.commands.workspace as workspace_command_module
 from kungfu.cli.commands.workspace import (
     _human_initiative_group_line,
@@ -51,7 +47,8 @@ ROOT_B = "sha256:" + "b" * 64
 ROOT_C = "sha256:" + "c" * 64
 ROOT_D = "sha256:" + "d" * 64
 CONTRACT = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[4]
+    / "framework"
     / "workspace-federation"
     / "workspace-federation.contract.json"
 )
@@ -535,80 +532,6 @@ def test_append_journal_signal_is_workspace_scoped_and_monotonic(tmp_path):
     assert before
     assert _runtime_signal(str(runtime)) != before
     assert _runtime_signal(str(tmp_path / "other-runtime")) == ""
-
-
-def test_observer_persists_only_when_durable_state_advances():
-    cursor = {"workspace": {"target_result_hash": "sha256:same"}}
-    signals = {"workspace": "journal:10:20:30"}
-
-    assert not _observer_state_advanced(
-        cursor, dict(cursor), signals, dict(signals), set()
-    )
-    assert _observer_state_advanced(
-        cursor,
-        {"workspace": {"target_result_hash": "sha256:next"}},
-        signals,
-        signals,
-        set(),
-    )
-    assert _observer_state_advanced(
-        cursor,
-        cursor,
-        signals,
-        {"workspace": "journal:11:21:31"},
-        set(),
-    )
-    assert _observer_state_advanced(cursor, cursor, signals, signals, {"workspace"})
-
-
-def test_observer_stable_poll_does_not_rewrite_persisted_state(tmp_path, monkeypatch):
-    query = {
-        "schema": "kungfu.workspace-federation.query/v1",
-        "observed_at": "2026-01-01T00:00:00Z",
-        "aggregate": {},
-        "verification": {"ok": True},
-        "proof": {"catalog_cut": ROOT_A},
-        "global_work": {"filter": {"include_settled": False}},
-        "components": [],
-    }
-    writes = []
-    stop_checks = 0
-
-    def stop():
-        nonlocal stop_checks
-        stop_checks += 1
-        return stop_checks > 2
-
-    monkeypatch.setattr(
-        federation_observer,
-        "load_workspace_catalog",
-        lambda *_args, **_kwargs: {"catalog_cut": ROOT_A},
-    )
-    monkeypatch.setattr(
-        federation_observer,
-        "query_federation",
-        lambda *_args, **_kwargs: query,
-    )
-    monkeypatch.setattr(federation_observer.time, "sleep", lambda _seconds: None)
-    monkeypatch.setattr(
-        federation_observer,
-        "_write_state",
-        lambda *_args: writes.append("write"),
-    )
-
-    events = list(
-        federation_observer.observe_federation(
-            inspect_workspace(home=True, env={"HOME": str(tmp_path)}),
-            state_path=tmp_path / "observer.json",
-            config_home=str(tmp_path / "config"),
-            env={"HOME": str(tmp_path)},
-            poll_interval=0,
-            stop=stop,
-        )
-    )
-
-    assert [event["mode"] for event in events] == ["recovery"]
-    assert writes == ["write"]
 
 
 def test_false_zero_regression_preserves_31_unavailable_components(tmp_path):

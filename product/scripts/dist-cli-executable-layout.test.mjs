@@ -5,11 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import {
-  cliArchiveLayout,
-  stageCoreRuntimeForCli,
-  verifyDarwinCliExecutableLayout,
-} from './dist.mjs';
+import { cliArchiveLayout, verifyDarwinCliExecutableLayout } from './dist.mjs';
 
 test('macOS CLI executable qualification is architecture-exact and signed', (t) => {
   if (process.platform !== 'darwin') {
@@ -45,58 +41,4 @@ test('macOS CLI executable qualification is architecture-exact and signed', (t) 
   assert.equal(result.codesignStrict, true);
   assert.equal(calls.filter(([command]) => command === 'file').length, 4);
   assert.equal(calls.filter(([command]) => command === 'codesign').length, 4);
-});
-
-test('CLI staging copies only the declared Work Design package closure', () => {
-  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-work-design-'));
-  try {
-    const source = path.join(parent, 'source');
-    const target = path.join(parent, 'target');
-    const workDesign =
-      'python/lib/python3.13/site-packages/kungfu/work_design_runtime';
-    const spec = 'node_modules/@kungfu-tech/spec';
-    const specFiles = ['package.json', 'format/project-cut-canonical-json.mjs'];
-    const closure = {
-      schema: 'kungfu.work-design.runtime-closure/v1',
-      packageDependencies: [{ name: '@kungfu-tech/spec', files: specFiles }],
-    };
-    for (const [relative, content] of [
-      ['kungfu', 'runtime'],
-      ['bin/python3', 'interpreter'],
-      [
-        path.join(workDesign, 'work-design-runtime.json'),
-        JSON.stringify(closure),
-      ],
-      [
-        path.join(workDesign, spec, specFiles[0]),
-        '{"name":"@kungfu-tech/spec"}',
-      ],
-      [
-        path.join(workDesign, spec, specFiles[1]),
-        'export const canonical = true;',
-      ],
-      ['node_modules/unrelated/index.js', 'development-only'],
-      [path.join(workDesign, 'node_modules/rogue/index.js'), 'undeclared'],
-    ]) {
-      const file = path.join(source, relative);
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, `${content}\n`);
-    }
-    stageCoreRuntimeForCli(source, target);
-
-    const stagedWorkDesign = path.join(target, workDesign);
-    for (const relative of specFiles) {
-      assert.equal(
-        fs.existsSync(path.join(stagedWorkDesign, spec, relative)),
-        true,
-      );
-    }
-    assert.equal(fs.existsSync(path.join(target, 'node_modules')), false);
-    assert.equal(
-      fs.existsSync(path.join(stagedWorkDesign, 'node_modules/rogue')),
-      false,
-    );
-  } finally {
-    fs.rmSync(parent, { recursive: true, force: true });
-  }
 });

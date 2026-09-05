@@ -131,7 +131,6 @@ jobs:
           set -euo pipefail
           pull_request="$(jq -er '.pull_request.number' "$GITHUB_EVENT_PATH")"
           source_head="$(jq -er '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
-          source_repository="$(jq -er '.pull_request.head.repo.full_name' "$GITHUB_EVENT_PATH")"
           protected_base="$(jq -er '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
           # pull_request runs use refs/pull/<number>/merge for GITHUB_REF_NAME;
           # only GITHUB_BASE_REF is the event's protected target branch.
@@ -149,10 +148,6 @@ jobs:
               exit 1
               ;;
           esac
-          if [ "$source_repository" != "$GITHUB_REPOSITORY" ]; then
-            echo "Fork candidate relies on the protected workflow_run bootstrap."
-            exit 0
-          fi
           payload="$(jq -cn \
             --arg targetBranch "$protected_base" \
             --argjson pullRequestNumber "$pull_request" \

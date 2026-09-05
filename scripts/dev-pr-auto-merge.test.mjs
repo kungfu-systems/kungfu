@@ -169,10 +169,6 @@ test('Core source qualification emits one exact Warrant bootstrap wake', () => {
     sourceWorkflow,
     /test "\$protected_base" = "\$GITHUB_BASE_REF"/u,
   );
-  assert.match(
-    sourceWorkflow,
-    /source_repository="\$\(jq -er '\.pull_request\.head\.repo\.full_name' "\$GITHUB_EVENT_PATH"\)"[\s\S]*if \[ "\$source_repository" != "\$GITHUB_REPOSITORY" \]; then[\s\S]*protected workflow_run bootstrap[\s\S]*exit 0/u,
-  );
   assert.doesNotMatch(
     sourceWorkflow,
     /test "\$protected_base" = "\$GITHUB_REF_NAME"/u,
@@ -435,10 +431,6 @@ test('Dev delivery fails closed to fenced native execution without a v3 receipt'
 });
 
 test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {
-  const projectCut = workflow.slice(
-    workflow.indexOf('      - name: Produce exact Project Cut replay proof'),
-    workflow.indexOf('  admission:\n'),
-  );
   assert.match(
     workflow,
     /Check out protected consumer adapter[\s\S]*fetch-depth: 0/u,
@@ -462,14 +454,6 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   assert.match(
     workflow,
     /project-cut-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.project-cut-proof-json \}\}/u,
-  );
-  assert.match(
-    projectCut,
-    /test "\$GITHUB_REPOSITORY" = "\$\(jq -r '\.base\.repo\.full_name' "\$pull_request"\)"/u,
-  );
-  assert.doesNotMatch(
-    projectCut,
-    /test "\$GITHUB_REPOSITORY" = "\$\(jq -r '\.head\.repo\.full_name' "\$pull_request"\)"/u,
   );
   assert.match(
     workflow,

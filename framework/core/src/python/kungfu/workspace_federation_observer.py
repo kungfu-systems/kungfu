@@ -62,15 +62,11 @@ def _load_state(path: Path) -> dict[str, Any] | None:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    if not isinstance(value, dict):
-        return None
-    if not all(
-        (
-            value.get("schema") == OBSERVER_STATE_SCHEMA,
-            isinstance(value.get("query"), dict),
-            isinstance(value.get("cursors"), dict),
-            isinstance(value.get("signals"), dict),
-        )
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != OBSERVER_STATE_SCHEMA
+        or not isinstance(value.get("query"), dict)
+        or not isinstance(value.get("cursors"), dict)
     ):
         return None
     return value
@@ -185,40 +181,6 @@ def _component_cache(query: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     }
 
 
-def _observer_state_advanced(
-    previous_cursors: Mapping[str, Mapping[str, Any]],
-    current_cursors: Mapping[str, Mapping[str, Any]],
-    previous_signals: Mapping[str, str],
-    current_signals: Mapping[str, str],
-    changed_roots: set[str],
-) -> bool:
-    return bool(
-        changed_roots
-        or previous_cursors != current_cursors
-        or previous_signals != current_signals
-    )
-
-
-def _write_state_if_advanced(
-    path: Path,
-    query: Mapping[str, Any],
-    cursors: Mapping[str, Mapping[str, Any]],
-    signals: Mapping[str, str],
-    previous_cursors: Mapping[str, Mapping[str, Any]],
-    previous_signals: Mapping[str, str],
-    changed_roots: set[str],
-) -> None:
-    if not _observer_state_advanced(
-        previous_cursors,
-        cursors,
-        previous_signals,
-        signals,
-        changed_roots,
-    ):
-        return
-    _write_state(path, query, cursors, signals)
-
-
 def _event(
     query: Mapping[str, Any],
     *,
@@ -258,28 +220,25 @@ def observe_federation(
     cursors: dict[str, dict[str, Any]] = {}
     signals: dict[str, str] = {}
 
-    state_value = state or {}
-    if all(
-        (
-            state is not None,
-            state_value.get("catalog_cut") == catalog.get("catalog_cut"),
-            (state_value.get("query") or {}).get("verification", {}).get("ok") is True,
-            bool(
-                ((state_value.get("query") or {}).get("global_work") or {})
-                .get("filter", {})
-                .get("include_settled")
-            )
-            is include_settled,
+    if (
+        state is not None
+        and state.get("catalog_cut") == catalog.get("catalog_cut")
+        and (state.get("query") or {}).get("verification", {}).get("ok") is True
+        and bool(
+            ((state.get("query") or {}).get("global_work") or {})
+            .get("filter", {})
+            .get("include_settled")
         )
+        is include_settled
     ):
-        query = dict(state_value["query"])
+        query = dict(state["query"])
         cursors = {
             str(key): dict(value)
-            for key, value in state_value["cursors"].items()
+            for key, value in state["cursors"].items()
             if isinstance(value, dict)
         }
         signals = {
-            str(key): str(value) for key, value in state_value["signals"].items()
+            str(key): str(value) for key, value in (state.get("signals") or {}).items()
         }
         yield _event(
             query,
@@ -455,8 +414,6 @@ def observe_federation(
             )
             continue
 
-        previous_cursors = dict(cursors)
-        previous_signals = signals
         changed_roots: set[str] = set()
         changed_ids: list[str] = []
         for identity_root, workspace_id, cursor, changed, _gap in observations:
@@ -482,12 +439,4 @@ def observe_federation(
                 started=started,
             )
         signals = current_signals
-        _write_state_if_advanced(
-            state_file,
-            query,
-            cursors,
-            signals,
-            previous_cursors,
-            previous_signals,
-            changed_roots,
-        )
+        _write_state(state_file, query, cursors, signals)

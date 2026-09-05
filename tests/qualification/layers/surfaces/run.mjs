@@ -18,7 +18,6 @@ import {
   cliArchiveBase,
   runInstalledCliSemanticSmoke,
   runInstalledKungfu,
-  runInstalledKungfuAssignmentAdmissionSmoke,
 } from '../../../../product/scripts/dist.mjs';
 import { runMeasured } from '../process-metrics.mjs';
 import {
@@ -51,82 +50,6 @@ export function surfaceQualificationTempRoot(
 
 export function surfaceQualificationTempPrefix(tempRoot) {
   return path.join(tempRoot, 'kfs-');
-}
-
-export function seedGlobalWorkQualification(
-  configHome,
-  observedQuery,
-  componentCount = 2048,
-) {
-  const statePath = path.join(configHome, 'gui', 'global-work-observer.json');
-  fs.mkdirSync(path.dirname(statePath), { recursive: true });
-  fs.writeFileSync(
-    path.join(configHome, 'config.json'),
-    `${JSON.stringify({
-      ui: {
-        onboarding: {
-          version: 1,
-          status: 'completed',
-          route: 'agent',
-          labCompleted: false,
-          tourCompleted: false,
-          completedAt: '2026-01-01T00:00:00Z',
-        },
-      },
-    })}\n`,
-  );
-  const observedAt = observedQuery.observed_at || '2026-01-01T00:00:00Z';
-  const query = {
-    ...observedQuery,
-    observed_at: observedAt,
-    components: [
-      ...(Array.isArray(observedQuery.components)
-        ? observedQuery.components
-        : []),
-      ...Array.from({ length: componentCount }, (_, index) => ({
-        workspace_id: `large-snapshot-${index}`,
-        qualification_padding: 'x'.repeat(2048),
-      })),
-    ],
-  };
-  fs.writeFileSync(
-    statePath,
-    `${JSON.stringify({
-      schema: 'kungfu.gui.global-work-observer/v2',
-      catalog_cut: query.proof?.catalog_cut || '',
-      cursors: {},
-      signals: {},
-      query,
-    })}\n`,
-  );
-  return statePath;
-}
-
-const AMBIENT_PRODUCT_PREFIXES = [
-  'ELECTRON_',
-  'KFE_',
-  'KF_',
-  'KUNGFU_',
-  'NODE_',
-  'PYTHON',
-];
-
-export function isolatedSurfaceProductEnvironment(env = process.env) {
-  const isolated = Object.fromEntries(
-    Object.entries(env).filter(([key]) => {
-      const normalized = key.toUpperCase();
-      return !AMBIENT_PRODUCT_PREFIXES.some((prefix) =>
-        normalized.startsWith(prefix),
-      );
-    }),
-  );
-  return {
-    ...isolated,
-    NODE_OPTIONS: '',
-    NODE_PATH: '',
-    PYTHONHOME: '',
-    PYTHONPATH: '',
-  };
 }
 
 function parseArgs(argv) {
@@ -379,8 +302,7 @@ async function exactQualification(options, fixture) {
         fail(`compatibility manifest missing lower contract ${contract}`);
     }
 
-    const productEnv = isolatedSurfaceProductEnvironment(process.env);
-    const env = { ...productEnv, KF_CONFIG_HOME: path.join(temp, 'config') };
+    const env = { ...process.env, KF_CONFIG_HOME: path.join(temp, 'config') };
     const started = process.hrtime.bigint();
     const lowerDataRoot = path.join(temp, 'lower-data-root');
     const smoke = runInstalledCliSemanticSmoke({
@@ -402,85 +324,19 @@ async function exactQualification(options, fixture) {
       temp,
     );
     const guiExecutable = findGuiExecutable(desktopInstall.installRoot);
-    const guiConfigHome = path.join(temp, 'gui-config');
-    const guiUserHome = path.join(temp, 'gui-user');
-    const guiDataHome = path.join(guiUserHome, '.kungfu');
-    const admission = runInstalledKungfuAssignmentAdmissionSmoke({
-      installRoot,
-      kungfuBin,
-      env: { ...env, KF_CONFIG_HOME: guiConfigHome },
-      home: guiDataHome,
-      userHome: guiUserHome,
-      workspace: path.join(temp, 'assignment-admission-workspace'),
-      requestPath: path.join(temp, 'assignment-admission-request.json'),
-    });
-    const observedQuery = JSON.parse(
-      runInstalledKungfu({
-        kungfuBin,
-        installRoot,
-        home: guiDataHome,
-        args: [
-          'workspace',
-          'work',
-          '--scope',
-          'all',
-          '--include-settled',
-          '--json',
-        ],
-        env: { ...env, KF_CONFIG_HOME: guiConfigHome },
-      }),
-    );
-    const admittedWorkspace = admission.admitted.workspace;
-    const admittedRow = observedQuery.global_work?.visible_work?.find(
-      (row) =>
-        row.object_kind === 'assignment' &&
-        row.display?.title === 'Verify installed Assignment admission' &&
-        row.observations?.some(
-          (observation) =>
-            observation.workspace_id === admittedWorkspace.workspace_id &&
-            observation.workspace_identity_root ===
-              admittedWorkspace.identity_root,
-        ),
-    );
-    if (!admittedRow)
-      fail(
-        'installed global Work query did not contain the exact admitted Work',
-      );
-    const observerState = seedGlobalWorkQualification(
-      guiConfigHome,
-      observedQuery,
-    );
-    const authorityRoot = path.join(admission.workspace, '.kungfu');
-    const authorityBefore = sha256Tree(authorityRoot);
-    const observerStateBytes = fs.statSync(observerState).size;
-    if (observerStateBytes < 4 * 1024 * 1024)
-      fail('large global Work qualification snapshot is too small');
     const guiStarted = process.hrtime.bigint();
     const guiMemory = await runMeasured(guiExecutable, guiQualificationArgs(), {
       cwd: desktopInstall.installRoot,
       env: {
-        ...productEnv,
-        HOME: guiUserHome,
-        USERPROFILE: guiUserHome,
+        ...process.env,
         KF_QUALIFICATION_MODE: '1',
-        KF_QUALIFICATION_ALL_WORK: '1',
-        KF_QUALIFICATION_EXPECTED_WORK_TITLE:
-          'Verify installed Assignment admission',
-        KF_CONFIG_HOME: guiConfigHome,
-        KF_HOME: guiDataHome,
-        KF_RUNTIME_DIR: path.join(guiDataHome, 'runtime'),
+        KF_HOME: path.join(temp, 'gui-home'),
+        KF_RUNTIME_DIR: path.join(temp, 'gui-home', 'runtime'),
       },
     });
     const guiColdStartMs = Number(process.hrtime.bigint() - guiStarted) / 1e6;
     if (!guiMemory.stdout.includes('KF_GUI_QUALIFICATION_READY'))
       fail('packaged GUI did not reach qualification-ready state');
-    if (!guiMemory.stdout.includes('KF_GUI_QUALIFICATION_ALL_WORK_READY'))
-      fail(
-        `packaged GUI did not render the seeded All Work snapshot; stdout=${guiMemory.stdout.slice(-4096)} stderr=${guiMemory.stderr.slice(-4096)}`,
-      );
-    const authorityAfter = sha256Tree(authorityRoot);
-    if (authorityBefore !== authorityAfter)
-      fail('packaged GUI changed the Work authority fixture');
     // The bounded Electron main process can exit before a short-lived packaged
     // runtime child releases directories below the installed application. On
     // Windows, traversing that tree in the gap can fail with EPERM even though

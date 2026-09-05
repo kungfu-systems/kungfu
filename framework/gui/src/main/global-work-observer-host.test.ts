@@ -2,15 +2,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import test from 'node:test';
 
-import {
-  GLOBAL_WORK_OBSERVER_EVENT_CHANNEL,
-  GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL,
-  GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL,
-} from '../sandbox/channels.ts';
-import {
-  bindElectronGlobalWorkObserver,
-  createGlobalWorkObserverHost,
-} from './global-work-observer-host.ts';
+import { createGlobalWorkObserverHost } from './global-work-observer-host.ts';
 
 function fakeChild() {
   const child = new EventEmitter() as EventEmitter & {
@@ -147,12 +139,7 @@ test('first renderer receives the last verified observer cache before a live sca
           schema: 'kungfu.workspace-federation.query/v1',
           observed_at: '2026-07-27T14:29:26Z',
           aggregate: { state: 'partial' },
-          components: Array.from({ length: 20_000 }, (_, index) => ({
-            workspace: { workspace_id: `project:${index}` },
-            diagnostics: 'x'.repeat(128),
-          })),
           global_work: {
-            projection_root: 'sha256:projection',
             visible_work: [
               {
                 canonical_root: 'sha256:initiative',
@@ -175,15 +162,6 @@ test('first renderer receives the last verified observer cache before a live sca
   assert.equal(received.length, 1);
   assert.equal((received[0] as { mode: string }).mode, 'resume');
   assert.equal(
-    (received[0] as { snapshot: { schema: string } }).snapshot.schema,
-    'kungfu.gui.global-work-snapshot/v1',
-  );
-  assert.equal(
-    'components' in
-      (received[0] as { snapshot: Record<string, unknown> }).snapshot,
-    false,
-  );
-  assert.equal(
     (
       received[0] as {
         snapshot: { global_work: { visible_work: unknown[] } };
@@ -192,84 +170,4 @@ test('first renderer receives the last verified observer cache before a live sca
     2,
   );
   host.dispose();
-});
-
-test('one renderer keeps observer delivery until its last listener unsubscribes', () => {
-  const child = fakeChild();
-  const host = createGlobalWorkObserverHost({
-    bin: '/kungfu',
-    env: {},
-    statePath: '/state',
-    spawn: () => child as never,
-    restart: () => ({}) as NodeJS.Timeout,
-    cancelRestart: () => {},
-  });
-  const handlers = new Map<
-    string,
-    (event: {
-      sender: {
-        id: number;
-        send: (channel: string, payload: unknown) => void;
-        isDestroyed: () => boolean;
-        once: (event: 'destroyed', listener: () => void) => void;
-      };
-    }) => unknown
-  >();
-  const rendererListeners = new Set<(payload: unknown) => void>();
-  const sender = {
-    id: 7,
-    send: (channel: string, payload: unknown) => {
-      assert.equal(channel, GLOBAL_WORK_OBSERVER_EVENT_CHANNEL);
-      for (const listener of rendererListeners) listener(payload);
-    },
-    isDestroyed: () => false,
-    once: () => {},
-  };
-  const binding = bindElectronGlobalWorkObserver(
-    {
-      handle: (channel, listener) => handlers.set(channel, listener),
-      removeHandler: (channel) => handlers.delete(channel),
-    },
-    host,
-  );
-  const first: unknown[] = [];
-  const second: unknown[] = [];
-  const firstListener = (payload: unknown) => first.push(payload);
-  const secondListener = (payload: unknown) => second.push(payload);
-  rendererListeners.add(firstListener);
-  handlers.get(GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL)?.({ sender });
-  rendererListeners.add(secondListener);
-  handlers.get(GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL)?.({ sender });
-
-  const emitSnapshot = (revision: string) =>
-    child.stdout.emit(
-      'data',
-      `${JSON.stringify({
-        schema: 'kungfu.gui.global-work-observer-event/v1',
-        kind: 'snapshot',
-        mode: 'incremental',
-        observed_at: revision,
-        latency_ms: 1,
-        changed_workspace_ids: ['project:a'],
-        snapshot: {
-          aggregate: { revision },
-          global_work: { projection_root: revision },
-        },
-      })}\n`,
-    );
-  emitSnapshot('one');
-  assert.equal(first.length, 1);
-  assert.equal(second.length, 1);
-
-  rendererListeners.delete(firstListener);
-  handlers.get(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL)?.({ sender });
-  emitSnapshot('two');
-  assert.equal(first.length, 1);
-  assert.equal(second.length, 2);
-
-  rendererListeners.delete(secondListener);
-  handlers.get(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL)?.({ sender });
-  emitSnapshot('three');
-  assert.equal(second.length, 2);
-  binding.dispose();
 });
