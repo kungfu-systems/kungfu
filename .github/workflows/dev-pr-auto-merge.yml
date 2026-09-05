@@ -374,6 +374,17 @@ jobs:
         # shifu-entry-contract: allow bootstrapping the separately checked-out exact Buildchain runtime
         run: corepack pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Install protected Work consumer dependencies
+        if: >-
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        shell: bash
+        # Project Cut executes from the protected checkout and resolves only
+        # the workspace dependencies declared by @kungfu-tech/work.  Keep the
+        # Warrant consumer independent of candidate or developer node_modules.
+        # shifu-entry-contract: allow protected Work dependency bootstrap before the candidate launcher is trusted
+        run: corepack pnpm install --filter '@kungfu-tech/work...' --frozen-lockfile --ignore-scripts
+
       - name: Verify exact source qualification run
         if: >-
           needs.resolve-target.outputs.source-workflow-run-id != '' &&

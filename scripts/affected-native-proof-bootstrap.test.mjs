@@ -56,3 +56,14 @@ test('affected-native Warrant bootstrap fails when its source closure is incompl
       String(error.message).includes('project-cut-family-queue-lease.mjs'),
   );
 });
+
+test('protected Project Cut replay materializes its declared Work dependency closure', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/dev-pr-auto-merge.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /name: Check out protected consumer adapter[\s\S]*name: Install protected Work consumer dependencies[\s\S]*corepack pnpm install --filter '@kungfu-tech\/work\.\.\.' --frozen-lockfile --ignore-scripts[\s\S]*name: Produce exact Project Cut replay proof/u,
+  );
+});
