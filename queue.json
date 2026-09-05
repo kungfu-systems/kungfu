@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9428,
+  "generation": 9429,
   "fencingCounter": 903,
   "policy": {
     "agingSeconds": 900,
@@ -77739,8 +77739,74 @@
         "sha256:42a7639ab3e149b4dc329c94232441eda4e33e1d6a8b3ae87de7b32c3b179d57",
         "sha256:5830c9d39da943fe27db430f1e1bfde8dd7656f3858eebb7d2a6e2d86532de2f"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3715,
+      "assignmentRoot": "sha256:89e40b10739210f82239624d191bd55c9819b5edb33ffd8d24d250eeff34cfdd",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:81cfab64be92ebe802199dfa26bd9f4aa4b7a95c8b9299905c7580e76fc2e5c6",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:5d9af0322cd0d440f73d7f2f917eb2822a15c006af6c92d33def81c7b56ad12d",
+      "sourceHead": "0df8377a65a1aa1ef4b9eb3980a7d52ace4b7259",
+      "sourcePatchRoot": "sha256:ef33e0e9547723dd668fb852147a7e75c30e37cb465a7a853c2158ab3be21d74",
+      "sourceProofRoot": "sha256:0a57494c9e04ad6ed62d7524b2a9e29469eb4a4007e15dc56e4d7e08b945ad0e",
+      "planRoot": "sha256:973094e2d75ce9c3276f0809982001ca5e5723ed6f6acfb22695efe5f2e23731",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:760d1dc5f56226d9c4ced873df4b1f56e1d56d5768d4de5ff6a02a4b22d82033",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "nativeCommandContract": {
+        "schema": "kungfu.buildchain.native-command-contract/v1",
+        "runner": "bash-lc",
+        "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3715 --expected-head 0df8377a65a1aa1ef4b9eb3980a7d52ace4b7259 --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+        "commandRoot": "sha256:466ae1a11a4800d9792cc857c6b7570f15a84489e6859962e1e42f212aade826"
+      },
+      "sourceWorkflowRunId": 33987876131,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-09-05T19:49:08.456Z",
+      "updatedAt": "2026-09-05T19:49:08.456Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/affected-native-pr.yml",
+        ".github/workflows/dev-pr-auto-merge.yml",
+        "extensions/work-dashboard/src/view/index.tsx",
+        "framework/core/src/python/kungfu/cli/commands/work_design.py",
+        "framework/core/src/python/kungfu/workspace_federation_observer.py",
+        "framework/core/tests/python/test_work_design_cli.py",
+        "framework/core/tests/python/test_workspace_federation.py",
+        "framework/gui/src/agent-work-lab.test.ts",
+        "framework/gui/src/main/global-work-observer-host.test.ts",
+        "framework/gui/src/main/global-work-observer-host.ts",
+        "framework/gui/src/main/index.ts",
+        "framework/gui/src/product-search.test.ts",
+        "framework/gui/src/renderer/src/main.tsx",
+        "framework/gui/src/renderer/src/product-navigation/index.tsx",
+        "framework/site/src/kfx-site-impact-proofs/0becc19657e66357fa8be4b4fbcf9f1e8a276767b34cf85b22ad3a3c60e71f4f.json",
+        "framework/site/src/kfx-site-impact-proofs/361c5fd12dc71187a6fc792b68e9b8005c947448e8da982a49e6ec77093cb897.json",
+        "framework/site/src/kfx-site-impact-proofs/469b316b837b3a647bc85eac46cf24bea07fe90c372cdfa7e187d8c44d8b4139.json",
+        "framework/site/src/kfx-site-impact-proofs/780540dc3810cdd725738d7f9fd7291ed0fc2bd3d4907107fee1d2fe61349b89.json",
+        "framework/site/src/kfx-site-impact-proofs/b8eb1af66d9b955449b0324fd92029f5ae3bc1265c57677360d35a3f06412886.json",
+        "framework/site/src/kfx-site-impact-proofs/cd064c1da15a75b405886ae8f21cb88d6c14dcae240c7e95488b42d41092adcb.json",
+        "package.json",
+        "product/scripts/dist-cli-executable-layout.test.mjs",
+        "product/scripts/dist.mjs",
+        "scripts/check.mjs",
+        "scripts/dev-pr-auto-merge.test.mjs",
+        "scripts/run-profile-lifecycle-tests.mjs",
+        "tests/qualification/layers/surfaces/run.mjs",
+        "tests/qualification/layers/surfaces/run.test.mjs"
+      ],
+      "shardEvidenceRoots": [
+        "sha256:42a7639ab3e149b4dc329c94232441eda4e33e1d6a8b3ae87de7b32c3b179d57",
+        "sha256:9b7eff80c291d036218eb7b9d5cd9d493aaf15730bb9d73cef33b7d1546a8863"
+      ]
     }
   ],
-  "updatedAt": "2026-09-05T19:44:53.718Z",
-  "stateRoot": "sha256:3c6be21789f8200a8210c48236b1a258647a08ffe6933160582d1d3ac2a7817e"
+  "updatedAt": "2026-09-05T19:49:08.456Z",
+  "stateRoot": "sha256:9251de32d5fd470e2ef45b13b5602b60b1660d7971ce4606432a8f50c64cdf0c"
 }
