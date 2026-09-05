@@ -396,6 +396,7 @@ def test_public_profile_validate_and_qualify_share_work_conformance(tmp_path):
         (
             repository
             / "framework"
+            / "work"
             / "work-profile-conformance"
             / "qualification"
             / "reference-scenarios.json"

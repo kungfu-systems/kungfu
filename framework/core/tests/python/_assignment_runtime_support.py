@@ -41,6 +41,7 @@ ASSIGNMENT_RUNTIME_CONTRACT = json.loads(
     (
         REPOSITORY
         / "framework"
+        / "work"
         / "assignment-runtime"
         / "assignment-runtime.contract.json"
     ).read_text(encoding="utf-8")
@@ -49,6 +50,7 @@ ENVELOPE_SCHEMA = json.loads(
     (
         REPOSITORY
         / "framework"
+        / "work"
         / "assignment-runtime"
         / "schema"
         / "assignment-runtime-envelope-v1.schema.json"
