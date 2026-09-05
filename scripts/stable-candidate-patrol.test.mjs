@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-import { activeProjection } from '../product/version-line/version-line-authority.mjs';
+import { activeProjection } from '@kungfu-tech/product-kungfu/version-line/version-line-authority';
 import { digest } from './alpha-ruleset.mjs';
 
 const workflow = fs.readFileSync(

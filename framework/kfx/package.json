@@ -5,15 +5,18 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.5",
-  "description": "The kfx view contract — types and UI tokens shared by the shell and view extensions",
+  "description": "The kfx view contract \u2014 types and UI tokens shared by the shell and view extensions",
   "license": "Apache-2.0",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./project-work-run": "./src/project-work-run.tsx",
     "./query-view": "./src/query-view.tsx",
-    "./shared-modules": "./shared-modules.json"
+    "./shared-modules": "./shared-modules.json",
+    "./tsconfig.json": "./tsconfig.json"
   },
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
@@ -28,7 +31,8 @@
     "schema",
     "README.md",
     "kungfu-kfx.contract.json",
-    "shared-modules.json"
+    "shared-modules.json",
+    "tsconfig.json"
   ],
   "scripts": {
     "build": "tsc --noEmit"

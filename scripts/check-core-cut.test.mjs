@@ -11,12 +11,12 @@ import {
   importCut,
   verifyCut,
   verifyCutReceipt,
-} from '../framework/work/cut/src/cut.mjs';
+} from '@kungfu-tech/work/cut';
 import {
   migrateProjectCut,
   verifyMigration,
-} from '../framework/work/cut/src/project-cut-migration.mjs';
-import { buildProjectCut } from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/cut/migration';
+import { buildProjectCut } from '@kungfu-tech/work/project-cut';
 
 const root = (digit) => `sha256:${digit.repeat(64)}`;
 const base = (

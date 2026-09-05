@@ -15,8 +15,8 @@ import {
   WORKFLOW_PATH,
   lookupReusableArtifact,
   requireSha,
-} from '../product/release/affected-native-artifact-lookup.mjs';
-import { runAffectedNativeProofCli } from '../product/release/affected-native-proof-cli.mjs';
+} from '@kungfu-tech/product-kungfu/release/affected-native-artifact-lookup';
+import { runAffectedNativeProofCli } from '@kungfu-tech/product-kungfu/release/affected-native-proof-cli';
 import { parseFamilyQueueLeaseMarker } from './project-cut-family-queue-lease.mjs';
 
 export {
@@ -24,7 +24,7 @@ export {
   WORKFLOW_PATH,
   lookupReusableArtifact,
   selectReusableArtifact,
-} from '../product/release/affected-native-artifact-lookup.mjs';
+} from '@kungfu-tech/product-kungfu/release/affected-native-artifact-lookup';
 
 const LEGACY_IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
 const LEGACY_PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';

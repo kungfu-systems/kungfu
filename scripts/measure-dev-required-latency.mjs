@@ -12,8 +12,8 @@ import {
   createCandidateTimeline,
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
+import { latencyBaselineForDevBranch } from '@kungfu-tech/product-kungfu/version-line/version-line-authority';
 import * as queueEvidence from '../developer/dev-delivery/dev-gate-queue-evidence.mjs';
-import { latencyBaselineForDevBranch } from '../product/version-line/version-line-authority.mjs';
 import {
   affectedNativeClassification,
   collectDeliveryAttemptFromArtifacts,

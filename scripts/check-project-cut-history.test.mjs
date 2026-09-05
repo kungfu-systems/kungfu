@@ -12,12 +12,12 @@ import {
   buildProjectCut,
   canonicalJson,
   semanticRoot,
-} from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut';
 import {
   observeHistory,
   reconcileHistory,
   verifyHistoryObservation,
-} from '../framework/work/project-cut/src/history.mjs';
+} from '@kungfu-tech/work/project-cut/history';
 import { checkProjectCutHistoryContract } from './project-cut-history-contract.mjs';
 
 const REPO_ROOT = path.resolve(

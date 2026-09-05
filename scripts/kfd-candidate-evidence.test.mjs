@@ -19,7 +19,7 @@ import {
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
   verifyReleaseArtifactRoot,
-} from '../product/release/kfd-candidate-evidence.mjs';
+} from '@kungfu-tech/product-kungfu/release/kfd-candidate-evidence';
 
 const SOURCE_SHA = 'a'.repeat(40);
 const SOURCE_TREE = 'b'.repeat(40);

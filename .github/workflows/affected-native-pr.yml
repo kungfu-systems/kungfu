@@ -320,6 +320,11 @@ jobs:
             echo "base_sha=${base_sha}"
             echo "head_sha=${head_sha}"
           } >> "$GITHUB_OUTPUT"
+      - name: Install declared proof bootstrap workspace packages
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+          node scripts/install-proof-bootstrap-packages.mjs
       - name: Capture exact family delivery binding
         id: delivery
         shell: bash

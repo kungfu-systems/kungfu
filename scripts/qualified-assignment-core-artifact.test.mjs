@@ -9,32 +9,32 @@ import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
-  consumeQualifiedCoreForCheckout,
-  discoverGithubBundle,
-  downloadGithubArtifact,
-  downloadHttpArtifact,
-  materializeQualifiedCoreBundle,
-  resolveShifuCachedTool,
-} from '../framework/work/assignment-capture/qualified-assignment-core-consumer.mjs';
-import {
-  appendQualifiedCoreUsage,
-  qualifiedCoreUsageObservation,
-  summarizeQualifiedCoreUsage,
-} from '../framework/work/assignment-capture/qualified-assignment-core-observability.mjs';
-import {
-  REQUIRED_ROWS,
-  qualifiedCoreArtifactName,
-  qualifiedCorePlatformMatrix,
-  qualifiedCorePlatformRow,
-} from '../framework/work/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
-import {
   promoteQualifiedCoreCandidate,
   qualifiedCoreCheckoutRoots,
   reuseQualifiedCoreBundle,
   sealQualifiedCoreCandidate,
   validateQualifiedCoreCandidate,
   verifyQualifiedCoreBundle,
-} from '../product/release/qualified-assignment-core-artifact.mjs';
+} from '@kungfu-tech/product-kungfu/release/qualified-assignment-core-artifact';
+import {
+  consumeQualifiedCoreForCheckout,
+  discoverGithubBundle,
+  downloadGithubArtifact,
+  downloadHttpArtifact,
+  materializeQualifiedCoreBundle,
+  resolveShifuCachedTool,
+} from '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer';
+import {
+  appendQualifiedCoreUsage,
+  qualifiedCoreUsageObservation,
+  summarizeQualifiedCoreUsage,
+} from '@kungfu-tech/work/assignment-capture/qualified-assignment-core-observability';
+import {
+  REQUIRED_ROWS,
+  qualifiedCoreArtifactName,
+  qualifiedCorePlatformMatrix,
+  qualifiedCorePlatformRow,
+} from '@kungfu-tech/work/assignment-capture/qualified-assignment-core-platform-matrix';
 import {
   createDeliveryAttempt,
   createDeliveryBinding,

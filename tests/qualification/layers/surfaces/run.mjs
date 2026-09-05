@@ -9,16 +9,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   extractTarGz,
   extractZip,
-} from '../../../../product/scripts/archive.mjs';
+} from '@kungfu-tech/product-kungfu/tooling/archive';
 import {
   sha256File,
   sha256Tree,
-} from '../../../../product/scripts/compatibility.mjs';
+} from '@kungfu-tech/product-kungfu/tooling/compatibility';
 import {
   cliArchiveBase,
   runInstalledCliSemanticSmoke,
   runInstalledKungfu,
-} from '../../../../product/scripts/dist.mjs';
+} from '@kungfu-tech/product-kungfu/tooling/dist';
 import { runMeasured } from '../process-metrics.mjs';
 import {
   findGuiExecutable,

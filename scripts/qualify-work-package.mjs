@@ -85,6 +85,7 @@ export function qualifyWorkPackage() {
       'package/assignment-runtime/index.mjs',
       'package/evidence/index.mjs',
       'package/project-cut/index.mjs',
+      'package/assignment-capture/qualified-assignment-core-consumer.d.mts',
     ])
       if (!workEntries.includes(required))
         fail(`@kungfu-tech/work: missing ${required}`);
@@ -112,6 +113,9 @@ export function qualifyWorkPackage() {
             "import * as assignmentPublic from '@kungfu-tech/work/assignment-runtime';",
             "import * as evidencePublic from '@kungfu-tech/work/evidence';",
             "import * as cutPublic from '@kungfu-tech/work/project-cut';",
+            "import assert from 'node:assert/strict';",
+            "for (const entry of ['cut','cut/migration','episode-provider','project-cut/history','project-cut/receipt-evidence','project-cut/native-loop-qualification','work-design-advisor','work-design-preflight','work-design-policy-replay','work-history-selector']) assert.ok(Object.keys(await import('@kungfu-tech/work/' + entry)).length > 0);",
+            "await assert.rejects(import('@kungfu-tech/work/project-cut/src/index.mjs'), {code: 'ERR_PACKAGE_PATH_NOT_EXPORTED'});",
             'process.stdout.write(JSON.stringify({boundary:WORK_PACKAGE_BOUNDARY,root:[typeof action.canonicalJson,typeof assignmentRuntime.validateContract,typeof evidence.createEvidenceEnvelope,typeof projectCut.buildProjectCut],subpaths:[typeof actionPublic.canonicalJson,typeof assignmentPublic.validateContract,typeof evidencePublic.createEvidenceEnvelope,typeof cutPublic.buildProjectCut]}));',
           ].join(''),
         ],
@@ -125,11 +129,33 @@ export function qualifyWorkPackage() {
     )
       fail('clean installed Work consumer qualification mismatch');
 
+    fs.copyFileSync(
+      path.join(
+        ROOT,
+        'tests/fixtures/work-package-consumer-types/consumer.mts.txt',
+      ),
+      path.join(consumer, 'consumer.mts'),
+    );
+    run(
+      'node',
+      [
+        path.join(ROOT, 'node_modules/typescript/bin/tsc'),
+        '--noEmit',
+        '--strict',
+        '--module',
+        'nodenext',
+        '--noUncheckedSideEffectImports',
+        'consumer.mts',
+      ],
+      { cwd: consumer },
+    );
+
     return {
       schema: 'kungfu.work-package-qualification/v1',
       packageSet: SOURCES.map(([name]) => name),
       workArchiveEntries: workEntries.length,
       cleanConsumer: true,
+      publicTypeConsumer: true,
       boundary: result.boundary,
       nonClaims: [
         'This qualification does not publish or reserve an npm coordinate.',

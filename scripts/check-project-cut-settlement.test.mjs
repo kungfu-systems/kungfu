@@ -12,12 +12,9 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
-import {
-  canonicalJson,
-  semanticRoot,
-} from '../framework/work/project-cut/index.mjs';
-import * as settlementApi from '../framework/work/project-cut/settlement.mjs';
+} from '@kungfu-tech/work/episode-provider';
+import { canonicalJson, semanticRoot } from '@kungfu-tech/work/project-cut';
+import * as settlementApi from '@kungfu-tech/work/project-cut/settlement';
 
 const {
   abandonSettlement,
