@@ -341,7 +341,7 @@ def test_live_click_tree_has_complete_contract_and_action_topology_parity():
     )
 
     action_topology = json.loads(
-        (REPO_ROOT / "framework/action/cli-topology.contract.json").read_text(
+        (REPO_ROOT / "framework/work/action/cli-topology.contract.json").read_text(
             encoding="utf-8"
         )
     )

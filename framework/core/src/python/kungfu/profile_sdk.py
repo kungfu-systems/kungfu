@@ -120,7 +120,9 @@ def validation_scope() -> Iterator[None]:
 
 
 def _work_profile_conformance_script() -> Path | None:
-    relative = Path("framework/work-profile-conformance/work-profile-conformance.mjs")
+    relative = Path(
+        "framework/work/work-profile-conformance/work-profile-conformance.mjs"
+    )
     roots = (*Path(__file__).resolve().parents, *Path.cwd().resolve().parents)
     candidates = (
         Path(__file__).resolve().parent

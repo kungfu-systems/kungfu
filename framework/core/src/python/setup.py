@@ -67,7 +67,7 @@ _STATIC_ESM_PATTERNS = (
 
 def _load_work_design_manifest(repository_root):
     manifest_path = repository_root.joinpath(
-        "framework", "work-design-preflight", "work-design-runtime.json"
+        "framework", "work", "work-design-preflight", "work-design-runtime.json"
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if (
@@ -79,6 +79,61 @@ def _load_work_design_manifest(repository_root):
     if manifest["entrypoint"] not in manifest["files"]:
         raise ValueError("Work Design entrypoint is absent from its closure")
     return manifest
+
+
+def _work_design_package_dependencies(repository_root):
+    manifest = _load_work_design_manifest(repository_root)
+    if not isinstance(manifest.get("packageDependencies"), list):
+        raise ValueError("invalid Work Design package dependencies")
+    framework_root = (repository_root / "framework").resolve()
+    seen = set()
+    dependencies = []
+    for dependency in manifest["packageDependencies"]:
+        dependency, source_root = _validated_work_design_package_dependency(
+            dependency, framework_root, seen
+        )
+        seen.add(dependency["name"])
+        dependencies.append(dependency)
+    _validate_work_design_declared_package_imports(
+        repository_root, manifest["files"], {item["name"] for item in dependencies}
+    )
+    return dependencies
+
+
+def _validated_work_design_package_dependency(dependency, framework_root, seen):
+    if not isinstance(dependency, dict):
+        raise ValueError("invalid Work Design package dependency")
+    name = dependency.get("name")
+    source = dependency.get("source")
+    files = dependency.get("files")
+    if (
+        not isinstance(name, str)
+        or not re.fullmatch(r"@[^/]+/[^/]+", name)
+        or not isinstance(source, str)
+        or not isinstance(files, list)
+        or "package.json" not in files
+        or name in seen
+    ):
+        raise ValueError("invalid Work Design package dependency")
+    source_coordinate = _work_design_coordinate(source)
+    source_root = framework_root.joinpath(*source_coordinate.parts).resolve()
+    if not source_root.is_relative_to(framework_root):
+        raise ValueError(f"invalid Work Design package source: {source}")
+    _validate_work_design_package_files(name, files, source_root)
+    package = json.loads(
+        source_root.joinpath("package.json").read_text(encoding="utf-8")
+    )
+    if package.get("name") != name:
+        raise ValueError(f"Work Design package name mismatch: {name}")
+    return dependency, source_root
+
+
+def _validate_work_design_package_files(name, files, source_root):
+    for relative in files:
+        coordinate = _work_design_coordinate(relative)
+        source_file = source_root.joinpath(*coordinate.parts).resolve()
+        if not source_file.is_relative_to(source_root) or not source_file.is_file():
+            raise ValueError(f"invalid Work Design package file: {name}/{relative}")
 
 
 def _work_design_coordinate(relative):
@@ -126,6 +181,43 @@ def _work_design_runtime_files(repository_root):
     return sorted(discovered)
 
 
+def _validate_work_design_package_imports(source, package_names):
+    for pattern in _STATIC_ESM_PATTERNS:
+        for match in pattern.finditer(source):
+            specifier = match.group(2)
+            if not specifier.startswith("@kungfu-tech/"):
+                continue
+            package_name = "/".join(specifier.split("/")[:2])
+            if package_name not in package_names:
+                raise ValueError(
+                    f"undeclared Work Design package dependency: {specifier}"
+                )
+
+
+def _validate_work_design_declared_package_imports(
+    repository_root, files, package_names
+):
+    framework_root = repository_root / "framework"
+    for relative in files:
+        coordinate = _work_design_coordinate(relative)
+        source = framework_root.joinpath(*coordinate.parts).read_text(encoding="utf-8")
+        _validate_work_design_package_imports(source, package_names)
+
+
+def _copy_work_design_package_dependencies(repository_root, runtime_root):
+    for dependency in _work_design_package_dependencies(repository_root):
+        package_root = runtime_root / "node_modules"
+        for name_part in dependency["name"].split("/"):
+            package_root /= name_part
+        source_root = repository_root / "framework" / dependency["source"]
+        for relative in dependency["files"]:
+            coordinate = PurePosixPath(relative)
+            source_file = source_root / Path(*coordinate.parts)
+            destination_file = package_root / Path(*coordinate.parts)
+            destination_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_file, destination_file)
+
+
 class BinaryDistribution(Distribution):
     """Distribution which always forces a binary package with platform name"""
 
@@ -139,15 +231,13 @@ class BuildPythonWithExitContract(build_py):
     def run(self):
         super().run()
         source = (
-            _find_pyproject(_here).parent.parent
-            / "exit"
-            / "kungfu-exit-bundle.contract.json"
+            _find_pyproject(_here).parent / "exit" / "kungfu-exit-bundle.contract.json"
         )
         destination = Path(self.build_lib) / "kungfu" / "exit_bundle.contract.json"
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
         conformance_source = (
-            _find_pyproject(_here).parent.parent / "work-profile-conformance"
+            _find_pyproject(_here).parent.parent / "work" / "work-profile-conformance"
         )
         conformance_destination = (
             Path(self.build_lib) / "kungfu" / "work_profile_conformance"
@@ -172,6 +262,7 @@ class BuildPythonWithExitContract(build_py):
         work_design_manifest = (
             repository_root
             / "framework"
+            / "work"
             / "work-design-preflight"
             / "work-design-runtime.json"
         )
@@ -186,6 +277,9 @@ class BuildPythonWithExitContract(build_py):
             destination_file = work_design_runtime / Path(*coordinate.parts)
             destination_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_file, destination_file)
+        _copy_work_design_package_dependencies(
+            repository_root, work_design_runtime.parent
+        )
 
 
 setup(

@@ -12,12 +12,12 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
 import {
   canonicalJson,
   semanticRoot,
-} from '../framework/project-cut/index.mjs';
-import * as settlementApi from '../framework/project-cut/settlement.mjs';
+} from '../framework/work/project-cut/index.mjs';
+import * as settlementApi from '../framework/work/project-cut/settlement.mjs';
 
 const {
   abandonSettlement,
@@ -34,11 +34,11 @@ const CONTEXT_PACK_ROOT = `sha256:${'6'.repeat(64)}`;
 const SCHEMA_ROOT = `sha256:${'7'.repeat(64)}`;
 const HOOK = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../framework/project-cut/hooks/project-cut-hook.mjs',
+  '../framework/work/project-cut/hooks/project-cut-hook.mjs',
 );
 const CLI = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../framework/project-cut/bin/project-cut.mjs',
+  '../framework/work/project-cut/bin/project-cut.mjs',
 );
 const SHIFU = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -52,7 +52,7 @@ const SOURCE_PROJECTION_POLICY = JSON.parse(
   fs.readFileSync(
     path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
-      '../framework/project-cut/default-source-projection-policy.json',
+      '../framework/work/project-cut/default-source-projection-policy.json',
     ),
     'utf8',
   ),

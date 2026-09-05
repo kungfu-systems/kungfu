@@ -1228,7 +1228,7 @@ export function resolveKungfuConfigContractPath(
   for (const start of [SKILL_MODULE_DIR, options.cwd ?? process.cwd()]) {
     for (const directory of ancestorDirs(resolve(start))) {
       for (const rel of [
-        join('framework', 'config', CONFIG_CONTRACT_FILE),
+        join('framework', 'core', 'config', CONFIG_CONTRACT_FILE),
         join('config', CONFIG_CONTRACT_FILE),
       ]) {
         const candidate = join(directory, rel);

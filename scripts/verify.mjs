@@ -758,6 +758,7 @@ function verifyConfigContract(kungfuBin) {
   const repoContract = path.join(
     ROOT,
     'framework',
+    'core',
     'config',
     'kungfu-config.contract.json',
   );

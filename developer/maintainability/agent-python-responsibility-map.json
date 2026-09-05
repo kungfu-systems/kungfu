@@ -1,0 +1,515 @@
+{
+  "schema": "kungfu.agent-python-responsibility-map/v1",
+  "baselineRevision": "431eb6728e1a08ee9879b14afdf315d3d0d78b87",
+  "measurement": {
+    "functionRisk": "developer/maintainability/function-risk.mjs extractFunctions baseRisk",
+    "physicalLines": "UTF-8 source splitlines",
+    "responsibilities": "top-level classes/functions plus distinct kungfu imports"
+  },
+  "targets": [
+    {
+      "sourcePath": "framework/core/src/python/kungfu/agent/resources.py",
+      "baseline": {
+        "physicalLines": 1020,
+        "responsibilities": 41,
+        "functionRisk": { "functions": 39, "total": 889, "maximum": 203 }
+      },
+      "current": {
+        "physicalLines": 533,
+        "responsibilities": 39,
+        "functionRisk": { "functions": 36, "total": 274, "maximum": 41 }
+      },
+      "ownerFiles": ["framework/core/src/python/kungfu/agent/advisory.py"],
+      "ownedDefinitions": [
+        "normalize_work_signals",
+        "evaluate_work_advisory",
+        "normalize_skill_signals",
+        "evaluate_skill_decision"
+      ],
+      "facadeSymbols": [
+        "validate_work_advisory_signals",
+        "assess_work_advisory",
+        "validate_skill_decision_signals",
+        "assess_skill_decision"
+      ],
+      "responsibility": "Agent resource discovery and bootstrap remain here; deterministic Work and Skill advisory policy is owned by kungfu.agent.advisory."
+    },
+    {
+      "sourcePath": "framework/core/src/python/kungfu/agent/run_agent.py",
+      "baseline": {
+        "physicalLines": 1221,
+        "responsibilities": 35,
+        "functionRisk": { "functions": 22, "total": 171, "maximum": 28 }
+      },
+      "current": {
+        "physicalLines": 528,
+        "responsibilities": 18,
+        "functionRisk": { "functions": 5, "total": 48, "maximum": 27 }
+      },
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/agent/native_launch.py",
+        "framework/core/src/python/kungfu/agent/_run_agent/runtime.py"
+      ],
+      "ownedDefinitions": [
+        "provider_interactive_argv",
+        "bind_current_native_work",
+        "agent_activity_history_projection",
+        "validate_work_ref",
+        "validate_continuation",
+        "select_profile",
+        "select_interactive_profile",
+        "launch_argv",
+        "_direct_process_transport",
+        "native_environment",
+        "run_native_interactive",
+        "_environment",
+        "_cwd",
+        "ProcessResult",
+        "_session_ref",
+        "_invoke_session_control",
+        "_wait_for_session",
+        "run_session_attempt",
+        "run_process"
+      ],
+      "facadeSymbols": [
+        "interactive_launch_argv",
+        "bind_current_native_work",
+        "agent_activity_history_projection",
+        "validate_work_ref",
+        "validate_continuation",
+        "select_profile",
+        "select_interactive_profile",
+        "launch_argv",
+        "_direct_process_transport",
+        "native_environment",
+        "run_native_interactive",
+        "_environment",
+        "_cwd",
+        "ProcessResult",
+        "_session_ref",
+        "_invoke_session_control",
+        "_wait_for_session",
+        "run_session_attempt",
+        "run_process"
+      ],
+      "responsibility": "Episode, report, and public execution orchestration remain on the stable facade; Work binding, launch policy, environment construction, Session control, and direct process transport are owned by the private run-agent runtime module, while provider-specific interactive argv remains owned by native_launch."
+    },
+    {
+      "sourcePath": "framework/core/src/python/kungfu/agent_work_lab.py",
+      "baseline": {
+        "physicalLines": 1707,
+        "responsibilities": 46,
+        "functionRisk": { "functions": 38, "total": 472, "maximum": 63 }
+      },
+      "current": {
+        "physicalLines": 929,
+        "responsibilities": 20,
+        "functionRisk": { "functions": 17, "total": 197, "maximum": 53 }
+      },
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/agent_work_lab_evidence.py",
+        "framework/core/src/python/kungfu/agent_work_lab_demo.py",
+        "framework/core/src/python/kungfu/agent_work_lab_template.py"
+      ],
+      "ownedDefinitions": [
+        "content_root",
+        "load_suite_catalog",
+        "work_reference",
+        "open_episode",
+        "close_episode",
+        "publish_event",
+        "demo_plan",
+        "run_demo",
+        "ProjectTemplateError",
+        "load_project_template",
+        "plan_project_template",
+        "create_project_template"
+      ],
+      "facadeSymbols": [
+        "content_root",
+        "_load_suite_catalog",
+        "_work_ref",
+        "_open_session_episode",
+        "_close_session_episode",
+        "_publish_event",
+        "demo_plan",
+        "run_demo",
+        "ProjectTemplateError",
+        "load_project_template",
+        "plan_project_template",
+        "create_project_template"
+      ],
+      "responsibility": "Agent process execution and report verification remain on the public facade; shared schemas and immutable Episode evidence, deterministic demo execution, and fail-closed project templates are owned by the evidence, demo, and template modules."
+    },
+    {
+      "sourcePath": "framework/core/src/python/kungfu/assignment_orchestration.py",
+      "baseline": {
+        "physicalLines": 1566,
+        "responsibilities": 34,
+        "functionRisk": {
+          "functions": 32,
+          "total": 1337,
+          "maximum": 325
+        }
+      },
+      "current": {
+        "physicalLines": 662,
+        "responsibilities": 20,
+        "functionRisk": {
+          "functions": 17,
+          "total": 444,
+          "maximum": 70
+        }
+      },
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/assignment_provenance/__init__.py",
+        "framework/core/src/python/kungfu/assignment_outcome.py",
+        "framework/core/src/python/kungfu/_assignment_orchestration/portable.py"
+      ],
+      "ownedDefinitions": [
+        "inspect_binding",
+        "installed_runtime_entrypoint",
+        "OutcomeBindings",
+        "sealed_state_plan",
+        "cross_workspace_binding_plan"
+      ],
+      "facadeSymbols": [
+        "binding_provenance",
+        "_validate_outcome_artifact",
+        "outcome_binding_plan",
+        "verify_outcome_binding",
+        "apply_outcome_binding",
+        "list_outcome_bindings",
+        "sealed_state_plan",
+        "cross_workspace_binding_plan"
+      ],
+      "convergenceContract": {
+        "schema": "kungfu.python-responsibility-convergence.assignment/v1",
+        "exactBase": "b81ca2c916d013f9dbab60e9c8f4faa5e8799a6a",
+        "baselineSources": [
+          {
+            "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+            "sha256": "2f746cd0531fadad6893bb3c89aec3f7ef420f951f44d08cb864861911b99fc7"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+            "sha256": "403a9c492d1c6c72291f0066a25b5301a828adfbda54458f90686c96bf6069fb"
+          }
+        ],
+        "publicImports": [
+          "OUTCOME_SCHEMA",
+          "OUTCOME_BINDING_SCHEMA",
+          "OUTCOME_INDEX_SCHEMA",
+          "_validate_outcome_artifact",
+          "outcome_binding_plan",
+          "verify_outcome_binding",
+          "apply_outcome_binding",
+          "list_outcome_bindings"
+        ],
+        "cli": {
+          "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+          "group": "work",
+          "sha256": "ab73a9782818b0fa0a7f8bb8c3bcdc5dfa6160d9f3d324909a5d468184e8e5a7",
+          "invariant": "Pre-existing command names, option names, defaults, output schemas, and exit behavior remain compatible; domain-neutral Work commands are additive."
+        },
+        "schemas": [
+          "kungfu.assignment-request/v1",
+          "kungfu.assignment-capture.receipt/v1",
+          "kungfu.assignment-capture.response/v1",
+          "kungfu.assignment-orchestration.sealed-state/v1",
+          "kungfu.work-design.outcome/v1",
+          "kungfu.assignment-orchestration.work-design-outcome-binding/v1",
+          "kungfu.assignment-orchestration.work-design-outcome-index/v1",
+          "kungfu.assignment-orchestration.cross-workspace-binding/v1"
+        ],
+        "persistence": [
+          "Captured requests and receipts retain canonical JSON bytes and their existing content-addressed inbox paths.",
+          "Assignment seals retain assignment-states/sha256/<prefix>/<root>/{state,receipt}.json in the Git common directory, Home workspace, or workspace fallback selected by the existing resolver.",
+          "Outcome bindings retain work-design-outcomes/sha256/<prefix>/<root>/binding.json and remain additive, immutable, portable, and runtime-independent."
+        ],
+        "lifecycleAndRecovery": [
+          "Assignment remains the only native dispatch unit and Work Control remains the only lifecycle writer.",
+          "Outcome observation never gains Fact, Episode, Assignment, Work Control, policy, or mutation authority.",
+          "Run and closeout gates, continuation cycles, portable seal verification, and cross-workspace binding behavior remain unchanged."
+        ],
+        "crossLanguage": [
+          "Python remains a lossless client of the existing native Work lifecycle and storage interfaces.",
+          "No C++ runtime, Node binding implementation, generated Work lifecycle SDK, watcher, GUI, or TUI path is in the allowed change surface."
+        ],
+        "generatedProjections": {
+          "authority": "The primitive catalog and KFD generators remain the sole writers of these derived projections.",
+          "invariant": "Only source, catalog, witness, artifact, release, and portable-bundle roots may change; primitive semantics, surface and claim cardinality, C++ symbols, runtime behavior, and binding interfaces remain unchanged.",
+          "canonicalPolicy": [
+            "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
+            "config/kungfu-agent-first-canonical-policy.json"
+          ],
+          "primitiveCatalog": [
+            "config/primitive/kungfu-primitive-catalog.contract.json",
+            "framework/spec/primitive/kungfu-primitive-catalog.contract.json",
+            "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp"
+          ],
+          "kfdWitnesses": [
+            ".buildchain/kfd/kfd-1/contract-world.witness.json",
+            ".buildchain/kfd/kfd-1/release-gate.json",
+            ".buildchain/kfd/kfd-2/release-claims.json",
+            ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+            "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+            "developer/sdk/kfd/kfd-1/release-gate.json",
+            "developer/sdk/kfd/kfd-2/release-claims.json"
+          ],
+          "supportMatrix": [
+            ".buildchain/kfd/support-matrix.json",
+            "developer/sdk/kfd/support-matrix.json"
+          ]
+        },
+        "allowedChangeSurface": [
+          ".buildchain/kfd/kfd-1/contract-world.witness.json",
+          ".buildchain/kfd/kfd-1/release-gate.json",
+          ".buildchain/kfd/kfd-2/release-claims.json",
+          ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+          ".buildchain/kfd/support-matrix.json",
+          ".xinfa/portable-atlas-classification.json.gz",
+          ".xinfa/product-atlas-bundle.json",
+          "config/kungfu-agent-first-canonical-policy.json",
+          "config/primitive/kungfu-primitive-catalog.contract.json",
+          "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+          "developer/sdk/kfd/kfd-1/release-gate.json",
+          "developer/sdk/kfd/kfd-2/release-claims.json",
+          "developer/sdk/kfd/support-matrix.json",
+          "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
+          "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
+          "framework/core/src/python/kungfu/assignment_orchestration.py",
+          "framework/core/src/python/kungfu/_assignment_orchestration/portable.py",
+          "framework/core/src/python/kungfu/assignment_outcome.py",
+          "framework/core/src/python/kungfu/cli/commands/_assignment/family.py",
+          "framework/core/src/python/kungfu/cli/commands/_assignment/review.py",
+          "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
+          "framework/core/src/python/kungfu/cli/commands/assignment.py",
+          "framework/core/tests/python/test_work_design_outcome_history.py",
+          "developer/maintainability/agent-python-responsibility-map.json",
+          "framework/spec/primitive/kungfu-primitive-catalog.contract.json",
+          "scripts/check-agent-python-responsibility-map.py",
+          "scripts/check-code-complexity.test.mjs",
+          "package.json"
+        ],
+        "currentSources": [
+          {
+            "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+            "sha256": "41668878eb536531124e691d37a649105675252ab13af959492cf2ee3b56cc82"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/assignment_outcome.py",
+            "sha256": "eeb8bb3ee24bdacb438f8842bdf969bcd6578ab7d2c1b7237f6837ff102ce44e"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+            "sha256": "ab73a9782818b0fa0a7f8bb8c3bcdc5dfa6160d9f3d324909a5d468184e8e5a7"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/_assignment_orchestration/portable.py",
+            "sha256": "81759b4f57dcfb3915a89e7e2e5a406e960101aa31320094651c09ade5ceb0da"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
+            "sha256": "74af019325ea83b4d00b257f880534fe8ca4dcd9a921ac172e05bb8f6ab192d8"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/cli/commands/_assignment/review.py",
+            "sha256": "5b31a8d6dccd16159218550fdaa6962918bfde283876da620c3a6392ef661f31"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/cli/commands/_assignment/family.py",
+            "sha256": "33a587959c5c9c1c37f3f5e3d5d32bf7b5211c7a30aeb4a4e1d862858a96e149"
+          }
+        ],
+        "ownerAggregate": {
+          "baseline": {
+            "paths": [
+              "framework/core/src/python/kungfu/assignment_orchestration.py",
+              "framework/core/src/python/kungfu/cli/commands/assignment.py"
+            ],
+            "responsibilities": 100,
+            "functionRisk": {
+              "functions": 101,
+              "baseRisk": 1947,
+              "changeRisk": 2260,
+              "maximum": 325
+            }
+          },
+          "current": {
+            "paths": [
+              "framework/core/src/python/kungfu/assignment_orchestration.py",
+              "framework/core/src/python/kungfu/assignment_outcome.py",
+              "framework/core/src/python/kungfu/cli/commands/assignment.py"
+            ],
+            "responsibilities": 67,
+            "functionRisk": {
+              "functions": 69,
+              "baseRisk": 1364,
+              "changeRisk": 1752,
+              "maximum": 254
+            }
+          }
+        },
+        "modificationSurface": {
+          "baseline": {
+            "outcomeOwnerPath": "framework/core/src/python/kungfu/assignment_orchestration.py",
+            "ownerPhysicalLines": 1470,
+            "ownerResponsibilities": 33
+          },
+          "current": {
+            "outcomeOwnerPath": "framework/core/src/python/kungfu/assignment_outcome.py",
+            "ownerPhysicalLines": 450,
+            "ownerResponsibilities": 1
+          },
+          "cohesiveExtraction": {
+            "ownerClass": "OutcomeBindings",
+            "ownerFunctions": [
+              "validate_artifact",
+              "plan",
+              "verify",
+              "apply",
+              "list"
+            ],
+            "facadeAliases": {
+              "_validate_outcome_artifact": "validate_artifact",
+              "outcome_binding_plan": "plan",
+              "verify_outcome_binding": "verify",
+              "apply_outcome_binding": "apply",
+              "list_outcome_bindings": "list"
+            },
+            "sharedAuthorities": [
+              "assignment_canonical canonical-byte and schema validation",
+              "the existing _sealed_state_storage resolver"
+            ],
+            "evidence": "OutcomeBindings is the single cohesive owner of immutable schema declarations, validation rules and helpers, settled-coordinate binding, immutable collision checks, verification, and conflict-aware indexing. Every owner method is an explicit static method; the five public methods are the real algorithms and the facade aliases those same function objects after compatibility metadata normalization. There is no instance binding, wrapper function, duplicate implementation, or writer."
+          },
+          "semanticAmplification": "No new authority, topology, policy, persistence format, generated surface, or platform branch."
+        }
+      },
+      "responsibility": "Captured Assignment state remains here; exact native-binding classification is owned by kungfu.assignment_provenance, while settled advisory outcome validation and immutable bindings are single-owned by kungfu.assignment_outcome."
+    },
+    {
+      "sourcePath": "framework/core/src/python/kungfu/cli/commands/agent.py",
+      "baseline": {
+        "physicalLines": 1591,
+        "responsibilities": 61,
+        "functionRisk": { "functions": 55, "total": 899, "maximum": 70 }
+      },
+      "current": {
+        "physicalLines": 412,
+        "responsibilities": 25,
+        "functionRisk": { "functions": 14, "total": 173, "maximum": 65 }
+      },
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/agent/context_surface.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/base.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/work.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/hub.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/runtime.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/console.py",
+        "framework/core/src/python/kungfu/cli/commands/_agent/provider.py"
+      ],
+      "ownedDefinitions": [
+        "project_agent_context",
+        "agent",
+        "work",
+        "work_action",
+        "work_import_authority",
+        "hub",
+        "hub_handle",
+        "runtime",
+        "runtime_upsert",
+        "console",
+        "console_bind_work",
+        "session_action",
+        "install_skill",
+        "bootstrap",
+        "set_mode"
+      ],
+      "facadeSymbols": ["_context"],
+      "responsibility": "The stable Agent facade keeps public imports and cross-domain discovery commands; Work, Hub, runtime, Console, Session, and provider-policy registration are owned by cohesive private command domains, while native and local context projection remains owned by kungfu.agent.context_surface."
+    },
+    {
+      "sourcePath": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+      "baseline": {
+        "physicalLines": 2003,
+        "responsibilities": 68,
+        "functionRisk": { "functions": 71, "total": 1022, "maximum": 157 }
+      },
+      "current": {
+        "physicalLines": 982,
+        "responsibilities": 46,
+        "functionRisk": { "functions": 35, "total": 519, "maximum": 57 }
+      },
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/cli/commands/assignment_review/__init__.py",
+        "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
+        "framework/core/src/python/kungfu/cli/commands/_assignment/review.py",
+        "framework/core/src/python/kungfu/cli/commands/_assignment/family.py"
+      ],
+      "ownedDefinitions": [
+        "find_passing_evidence",
+        "start_plan",
+        "review_agent_plan",
+        "family_create",
+        "binding_create",
+        "seal"
+      ],
+      "facadeSymbols": [
+        "_find_retained_reviewer_evidence",
+        "start_plan",
+        "review_agent_plan",
+        "family_create",
+        "binding_create",
+        "seal"
+      ],
+      "responsibility": "Work CLI facade keeps stable command imports and shared context; starter, independent-review, Initiative-family, binding, and portable-seal commands are owned by cohesive private command domains."
+    },
+    {
+      "sourcePath": "framework/core/src/python/kungfu/profile_sdk.py",
+      "baseline": {
+        "physicalLines": 2123,
+        "responsibilities": 60,
+        "functionRisk": { "functions": 55, "total": 585, "maximum": 95 }
+      },
+      "current": {
+        "physicalLines": 930,
+        "responsibilities": 28,
+        "functionRisk": { "functions": 17, "total": 223, "maximum": 66 }
+      },
+      "ownerFiles": [
+        "framework/core/src/python/kungfu/profile_sdk_source.py",
+        "framework/core/src/python/kungfu/profile_sdk_support.py",
+        "framework/core/src/python/kungfu/_profile_sdk/action.py",
+        "framework/core/src/python/kungfu/_profile_sdk/intent.py",
+        "framework/core/src/python/kungfu/_profile_sdk/kfd3.py",
+        "framework/core/src/python/kungfu/_profile_sdk/lifecycle.py"
+      ],
+      "ownedDefinitions": [
+        "resolve_profile_source",
+        "decision_card",
+        "semantic_diff",
+        "intent_inspect",
+        "kfd3_status",
+        "export_source_bundle"
+      ],
+      "facadeSymbols": [
+        "resolve_source",
+        "decision_card",
+        "semantic_diff",
+        "intent_inspect",
+        "kfd3_status",
+        "export_source_bundle"
+      ],
+      "responsibility": "Profile SDK facade keeps its stable import contract; action, intent, KFD-3, and source-lifecycle algorithms are owned by cohesive private domains alongside the existing source and support layers."
+    }
+  ],
+  "invariants": [
+    "All seven public module paths and facade symbols remain importable.",
+    "CLI command names and parameters remain unchanged.",
+    "Native fact, schema, discovery, and recovery authority remain single-owned.",
+    "Every original module has fewer responsibilities, fewer physical lines, and lower aggregate function risk than the protected baseline.",
+    "The current Python import graph has no strongly connected component."
+  ]
+}

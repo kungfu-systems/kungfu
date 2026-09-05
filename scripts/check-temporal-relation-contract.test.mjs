@@ -10,7 +10,7 @@ import test from 'node:test';
 const ROOT = process.cwd();
 const CONTRACT = path.join(
   ROOT,
-  'framework/fact/kungfu-fact-cut-kernel.contract.json',
+  'framework/core/fact/kungfu-fact-cut-kernel.contract.json',
 );
 const FIXTURE = path.join(
   ROOT,

@@ -73,7 +73,7 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:7461fe322e3ad2de57f5749e1febe20f94411381d49622f33448d951cc0e3398"
+    "digest": "sha256:963c9b96bbbbcef5991e1802341ebd24e938af71f06f11e8c97ae861f348645e"
   },
   "surfaces": [
     {
@@ -1860,8 +1860,8 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "developer/sdk/src/sdk-contract.js",
-      "evidencePath": "framework/contract/kungfu-agent-first-canonical-policy.json",
-      "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "evidencePath": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
+      "artifactPath": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
@@ -1880,8 +1880,8 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "developer/sdk/src/sdk-contract.js",
-      "evidencePath": "framework/contract/kungfu-contracts.registry.json",
-      "artifactPath": "framework/contract/kungfu-contracts.registry.json",
+      "evidencePath": "framework/spec/contract/kungfu-contracts.registry.json",
+      "artifactPath": "framework/spec/contract/kungfu-contracts.registry.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",

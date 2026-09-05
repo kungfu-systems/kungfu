@@ -12,9 +12,10 @@ import { githubMergeGroupCoordinates } from './source-acceptance.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const CONTRACT_PATH = 'framework/incubation/incubation-passport.contract.json';
+const CONTRACT_PATH =
+  'framework/spec/incubation/incubation-passport.contract.json';
 const CONTRACT_SCHEMA_PATH =
-  'framework/incubation/schema/incubation-passport-contract-v1.schema.json';
+  'framework/spec/incubation/schema/incubation-passport-contract-v1.schema.json';
 const SHA256_ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const GIT_OBJECT_PATTERN = /^[0-9a-f]{40}$/u;
 const ADMISSION_FIXTURE_SCHEMA =

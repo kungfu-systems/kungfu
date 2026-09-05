@@ -3,11 +3,11 @@
 Kungfu governs removals through one source registry:
 
 - lifecycle contract:
-  [`framework/deprecation/deprecation-lifecycle.contract.json`](../../framework/deprecation/deprecation-lifecycle.contract.json);
+  [`developer/deprecation/deprecation-lifecycle.contract.json`](../../developer/deprecation/deprecation-lifecycle.contract.json);
 - discovery contract:
-  [`framework/deprecation/deprecation-discovery.contract.json`](../../framework/deprecation/deprecation-discovery.contract.json);
+  [`developer/deprecation/deprecation-discovery.contract.json`](../../developer/deprecation/deprecation-discovery.contract.json);
 - current and historical entries:
-  [`framework/deprecation/deprecation-registry.json`](../../framework/deprecation/deprecation-registry.json); and
+  [`developer/deprecation/deprecation-registry.json`](../../developer/deprecation/deprecation-registry.json); and
 - governing decision:
   [KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c](../adr/KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c.md).
 

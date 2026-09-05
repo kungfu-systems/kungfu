@@ -5,14 +5,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../framework/project-cut/index.mjs';
+import { semanticRoot } from '../framework/work/project-cut/index.mjs';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
 const CONTRACT =
-  'framework/episode-provider/workspace-continuation.contract.json';
+  'framework/work/episode-provider/workspace-continuation.contract.json';
 const STATES = [
   'uninitialized',
   'shadow-only',

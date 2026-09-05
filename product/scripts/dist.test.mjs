@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
+import { readElectronBuilderProjection } from '../../developer/maintainability/semantic-amplification.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {

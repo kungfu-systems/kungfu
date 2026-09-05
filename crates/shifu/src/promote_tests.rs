@@ -688,6 +688,84 @@ fn retained_rollback_uses_installed_state_after_source_slot_removal() {
 }
 
 #[test]
+fn renamed_product_retains_exact_previous_desktop_for_rollback() {
+    let root = shifu_core::host::unique_temp_dir("renamed-product-rollback").unwrap();
+    let previous = root.join("Kungfu Episodes.app");
+    let installed = root.join("Kungfu.app");
+    let backup = root.join(".Kungfu.app.shifu-previous-cut");
+    let updater_relative = Path::new("Contents/Resources/kungfu/kungfu");
+    fs::create_dir_all(previous.join(updater_relative).parent().unwrap()).unwrap();
+    fs::create_dir_all(installed.join(updater_relative).parent().unwrap()).unwrap();
+    fs::write(previous.join(updater_relative), b"previous updater").unwrap();
+    fs::write(installed.join(updater_relative), b"current updater").unwrap();
+    let previous_digest = artifact_sha256(&previous).unwrap();
+    let current_digest = artifact_sha256(&installed).unwrap();
+    let previous_updater_digest = artifact_sha256(&previous.join(updater_relative)).unwrap();
+    let current_updater_digest = artifact_sha256(&installed.join(updater_relative)).unwrap();
+    let previous_receipt = format!(
+        "KUNGFU_INSTALLED_KIND='app'\nKUNGFU_INSTALLED_ARTIFACT='{}'\nKUNGFU_INSTALLED_DIGEST='{}'\nKUNGFU_INSTALLED_NATIVE_UPDATER='{}'\nKUNGFU_INSTALLED_NATIVE_UPDATER_DIGEST='{}'\n",
+        previous.display(),
+        previous_digest,
+        previous.join(updater_relative).display(),
+        previous_updater_digest
+    );
+    let current_receipt = format!(
+        "KUNGFU_INSTALLED_KIND='app'\nKUNGFU_INSTALLED_ARTIFACT='{}'\nKUNGFU_INSTALLED_DIGEST='{}'\nKUNGFU_INSTALLED_NATIVE_UPDATER='{}'\nKUNGFU_INSTALLED_NATIVE_UPDATER_DIGEST='{}'\n",
+        installed.display(),
+        current_digest,
+        installed.join(updater_relative).display(),
+        current_updater_digest
+    );
+
+    assert_eq!(
+        retain_renamed_desktop_at(&previous_receipt, &installed, &backup).unwrap(),
+        backup
+    );
+    assert!(!previous.exists());
+    assert_eq!(
+        retain_renamed_desktop_at(&previous_receipt, &installed, &backup).unwrap(),
+        backup
+    );
+
+    fs::create_dir_all(previous.join(updater_relative).parent().unwrap()).unwrap();
+    fs::write(previous.join(updater_relative), b"ambiguous duplicate").unwrap();
+    assert!(
+        retain_renamed_desktop_at(&previous_receipt, &installed, &backup)
+            .unwrap_err()
+            .contains("both exist")
+    );
+    fs::remove_dir_all(&previous).unwrap();
+
+    swap_retained_desktop(
+        &installed,
+        &backup,
+        &current_digest,
+        &previous_digest,
+        artifact_sha256,
+    )
+    .unwrap();
+    let (restored_receipt, restored_updater) =
+        rebind_exact_app_receipt(&previous_receipt, &installed).unwrap();
+    let (reverse_receipt, reverse_updater) =
+        rebind_exact_app_receipt(&current_receipt, &backup).unwrap();
+    assert_eq!(
+        receipt_value(&restored_receipt, "KUNGFU_INSTALLED_ARTIFACT"),
+        installed.display().to_string()
+    );
+    assert_eq!(restored_updater, installed.join(updater_relative));
+    assert_eq!(
+        receipt_value(&reverse_receipt, "KUNGFU_INSTALLED_ARTIFACT"),
+        backup.display().to_string()
+    );
+    assert_eq!(reverse_updater, backup.join(updater_relative));
+    assert_ne!(
+        artifact_sha256(&restored_updater).unwrap(),
+        artifact_sha256(&reverse_updater).unwrap()
+    );
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
 fn product_manifest_io_error_is_not_corruption() {
     let root = shifu_core::host::unique_temp_dir("promote-manifest-read-error").unwrap();
     let mut entry = qualified_app(&root);

@@ -9,10 +9,10 @@ import workLifecycle from '../framework/storage/generated/work-lifecycle-v1.js';
 const read = (relative) => fs.readFileSync(relative, 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const matrix = readJson(
-  'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
+  'framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
 );
 const nativeContract = readJson(
-  'framework/work-lifecycle/work-lifecycle-native.contract.json',
+  'framework/work/work-lifecycle/work-lifecycle-native.contract.json',
 );
 
 test('one matrix owns every language state, native owner, and reconciliation edge', () => {
@@ -104,7 +104,9 @@ test('installed language projections expose raw transport and never pre-decide u
 });
 
 test('Python conformance oracles are explicit and production fallback is absent', () => {
-  const source = read('framework/core/src/python/kungfu/agent/work_profile.py');
+  const source = read(
+    'framework/core/src/python/kungfu/agent/_work_profile/session.py',
+  );
   assert.doesNotMatch(source, /_native_edge_available/u);
   assert.doesNotMatch(source, /fall back to the pure-Python/u);
   for (const name of [

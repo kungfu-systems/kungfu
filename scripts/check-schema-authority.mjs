@@ -12,7 +12,8 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const MANIFEST = 'framework/core/schema-authority.json';
-const CONTRACT_REGISTRY = 'framework/contract/kungfu-contracts.registry.json';
+const CONTRACT_REGISTRY =
+  'framework/spec/contract/kungfu-contracts.registry.json';
 
 const EXPECTED_ROUTE = {
   hana: 'hana-sqlite-orm',

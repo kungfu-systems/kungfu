@@ -10,7 +10,7 @@ import {
   compositionChanged,
   observeComposition,
   verifyComposition,
-} from '../framework/project-cut/composition.mjs';
+} from '../framework/work/project-cut/composition.mjs';
 import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 import { sourceMergeGroupBase } from './source-acceptance.mjs';
 

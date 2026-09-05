@@ -11,12 +11,12 @@ import {
   importCut,
   verifyCut,
   verifyCutReceipt,
-} from '../framework/cut/src/cut.mjs';
+} from '../framework/work/cut/src/cut.mjs';
 import {
   migrateProjectCut,
   verifyMigration,
-} from '../framework/cut/src/project-cut-migration.mjs';
-import { buildProjectCut } from '../framework/project-cut/index.mjs';
+} from '../framework/work/cut/src/project-cut-migration.mjs';
+import { buildProjectCut } from '../framework/work/project-cut/index.mjs';
 
 const root = (digit) => `sha256:${digit.repeat(64)}`;
 const base = (
@@ -49,7 +49,7 @@ const base = (
 test('a non-software Profile creates, verifies, exports, and rebuilds the same Core Cut', () => {
   const fixture = JSON.parse(
     fs.readFileSync(
-      'framework/cut/fixtures/course-production-cut-v1.json',
+      'framework/work/cut/fixtures/course-production-cut-v1.json',
       'utf8',
     ),
   );
@@ -74,7 +74,7 @@ test('Core Cut fails closed on authority and canonical-order drift', () => {
 test('legacy Project Cut migration creates a distinct root-bound identity and retains rollback', () => {
   const fixture = JSON.parse(
     fs.readFileSync(
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
       'utf8',
     ),
   );

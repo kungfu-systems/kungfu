@@ -11,14 +11,14 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/index.mjs';
-import * as publicationBoundary from '../framework/project-cut/publication.mjs';
+} from '../framework/work/project-cut/index.mjs';
+import * as publicationBoundary from '../framework/work/project-cut/publication.mjs';
 
 const {
   advanceSettlementPublication,
@@ -39,12 +39,15 @@ const PROJECT_CUT_FIXTURE = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
     ),
     'utf8',
   ),
 );
-const CLI = path.join(REPO_ROOT, 'framework/project-cut/bin/project-cut.mjs');
+const CLI = path.join(
+  REPO_ROOT,
+  'framework/work/project-cut/bin/project-cut.mjs',
+);
 
 test('publication boundary exposes only the stable operations', () => {
   assert.deepEqual(Object.keys(publicationBoundary), [

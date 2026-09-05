@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1115, https://github.com/kungfu-systems/kungfu/pull/1116, https://github.com/kungfu-systems/kungfu/pull/1139]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1139
-qualification_refs: [framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json, framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, scripts/check-fact-root-canonical.test.mjs, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/storage-node-binding.test.js, docs/qualification/evidence/gate-measurements/1edae0d8b1/linux/receipt.json, scripts/check-kungfu-gate-catalog.test.mjs, scripts/check-project-cut-composition.test.mjs]
+qualification_refs: [framework/core/fact/kungfu-fact-root-canonical-v2.json, framework/core/fact/kungfu-fact-writer-authority-v2.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json, framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, scripts/check-fact-root-canonical.test.mjs, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/storage-node-binding.test.js, docs/qualification/evidence/gate-measurements/1edae0d8b1/linux/receipt.json, scripts/check-kungfu-gate-catalog.test.mjs, scripts/check-project-cut-composition.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -41,7 +41,7 @@ persisted Roots and violate KFD-1.
 
 `kungfu.fact-root.canonical/v2` (KFR2) is the portable Fact Root protocol. Its
 normative source is
-[`kungfu-fact-root-canonical-v2.json`](../../framework/fact/kungfu-fact-root-canonical-v2.json).
+[`kungfu-fact-root-canonical-v2.json`](../../framework/core/fact/kungfu-fact-root-canonical-v2.json).
 Every preimage starts with the four bytes `KFR2`, followed by a closed typed
 value. Type tags, unsigned 64-bit length/count framing, integer ranges,
 binary64 bits, text, bytes, array, set, map, and schema-bound record encoding
@@ -76,7 +76,7 @@ portability or NFC claim. Existing v1 bytes and Roots are never reserialized,
 normalized, or relabeled as KFR2.
 
 KFR2 is the explicit authoritative writer for new native journal records under
-[`kungfu-fact-writer-authority-v2.json`](../../framework/fact/kungfu-fact-writer-authority-v2.json).
+[`kungfu-fact-writer-authority-v2.json`](../../framework/core/fact/kungfu-fact-writer-authority-v2.json).
 Every new record and its operation receipt use record schema version 2. Logical
 continuity is represented by stable Fact object identity and
 `kungfu.fact.root-mapping-receipt/v1`. The mapping receipt binds the legacy and

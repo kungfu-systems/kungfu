@@ -682,6 +682,15 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
+  framework/work:
+    dependencies:
+      '@kungfu-tech/spec':
+        specifier: workspace:*
+        version: link:../spec
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
+
   product:
     dependencies:
       '@kungfu-tech/core':
@@ -767,8 +776,8 @@ importers:
         version: link:../framework/tui
     devDependencies:
       '@kungfu-tech/buildchain':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.0.9-alpha.17
+        version: 3.0.9-alpha.17
 
 packages:
 

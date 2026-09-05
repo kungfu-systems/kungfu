@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
+import { activeProjection } from '../product/version-line/version-line-authority.mjs';
 import {
   compareRuleset,
   digest,

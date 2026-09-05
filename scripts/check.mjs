@@ -363,14 +363,14 @@ function testShifuCacheContract() {
 
 function checkShifuProductionGraphContract() {
   run('Shifu Production Graph contract gate', 'node', [
-    path.join('framework', 'production-graph', 'check.mjs'),
+    path.join('developer', 'production-graph', 'check.mjs'),
   ]);
 }
 
 function testShifuProductionGraphContract() {
   run('Shifu Production Graph contract tests', 'node', [
     '--test',
-    path.join('framework', 'production-graph', 'check.test.mjs'),
+    path.join('developer', 'production-graph', 'check.test.mjs'),
   ]);
 }
 

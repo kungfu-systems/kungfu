@@ -9,10 +9,10 @@ shifu.cmd text eol=crlf
 
 # Canonical contract bytes are hashed and compared byte-for-byte. Keep their
 # line endings independent of the checkout platform.
-framework/config/*.contract.json text eol=lf
+framework/core/config/*.contract.json text eol=lf
 framework/kfx/*.contract.json text eol=lf
 framework/skill/*.contract.json text eol=lf
-framework/contract/*.json text eol=lf
+framework/spec/contract/*.json text eol=lf
 framework/core/stubs/**/*.pyi text eol=lf
 # Conan recipe revisions hash exported source bytes. Keep the audited recipe
 # and patches identical on autocrlf Windows checkouts as well as POSIX hosts.

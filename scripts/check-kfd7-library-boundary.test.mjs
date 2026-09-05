@@ -104,11 +104,11 @@ assert.ok(
 );
 assert.equal(
   contract.authority.actionGeometryContract,
-  'framework/action/action-geometry.contract.json',
+  'framework/work/action/action-geometry.contract.json',
 );
 assert.equal(
   contract.authority.agentWorkDomainProfile,
-  'framework/agent-work/kungfu-agent-work-domain-profile.contract.json',
+  'framework/work/agent-work/kungfu-agent-work-domain-profile.contract.json',
 );
 
 const current = new Map(

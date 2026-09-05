@@ -27,9 +27,9 @@ import {
   releaseCandidateKfdRoot,
   renderKfdJson,
   resolveGitBoundKfdEvidenceSourceSha,
-} from '../framework/release/buildchain-kfd-runtime.mjs';
-import { syncKfdAdopterRelease } from '../framework/release/kfd-adopter-release.mjs';
-import { KFD_ARTIFACT_WITNESS_JSONS } from '../framework/release/kfd-candidate-evidence.mjs';
+} from '../product/release/buildchain-kfd-runtime.mjs';
+import { syncKfdAdopterRelease } from '../product/release/kfd-adopter-release.mjs';
+import { KFD_ARTIFACT_WITNESS_JSONS } from '../product/release/kfd-candidate-evidence.mjs';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   assertKfdEvidenceSourceBinding,
@@ -168,9 +168,7 @@ const RUNTIME_SERVICE_PATH = path.join(
 );
 const CONTRACT_REGISTRY_PATH = path.join(
   ROOT,
-  'framework',
-  'contract',
-  'kungfu-contracts.registry.json',
+  'framework/spec/contract/kungfu-contracts.registry.json',
 );
 const KFD2_REGISTRY_PATH = path.join(ROOT, BUILDCHAIN_KFD2_REGISTRY_PATH);
 const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
@@ -654,7 +652,7 @@ function sdkAndProductSurfaces() {
       name: 'kungfu sdk contract witness --json',
       kind: 'cli',
       sourcePath: 'developer/sdk/src/sdk-contract.js',
-      evidencePath: 'framework/contract/kungfu-contracts.registry.json',
+      evidencePath: 'framework/spec/contract/kungfu-contracts.registry.json',
       maturity: 'stable',
     }),
     fileSurface({
@@ -663,7 +661,7 @@ function sdkAndProductSurfaces() {
       kind: 'cli',
       sourcePath: 'developer/sdk/src/sdk-contract.js',
       evidencePath:
-        'framework/contract/kungfu-agent-first-canonical-policy.json',
+        'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
       maturity: 'stable',
     }),
     fileSurface({
@@ -1327,7 +1325,7 @@ function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
   ).parsed;
   const repoPath = (relativePath) => path.join(ROOT, relativePath);
   const primitiveCatalogRelativePath =
-    'framework/primitive/kungfu-primitive-catalog.contract.json';
+    'framework/spec/primitive/kungfu-primitive-catalog.contract.json';
   const primitiveCatalogPath = repoPath(primitiveCatalogRelativePath);
   const catalog = readJson(primitiveCatalogPath);
   const assignment = catalog.primitives?.find(({ id }) => id === 'assignment');
@@ -1401,14 +1399,16 @@ function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
       'assignment-minimum-closure',
       'minimum-closure',
       repoPath(
-        'framework/assignment-capture/fixtures/assignment-request-roundtrip-v1.json',
+        'framework/work/assignment-capture/fixtures/assignment-request-roundtrip-v1.json',
       ),
     ),
     gateEvidence(
       workspace,
       'assignment-native-lifecycle',
       'native-lifecycle',
-      repoPath('framework/work-lifecycle/work-lifecycle-native.contract.json'),
+      repoPath(
+        'framework/work/work-lifecycle/work-lifecycle-native.contract.json',
+      ),
     ),
     {
       id: 'assignment-orchestration-qualification',
@@ -1479,9 +1479,7 @@ function kfd7GateInput({ workspace, sourceSha, checkedAt, standards }) {
   ).parsed;
   const actionContractPath = path.join(
     ROOT,
-    'framework',
-    'agent-work',
-    'kungfu-kfd-7-action-contract.json',
+    'framework/work/agent-work/kungfu-kfd-7-action-contract.json',
   );
   const actionContract = readJson(actionContractPath);
   const categorySources = {
@@ -1513,7 +1511,7 @@ function kfd7GateInput({ workspace, sourceSha, checkedAt, standards }) {
       workspace,
       category,
       'qualification-proof',
-      path.join(ROOT, 'framework', 'agent-work', 'evidence', 'kfd-7', fileName),
+      path.join(ROOT, 'framework/work/agent-work/evidence/kfd-7', fileName),
       `kfd-7-${category}`,
     ),
   );
@@ -1534,6 +1532,7 @@ function kfd7GateInput({ workspace, sourceSha, checkedAt, standards }) {
       path.join(
         ROOT,
         'framework',
+        'work',
         'agent-work',
         'evidence',
         'kfd-7',

@@ -485,7 +485,7 @@ async function main() {
       pathToFileURL(
         path.join(
           __dirname,
-          'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+          'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
         ),
       ).href
     );

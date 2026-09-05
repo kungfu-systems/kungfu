@@ -15,16 +15,16 @@ import {
   WORKFLOW_PATH,
   lookupReusableArtifact,
   requireSha,
-} from '../framework/release/affected-native-artifact-lookup.mjs';
-import { runAffectedNativeProofCli } from '../framework/release/affected-native-proof-cli.mjs';
-import { parseFamilyQueueLeaseMarker } from './project-cut-merge-queue-admission.mjs';
+} from '../product/release/affected-native-artifact-lookup.mjs';
+import { runAffectedNativeProofCli } from '../product/release/affected-native-proof-cli.mjs';
+import { parseFamilyQueueLeaseMarker } from './project-cut-family-queue-lease.mjs';
 
 export {
   DEFAULT_MAX_AGE_SECONDS,
   WORKFLOW_PATH,
   lookupReusableArtifact,
   selectReusableArtifact,
-} from '../framework/release/affected-native-artifact-lookup.mjs';
+} from '../product/release/affected-native-artifact-lookup.mjs';
 
 const LEGACY_IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
 const LEGACY_PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';

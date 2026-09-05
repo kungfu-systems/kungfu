@@ -208,7 +208,6 @@ function main() {
 
   const retainedVectorRoot = path.resolve(
     pkgRoot,
-    '..',
     'format',
     'conformance',
     'portable-format-vectors',
@@ -257,7 +256,7 @@ function main() {
     authority: descriptor(
       inventory,
       'authority.json',
-      'framework/format',
+      'framework/spec/format',
       'current-pre-release-authority',
     ),
     schema_registry: descriptor(
@@ -269,37 +268,37 @@ function main() {
     error_dictionary: descriptor(
       inventory,
       'errors.json',
-      'framework/format',
+      'framework/spec/format',
       'current',
     ),
     capabilities: descriptor(
       inventory,
       'capabilities.json',
-      'framework/format',
+      'framework/spec/format',
       'current',
     ),
     reader_matrix: descriptor(
       inventory,
       'reader-matrix.json',
-      'framework/format',
+      'framework/spec/format',
       'current',
     ),
     compatibility: descriptor(
       inventory,
       'compatibility.json',
-      'framework/format',
+      'framework/spec/format',
       'current',
     ),
     migration: descriptor(
       inventory,
       'migration.json',
-      'framework/format',
+      'framework/spec/format',
       'current',
     ),
     conformance_vectors: descriptor(
       inventory,
       'vectors/index.json',
-      'framework/format',
+      'framework/spec/format',
       'qualified-retained-corpus',
     ),
   };

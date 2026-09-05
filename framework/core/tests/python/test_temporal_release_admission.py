@@ -16,18 +16,18 @@ from kungfu.temporal_release_admission import (
 )
 
 ROOT = Path(__file__).resolve().parents[4]
-CONTRACT = ROOT / "framework/release/kungfu-temporal-release-admission.contract.json"
+CONTRACT = ROOT / "product/release/kungfu-temporal-release-admission.contract.json"
 COMPATIBILITY_FACTS = (
     ROOT / "docs/qualification/evidence/buildchain-compatibility-fact-projection.json"
 )
 ADMISSION_FACTS = (
     ROOT / "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json"
 )
-PROVENANCE_CONTRACT = ROOT / "framework/release/kungfu-release-provenance.contract.json"
+PROVENANCE_CONTRACT = ROOT / "product/release/kungfu-release-provenance.contract.json"
 PROVENANCE_FIXTURE = ROOT / "tests/fixtures/release-provenance-object/cases.json"
 ALPHA_LOCK = ROOT / ".buildchain/alpha-contract-lock.json"
 ROLLBACK_CONTRACT = (
-    ROOT / "framework/release/kungfu-temporal-release-rollback.contract.json"
+    ROOT / "product/release/kungfu-temporal-release-rollback.contract.json"
 )
 
 CURRENT = "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404"

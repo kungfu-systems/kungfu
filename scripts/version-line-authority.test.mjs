@@ -11,7 +11,7 @@ import {
   checkVersionLineAuthority,
   narrowMatches,
   scanNarrowBindings,
-} from '../framework/version-line/check-version-line-authority.mjs';
+} from '../product/version-line/check-version-line-authority.mjs';
 import {
   deriveProjection,
   digest,
@@ -19,7 +19,7 @@ import {
   renderedProjections,
   rulesetContract,
   validateAuthority,
-} from '../framework/version-line/version-line-authority.mjs';
+} from '../product/version-line/version-line-authority.mjs';
 
 test('checked-in version-line authority and projections are qualifying', () => {
   const result = checkVersionLineAuthority();

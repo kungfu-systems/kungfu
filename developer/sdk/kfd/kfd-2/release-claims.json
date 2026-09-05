@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.5",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.5",
-    "sourceSha": "5c32c9c809a2f4d55c305a8d3ba239e9c94d24b4"
+    "sourceSha": "8e3cc2bb45a65385330d0a33140bbbb60416db61"
   },
   "claims": [
     {
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "b6e057bff07e4b307ab31701594b03f96eb45ae395850af6c7b45cc640e1d685"
+            "sha256": "30513d46e35faad308e44439d8ad383a013396f9b7f14814110cf4664fdcc3df"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -224,8 +224,8 @@
       "category": "kfd-2",
       "source": {
         "kind": "file",
-        "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa"
+        "path": "framework/work/agent-work/kungfu-agent-work-state.contract.json",
+        "sha256": "b9b8569a9c2b8315cfa156c99d0fb0690b5386e2438a15ce73f596de473cc553"
       },
       "evidence": [
         {
@@ -233,7 +233,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-            "sha256": "f686ca8c1ec7fb1796c4df5f105da8c274b3b5618a4e128896b665d47839db4c"
+            "sha256": "752dc3bc729a01e10508653a383e0323c9aeb02d15ea04a6691b79ae42fbb3e5"
           },
           "description": "Accepted role-separation decision and bounded P17 qualification boundary."
         },
@@ -242,7 +242,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-agent-work-state-contract.test.mjs",
-            "sha256": "1e91331147a84659540a425e5ef1fd8c7d44543208edf85e072b7511c386b366"
+            "sha256": "ef45e3390b7522fcf606a22ac8e89b67e1ce3754511322131218568c1c54420e"
           },
           "description": "Source, package, KFD-2, KFD-3, and continuity evidence-boundary checks."
         },
@@ -250,7 +250,7 @@
           "type": "file",
           "pointer": {
             "kind": "file",
-            "path": "framework/agent-work/fixtures/continuity-evidence-cases.json",
+            "path": "framework/work/agent-work/fixtures/continuity-evidence-cases.json",
             "sha256": "0c8890d688bd2e46389772a486347ca0827a6156cba6501e15ba9a922c9e165e"
           },
           "description": "Positive profiles and fail-closed smoke-as-FO10, missing-baseline, and animation-without-report cases."
@@ -306,8 +306,8 @@
       "category": "kfd-2",
       "source": {
         "kind": "file",
-        "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063"
+        "path": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+        "sha256": "cf6db729809a470d5d01f522f6b47a1e9a2b1c6637812d0b86a6a072bb6fa835"
       },
       "evidence": [
         {
@@ -324,7 +324,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-native-authority-membrane.test.mjs",
-            "sha256": "92c11028398ff041fa39402e8c8dafc181dd9f428c4f86f4e11a9337b80bee70"
+            "sha256": "79cd49995902dc760cbf4c84bb6696487813a7ae5cf18a12fe09c9c32000ea88"
           },
           "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
         },
@@ -333,7 +333,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-            "sha256": "9f68398f076a690e8009fb1012fdcdf16c2ab6ad4afdbd985c35e699292a65b6"
+            "sha256": "63d2d41ee2f9aaa55fe23e49919cdea11c5aab3085a9051a9f815844179c0286"
           },
           "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
         },
@@ -342,7 +342,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/layers/sdk/run.mjs",
-            "sha256": "85d79cc690fbc2a5f05f16cec6fa17c30b67791f8c781c68eee89db00535cefe"
+            "sha256": "00581d7d1bc595afa604f77d92ba4a9d538ce2905afad8f49afe3c950367dd57"
           },
           "description": "Installed C++, Python, Node.js, and Rust SDK qualification against one exact native runtime."
         },
@@ -360,7 +360,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-            "sha256": "1d89fcf741abd3b597ea531719881121eadfc0bdb33ff3c13bfcfc1ab7d74297"
+            "sha256": "77803df07eb3e0d75f30b89b13e28f4d26c5be7a7e42e6319e87d8b84793755f"
           },
           "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
         }

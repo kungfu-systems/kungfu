@@ -51,6 +51,7 @@ ROOT_D = "sha256:" + "d" * 64
 CONTRACT = (
     Path(__file__).resolve().parents[4]
     / "framework"
+    / "core"
     / "workspace-federation"
     / "workspace-federation.contract.json"
 )

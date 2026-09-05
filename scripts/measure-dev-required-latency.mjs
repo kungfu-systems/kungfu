@@ -12,8 +12,8 @@ import {
   createCandidateTimeline,
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
-import * as queueEvidence from '../framework/dev-delivery/dev-gate-queue-evidence.mjs';
-import { latencyBaselineForDevBranch } from '../framework/version-line/version-line-authority.mjs';
+import * as queueEvidence from '../developer/dev-delivery/dev-gate-queue-evidence.mjs';
+import { latencyBaselineForDevBranch } from '../product/version-line/version-line-authority.mjs';
 import {
   affectedNativeClassification,
   collectDeliveryAttemptFromArtifacts,
@@ -51,7 +51,7 @@ export {
   postMergeAdvisoryEvidence,
   summarizeMergeQueueDelivery,
   summarizePostMergeAdvisory,
-} from '../framework/dev-delivery/dev-gate-queue-evidence.mjs';
+} from '../developer/dev-delivery/dev-gate-queue-evidence.mjs';
 export {
   affectedNativeEvidenceBinding,
   deliveryAttemptEvidenceFromMembers,

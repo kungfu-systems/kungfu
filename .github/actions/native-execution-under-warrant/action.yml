@@ -59,7 +59,7 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         KUNGFU_NATIVE_COMMAND: ${{ inputs.command }}
       run: >-
-        node framework/dev-delivery/native-execution-under-warrant.mjs
+        node developer/dev-delivery/native-execution-under-warrant.mjs
         --repository "$GITHUB_REPOSITORY"
         --branch "${{ inputs.protected-base }}"
         --pull-request "${{ inputs.pull-request }}"

@@ -24,7 +24,15 @@
     ".gyp/noop-install.js",
     ".gyp/refuse-source-pack.js",
     "core-platform-package.contract.json",
-    "node-api-authority.json"
+    "node-api-authority.json",
+    "config/",
+    "data-protection/",
+    "episode/",
+    "episode-admission/",
+    "exit/",
+    "fact/",
+    "runtime/",
+    "workspace-federation/"
   ],
   "config": {
     "build_type": "Release",

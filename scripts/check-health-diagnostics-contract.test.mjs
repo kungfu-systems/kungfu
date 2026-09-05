@@ -9,8 +9,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (relative) =>
   JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
-const contract = readJson('framework/runtime/kungfu-diagnostics.contract.json');
-const registry = readJson('framework/contract/kungfu-contracts.registry.json');
+const contract = readJson(
+  'framework/core/runtime/kungfu-diagnostics.contract.json',
+);
+const registry = readJson(
+  'framework/spec/contract/kungfu-contracts.registry.json',
+);
 
 test('diagnostics contract is registered with stable statuses and exits', () => {
   const entry = registry.contracts.find(
@@ -19,7 +23,7 @@ test('diagnostics contract is registered with stable statuses and exits', () => 
   assert.ok(entry);
   assert.equal(
     entry.source,
-    'framework/runtime/kungfu-diagnostics.contract.json',
+    'framework/core/runtime/kungfu-diagnostics.contract.json',
   );
   assert.equal(contract.schema, 'kungfu.diagnostics.contract/v1');
   assert.deepEqual(contract.statuses, [

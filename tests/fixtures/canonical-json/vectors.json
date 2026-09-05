@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.canonical-json.conformance/v1",
-  "contract": "framework/action/action-canonical-json-v1.json",
+  "contract": "framework/work/action/action-canonical-json-v1.json",
   "profiles": {
     "kungfu.action.canonical-json/v1": {
       "accepted": [

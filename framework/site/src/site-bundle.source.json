@@ -533,7 +533,7 @@
     },
     {
       "id": "action-geometry-contract",
-      "path": "framework/action/action-geometry.contract.json",
+      "path": "framework/work/action/action-geometry.contract.json",
       "role": "machine-contract"
     },
     {
@@ -613,7 +613,7 @@
     },
     {
       "id": "profile-contract",
-      "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+      "path": "framework/work/profile/kungfu-domain-profile-authoring.contract.json",
       "role": "machine-contract"
     },
     {

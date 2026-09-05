@@ -262,9 +262,9 @@ if [ "${1:-}" = "action" ]; then
   export KUNGFU_ACTION_LAYOUT=source
   if command -v fnm >/dev/null 2>&1; then
     fnm install >/dev/null 2>&1 || true
-    exec fnm exec -- node ./framework/action/action.mjs "$@"
+    exec fnm exec -- node ./framework/work/action/action.mjs "$@"
   elif command -v node >/dev/null 2>&1; then
-    exec node ./framework/action/action.mjs "$@"
+    exec node ./framework/work/action/action.mjs "$@"
   else
     echo "shifu: action needs node" >&2
     exit 127
@@ -278,9 +278,9 @@ if [ "${1:-}" = "work" ]; then
   if [ "${1:-}" = "capture" ] || [ "${1:-}" = "cleanup" ]; then
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
-      exec fnm exec -- node ./framework/assignment-capture/assignment-capture.mjs "$@"
+      exec fnm exec -- node ./framework/work/assignment-capture/assignment-capture.mjs "$@"
     elif command -v node >/dev/null 2>&1; then
-      exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
+      exec node ./framework/work/assignment-capture/assignment-capture.mjs "$@"
     else
       echo "shifu: work capture needs node" >&2
       exit 127
@@ -293,11 +293,11 @@ if [ "${1:-}" = "work" ]; then
   }
   _kungfu_checkout_binding="$(kungfu_checkout_binding)"
   _kungfu_checkout_build_info="./framework/core/dist/kungfu/kungfubuildinfo.json"
-  _kungfu_uv="$(command -v uv || { command -v node >/dev/null 2>&1 && node ./framework/assignment-capture/qualified-assignment-core-consumer.mjs resolve-cached-tool uv 2>/dev/null; } || true)"
+  _kungfu_uv="$(command -v uv || { command -v node >/dev/null 2>&1 && node ./framework/work/assignment-capture/qualified-assignment-core-consumer.mjs resolve-cached-tool uv 2>/dev/null; } || true)"
   if [ -z "$_kungfu_checkout_binding" ] \
     && { [ "$(kungfu_native_platform)" = "macos-arm64" ] || [ "$(kungfu_native_platform)" = "linux-x64" ]; } \
-    && command -v node >/dev/null 2>&1 && [ -f "./framework/assignment-capture/qualified-assignment-core-consumer.mjs" ]; then
-    node ./framework/assignment-capture/qualified-assignment-core-consumer.mjs materialize --repository-root "$PWD" || exit $?
+    && command -v node >/dev/null 2>&1 && [ -f "./framework/work/assignment-capture/qualified-assignment-core-consumer.mjs" ]; then
+    node ./framework/work/assignment-capture/qualified-assignment-core-consumer.mjs materialize --repository-root "$PWD" || exit $?
     _kungfu_checkout_binding="$(kungfu_checkout_binding)"
   fi
   if [ -n "$_kungfu_checkout_binding" ] && [ -f "$_kungfu_checkout_build_info" ] && [ -n "$_kungfu_uv" ]; then

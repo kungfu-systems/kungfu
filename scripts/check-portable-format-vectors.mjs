@@ -17,7 +17,7 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const INDEX_PATH =
-  'framework/format/conformance/portable-format-vectors/index.json';
+  'framework/spec/format/conformance/portable-format-vectors/index.json';
 const CURRENT_EPOCH = 0xe3b24c8d;
 const PAGE_HEADER_SIZE = 32;
 const FRAME_HEADER_SIZE = 72;
@@ -109,7 +109,7 @@ export function classifyRetainedVector(vector, bytes) {
       return reject('E_MIGRATION_TUPLE_MALFORMED');
     const contract = readJson(
       ROOT,
-      'framework/format/kungfu-format-migration.contract.json',
+      'framework/spec/format/kungfu-format-migration.contract.json',
     );
     const negotiated = negotiateFormat(contract, { source: payload.tuple });
     const classification = {
@@ -172,7 +172,7 @@ export function classifyRetainedVector(vector, bytes) {
 function verifyMigrationAndRepair(root, vectors) {
   const contract = readJson(
     root,
-    'framework/format/kungfu-format-migration.contract.json',
+    'framework/spec/format/kungfu-format-migration.contract.json',
   );
   const legacy = vectors.find(
     (vector) => vector.id === 'fact-root-v1-legacy-atoms',

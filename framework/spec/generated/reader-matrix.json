@@ -163,8 +163,8 @@
     "root_protocol": "sha256:opaque-bytes/v1",
     "sources": [
       {
-        "path": "framework/format/kungfu-required-reader.contract.json",
-        "root": "sha256:ead20b4326409b708dba138aeb79b2f4e3b5c1c58c83dfd57a790aebf19ac25d"
+        "path": "framework/spec/format/kungfu-required-reader.contract.json",
+        "root": "sha256:37cbdb6caf55766b8d81fef2f0e1178386abd832a6595f15bc6f5fe3f13d7036"
       }
     ]
   },

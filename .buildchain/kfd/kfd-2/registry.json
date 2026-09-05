@@ -211,7 +211,7 @@
       "statement": "Kungfu releases publish one welded Agent Work contract whose current release state is explicitly not-qualified for P17, whose FO1-FO10 debt remains machine-readable, and whose continuity smoke, comparison, and projection claims are evidence-bounded.",
       "source": {
         "kind": "file",
-        "path": "framework/agent-work/kungfu-agent-work-state.contract.json"
+        "path": "framework/work/agent-work/kungfu-agent-work-state.contract.json"
       },
       "evidence": [
         {
@@ -226,7 +226,7 @@
         },
         {
           "type": "file",
-          "path": "framework/agent-work/fixtures/continuity-evidence-cases.json",
+          "path": "framework/work/agent-work/fixtures/continuity-evidence-cases.json",
           "description": "Positive profiles and fail-closed smoke-as-FO10, missing-baseline, and animation-without-report cases."
         },
         {
@@ -243,7 +243,7 @@
       "artifacts": [
         {
           "name": "agent-work-state-contract",
-          "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
+          "path": "framework/work/agent-work/kungfu-agent-work-state.contract.json",
           "expectedPackagePath": "config/kungfu-agent-work-state.contract.json"
         }
       ],
@@ -279,7 +279,7 @@
       "statement": "Kungfu releases publish one closed Work lifecycle inventory in which native runtime components are the only semantic decision owners and C++, Python, Node.js, and Rust are lossless request/result projections with explicit unavailable, degraded, unsupported, stale, and unknown states.",
       "source": {
         "kind": "file",
-        "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
+        "path": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
       },
       "evidence": [
         {
@@ -316,7 +316,7 @@
       "artifacts": [
         {
           "name": "work-lifecycle-operation-matrix",
-          "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "path": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
           "expectedPackagePath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
         }
       ],

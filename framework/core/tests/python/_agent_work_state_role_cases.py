@@ -56,12 +56,12 @@ def test_kfd7_profile_action_and_receipt_schemas_cover_runtime_vectors():
     root = Path(__file__).resolve().parents[4]
     action_schema = json.loads(
         (
-            root / "framework/agent-work/kungfu-kfd-7-profile-action.schema.json"
+            root / "framework/work/agent-work/kungfu-kfd-7-profile-action.schema.json"
         ).read_text()
     )
     receipt_schema = json.loads(
         (
-            root / "framework/agent-work/kungfu-kfd-7-profile-receipt.schema.json"
+            root / "framework/work/agent-work/kungfu-kfd-7-profile-receipt.schema.json"
         ).read_text()
     )
     request = _profile_request()

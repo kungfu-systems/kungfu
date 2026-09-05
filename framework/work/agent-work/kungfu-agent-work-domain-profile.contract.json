@@ -1,0 +1,252 @@
+{
+  "schema": "kungfu.agent-work-domain-profile.contract/v1",
+  "id": "kungfu-agent-work-domain-profile",
+  "version": 1,
+  "weldedSurface": "agent-work-domain-profile-contract",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "contractSchema",
+      "actionGeometry",
+      "roleOrder",
+      "roleSchemas",
+      "initialStates",
+      "transitions",
+      "denials",
+      "validation",
+      "presentation",
+      "evidenceAndSuccess",
+      "authority",
+      "legacyCompatibility",
+      "nonClaims"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.agent-work-domain-profile.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-agent-work-domain-profile"
+      },
+      "version": {
+        "const": 1
+      },
+      "weldedSurface": {
+        "const": "agent-work-domain-profile-contract"
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "actionGeometry": {
+        "type": "object",
+        "required": [
+          "surface",
+          "id",
+          "schema",
+          "root"
+        ]
+      },
+      "roleOrder": {
+        "type": "array",
+        "minItems": 5,
+        "maxItems": 5,
+        "uniqueItems": true
+      },
+      "roleSchemas": {
+        "type": "object",
+        "minProperties": 5,
+        "maxProperties": 5
+      },
+      "initialStates": {
+        "type": "object",
+        "minProperties": 5,
+        "maxProperties": 5
+      },
+      "transitions": {
+        "type": "object",
+        "minProperties": 5,
+        "maxProperties": 5
+      },
+      "denials": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "validation": {
+        "type": "object"
+      },
+      "presentation": {
+        "type": "object"
+      },
+      "evidenceAndSuccess": {
+        "type": "object"
+      },
+      "authority": {
+        "type": "object"
+      },
+      "legacyCompatibility": {
+        "type": "object"
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "actionGeometry": {
+    "surface": "action-geometry",
+    "id": "kungfu-action-geometry",
+    "schema": "kungfu.action-geometry.contract/v1",
+    "root": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793"
+  },
+  "roleOrder": [
+    "fact",
+    "episode",
+    "pursuit",
+    "atlas",
+    "warrant"
+  ],
+  "roleSchemas": {
+    "fact": {
+      "schema": "kungfu.agent-work.fact-role/v2",
+      "source": "framework/work/agent-work/role-schemas/fact.schema.json",
+      "artifact": "config/agent-work/role-schemas/fact.schema.json",
+      "root": "sha256:a7bf1af8fc22d60d909b0de9591ed724c65aa87aaa11869d457c3d3666233426"
+    },
+    "episode": {
+      "schema": "kungfu.agent-work.episode-role/v2",
+      "source": "framework/work/agent-work/role-schemas/episode.schema.json",
+      "artifact": "config/agent-work/role-schemas/episode.schema.json",
+      "root": "sha256:42f7171fdad5c43162749065cdb74eed174121b1f9497e1e933f24299b09f7a3"
+    },
+    "pursuit": {
+      "schema": "kungfu.agent-work.pursuit-role/v2",
+      "source": "framework/work/agent-work/role-schemas/pursuit.schema.json",
+      "artifact": "config/agent-work/role-schemas/pursuit.schema.json",
+      "root": "sha256:705f541dec68b8f18aa4b3968e0db83a4dc8ff53331b0e772999a3054cb8db7b"
+    },
+    "atlas": {
+      "schema": "kungfu.agent-work.atlas-role/v2",
+      "source": "framework/work/agent-work/role-schemas/atlas.schema.json",
+      "artifact": "config/agent-work/role-schemas/atlas.schema.json",
+      "root": "sha256:00516c07e553e66a23732c0e1fb05ed1f052e25a7f1babe4fb0bb77c27631929"
+    },
+    "warrant": {
+      "schema": "kungfu.agent-work.warrant-role/v2",
+      "source": "framework/work/agent-work/role-schemas/warrant.schema.json",
+      "artifact": "config/agent-work/role-schemas/warrant.schema.json",
+      "root": "sha256:ece2cf9cfdcbf95ca8a0e79d83105a4e57d91fedc1dcf6ab32af329f6268daaf"
+    }
+  },
+  "initialStates": {
+    "fact": "declared",
+    "episode": "open",
+    "pursuit": "active",
+    "atlas": "current",
+    "warrant": "issued"
+  },
+  "transitions": {
+    "fact": [
+      "create:absent->declared",
+      "successor:declared->superseded",
+      "fork:declared->declared",
+      "degrade:declared->degraded"
+    ],
+    "episode": [
+      "create:absent->open",
+      "seal:open->sealed",
+      "compensate:sealed->compensated",
+      "reconcile:sealed->reconciled",
+      "reconcile:compensated->reconciled"
+    ],
+    "pursuit": [
+      "create:absent->active",
+      "branch:active->active",
+      "continue:active->active",
+      "continue:paused->active",
+      "pause:active->paused",
+      "complete:active->completed",
+      "complete:paused->completed",
+      "abandon:active->abandoned",
+      "abandon:paused->abandoned"
+    ],
+    "atlas": [
+      "create:absent->current",
+      "refresh:current->current",
+      "refresh:stale->current",
+      "refresh:conflicted->current",
+      "mark-stale:current->stale",
+      "mark-conflicted:current->conflicted",
+      "supersede:current->superseded",
+      "supersede:stale->superseded"
+    ],
+    "warrant": [
+      "create:absent->issued",
+      "attenuate:issued->attenuated",
+      "attenuate:attenuated->attenuated",
+      "expire:issued->expired",
+      "expire:attenuated->expired",
+      "revoke:issued->revoked",
+      "revoke:attenuated->revoked",
+      "deny:issued->denied",
+      "deny:attenuated->denied"
+    ]
+  },
+  "denials": [
+    "responsibility-gap",
+    "invalid-request",
+    "invalid-transition",
+    "profile-state-mismatch",
+    "body-missing",
+    "stale-ref",
+    "replay-mismatch",
+    "unauthorized",
+    "warrant-expired",
+    "warrant-revoked",
+    "atlas-stale",
+    "kernel-rejected"
+  ],
+  "validation": {
+    "successorRoleBodyRule": "Every successor role body binds this exact Domain Profile root, the exact Action Geometry root, and its exact role schema root.",
+    "bindingFailure": "fail-closed",
+    "legacyReadRule": "Legacy v1 bodies remain readable under their original schema identity and are not reinterpreted as successor bodies.",
+    "contextInsufficiency": "Context payload alone never determines action validity."
+  },
+  "presentation": {
+    "profile": "kungfu-kfd-7-action-profile",
+    "roles": "progressively disclosed",
+    "publicCommands": "preserved",
+    "multiSurfaceAuthority": "one contract registry and one runtime authority"
+  },
+  "evidenceAndSuccess": {
+    "episode": "Causal occurrence and sealed evidence remain owned by Episode authority.",
+    "fact": "Admitted results and decision cuts remain owned by Fact authority.",
+    "actionAcceptance": "An accepted Agent Work action is not proof of Pursuit completion or complete reality.",
+    "successPolicy": "Pursuit completion requires the existing domain transition and evidence rules; Geometry does not define success."
+  },
+  "authority": {
+    "profile": "Agent Work fields, role schemas, lifecycle, transitions, defaults, validation, presentation, evidence mapping, and success policy",
+    "geometry": "Responsibility separation, relation constraints, non-substitution invariants, and conservative session refinement",
+    "kernel": "Identity, immutable versions, relations, Cuts, CAS, and receipts",
+    "episode": "Causal occurrence and sealed evidence"
+  },
+  "legacyCompatibility": {
+    "profile": "kungfu-kfd-7-action-profile",
+    "actionSchema": "kungfu.kfd7.profile-action/v1",
+    "receiptSchema": "kungfu.kfd7.profile-action-receipt/v1",
+    "roleBodySchema": "kungfu.kfd7.profile-role/v1",
+    "capabilitiesSchema": "kungfu.kfd7.profile-capabilities/v1",
+    "objectTypePattern": "kfd7.profile.<role>",
+    "policy": "Legacy roots, bodies, receipts, fixtures, public commands, replay, recovery, and object identities retain their original meaning."
+  },
+  "nonClaims": [
+    "This Domain Profile does not redefine Action Geometry.",
+    "This Domain Profile does not mint Fact or Episode authority, duplicate storage, replace receipts, or create a second action state machine.",
+    "Successor role schemas do not reinterpret legacy v1 role bodies."
+  ]
+}

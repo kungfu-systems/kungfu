@@ -33,7 +33,7 @@ Architecture decisions and their historical rationale remain in
 - [Core Layer Map](../../framework/core/architecture/LAYERS.md)
 - [Event Model](event-model.md)
 - [`.kungfu` Format Contract](kungfu-format-contract.md)
-- [Portable Format Authority Composition](../../framework/format/kungfu-portable-format-authority.contract.json)
+- [Portable Format Authority Composition](../../framework/spec/format/kungfu-portable-format-authority.contract.json)
 - [Adapters](adapters.md)
 - [Carrier Type Registry](carrier-type-registry.md)
 - [Embedding Contract Face](embedding-contract-face.md)

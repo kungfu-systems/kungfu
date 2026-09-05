@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
+import { readElectronBuilderProjection } from '../../developer/maintainability/semantic-amplification.mjs';
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,

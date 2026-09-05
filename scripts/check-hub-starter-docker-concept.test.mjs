@@ -16,7 +16,7 @@ const CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
       ROOT,
-      'framework/hub-starter/kungfu-hub-starter-docker.contract.json',
+      'product/hub-starter/kungfu-hub-starter-docker.contract.json',
     ),
     'utf8',
   ),

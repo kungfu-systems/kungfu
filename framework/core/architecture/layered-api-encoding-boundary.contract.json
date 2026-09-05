@@ -10,16 +10,16 @@
       "sha256": "84d9265adbdc3d117b0d9d01ee36510985f974892e7430fbdcd5e1da530d1c19"
     },
     "factRootProtocol": {
-      "path": "framework/fact/kungfu-fact-root-canonical-v2.json",
-      "sha256": "05e5a92db42d59957fc39d61820ce1ef1c37b894687f2db63f2d7446ca66156a"
+      "path": "framework/core/fact/kungfu-fact-root-canonical-v2.json",
+      "sha256": "78cd57b352d3e29a243fc69bb475189d15ccd39c91be26ecd4fd4a05a110cfc4"
     },
     "actionGeometry": {
-      "path": "framework/action/action-geometry.contract.json",
+      "path": "framework/work/action/action-geometry.contract.json",
       "sha256": "7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793"
     },
     "domainProfile": {
-      "path": "framework/agent-work/kungfu-agent-work-domain-profile.contract.json",
-      "sha256": "be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d"
+      "path": "framework/work/agent-work/kungfu-agent-work-domain-profile.contract.json",
+      "sha256": "89b99615674e0e89d66e2389e8ddffe4ed86358cfa343165e1210be1a6dccb85"
     },
     "schemaOwners": {
       "path": "framework/core/schema-authority.json",
@@ -256,8 +256,8 @@
     ]
   },
   "workLifecycle": {
-    "operationCatalog": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-    "nativeContract": "framework/work-lifecycle/work-lifecycle-native.contract.json",
+    "operationCatalog": "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+    "nativeContract": "framework/work/work-lifecycle/work-lifecycle-native.contract.json",
     "action": "work_lifecycle",
     "generatedFiles": {
       "cpp": "framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp",

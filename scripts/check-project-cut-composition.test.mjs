@@ -12,20 +12,20 @@ import {
   buildGitEpisodeSegment,
   episodeProviderPaths,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
 
-import * as compositionApi from '../framework/project-cut/composition.mjs';
+import * as compositionApi from '../framework/work/project-cut/composition.mjs';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
   sha256Bytes,
-} from '../framework/project-cut/index.mjs';
+} from '../framework/work/project-cut/index.mjs';
 import {
   sourceProjectionAtCommit,
   sourceProjectionAtTree,
-} from '../framework/project-cut/settlement.mjs';
+} from '../framework/work/project-cut/settlement.mjs';
 import { checkProjectCutCompositionContract } from './project-cut-composition-contract.mjs';
 
 const { observeComposition, verifyComposition } = compositionApi;
@@ -46,7 +46,7 @@ const FIXTURE = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
     ),
     'utf8',
   ),

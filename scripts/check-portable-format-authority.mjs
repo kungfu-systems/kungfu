@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const CONTRACT_PATH =
-  'framework/format/kungfu-portable-format-authority.contract.json';
+  'framework/spec/format/kungfu-portable-format-authority.contract.json';
 
 const REQUIRED_TERMS = [
   'Episode Manifest',

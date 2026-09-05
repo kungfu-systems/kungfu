@@ -5,13 +5,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../framework/project-cut/index.mjs';
+import { semanticRoot } from '../framework/work/project-cut/index.mjs';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-const CONTRACT = 'framework/episode-admission/episode-admission.contract.json';
+const CONTRACT =
+  'framework/core/episode-admission/episode-admission.contract.json';
 const ACTIONS = [
   'contract',
   'plan',

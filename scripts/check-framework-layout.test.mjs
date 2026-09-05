@@ -47,7 +47,8 @@ function fixture(t) {
   const manifest = {
     schema: 'kungfu.framework-layout-manifest/v1',
     frameworkRoot: 'framework',
-    releaseRegistry: 'framework/release/npm-package-registry.json',
+    releaseRegistry: 'product/release/npm-package-registry.json',
+    sourceOnlyPolicy: 'allow-source-only',
     entries: [
       {
         path: 'framework/alpha',
@@ -75,6 +76,18 @@ function fixture(t) {
   };
   return { root, manifest };
 }
+
+test('can forbid every source-only root at the framework boundary', (t) => {
+  const { root, manifest } = fixture(t);
+  manifest.sourceOnlyPolicy = 'forbid-source-only';
+  const result = validateFrameworkLayout({
+    root,
+    manifest,
+    releaseRegistry: RELEASE_REGISTRY,
+  });
+  assert.equal(result.ok, false);
+  assert.ok(codes(result).includes('source-only-forbidden'));
+});
 
 function codes(result) {
   return result.issues.map((entry) => entry.code);
@@ -294,11 +307,6 @@ test('the repository matches its framework layout manifest', () => {
     manifest.entries
       .filter((entry) => entry.boundaryReview === 'complete')
       .map((entry) => entry.path),
-    [
-      'framework/action',
-      'framework/assignment-runtime',
-      'framework/evidence',
-      'framework/project-cut',
-    ],
+    [],
   );
 });

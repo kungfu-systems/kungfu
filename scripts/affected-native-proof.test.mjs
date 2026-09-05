@@ -1203,7 +1203,7 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   );
   const artifactLookup = fs.readFileSync(
     new URL(
-      '../framework/release/affected-native-artifact-lookup.mjs',
+      '../product/release/affected-native-artifact-lookup.mjs',
       import.meta.url,
     ),
     'utf8',

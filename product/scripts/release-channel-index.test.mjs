@@ -174,9 +174,7 @@ test('channel index generation is deterministic and signs exact canonical bytes'
   );
   const schema = JSON.parse(
     fs.readFileSync(
-      path.resolve(
-        'framework/upgrade/kungfu-release-channel-index.schema.json',
-      ),
+      path.resolve('product/upgrade/kungfu-release-channel-index.schema.json'),
       'utf8',
     ),
   );

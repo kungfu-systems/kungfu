@@ -6,12 +6,13 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../framework/project-cut/index.mjs';
+import { semanticRoot } from '../framework/work/project-cut/index.mjs';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
+const PROJECT_CUT_ROOT = 'framework/work/project-cut';
 const require = createRequire(import.meta.url);
 
 function readJson(root, relative) {
@@ -27,13 +28,11 @@ function loadAjv2020() {
 }
 
 export function computeProjectCutSettlementRoots(root = DEFAULT_ROOT) {
-  const contractPath = 'framework/project-cut/settlement.contract.json';
+  const contractPath = `${PROJECT_CUT_ROOT}/settlement.contract.json`;
   const contract = readJson(root, contractPath);
   const files = contract.schemaBundle.files.map((relative) => ({
     path: relative,
-    root: semanticRoot(
-      readJson(root, path.join('framework/project-cut', relative)),
-    ),
+    root: semanticRoot(readJson(root, path.join(PROJECT_CUT_ROOT, relative))),
   }));
   const schemaRoot = semanticRoot({
     schema: 'project.cut.settlement-schema-bundle/v1',
@@ -64,7 +63,7 @@ export function checkProjectCutSettlementContract(root = DEFAULT_ROOT) {
   if (Ajv2020) {
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     for (const relative of roots.contract.schemaBundle.files)
-      ajv.compile(readJson(root, path.join('framework/project-cut', relative)));
+      ajv.compile(readJson(root, path.join(PROJECT_CUT_ROOT, relative)));
   }
   return {
     schemaRoot: roots.schemaRoot,

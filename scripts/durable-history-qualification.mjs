@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH =
-  'framework/data-protection/durable-history-qualification.contract.json';
+  'framework/core/data-protection/durable-history-qualification.contract.json';
 const NODE_TESTS = [
   'scripts/check-durable-history-qualification.test.mjs',
   'scripts/check-data-protection-contract.test.mjs',
@@ -131,10 +131,10 @@ export function buildReceipt({
       contractRoot: digestDocument(contract),
       entrypointMatrixRoot: digestDocument(contract.entrypointMatrix),
       bundleContractRoot: sourceRoot(
-        'framework/exit/kungfu-exit-bundle.contract.json',
+        'framework/core/exit/kungfu-exit-bundle.contract.json',
       ),
       migrationContractRoot: sourceRoot(
-        'framework/upgrade/kungfu-product-release-cut.contract.json',
+        'product/upgrade/kungfu-product-release-cut.contract.json',
       ),
       campaignCorpusRoot: digestDocument(corpus),
       campaignResultRoot: digestDocument(campaignResults),

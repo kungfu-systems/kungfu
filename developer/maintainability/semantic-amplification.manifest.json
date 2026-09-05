@@ -1,0 +1,1432 @@
+{
+  "schema": "kungfu.semantic-amplification-manifest/v1",
+  "status": "navigation-projection-input",
+  "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
+  "legacyReportPath": "developer/maintainability/semantic-amplification-report.json",
+  "integrityPolicy": {
+    "schema": "kungfu.abstraction-integrity-governance/v1",
+    "compatibility": "additive-extension-of-kungfu.semantic-amplification-manifest/v1",
+    "authoritySemantics": "This policy measures declared topology and debt. It never replaces the business authorities named by each family or topology.",
+    "dimensions": [
+      "language",
+      "product-surface",
+      "platform",
+      "execution-topology",
+      "lifecycle",
+      "delivery",
+      "configuration",
+      "policy",
+      "evidence"
+    ],
+    "findingClasses": {
+      "parallel-authority": {
+        "weight": 13,
+        "severity": "blocking",
+        "explanation": "A topology introduces another business authority instead of adapting the declared authority."
+      },
+      "duplicate-policy": {
+        "weight": 8,
+        "severity": "high",
+        "explanation": "Equivalent policy is independently owned or declared more than once."
+      },
+      "leaking-platform-branch": {
+        "weight": 8,
+        "severity": "high",
+        "explanation": "Platform primitives spread outside the declared adapter boundary."
+      },
+      "orphan-adapter": {
+        "weight": 8,
+        "severity": "high",
+        "explanation": "An adapter cannot name the authority it translates."
+      },
+      "illegal-axis-value": {
+        "weight": 13,
+        "severity": "blocking",
+        "explanation": "A variant escapes the declared legal topology."
+      },
+      "missing-qualification": {
+        "weight": 5,
+        "severity": "medium",
+        "explanation": "A topology has no independent qualification route."
+      },
+      "stale-exception": {
+        "weight": 5,
+        "severity": "medium",
+        "explanation": "An exception expired or lost its rationale and remediation owner."
+      },
+      "oversized-orchestration": {
+        "weight": 5,
+        "severity": "medium",
+        "explanation": "One orchestration surface owns too many lifecycle stages."
+      },
+      "config-duplication": {
+        "weight": 5,
+        "severity": "medium",
+        "explanation": "Configuration policy is copied across product surfaces."
+      },
+      "policy-drift": {
+        "weight": 8,
+        "severity": "high",
+        "explanation": "The integrity policy or detector cannot be evaluated as declared."
+      }
+    },
+    "ratchet": {
+      "mode": "non-increasing-weighted-debt",
+      "baseline": {
+        "sourceRef": "1b77dbe8a0e669f3ec086f76c63eac07ec6e2a0d",
+        "capturedAt": "2026-07-31",
+        "findings": 3,
+        "weightedDebt": 18,
+        "findingIds": [
+          "product-assembly:product-orchestration-size",
+          "desktop-packaging:electron-config-overlap",
+          "core-durability:durability-platform-primitive-spread"
+        ]
+      }
+    },
+    "topologies": [
+      {
+        "id": "runner-lifecycle",
+        "owner": "buildchain/release",
+        "dimensions": [
+          "platform",
+          "execution-topology",
+          "lifecycle",
+          "delivery",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "pinned-buildchain-runner-preset-contract",
+          "kind": "external-pinned-contract",
+          "repository": "kungfu-systems/buildchain",
+          "pinSource": ".buildchain/contract-lock.json",
+          "sources": [
+            ".buildchain/contract-lock.json"
+          ]
+        },
+        "legalAxes": {
+          "provider": [
+            "github",
+            "kungfu-fleet",
+            "aws-codebuild",
+            "aws-ec2"
+          ],
+          "lifecycle": [
+            "hosted",
+            "persistent",
+            "jit"
+          ],
+          "platform": [
+            "linux-x64",
+            "linux-arm64",
+            "macos-arm64",
+            "windows-x64"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "github-hosted",
+            "axes": {
+              "provider": "github",
+              "lifecycle": "hosted"
+            },
+            "paths": [
+              ".github/workflows/build.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:github-hosted"
+          },
+          {
+            "id": "aws-codebuild-linux",
+            "axes": {
+              "provider": "aws-codebuild",
+              "lifecycle": "jit",
+              "platform": "linux-x64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-linux-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-codebuild-linux"
+          },
+          {
+            "id": "aws-ec2-windows-jit",
+            "axes": {
+              "provider": "aws-ec2",
+              "lifecycle": "jit",
+              "platform": "windows-x64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-windows-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-ec2-windows-jit"
+          },
+          {
+            "id": "aws-ec2-macos-jit",
+            "axes": {
+              "provider": "aws-ec2",
+              "lifecycle": "jit",
+              "platform": "macos-arm64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-macos-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-ec2-macos-jit"
+          }
+        ],
+        "projections": [
+          {
+            "path": ".github/workflows/build.yml",
+            "role": "consumer-binding"
+          }
+        ],
+        "qualification": [
+          {
+            "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          },
+          {
+            "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          },
+          {
+            "path": ".github/workflows/aws-us-macos-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          }
+        ],
+        "exceptions": [
+          {
+            "id": "external-runner-authority-read",
+            "expiresAt": "2027-01-31",
+            "rationale": "The build-free Kungfu report reads the exact Buildchain contract lock, not a neighboring checkout or the network.",
+            "remediation": "Refresh the contract lock through Buildchain compatibility admission when the protected runtime changes."
+          }
+        ],
+        "recovery": "Read the pinned Buildchain contract lock, then qualify each provider adapter independently; never infer one provider from another."
+      },
+      {
+        "id": "product-assembly",
+        "owner": "product/release",
+        "dimensions": [
+          "language",
+          "product-surface",
+          "platform",
+          "lifecycle",
+          "delivery"
+        ],
+        "authority": {
+          "id": "product-dist-orchestration",
+          "kind": "repository-source",
+          "sources": [
+            "product/scripts/dist.mjs",
+            "product/scripts/runtime-pin-snapshot.mjs"
+          ]
+        },
+        "legalAxes": {
+          "product": [
+            "all",
+            "desktop",
+            "cli"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "desktop-product",
+            "axes": {
+              "product": "desktop"
+            },
+            "paths": [
+              "product/scripts/dist.mjs",
+              "product/scripts/runtime-pin-snapshot.mjs"
+            ],
+            "authorityBinding": "product-dist-orchestration"
+          },
+          {
+            "id": "cli-product",
+            "axes": {
+              "product": "cli"
+            },
+            "paths": [
+              "product/scripts/dist.mjs",
+              "product/scripts/runtime-pin-snapshot.mjs"
+            ],
+            "authorityBinding": "product-dist-orchestration"
+          }
+        ],
+        "projections": [
+          {
+            "path": "product/electron-builder.yml",
+            "role": "desktop-package-policy"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "product/scripts/dist.test.mjs",
+            "role": "source-and-product-contract"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "product-orchestration-size",
+            "kind": "line-count",
+            "findingClass": "oversized-orchestration",
+            "paths": [
+              "product/scripts/dist.mjs"
+            ],
+            "maximum": 2450,
+            "remediation": "Keep lifecycle sequencing in a pure assembly plan and leave platform/product mechanics in owned modules."
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Query the product topology, run dist source tests, and qualify desktop and CLI products separately."
+      },
+      {
+        "id": "desktop-packaging",
+        "owner": "framework/gui",
+        "dimensions": [
+          "product-surface",
+          "platform",
+          "delivery",
+          "configuration",
+          "policy"
+        ],
+      "authority": {
+        "id": "electron-builder-surface-policy",
+        "kind": "repository-source",
+        "sources": [
+          "framework/gui/electron-builder.base.json",
+          "product/electron-builder.overlay.json"
+        ]
+      },
+        "legalAxes": {
+        "surface": [
+          "framework-gui",
+          "assembled-product",
+          "projection-generator"
+          ]
+        },
+        "adapters": [
+        {
+          "id": "framework-gui-package",
+            "axes": {
+              "surface": "framework-gui"
+            },
+          "paths": [
+            "framework/gui/electron-builder.base.json"
+          ],
+            "authorityBinding": "electron-builder-surface-policy"
+          },
+        {
+          "id": "assembled-product-package",
+            "axes": {
+              "surface": "assembled-product"
+            },
+          "paths": [
+            "product/electron-builder.overlay.json"
+          ],
+          "authorityBinding": "electron-builder-surface-policy"
+        },
+        {
+          "id": "electron-builder-projection-generator",
+          "axes": {
+            "surface": "projection-generator"
+          },
+          "paths": [
+            "developer/maintainability/semantic-amplification.mjs"
+          ],
+          "authorityBinding": "electron-builder-surface-policy"
+        }
+        ],
+        "projections": [
+          {
+            "path": "framework/gui/electron-builder.yml",
+            "role": "framework-package"
+          },
+          {
+            "path": "product/electron-builder.yml",
+            "role": "product-package"
+          }
+        ],
+        "qualification": [
+        {
+          "path": "product/scripts/dist.test.mjs",
+          "role": "config-contract"
+        },
+        {
+          "path": "framework/gui/scripts/electron-builder-config.test.mjs",
+          "role": "base-overlay-projection-drift"
+        }
+      ],
+        "detectors": [
+          {
+            "id": "electron-config-overlap",
+            "kind": "normalized-line-overlap",
+            "findingClass": "config-duplication",
+          "paths": [
+            "framework/gui/electron-builder.base.json",
+            "product/electron-builder.overlay.json"
+          ],
+          "minimumLineLength": 4,
+          "maximumSharedLines": 9,
+          "thresholdRationale": "The product overlay must restate nine resource/filter lines because electron-builder replaces extraResources arrays instead of merging their entries; any additional shared policy line is a regression.",
+          "remediation": "Keep shared packaging policy in the canonical base, product-only assembly in the overlay, and both generated projections drift-checked."
+        }
+      ],
+      "exceptions": [],
+      "recovery": "Edit the executable base or product overlay, regenerate both projections, run the drift and product config contracts, then qualify packaging on every claimed platform."
+      },
+      {
+        "id": "core-durability",
+        "owner": "core/runtime-storage",
+        "dimensions": [
+          "language",
+          "platform",
+          "lifecycle",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+      "authority": {
+        "id": "native-durability-contract-and-storage-authority",
+        "kind": "repository-source",
+        "sources": [
+          "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h",
+          "framework/core/src/libyijinjing/src/io/durability.h",
+          "framework/core/src/libyijinjing/include/kungfu/yijinjing/platform/mmap.h",
+          "framework/storage/kungfu-storage.contract.json"
+        ]
+        },
+        "legalAxes": {
+          "durability-semantics": [
+            "strict-file-and-metadata",
+            "best-effort-content-publication",
+            "engine-owned"
+          ],
+          "platform-adapter": [
+            "windows",
+            "posix",
+            "provider"
+          ]
+        },
+      "adapters": [
+        {
+          "id": "native-file-durability-platform-adapter",
+          "axes": {
+            "durability-semantics": "strict-file-and-metadata"
+          },
+          "paths": [
+            "framework/core/src/libyijinjing/src/io/durability.h",
+            "framework/core/src/libyijinjing/src/io/durability.cpp",
+            "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+            "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+            "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp"
+          ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "content-store-publication-adapter",
+            "axes": {
+              "durability-semantics": "best-effort-content-publication"
+            },
+            "paths": [
+              "framework/core/src/libyijinjing/src/storage/content_store.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "storage-provider-adapter",
+            "axes": {
+              "durability-semantics": "engine-owned",
+              "platform-adapter": "provider"
+            },
+            "paths": [
+              "framework/core/src/libkungfu/src/runtime/storage/provider.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          }
+        ],
+      "projections": [
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+          "role": "strict-durable-ingest-consumer"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+          "role": "strict-fact-journal-consumer"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+          "role": "strict-backend-authority-consumer"
+        },
+        {
+          "path": "docs/qualification/fact-storage-authority.md",
+            "role": "qualification-documentation"
+          }
+        ],
+        "qualification": [
+        {
+          "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
+          "role": "native-contract"
+        },
+        {
+          "path": "framework/core/src/libyijinjing/tests/durability_tests.cpp",
+          "role": "cross-platform-primitive-contract"
+        },
+          {
+            "path": "framework/core/tests/qualification/durability/product_contract.test.mjs",
+            "role": "product-contract"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "durability-platform-primitive-spread",
+            "kind": "token-spread",
+            "findingClass": "leaking-platform-branch",
+          "paths": [
+            "framework/core/src/libyijinjing/src/io/durability.cpp",
+            "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+              "framework/core/src/libyijinjing/src/storage/content_store.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/provider.cpp"
+            ],
+            "tokens": [
+              "FlushFileBuffers",
+              "MoveFileEx",
+              "::fsync",
+              "_commit("
+            ],
+            "maximumPaths": 2,
+          "remediation": "Keep equivalent strict primitives in the native file durability adapter; retain content-store best effort, mapping policy, and provider-owned WAL as explicit variants."
+          }
+        ],
+        "exceptions": [
+          {
+            "id": "content-store-best-effort-directory-sync",
+            "expiresAt": "2026-10-31",
+            "rationale": "Content-addressed publication deliberately reports a weaker profile than strict durable ingest and cannot inherit a stronger guarantee by refactor.",
+            "remediation": "Keep the weaker capability explicit; consolidate only after its public contract and power-loss evidence are upgraded."
+          }
+        ],
+      "recovery": "Inspect the declared durability semantics, use the platform adapter for strict file and metadata operations, preserve mapping policy, content-store best effort, and provider WAL as distinct contracts, then run native crash-recovery qualification."
+      },
+      {
+        "id": "integrity-governance",
+        "owner": "developer/maintainability",
+        "dimensions": [
+          "language",
+          "product-surface",
+          "platform",
+          "execution-topology",
+          "lifecycle",
+          "delivery",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "semantic-amplification-manifest",
+          "kind": "additive-navigation-policy",
+          "sources": [
+            "developer/maintainability/semantic-amplification.manifest.json"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "report",
+            "query",
+            "fixture"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "integrity-report",
+            "axes": {
+              "surface": "report"
+            },
+            "paths": [
+              "developer/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "semantic-amplification-manifest"
+          },
+          {
+            "id": "integrity-query",
+            "axes": {
+              "surface": "query"
+            },
+            "paths": [
+              "developer/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "semantic-amplification-manifest"
+          }
+        ],
+        "projections": [
+          {
+            "path": "developer/maintainability/semantic-amplification-report.json",
+            "role": "generated-report"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "developer/maintainability/semantic-amplification.test.mjs",
+            "role": "adversarial-and-ratchet-fixtures"
+          },
+          {
+            "path": "developer/maintainability/semantic-amplification.fixtures.json",
+            "role": "synthetic-variant-fixtures"
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Run the build-free report or task query, inspect exact findings and baseline delta, then edit the declared business authority or adapter rather than the report."
+      },
+      {
+        "id": "quality-governance",
+        "owner": "developer/maintainability",
+        "dimensions": [
+          "language",
+          "execution-topology",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "quality-governance-policy-set",
+          "kind": "repository-policy-set",
+          "sources": [
+            "developer/maintainability/function-risk-policy.json",
+            "developer/maintainability/function-risk-ratchet-policy.json",
+            "developer/maintainability/semantic-amplification.manifest.json"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "required-gate",
+            "read-only-kernel",
+            "compatibility-shadow",
+            "diagnostic-projection",
+            "advisory-report"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "quality-required-gate",
+            "axes": {
+              "surface": "required-gate"
+            },
+            "paths": [
+              "scripts/source-acceptance.mjs",
+              "developer/maintainability/function-risk-ratchet.mjs",
+              "shifu.gates.json"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-read-only-kernel",
+            "axes": {
+              "surface": "read-only-kernel"
+            },
+            "paths": [
+              "developer/maintainability/source-analysis-kernel.mjs",
+              "developer/maintainability/source-analysis-session.mjs",
+              "developer/maintainability/function-risk-transition.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-compatibility-shadow",
+            "axes": {
+              "surface": "compatibility-shadow"
+            },
+            "paths": [
+              "developer/maintainability/fixtures/function-risk-legacy-shadow.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-diagnostic-projection",
+            "axes": {
+              "surface": "diagnostic-projection"
+            },
+            "paths": [
+              "developer/maintainability/quality-governance-responsibility-map.json",
+              "developer/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          },
+          {
+            "id": "quality-advisory-report",
+            "axes": {
+              "surface": "advisory-report"
+            },
+            "paths": [
+              "developer/maintainability/function-risk.mjs"
+            ],
+            "authorityBinding": "quality-governance-policy-set"
+          }
+        ],
+        "projections": [
+          {
+            "path": "developer/maintainability/semantic-amplification-report.json",
+            "role": "generated-report"
+          },
+          {
+            "path": "developer/maintainability/quality-governance-responsibility-map.json",
+            "role": "navigation-only-responsibility-map"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "developer/maintainability/function-risk.test.mjs",
+            "role": "legacy-shadow-and-self-ratchet"
+          },
+          {
+            "path": "developer/maintainability/semantic-amplification.test.mjs",
+            "role": "topology-and-role-conformance"
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Run the required changed-code ratchet before the full advisory report, compare the shared kernel with the frozen legacy oracle, and repair the implementation without changing policy thresholds, exclusions, waivers, required contexts, or public contracts."
+      }
+    ]
+  },
+  "rolePolicy": {
+    "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
+    "allowedProjectionRoles": [
+      "generated-projection",
+      "thin-binding",
+      "compatibility-reader",
+      "required-gate",
+      "read-only-analysis-kernel",
+      "diagnostic-projection",
+      "advisory-report",
+      "conformance-oracle",
+      "test",
+      "documentation",
+      "package-release",
+      "retained-evidence"
+    ],
+    "unknownRole": "blocking",
+    "unmappedChangedSemanticSurface": "blocking"
+  },
+  "families": [
+    {
+      "id": "cli-agent-surface",
+      "owner": "core",
+      "identityTokens": [
+        "kungfu.cli-surface-registry/v1",
+        "kungfu.cli-surface-catalog/v1"
+      ],
+      "discoveryRoots": [
+        "framework/core/src/python/kungfu/cli/",
+        "framework/core/src/python/kungfu/agent/",
+        "product/scripts/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "live-click-tree-and-cli-surface-registry",
+        "sources": [
+          "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+          "framework/core/src/python/kungfu/cli/commands/__registry__.py",
+          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/core/src/python/kungfu/cli/catalog_projection.py",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+          "role": "generated-projection",
+          "generator": "framework/core/src/python/kungfu/cli/catalog_projection.py"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/commands.json",
+          "role": "generated-projection",
+          "generator": "framework/core/src/python/kungfu/agent/kfd3.py"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/help_projection.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-cli-catalog-parity.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/verify-agent-pack.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "framework/core/tests/python/test_cli_surface_contract.py",
+          "role": "test"
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.mjs",
+          "role": "package-release"
+        },
+        {
+          "path": "product/scripts/verify-cli-surface-qualification.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "docs/architecture/overview.md",
+          "role": "documentation"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Run the CLI catalog parity and product CLI qualification checks; edit live Click registration or the declared surface registry, never generated catalogs."
+    },
+    {
+      "id": "work-profile-lifecycle",
+      "owner": "core/runtime-action",
+      "identityTokens": [
+        "kungfu.work-lifecycle.native-contract/v1",
+        "kungfu.work-lifecycle.operation-matrix/v1"
+      ],
+      "discoveryRoots": [
+        "framework/work/work-lifecycle/",
+        "framework/core/src/libkungfu/src/runtime/action/",
+        "framework/core/src/libkungfu/src/runtime/profile/",
+        "framework/core/src/python/kungfu/",
+        "framework/storage/",
+        "crates/kungfu-sdk/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "native-work-lifecycle-authority-membrane",
+        "sources": [
+          "framework/work/work-lifecycle/work-lifecycle-native.contract.json",
+          "framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+          "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "scripts/generate-work-lifecycle-sdk.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/profile_sdk.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-native.test.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-differential.test.mjs",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "docs/architecture/work-lifecycle-operation-matrix.md",
+          "role": "documentation"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Inspect native work status and operation roots, regenerate declared SDK projections, and keep Python/Rust/Node clients lossless rather than semantic."
+    },
+    {
+      "id": "kfx-package-profile",
+      "owner": "core/runtime-kfx",
+      "identityTokens": [
+        "kungfu.kfx.contract/v1",
+        "kfx-contract"
+      ],
+      "discoveryRoots": [
+        "framework/kfx/",
+        "framework/core/src/libkungfu/src/runtime/kfx/",
+        "framework/core/src/python/kungfu/",
+        "framework/gui/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "native-kfx-contract",
+        "sources": [
+          "framework/kfx/kungfu-kfx.contract.json",
+          "framework/core/src/libkungfu/src/runtime/kfx/native_contract.cpp",
+          "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/kfx/src/index.ts",
+          "role": "thin-binding"
+        },
+        {
+          "path": "extensions/agent-work-lab/experience/src/index.ts",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_contract.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/profile_sdk.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/commands/kfx_authoring.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_authoring/__init__.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/generate-kfx-authoring-kit.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_authoring_assets/contract.json",
+          "role": "generated-projection",
+          "generator": "scripts/generate-kfx-authoring-kit.mjs"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/service-webhook-host.mjs",
+          "role": "generated-projection",
+          "generator": "scripts/generate-kfx-authoring-kit.mjs"
+        },
+        {
+          "path": "framework/core/tests/python/test_kfx_authoring.py",
+          "role": "test"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/kfx-authoring.md",
+          "role": "documentation"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/intent-map.json",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/run-native-kfx-admission-tests.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/run-kfx-profile-suite-tests.mjs",
+          "role": "test"
+        },
+        {
+          "path": "docs/qualification/kfd-native-sdk-release-gates.md",
+          "role": "documentation"
+        },
+        {
+          "path": "framework/gui/docs/shell-and-kfx.md",
+          "role": "documentation"
+        },
+        {
+          "path": "product/scripts/dist.mjs",
+          "role": "package-release"
+        },
+        {
+          "path": "product/scripts/runtime-pin-snapshot.mjs",
+          "role": "package-release"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Query the native KFX registry, verify the exact contract and package roots, and retain explicit unavailable/degraded results when installed product evidence is absent."
+    },
+    {
+      "id": "fact-episode",
+      "owner": "core/runtime-storage",
+      "identityTokens": [
+        "kungfu.fact-cut-kernel.contract/v1",
+        "kungfu.episode-invariants"
+      ],
+      "discoveryRoots": [
+        "framework/core/fact/",
+        "framework/core/episode/",
+        "framework/core/src/libkungfu/src/runtime/storage/",
+        "framework/core/src/python/kungfu/storage/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "fact-cut-and-episode-journal-authority",
+        "sources": [
+          "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
+          "framework/core/episode/kungfu-episode-invariants.contract.json",
+          "framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp",
+          "framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/core/fact/kungfu-fact-invariant-model-v1.json",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-fact-cut-kernel-contract.test.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/generate-portable-format-vectors.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/tests/python/test_episode_control.py",
+          "role": "test"
+        },
+        {
+          "path": "docs/architecture/fact-episode-action-runtime.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+          "role": "retained-evidence"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Verify content roots and journal-backed receipts, replay retained characterization fixtures, and never infer Fact authority from JSON projections."
+    },
+    {
+      "id": "storage-query",
+      "owner": "core/runtime-storage",
+      "identityTokens": [
+        "kungfu.storage-sdk.contract/v1",
+        "kf_maintenance_api_v1"
+      ],
+      "discoveryRoots": [
+        "framework/storage/",
+        "framework/core/src/libkungfu/src/runtime/storage/",
+        "framework/core/src/python/kungfu/storage/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "native-storage-api-and-component",
+        "sources": [
+          "framework/storage/kungfu-storage.contract.json",
+          "framework/core/src/libkungfu/include/kungfu/api.h",
+          "framework/core/src/libkungfu/src/runtime/storage/service.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/storage/index.js",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/service.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/json_compat.cpp",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "framework/core/tests/storage-node-binding.test.js",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "docs/qualification/fact-storage-authority.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/evidence/durability/production-candidate-v1/README.md",
+          "role": "retained-evidence"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Use native maintenance plans and exact provider receipts; preserve JSON as an edge projection and retain physical durability as a separate claim."
+    },
+    {
+      "id": "release-product-claim",
+      "owner": "product/release",
+      "identityTokens": [
+        "kungfu.trademark-public-use/v1",
+        "kungfu.alpha-github-release"
+      ],
+      "discoveryRoots": [
+        "product/release/",
+        "product/",
+        "scripts/",
+        ".github/workflows/",
+        "docs/qualification/gates/"
+      ],
+      "authority": {
+        "id": "kungfu-gate-catalog-and-release-claim-contract",
+        "sources": [
+          "shifu.gates.json",
+          "product/release/kungfu-trademark-public-use.contract.json",
+          "product/release-channel-trust.json"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "scripts/trademark-public-use-contract.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/prepare-ungfu-release-evidence.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "scripts/publish-alpha-run.mjs",
+          "role": "package-release"
+        },
+        {
+          "path": "docs/qualification/gates/workflow-bindings.json",
+          "role": "thin-binding"
+        },
+        {
+          "path": ".github/workflows/release-new-version.yml",
+          "role": "package-release"
+        },
+        {
+          "path": "docs/qualification/gates/release-and-promotion.md",
+          "role": "documentation"
+        },
+        {
+          "path": "product/release/kungfu-ungfu-release-evidence.candidate.json",
+          "role": "retained-evidence"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Recompute source-bound release admission and exact platform passports; preparation, dry-run, or one-platform evidence never becomes a public release claim."
+    },
+    {
+      "id": "quality-governance",
+      "owner": "developer/maintainability",
+      "identityTokens": [
+        "kungfu.function-risk-report/v1",
+        "kungfu.function-risk-ratchet/v1",
+        "kungfu.source-analysis-cache/v1",
+        "kungfu.quality-governance-responsibility-map/v1"
+      ],
+      "discoveryRoots": [
+        "developer/maintainability/",
+        "scripts/",
+        "shifu.gates.json"
+      ],
+      "authority": {
+        "id": "quality-governance-policy-set",
+        "sources": [
+          "developer/maintainability/function-risk-policy.json",
+          "developer/maintainability/function-risk-ratchet-policy.json",
+          "developer/maintainability/semantic-amplification.manifest.json"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "scripts/source-acceptance.mjs",
+          "role": "required-gate"
+        },
+        {
+          "path": "shifu.gates.json",
+          "role": "required-gate"
+        },
+        {
+          "path": "developer/maintainability/function-risk-ratchet.mjs",
+          "role": "required-gate"
+        },
+        {
+          "path": "developer/maintainability/source-analysis-kernel.mjs",
+          "role": "read-only-analysis-kernel"
+        },
+        {
+          "path": "developer/maintainability/source-analysis-session.mjs",
+          "role": "thin-binding"
+        },
+        {
+          "path": "developer/maintainability/function-risk-transition.mjs",
+          "role": "read-only-analysis-kernel"
+        },
+        {
+          "path": "developer/maintainability/fixtures/function-risk-legacy-shadow.mjs",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "developer/maintainability/function-risk.mjs",
+          "role": "advisory-report"
+        },
+        {
+          "path": "developer/maintainability/quality-governance-responsibility-map.json",
+          "role": "diagnostic-projection"
+        },
+        {
+          "path": "developer/maintainability/semantic-amplification.mjs",
+          "role": "diagnostic-projection"
+        },
+        {
+          "path": "developer/maintainability/function-risk.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "developer/maintainability/semantic-amplification.test.mjs",
+          "role": "test"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Follow the responsibility map to the existing policy authority, run the required changed-code ratchet first, then compare the shared kernel and frozen compatibility shadow before inspecting advisory projections."
+    }
+  ],
+  "productionBoundaries": [
+    {
+      "id": "source-and-readonly-discovery",
+      "state": "proved",
+      "evidence": [
+        "scripts/readonly-agent-bootstrap.test.mjs",
+        "scripts/code-complexity-budget.test.mjs"
+      ],
+      "claimBoundary": "Source and protected-checkout behavior only."
+    },
+    {
+      "id": "native-macos-current-checkout",
+      "state": "partial",
+      "evidence": [
+        "framework/core/architecture/ARCHITECTURE_HEALTH.md"
+      ],
+      "claimBoundary": "Buildable current source; no installed or released artifact inference."
+    },
+    {
+      "id": "semantic-authority-convergence",
+      "state": "proved",
+      "evidence": [
+        "developer/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-authority-convergence",
+        "requestRoot": "sha256:3c21a18843d601a08012bce640fa6c184358179cc9f82999d7420b80d7806b97",
+        "captureReceiptRoot": "sha256:e9668f6ac8cf97bb59db87c1c5ec04076dd14b4d294abc1a25408c2d2dfb552b"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-authority-convergence"
+      },
+      "claimBoundary": "The predecessor seal closes this Assignment; the current report remains a navigation projection over the declared authorities."
+    },
+    {
+      "id": "responsibility-hotspot-decomposition",
+      "state": "proved",
+      "evidence": [
+        "developer/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-responsibility-hotspot-decomposition",
+        "requestRoot": "sha256:5f71d58aac57e46f268dd1953473249aab182e0e3f8061a7d75929c3f81be9ee",
+        "captureReceiptRoot": "sha256:9694edded6e090e588c56286ebf9c957718ecfb14b3e92b8b74e7ffbcace2bde"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-responsibility-hotspot-decomposition"
+      },
+      "claimBoundary": "The predecessor seal closes the prior decomposition Assignment; newly discovered hotspots remain governed by the current exact-head terminal review."
+    },
+    {
+      "id": "linux-native-and-product",
+      "state": "proved",
+      "evidence": [
+        "developer/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-linux-product-qualification",
+        "requestRoot": "sha256:abfb20e87a7c06437431c133b4e32c5cb72a8c1ca4c7e5ddb8917b7eb77e0a4f",
+        "captureReceiptRoot": "sha256:91305cbc2255ed4ef18e2f7966be6f9acbc7ea68544b1535c261a70cebfa8974"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-linux-product-qualification"
+      },
+      "claimBoundary": "The predecessor seal closes the prior Linux Assignment; each later terminal cut must still provide its own exact-head platform evidence."
+    },
+    {
+      "id": "windows-native-and-product",
+      "state": "proved",
+      "evidence": [
+        "developer/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-windows-product-qualification",
+        "requestRoot": "sha256:2abb9fb07ac8c09ca1658388731b23a1fd47bbe8115ec284cc24c54e93b2157c",
+        "captureReceiptRoot": "sha256:bc649a491246506f2e0067b089af5539136ebce8972270c2783650ca8f7b1b04"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-windows-product-qualification"
+      },
+      "claimBoundary": "The predecessor seal closes the prior Windows Assignment; static parity never substitutes for exact-head Windows execution on a later cut."
+    },
+    {
+      "id": "physical-durability",
+      "state": "retained-dependency",
+      "evidence": [
+        "docs/qualification/evidence/durability/production-candidate-v1/README.md"
+      ],
+      "claimBoundary": "Current hardware candidate is not physical power-loss proof."
+    },
+    {
+      "id": "public-release",
+      "state": "retained-dependency",
+      "evidence": [
+        "product/release/kungfu-trademark-public-use.contract.json"
+      ],
+      "claimBoundary": "Release evidence remains pending and no public release claim is made."
+    }
+  ],
+  "decompositions": [
+    {
+      "id": "readonly-shifu-routing",
+      "original": [
+        "shifu",
+        "shifu.cmd"
+      ],
+      "boundary": "Cross-platform selection stays in the platform shim; command-to-reader dispatch and stable execution move to one Node built-in route.",
+      "target": "scripts/shifu-readonly-entry.mjs",
+      "owner": "shifu/source-tooling",
+      "dependencyInvariant": "The route may use only the existing Node executable and checked-in files; no installer, package manager, cache, network, or diagnostics writer.",
+      "tests": [
+        "scripts/check-shifu-entry-contract.test.mjs",
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ],
+      "rollback": "Remove the direct route and wrapper together; protected-checkout discovery then returns to the reproduced explicit failure."
+    },
+    {
+      "id": "invariant-discovery-projection",
+      "original": [
+        "scripts/kungfu-invariant.mjs"
+      ],
+      "boundary": "Registry-to-discovery projection is pure and build-free; full verification retains authority-root and qualification behavior.",
+      "target": "scripts/kungfu-invariant-discovery.mjs",
+      "owner": "shifu/source-tooling",
+      "dependencyInvariant": "Both discovery and full verification consume the same invariant registry and projection function.",
+      "tests": [
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ],
+      "rollback": "Restore the projection function in the full verifier and remove the read-only invariant route."
+    },
+    {
+      "id": "tui-control-plane-state",
+      "original": [
+        "framework/tui/src/profile-shell.tsx"
+      ],
+      "boundary": "Input transitions, quick-action matching, and focus fencing are pure state authority; Ink rendering remains in the profile shell.",
+      "target": "framework/tui/src/control-plane-state.ts",
+      "owner": "framework/tui",
+      "dependencyInvariant": "The state module imports no Ink or React runtime and the profile shell preserves its public exports.",
+      "tests": [
+        "framework/tui/src/control-plane.test.ts",
+        "framework/tui/src/profile-shell.test.ts"
+      ],
+      "rollback": "Restore the pure state declarations in profile-shell.tsx and remove the compatibility re-export."
+    },
+    {
+      "id": "affected-native-artifact-lookup",
+      "original": [
+        "scripts/affected-native-proof.mjs"
+      ],
+      "boundary": "GitHub artifact discovery and producer selection are release-evidence reads; proof construction and sealing remain in the affected-native authority.",
+      "target": "product/release/affected-native-artifact-lookup.mjs",
+      "owner": "product/release",
+      "dependencyInvariant": "Discovery admits only exact repository identities, trusted workflow events, successful runs, bounded age, and exact merge-group heads.",
+      "tests": [
+        "scripts/affected-native-proof.test.mjs"
+      ],
+      "rollback": "Move the remote lookup functions back without changing their public affected-native exports."
+    },
+    {
+      "id": "merge-queue-delivery-evidence",
+      "original": [
+        "scripts/cancel-dequeued-merge-group-runs.mjs"
+      ],
+      "boundary": "Dequeue settlement mutates queue cleanup state; retained delivery evidence reconstruction is a read-only maintainability projection.",
+      "target": "developer/maintainability/delivery-evidence.mjs",
+      "owner": "developer/maintainability",
+      "dependencyInvariant": "The evidence reader consumes validated affected-native attempts and GitHub observations without owning dequeue mutation.",
+      "tests": [
+        "scripts/candidate-timeline-events.test.mjs",
+        "scripts/cancel-dequeued-merge-group-runs.test.mjs"
+      ],
+      "rollback": "Move the read-only evidence helpers back and preserve the existing re-export surface."
+    },
+    {
+      "id": "product-assembly-runtime",
+      "original": [
+        "product/scripts/dist.mjs"
+      ],
+      "boundary": "Source pins, platform package selection, no-optional acquisition, and lifecycle ordering form one explicit-input assembly runtime; product mechanics and release behavior remain in dist.mjs.",
+      "target": "product/scripts/runtime-pin-snapshot.mjs",
+      "owner": "product/release-assembly-runtime",
+      "dependencyInvariant": "The runtime receives repository paths, command execution, logging, environment, package resolution, and product mechanics explicitly; it preserves Buildchain event order and exposes no CLI, publication, or second product authority.",
+      "tests": [
+        "product/scripts/dist.test.mjs",
+        "developer/maintainability/semantic-amplification.test.mjs"
+      ],
+      "rollback": "Inline runProductAssembly into dist.mjs without changing stage order, target guards, environment projection, or Buildchain events."
+    }
+  ]
+}

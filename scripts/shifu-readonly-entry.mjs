@@ -51,24 +51,24 @@ function route(command, args) {
   if (command === 'maintainability:complexity')
     return ['scripts/code-complexity-budget.mjs', args];
   if (command === 'maintainability:function-risk')
-    return ['framework/maintainability/function-risk.mjs', args];
+    return ['developer/maintainability/function-risk.mjs', args];
   if (command === 'maintainability:python-structure')
     return ['scripts/check-code-complexity.mjs', args];
   if (
     ['maintainability:amplification', 'maintainability:query'].includes(command)
   )
     return [
-      'framework/maintainability/semantic-amplification.mjs',
+      'developer/maintainability/semantic-amplification.mjs',
       command === 'maintainability:query' ? ['--query', ...args] : args,
     ];
   if (command === 'work-design:preflight')
     return [
-      'framework/work-design-preflight/tooling/work-design-preflight.mjs',
+      'framework/work/work-design-preflight/tooling/work-design-preflight.mjs',
       args,
     ];
   if (command === 'work-design:feedback')
     return [
-      'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
+      'framework/work/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
       ['feedback', ...args],
     ];
   return null;

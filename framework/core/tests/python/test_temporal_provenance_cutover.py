@@ -20,7 +20,7 @@ FACT_ONLY_QUALIFICATION = (
 BUILDCHAIN_FACTS = (
     ROOT / "docs/qualification/evidence/buildchain-compatibility-fact-projection.json"
 )
-ROLLBACK = ROOT / "framework/release/kungfu-temporal-release-rollback.contract.json"
+ROLLBACK = ROOT / "product/release/kungfu-temporal-release-rollback.contract.json"
 ADR = ROOT / "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md"
 
 
@@ -100,7 +100,7 @@ def test_cutover_evidence_is_rooted_and_preserved_as_source_qualification():
 
 def test_cutover_contract_has_no_hand_maintained_digest_path_map():
     contract = _json(
-        ROOT / "framework/release/kungfu-temporal-release-admission.contract.json"
+        ROOT / "product/release/kungfu-temporal-release-admission.contract.json"
     )
     policy = _json(ROOT / "docs/qualification/gates/release-admission-policy.json")
     assert "paths" not in contract
