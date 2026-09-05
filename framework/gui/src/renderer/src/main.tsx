@@ -92,7 +92,6 @@ import {
   type WindowChromeControl,
   createLabOnboardingRoutes,
   deferredAgentWorkStartup,
-  shouldBootRuntimeForInitialSurface,
   useAgentFirstEntry,
   useWindowChrome,
 } from './product-navigation';
@@ -1437,21 +1436,23 @@ function useAppFoundation() {
     window.process.env.KFE_INITIAL_SURFACE === 'projects';
   const initialFocusedProjectPath =
     window.process.env.KFE_FOCUSED_PROJECT_PATH || '';
-  const initialSurface = agentFirst.initialOpen
-    ? 'onboarding'
-    : initialProjectsOpen
-      ? 'projects'
-      : 'work';
-  const initialCoreWorkOpen = initialSurface === 'work';
+  const initialCoreWorkOpen = !initialProjectsOpen && !agentFirst.initialOpen;
   const [startup] = React.useState(() =>
     deferredAgentWorkStartup(
-      initialSurface,
+      agentFirst.initialOpen
+        ? 'onboarding'
+        : initialProjectsOpen
+          ? 'projects'
+          : 'work',
       window.process.env.KF_RUNTIME_DIR || '',
     ),
   );
   const startupSurface = capability.agentWorkLabStartupSurface(startup);
   const [runtime] = React.useState(() =>
-    shouldBootRuntimeForInitialSurface(initialSurface)
+    !initialProjectsOpen &&
+    !agentFirst.initialOpen &&
+    !initialCoreWorkOpen &&
+    startupSurface === 'work-graph'
       ? bootRuntime()
       : deferredRuntime(
           agentWorkLab,
@@ -2255,13 +2256,13 @@ function App() {
     onOpenLabExistingProject: () => setShellSurface('projects'),
     onLabComplete: labOnboarding.completeLab,
     onOpenStarterProject: labOnboarding.openStarterProject,
-    work: (
+    work: runtime.assignmentRuntime ? (
       <ProjectWorkControlView
         projects={projects}
         shell={shell}
         assignmentRuntime={runtime.assignmentRuntime}
       />
-    ),
+    ) : null,
   };
   const activeKfxProps: React.ComponentProps<typeof ActiveKfxSurface> | null =
     shellSurface === 'kfx'
