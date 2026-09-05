@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9379,
+  "generation": 9380,
   "fencingCounter": 898,
   "policy": {
     "agingSeconds": 900,
@@ -76180,11 +76180,20 @@
       "sourceWorkflowRunId": 33974988165,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-05T15:37:58.643Z",
-      "updatedAt": "2026-09-05T15:40:21.016Z",
+      "updatedAt": "2026-09-05T15:50:28.577Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "queued candidate PR #3710 is already merged; cancel stale Warrant queue entry without claiming Warrant delivery",
+        "evidenceRoot": "sha256:c9fc12fa99d5b3f8fce39f5c08a3c38dad0bea78ebe31ba333e447cc1efcf12b",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "a861decb9d94a376886486d9370d192a9e357f4b",
+        "observedSourceHead": "a861decb9d94a376886486d9370d192a9e357f4b",
+        "eventAction": "closed",
+        "closedAt": "2026-09-05T15:50:28.577Z"
+      },
       "affectedPaths": [
         ".github/workflows/dev-pr-auto-merge.yml",
         "scripts/affected-native-proof-bootstrap.test.mjs"
@@ -76489,6 +76498,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-05T15:45:33.432Z",
-  "stateRoot": "sha256:6ea96c2bcef6f4305ea9a3a7fd1eec2f47a9260b73b897f869503810ec0d0ec0"
+  "updatedAt": "2026-09-05T15:50:28.577Z",
+  "stateRoot": "sha256:4dcf31920fe893dbcfc2d7636303ab6f77b69a3bde326394d7f3610fdf5aabd9"
 }
