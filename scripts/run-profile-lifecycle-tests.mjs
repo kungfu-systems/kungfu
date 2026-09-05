@@ -201,6 +201,42 @@ try {
   fs.rmSync(nodeRuntime, { recursive: true, force: true });
 }
 
+function qualifyInstalledWheelWorkDesign(root, python, binary, run, fail) {
+  const runtimeEntry = run(
+    python,
+    [
+      '-c',
+      'from kungfu.cli.commands.work_design import _preflight_entry; print(_preflight_entry())',
+    ],
+    {
+      env: {
+        ...process.env,
+        PYTHONHOME: '',
+        PYTHONPATH: '',
+      },
+    },
+  ).trim();
+  let runtimeRoot = path.dirname(runtimeEntry);
+  while (
+    runtimeRoot !== path.dirname(runtimeRoot) &&
+    !fs.existsSync(path.join(runtimeRoot, 'work-design-runtime.json'))
+  )
+    runtimeRoot = path.dirname(runtimeRoot);
+  if (!fs.existsSync(path.join(runtimeRoot, 'work-design-runtime.json')))
+    fail(`installed Work Design manifest is unavailable above ${runtimeEntry}`);
+  return JSON.parse(
+    run(process.execPath, [
+      path.join(root, 'scripts', 'qualify-installed-work-design.mjs'),
+      '--binary',
+      binary,
+      '--runtime-root',
+      runtimeRoot,
+      '--surface',
+      'wheel',
+    ]),
+  );
+}
+
 function qualifyCommandContract() {
   const root = process.cwd();
   const wheelDir = path.join(
@@ -304,20 +340,12 @@ function qualifyCommandContract() {
     );
   }
 
-  const runtimeEntry = run(python, [
-    '-c',
-    'from kungfu.cli.commands.work_design import _preflight_entry; print(_preflight_entry())',
-  ]).trim();
-  const workDesignQualification = JSON.parse(
-    run(process.execPath, [
-      path.join(root, 'scripts', 'qualify-installed-work-design.mjs'),
-      '--binary',
-      binary,
-      '--runtime-root',
-      path.resolve(path.dirname(runtimeEntry), '..', '..', '..'),
-      '--surface',
-      'wheel',
-    ]),
+  const workDesignQualification = qualifyInstalledWheelWorkDesign(
+    root,
+    python,
+    binary,
+    run,
+    fail,
   );
 
   const home = path.join(environment, 'home');

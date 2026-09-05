@@ -11,6 +11,8 @@ import { fileURLToPath } from 'node:url';
 import { guiQualificationArgs } from './installer.mjs';
 import {
   findArtifact,
+  isolatedSurfaceProductEnvironment,
+  seedGlobalWorkQualification,
   surfaceQualificationTempPrefix,
   surfaceQualificationTempRoot,
 } from './run.mjs';
@@ -187,6 +189,88 @@ test('bounded GUI qualification avoids display-backed menus and embedded views',
     /if \(!qualificationMode\) \{\s*manager = new SandboxManager\(/,
   );
   assert.match(mainSource, /offscreen: qualificationMode/);
+  assert.match(mainSource, /KF_GUI_QUALIFICATION_ALL_WORK_READY/);
+  assert.match(mainSource, /KF_QUALIFICATION_EXPECTED_WORK_TITLE/);
+  assert.doesNotMatch(mainSource, /1 visible Work/);
+  assert.match(mainSource, /document\.body\.innerText/);
+});
+
+test('packaged GUI qualification enlarges the exact installed Work query', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-work-seed-'));
+  try {
+    const configHome = path.join(root, 'config');
+    const observedQuery = {
+      schema: 'kungfu.workspace-federation.query/v1',
+      observed_at: '2026-01-01T00:00:00Z',
+      aggregate: { state: 'ready' },
+      verification: { ok: true },
+      proof: { catalog_cut: 'catalog:exact' },
+      global_work: {
+        visible_work: [
+          {
+            canonical_root: 'sha256:exact-admitted-work',
+            object_kind: 'assignment',
+            display: { title: 'Verify installed Assignment admission' },
+          },
+        ],
+      },
+      components: [{ workspace_id: 'project:exact' }],
+    };
+    const statePath = seedGlobalWorkQualification(configHome, observedQuery, 2);
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    assert.equal(
+      state.query.global_work.visible_work[0].display.title,
+      'Verify installed Assignment admission',
+    );
+    assert.equal(state.query.components.length, 3);
+    assert.equal(state.catalog_cut, 'catalog:exact');
+    assert.equal(
+      path.relative(configHome, statePath),
+      path.join('gui', 'global-work-observer.json'),
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(configHome, 'config.json'), 'utf8'))
+        .ui.onboarding.status,
+      'completed',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('packaged GUI qualification admits real Work through the installed CLI', () => {
+  const source = fs.readFileSync(runner, 'utf8');
+  assert.match(source, /runInstalledKungfuAssignmentAdmissionSmoke\(\{/);
+  assert.match(source, /observedQuery\.global_work\?\.visible_work\?\.find/);
+  assert.match(source, /admittedWorkspace\.identity_root/);
+  assert.match(source, /path\.join\(admission\.workspace, '\.kungfu'\)/);
+  assert.match(source, /KF_CONFIG_HOME: guiConfigHome/);
+  assert.match(source, /HOME: guiUserHome/);
+  assert.match(source, /USERPROFILE: guiUserHome/);
+});
+
+test('packaged GUI qualification strips hostile development injection', () => {
+  const hostile = '/source/node_modules';
+  const isolated = isolatedSurfaceProductEnvironment({
+    PATH: '/usr/bin',
+    ELECTRON_RENDERER_URL: 'http://127.0.0.1:5173',
+    KFE_PATH: hostile,
+    Kf_Bundled_Extension_Root: hostile,
+    KUNGFU_DIR: hostile,
+    KUNGFU_GUI_DEV_SUPERVISOR: '1',
+    NODE_PATH: hostile,
+    NODE_OPTIONS: `--require=${hostile}`,
+    PYTHONPATH: hostile,
+  });
+  assert.equal(isolated.PATH, '/usr/bin');
+  assert.equal(isolated.ELECTRON_RENDERER_URL, undefined);
+  assert.equal(isolated.KFE_PATH, undefined);
+  assert.equal(isolated.Kf_Bundled_Extension_Root, undefined);
+  assert.equal(isolated.KUNGFU_DIR, undefined);
+  assert.equal(isolated.KUNGFU_GUI_DEV_SUPERVISOR, undefined);
+  assert.equal(isolated.NODE_PATH, '');
+  assert.equal(isolated.NODE_OPTIONS, '');
+  assert.equal(isolated.PYTHONPATH, '');
 });
 
 test('installed Windows tree traversal waits for packaged runtime children', () => {
