@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { digest } from './affected-native-proof.mjs';
-import { parseFamilyQueueLeaseMarker } from './project-cut-merge-queue-admission.mjs';
+import { parseFamilyQueueLeaseMarker } from './project-cut-family-queue-lease.mjs';
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u;
 const SHA = /^[0-9a-f]{40}$/u;
