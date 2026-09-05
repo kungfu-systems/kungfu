@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9417,
+  "generation": 9418,
   "fencingCounter": 901,
   "policy": {
     "agingSeconds": 900,
@@ -77203,11 +77203,20 @@
       "sourceWorkflowRunId": 33968253897,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-05T17:09:04.010Z",
-      "updatedAt": "2026-09-05T17:09:04.010Z",
+      "updatedAt": "2026-09-05T18:49:39.261Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "dequeued",
+      "terminal": {
+        "outcome": "dequeued",
+        "reason": "Temporarily dequeue this non-active candidate to resolve the caller-repair priority inversion; preserve the open PR for patrol re-admission after PR 3713 lands.",
+        "evidenceRoot": "sha256:b46a1f2f259fb29b4e2d23556e5b685ebfd4c3b3a4905aba0c883efdf716c5ea",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "8317a82508f0c92d02ad83cf6de38f95487f15d8",
+        "observedSourceHead": "8317a82508f0c92d02ad83cf6de38f95487f15d8",
+        "eventAction": "dequeued",
+        "closedAt": "2026-09-05T18:49:39.261Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/agent-work-state-contract.json",
         ".buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json",
@@ -77452,6 +77461,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-05T18:48:38.283Z",
-  "stateRoot": "sha256:38b5cd7e19cf71d024d2a8f7471a3bab6771c9657938bed658e1ddc49e2ae9ab"
+  "updatedAt": "2026-09-05T18:49:39.261Z",
+  "stateRoot": "sha256:f6ca564311604088407bb16feec3c414303816e5ae604984138b7ed0e6060e2c"
 }
