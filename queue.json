@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9403,
+  "generation": 9404,
   "fencingCounter": 900,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:c5991f18b7bcff7093afc84e80b7fe0e4d096b21109eaf90dca835f95f2953a8",
@@ -70,8 +70,13 @@
     "issuedAt": "2026-09-05T17:09:10.500Z",
     "expiresAt": "2026-09-05T21:42:30.228Z",
     "fencingToken": "sha256:bd3ea89366b143274e46c719484ac526b13153d1111c7cf47c750761064782a9",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-05T17:42:30.228Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-05T17:42:30.228Z",
+    "nativeProofRoot": "sha256:2f5fbecd7e6f9f061ee8d5935c7b2d6e472bad484ef75c087e91974dbcfb1f5f",
+    "nativeExecutionReceiptRoot": "sha256:0a28af112e399677fc13bc81e5f41caba85ac3efe1b6ddb25e7a42edf14c980d",
+    "nativeProofReuseRoot": "sha256:d6d1951c824678e59bd03e34d21d1c3c71c700f7b2e15ce62b5377b70552f430",
+    "qualificationReceiptRoot": "sha256:8fbe4b4cbbb5ffbcbb543e37b545e7913e0b7052c119262a8fd3ffe8c16d745c",
+    "qualifiedAt": "2026-09-05T17:42:59.302Z"
   },
   "candidates": [
     {
@@ -76782,10 +76787,10 @@
       "sourceWorkflowRunId": 33958157887,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-05T15:45:33.432Z",
-      "updatedAt": "2026-09-05T17:42:30.228Z",
+      "updatedAt": "2026-09-05T17:42:59.302Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "extensions/work-dashboard/src/view/index.tsx",
@@ -77143,6 +77148,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-05T17:42:30.228Z",
-  "stateRoot": "sha256:0006c05d402f4d24f008ae8e7f2a8ae673b763cc67400389a1f73989f5b5754b"
+  "updatedAt": "2026-09-05T17:42:59.302Z",
+  "stateRoot": "sha256:5f91f3ffc33a5e78b6588694ab6a4b2d0a312ac18568fb4ba09adb786bcbd93f"
 }
