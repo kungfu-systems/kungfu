@@ -64,6 +64,6 @@ test('protected Project Cut replay materializes its declared Work dependency clo
   );
   assert.match(
     workflow,
-    /name: Check out protected consumer adapter[\s\S]*name: Install protected Work consumer dependencies[\s\S]*corepack pnpm install --filter '@kungfu-tech\/work\.\.\.' --frozen-lockfile --ignore-scripts[\s\S]*name: Produce exact Project Cut replay proof/u,
+    /name: Check out protected consumer adapter[\s\S]*name: Install protected Work consumer dependencies[\s\S]*corepack pnpm install --filter '@kungfu-tech\/work\.\.\.' --prod --frozen-lockfile --ignore-scripts[\s\S]*name: Produce exact Project Cut replay proof/u,
   );
 });
