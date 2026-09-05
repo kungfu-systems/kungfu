@@ -908,7 +908,7 @@ function GlobalWorkView({
 }: {
   shell: Shell;
   projects: Projects;
-  assignmentRuntime: AssignmentRuntime;
+  assignmentRuntime: AssignmentRuntime | null;
 }) {
   const host = window as unknown as NodeHost;
   const projectMemoryKey =
@@ -949,7 +949,9 @@ function GlobalWorkView({
   const [status, setStatus] = React.useState('Connecting All Work…');
   const [error, setError] = React.useState('');
   const [assignmentRuntimeStatus, setAssignmentRuntimeStatus] = React.useState(
-    'Work Runtime connecting…',
+    assignmentRuntime
+      ? 'Work Runtime connecting…'
+      : 'Work Runtime unavailable · observer-only',
   );
   const [projectsCatalog, setProjectsCatalog] =
     React.useState<ProjectsCatalog>();
@@ -997,14 +999,16 @@ function GlobalWorkView({
     [host],
   );
 
-  React.useEffect(
-    () =>
-      observeAssignmentRuntimeStatus(
-        assignmentRuntime,
-        setAssignmentRuntimeStatus,
-      ),
-    [assignmentRuntime],
-  );
+  React.useEffect(() => {
+    if (!assignmentRuntime) {
+      setAssignmentRuntimeStatus('Work Runtime unavailable · observer-only');
+      return undefined;
+    }
+    return observeAssignmentRuntimeStatus(
+      assignmentRuntime,
+      setAssignmentRuntimeStatus,
+    );
+  }, [assignmentRuntime]);
   React.useEffect(() => {
     const requestedWorkId = shell.params.workId?.trim();
     if (!requestedWorkId) return;
@@ -2398,7 +2402,7 @@ export function ProjectWorkControlView({
 }: {
   projects: Projects;
   shell: Shell;
-  assignmentRuntime: AssignmentRuntime;
+  assignmentRuntime: AssignmentRuntime | null;
 }) {
   return (
     <GlobalWorkView
