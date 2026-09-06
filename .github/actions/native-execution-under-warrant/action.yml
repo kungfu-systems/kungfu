@@ -35,6 +35,11 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install declared proof bootstrap workspace packages
+      shell: bash
+      run: |
+        # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+        node scripts/install-proof-bootstrap-packages.mjs
     - name: Check out protected Buildchain Warrant runtime
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:

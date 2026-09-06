@@ -11,6 +11,7 @@ import {
   PROOF_BOOTSTRAP_PACKAGES,
   installProofBootstrapPackages,
 } from './install-proof-bootstrap-packages.mjs';
+import { parseDocument } from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -18,6 +19,12 @@ const sourceOnlyModules = [
   'scripts/affected-native-proof.mjs',
   'scripts/dev-delivery-warrant-input.mjs',
   'scripts/project-cut-family-queue-lease.mjs',
+  'scripts/run-core-affected-native.mjs',
+  'scripts/affected-native-self-test-support.mjs',
+  'scripts/candidate-timeline-events.cjs',
+  'scripts/readonly-source-toolchain.mjs',
+  'scripts/shifu-gate-evidence.mjs',
+  'developer/dev-delivery/native-execution-under-warrant.mjs',
   'product/release/affected-native-artifact-lookup.mjs',
   'product/release/affected-native-proof-cli.mjs',
   'framework/spec/format/project-cut-canonical-json.mjs',
@@ -57,7 +64,7 @@ test('cold proof bootstrap uses normal package exports and rejects private impor
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.copyFileSync(path.join(ROOT, relative), destination);
   }
-  const probe = `import assert from 'node:assert/strict'; import {digest} from './scripts/affected-native-proof.mjs'; import './scripts/dev-delivery-warrant-input.mjs'; assert.equal(typeof digest, 'function'); await assert.rejects(import('@kungfu-tech/spec/format/project-cut-canonical-json.mjs'), {code:'ERR_PACKAGE_PATH_NOT_EXPORTED'});`;
+  const probe = `import assert from 'node:assert/strict'; import {digest} from './scripts/affected-native-proof.mjs'; import './scripts/dev-delivery-warrant-input.mjs'; import {planFromChanged} from './scripts/run-core-affected-native.mjs'; import {runNativeExecutionUnderWarrant} from './developer/dev-delivery/native-execution-under-warrant.mjs'; assert.equal(typeof digest, 'function'); assert.equal(typeof planFromChanged, 'function'); assert.equal(typeof runNativeExecutionUnderWarrant, 'function'); await assert.rejects(import('@kungfu-tech/spec/format/project-cut-canonical-json.mjs'), {code:'ERR_PACKAGE_PATH_NOT_EXPORTED'});`;
   const run = () =>
     spawnSync(process.execPath, ['--input-type=module', '--eval', probe], {
       cwd: root,
@@ -86,6 +93,55 @@ test('cold proof bootstrap uses normal package exports and rejects private impor
     () => installProofBootstrapPackages(root),
     /declared workspace dependency/,
   );
+});
+
+test('cold native planning and fenced execution install declared packages before loading consumers', () => {
+  const workflowDocument = parseDocument(
+    fs.readFileSync(
+      path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+      'utf8',
+    ),
+  );
+  const actionDocument = parseDocument(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        '.github/actions/native-execution-under-warrant/action.yml',
+      ),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(workflowDocument.errors, []);
+  assert.deepEqual(actionDocument.errors, []);
+  const workflow = workflowDocument.toJS();
+  const action = actionDocument.toJS();
+  for (const [label, steps, consumer] of [
+    [
+      'native planning',
+      workflow.jobs.affected_native_shards.steps,
+      'node scripts/run-core-affected-native.mjs',
+    ],
+    [
+      'fenced execution',
+      action.runs.steps,
+      'node developer/dev-delivery/native-execution-under-warrant.mjs',
+    ],
+  ]) {
+    const installation = steps.findIndex((step) =>
+      step.run?.includes('node scripts/install-proof-bootstrap-packages.mjs'),
+    );
+    const evaluation = steps.findIndex((step) => step.run?.includes(consumer));
+    assert.ok(evaluation >= 0, `${label}: consumer must remain covered`);
+    assert.ok(
+      installation >= 0 && installation < evaluation,
+      `${label}: install declared dependencies before module evaluation`,
+    );
+    assert.equal(
+      steps[installation].if,
+      undefined,
+      `${label}: bootstrap must run for every admitted cold checkout`,
+    );
+  }
 });
 
 test('protected Project Cut replay materializes its declared Work dependency closure', () => {
