@@ -28,10 +28,10 @@ const technicalSpec = fs.readFileSync(
   'utf8',
 );
 
-test('one exact Buildchain workflow owns every declared demo', () => {
+test('one governed Buildchain v4 workflow owns every declared demo', () => {
   assert.match(
     demo.uses,
-    /^kungfu-systems\/buildchain\/\.github\/workflows\/\.declarative-auditable-demo\.yml@[0-9a-f]{40}$/u,
+    /^kungfu-systems\/buildchain\/\.github\/workflows\/public-build-demo\.yml@v4-alpha$/u,
   );
   assert.deepEqual(
     scenario.demos.map(({ id, steps }) => ({ id, argv: steps[0].argv })),
@@ -219,12 +219,9 @@ test('the build fails the real transported binary before either upload path', ()
   assert.equal(workflow.on.workflow_dispatch.inputs.mode.default, 'full');
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
+    'kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha',
   );
-  assert.equal(
-    build.with['buildchain-ref'],
-    '41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
-  );
+  assert.equal(build.with['buildchain-ref'], 'v4-alpha');
   assert.deepEqual(build.permissions, {
     actions: 'read',
     contents: 'read',
@@ -233,7 +230,7 @@ test('the build fails the real transported binary before either upload path', ()
   });
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
+    'kungfu-systems/buildchain/.github/workflows/public-build-demo.yml@v4-alpha',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
@@ -285,7 +282,7 @@ test('manual media publication runs only the Linux x64 product path', () => {
     "${{ always() && needs.build.result == 'success' && needs.resolve-binary.result == 'success' }}",
   );
   assert.equal(
-    releaseBuild.on.workflow_dispatch.inputs['render-auditable-demo'],
+    releaseBuild.on.workflow_dispatch?.inputs?.['render-auditable-demo'],
     undefined,
   );
   assert.equal(releaseBuild.jobs['resolve-auditable-demo-source'], undefined);

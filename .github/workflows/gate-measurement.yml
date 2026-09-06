@@ -29,7 +29,7 @@ permissions:
 jobs:
   measure:
     if: ${{ inputs.focused-gates == '' && !inputs.python-kfx-asyncio-performance }}
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812 # v3.0.0
+    uses: kungfu-systems/buildchain/.github/workflows/.build-gate-profile.yml@v4-alpha
     with:
       source-ref: ${{ inputs.source-ref || github.sha }}
       gate-profile: measurement

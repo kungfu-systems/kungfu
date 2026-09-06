@@ -4,7 +4,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,13 +15,10 @@ const KFD_ROOT = path.dirname(
   fileURLToPath(import.meta.resolve('@kungfu-tech/kfd/package.json')),
 );
 const KFD_BIN = path.join(KFD_ROOT, 'bin', 'kfd.mjs');
-const STABLE_BUILDCHAIN_PACKAGE = fileURLToPath(
-  import.meta.resolve('@kungfu-tech/buildchain-stable/package.json'),
-);
+// The current Xinfa compiler retains its qualified schema cut independently
+// of Buildchain upgrades and the newer KFD-bundled fixture below.
 const NATIVE_KFD_ROOT = path.dirname(
-  createRequire(STABLE_BUILDCHAIN_PACKAGE).resolve(
-    '@kungfu-tech/kfd/package.json',
-  ),
+  fileURLToPath(import.meta.resolve('@kungfu-tech/kfd-xinfa/package.json')),
 );
 const NATIVE_KFD_BIN = path.join(NATIVE_KFD_ROOT, 'bin', 'kfd.mjs');
 const KFD_ATLAS_FIXTURE = path.join(

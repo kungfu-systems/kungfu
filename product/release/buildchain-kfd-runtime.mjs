@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import {
   ADOPTER_DELIVERY_GATE_REQUEST_CONTRACT,
@@ -515,12 +516,22 @@ export const BUILDCHAIN_KFD2_REGISTRY_PATH =
 export const BUILDCHAIN_KFD3_DIR = '.buildchain/kfd/kfd-3';
 export const KFD3_DEFAULT_REGISTRY_PATH = '.buildchain/kfd/kfd-3/surfaces.json';
 
+async function loadBuildchainKfdToolchain() {
+  const buildchainRequire = createRequire(
+    import.meta.resolve('@kungfu-tech/buildchain-alpha/package.json'),
+  );
+  const toolchain = buildchainRequire.resolve(
+    '@kungfu-tech/kfd/adopter-conformance/toolchain',
+  );
+  return import(pathToFileURL(toolchain).href);
+}
+
 async function loadKfdAdopterRuntime() {
   const [adopterManifest, artifactVerification, adopterToolchain] =
     await Promise.all([
       import('@kungfu-tech/buildchain-alpha/kfd-adopter-manifest'),
       import('@kungfu-tech/buildchain-alpha/artifact-verification-envelope'),
-      import('@kungfu-tech/kfd/adopter-conformance/toolchain'),
+      loadBuildchainKfdToolchain(),
     ]);
   return { ...adopterManifest, ...artifactVerification, ...adopterToolchain };
 }
@@ -736,7 +747,7 @@ export function checkColdBuildchainKfd(root) {
   const lockPath = path.join(root, '.buildchain/alpha-contract-lock.json');
   const lock = readJson(lockPath);
   if (
-    lock?.buildchain?.ref !== 'v3-alpha' ||
+    lock?.buildchain?.ref !== 'v4-alpha' ||
     !/^[0-9a-f]{40}$/.test(lock?.buildchain?.resolvedSha || '') ||
     !/^sha256:[0-9a-f]{64}$/.test(lock?.buildchain?.contractDigest || '')
   )

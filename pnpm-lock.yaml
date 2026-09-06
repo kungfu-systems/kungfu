@@ -45,17 +45,20 @@ importers:
         specifier: 1.9.4
         version: 1.9.4
       '@kungfu-tech/buildchain':
-        specifier: 3.0.9-alpha.17
-        version: 3.0.9-alpha.17
+        specifier: 4.0.2-alpha.39
+        version: 4.0.2-alpha.39
       '@kungfu-tech/buildchain-alpha':
-        specifier: npm:@kungfu-tech/buildchain@3.0.9-alpha.17
-        version: '@kungfu-tech/buildchain@3.0.9-alpha.17'
+        specifier: npm:@kungfu-tech/buildchain@4.0.2-alpha.39
+        version: '@kungfu-tech/buildchain@4.0.2-alpha.39'
       '@kungfu-tech/buildchain-stable':
-        specifier: npm:@kungfu-tech/buildchain@3.0.7
-        version: '@kungfu-tech/buildchain@3.0.7'
+        specifier: npm:@kungfu-tech/buildchain@4.0.2-alpha.0
+        version: '@kungfu-tech/buildchain@4.0.2-alpha.0'
       '@kungfu-tech/kfd':
         specifier: 1.0.0-alpha.65
         version: 1.0.0-alpha.65
+      '@kungfu-tech/kfd-xinfa':
+        specifier: npm:@kungfu-tech/kfd@1.0.0-alpha.53
+        version: '@kungfu-tech/kfd@1.0.0-alpha.53'
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -93,8 +96,8 @@ importers:
   developer/sdk:
     dependencies:
       '@kungfu-tech/buildchain':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 4.0.2-alpha.39
+        version: 4.0.2-alpha.39
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../../framework/core
@@ -776,8 +779,8 @@ importers:
         version: link:../framework/tui
     devDependencies:
       '@kungfu-tech/buildchain':
-        specifier: 3.0.9-alpha.17
-        version: 3.0.9-alpha.17
+        specifier: 4.0.2-alpha.39
+        version: 4.0.2-alpha.39
 
 packages:
 
@@ -1494,28 +1497,19 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@kungfu-tech/buildchain@3.0.0':
-    resolution: {integrity: sha512-M6zDPk3Ri/P+CwVKesORVqr18K9yaofhL0n5utY2F1oaG2OR8HOo0xTdzb3VzcLtdDJoN3QnK/11Ttpd5g8CWQ==}
-    engines: {node: '>=22.14.0'}
-    hasBin: true
-
-  '@kungfu-tech/buildchain@3.0.7':
-    resolution: {integrity: sha512-e3Dl4/x0mcGOJCQq1HRMc8rk0b+CNd/QUP9R0d2PQg/eHZgYFdoov0FwgVxEDkALnpQrUYvTLyo1EbG5SkNKkg==}
-    engines: {node: '>=22.14.0'}
-    hasBin: true
-
   '@kungfu-tech/buildchain@3.0.9-alpha.11':
     resolution: {integrity: sha512-4ZVP7dN9agJw2APN3CEjjstJcwPoOB9vLo4uDQxQmDfhAJwPlKHvDW31LcBICJgR+OfwVRtXNZsp1pvuHYzkiA==}
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/buildchain@3.0.9-alpha.17':
-    resolution: {integrity: sha512-bHw9rUBjgjXlEfhQSrG3ph9kxemXkAJnE4VDwKzvkJ5/ChZlIOTCc3uCxpmdsigLjpipS9e9S/OZ+oVs/hW5fQ==}
+  '@kungfu-tech/buildchain@4.0.2-alpha.0':
+    resolution: {integrity: sha512-WXUlsFtYdsUlg6VnEDFZeYEgR1P0eI+y487Ncy3K5dLGuF2MBq7qU5Ld7odCX8NyNssU2mdOxQc4ZXZzewfNEA==}
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.41':
-    resolution: {integrity: sha512-e+iIuvsijDLSFotb3gPKqwn649lLGRX3xEWOwn7xfBeu8L8kvw5RPRznJ4xKVM+NYCrfYCRVmUzpJI58k97C+Q==}
+  '@kungfu-tech/buildchain@4.0.2-alpha.39':
+    resolution: {integrity: sha512-SORiUKpeYTelu5uQAXE7OLiewCHniDSbf4DhXjJkBN9A4Qv32jGggK6hofcqqBhFZXLiIqwlbobRoLLF9v0ECA==}
+    engines: {node: '>=22.14.0'}
     hasBin: true
 
   '@kungfu-tech/kfd@1.0.0-alpha.53':
@@ -5872,30 +5866,21 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kungfu-tech/buildchain@3.0.0':
-    dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.41
-      smol-toml: 1.7.0
-
-  '@kungfu-tech/buildchain@3.0.7':
-    dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.53
-      ajv: 8.20.0
-      smol-toml: 1.7.0
-
   '@kungfu-tech/buildchain@3.0.9-alpha.11':
     dependencies:
       '@kungfu-tech/kfd': 1.0.0-alpha.62
       ajv: 8.20.0
       smol-toml: 1.7.0
 
-  '@kungfu-tech/buildchain@3.0.9-alpha.17':
+  '@kungfu-tech/buildchain@4.0.2-alpha.0':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.65
-      ajv: 8.20.0
+      '@kungfu-tech/kfd': 1.0.0-alpha.62
       smol-toml: 1.7.0
 
-  '@kungfu-tech/kfd@1.0.0-alpha.41': {}
+  '@kungfu-tech/buildchain@4.0.2-alpha.39':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.62
+      smol-toml: 1.7.0
 
   '@kungfu-tech/kfd@1.0.0-alpha.53': {}
 
