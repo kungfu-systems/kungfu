@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "79fdd7981b6b7cd8756a66477dd9af4789c7ad22",
+    "sourceSha": "e0ec61b28bb9e0bf36a9c1aeef2daa788a1d1a4d",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:d435b187f3964bc1b005d1e2fe1c88b6d6ba06d608e41147070471274107bcc8"
+    "registryDigest": "sha256:e9f7e243048e3c34ad89ede3117f39fa9a279e4004fee771d4ea9311c9f23a8d"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "39e17c164d9fc4bba02de1a91f906588c9b1b48938e327b276a20c804b96ab9a",
-    "digest": "sha256:d435b187f3964bc1b005d1e2fe1c88b6d6ba06d608e41147070471274107bcc8"
+    "sha256": "7ae1d41afc1af5ae696956d29b18332151c0226321c1027453f1502e7b803c34",
+    "digest": "sha256:e9f7e243048e3c34ad89ede3117f39fa9a279e4004fee771d4ea9311c9f23a8d"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -27,9 +27,9 @@
     "packageVersions": {
       "kfd": "1.0.0-alpha.65",
       "libnode": "22.22.3-kf.5-alpha.3",
-      "buildchain": "3.0.0"
+      "buildchain": "4.0.2-alpha.39"
     },
-    "digest": "sha256:963c9b96bbbbcef5991e1802341ebd24e938af71f06f11e8c97ae861f348645e"
+    "digest": "sha256:80d086f71e9800a337c33758ed4755b7d628642813680c74fe64af58526c5874"
   },
   "expectedArtifactVerification": {
     "witnessJsons": [
@@ -41,7 +41,7 @@
     "generationPhase": "build-before-verify",
     "releasePhase": "consume-sealed-evidence-only"
   },
-  "collaborationInterfaceDigest": "sha256:54886800ecb39300fcd8f4e3b4f33f93a12bdd8f442479fa4121afd97a8115b6",
+  "collaborationInterfaceDigest": "sha256:bdd26a9c98474535afd2c35cdfe2cd6ee6bf5aeed771e4d2bb322e9a00b225ef",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -62,9 +62,9 @@
       "packageVersions": {
         "kfd": "1.0.0-alpha.65",
         "libnode": "22.22.3-kf.5-alpha.3",
-        "buildchain": "3.0.0"
+        "buildchain": "4.0.2-alpha.39"
       },
-      "digest": "sha256:963c9b96bbbbcef5991e1802341ebd24e938af71f06f11e8c97ae861f348645e"
+      "digest": "sha256:80d086f71e9800a337c33758ed4755b7d628642813680c74fe64af58526c5874"
     },
     "surfaces": [
       {

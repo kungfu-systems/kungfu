@@ -500,7 +500,7 @@ test('Build delegates cache policy while retaining the Windows compiler-cache in
   assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 0);
   assert.match(
     buildWorkflow,
-    /uses:\s+kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@/u,
+    /uses:\s+kungfu-systems\/buildchain\/\.github\/workflows\/\.build-engine\.yml@v4-alpha/u,
   );
 
   const sccacheProfilePath = path.join(

@@ -19,9 +19,10 @@ concurrency:
 jobs:
   qualify:
     name: Exact-source Linux core qualification after Buildchain trust gate
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499
+    uses: kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha
     with:
-      buildchain-ref: 376fb92fa014102366111b9aaef4856486c1e499
+      buildchain-visible-workflow: .github/workflows/.build-engine.yml
+      buildchain-ref: v4-alpha
       runner-preset: aws-us-codebuild-linux
       aws-codebuild-project: kungfu-buildchain-linux-burst-poc
       setup-rust: true
@@ -49,6 +50,6 @@ jobs:
       checkout-cache-github-timeout-seconds: 1200
       publish-channel: none
       release-candidate: false
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: allow-additive
       buildchain-contract-drift-issue-mode: off

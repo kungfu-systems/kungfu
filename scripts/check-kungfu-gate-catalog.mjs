@@ -147,6 +147,20 @@ function validateMeasurementDocument(document, issues) {
   return baseline;
 }
 
+// Historical cost samples retain the adapter used by their exact source receipt.
+// They do not qualify the current controller's behavior or performance.
+function controllerMeasurementAdapterMatches(binding, receipt, observation) {
+  if (gateDigest(binding.adapter) === receipt.binding?.adapterDigest)
+    return true;
+  if (!Array.isArray(binding.measurementHistory)) return false;
+  return binding.measurementHistory.some(
+    (entry) =>
+      entry.sourceSha === receipt.source?.sha &&
+      entry.receipt === observation.receipt &&
+      gateDigest(entry.adapter) === receipt.binding?.adapterDigest,
+  );
+}
+
 function validateControllerMeasurementReceipt(context) {
   const {
     receipt,
@@ -225,7 +239,7 @@ function validateControllerMeasurementReceipt(context) {
     !binding.gates?.includes(record.gateId) ||
     binding.workflow !== receipt.binding?.workflow ||
     binding.job !== receipt.binding?.job ||
-    gateDigest(binding.adapter) !== receipt.binding?.adapterDigest
+    !controllerMeasurementAdapterMatches(binding, receipt, observation)
   )
     issues.push(
       `[measurement] ${record.gateId}:${observation.platform}: controller binding identity is stale`,

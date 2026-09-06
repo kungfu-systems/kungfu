@@ -60,12 +60,13 @@ jobs:
   artifact:
     name: Qualify Hub CLI artifact on native Linux ARM64
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457 # v3.0.2-alpha.1 with cross-attempt artifact recovery
+    uses: kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
+      buildchain-visible-workflow: .github/workflows/.build-engine.yml
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
       runner-preset: custom
       platforms-json: >-
@@ -111,6 +112,6 @@ jobs:
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking

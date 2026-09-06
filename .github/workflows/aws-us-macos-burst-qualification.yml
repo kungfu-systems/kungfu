@@ -48,11 +48,12 @@ jobs:
           (inputs.mode == 'full' && inputs.qualification-id == 'mac-full-01')
         )
       }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105
+    uses: kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha
     with:
-      buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105
+      buildchain-visible-workflow: .github/workflows/.build-engine.yml
+      buildchain-ref: v4-alpha
       buildchain-contract-expected-channel: alpha
-      buildchain-contract-expected-major: v3
+      buildchain-contract-expected-major: v4
       runner-preset: aws-us-ec2-macos-jit
       aws-ec2-macos-runner-label: ${{ inputs.runner-label }}
       setup-rust: true
@@ -76,6 +77,6 @@ jobs:
       shifu-cache-profile-digest: ${{ inputs.mode == 'full' && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || '' }}
       publish-channel: none
       release-candidate: false
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: allow-additive
       buildchain-contract-drift-issue-mode: off

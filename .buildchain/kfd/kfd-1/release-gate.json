@@ -90,7 +90,7 @@
     },
     "package": {
       "name": "@kungfu-tech/kfd",
-      "version": "1.0.0-alpha.65",
+      "version": "1.0.0-alpha.62",
       "repository": "git+https://github.com/kungfu-systems/kfd.git"
     }
   },
@@ -106,7 +106,7 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "1772183124de5317c8e239d25b1d8a10fb7e74eb1c2a713c302dd71fe39e6fb1",
+      "preBuildWitnessSha256": "b9e09b66e9348dd30867524d0feda9a8ae037714ae89a61f78b5a91fefed0cca",
       "sourceHashes": {
         "sha256": "14820c6563f39f28bd00f04f1376403741672e65cba2b81397ed9866f321286e",
         "surfaceCount": 23
@@ -152,7 +152,7 @@
         "sourceVerificationRequired": true,
         "canonicalPolicy": {
           "path": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
-          "sha256": "d632c1ecd9ebef80248316e17a5c2430ac594e06e99eee385c0bc4b9c18d3c74"
+          "sha256": "b9b0b1f0305307ac0870bc18c2f02ba870ca6cb68284d1e03f5968cf64df2847"
         },
         "registry": {
           "path": "framework/spec/contract/kungfu-contracts.registry.json",
@@ -347,7 +347,7 @@
         "metadata": {
           "kfdPackage": {
             "name": "@kungfu-tech/kfd",
-            "version": "1.0.0-alpha.65",
+            "version": "1.0.0-alpha.62",
             "repository": "git+https://github.com/kungfu-systems/kfd.git"
           },
           "schemaIds": {

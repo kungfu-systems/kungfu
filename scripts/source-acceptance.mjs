@@ -940,6 +940,7 @@ export function sourceAcceptancePlan(
               'scripts/shifu-documentation-consumers.test.mjs',
               'scripts/kungfu-xinfa-consumer.test.mjs',
               'scripts/check-kungfu-gate-catalog.test.mjs',
+              'scripts/gate-measurement-history.test.mjs',
               'scripts/affected-native-proof.test.mjs',
               'scripts/affected-native-proof-bootstrap.test.mjs',
               'scripts/affected-native-semantic-source.test.mjs',
