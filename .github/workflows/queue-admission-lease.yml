@@ -34,6 +34,11 @@ jobs:
         run: |
           # shifu-entry-contract: allow exact pinned Buildchain dependency bootstrap before its CLI is runnable
           corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install declared proof bootstrap workspace packages
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+          node scripts/install-proof-bootstrap-packages.mjs
       - name: Consume the exact Buildchain Warrant lease
         shell: bash
         env:

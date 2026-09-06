@@ -8,7 +8,7 @@ import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { createPowerCutPlan } from '../framework/core/tests/qualification/durability/powercut_plan.mjs';
+import { createPowerCutPlan } from '@kungfu-tech/core/testing/qualification/durability/powercut_plan';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIRMATION = 'disposable-powercut-v1';

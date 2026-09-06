@@ -155,7 +155,7 @@ if (pythonResult.error || pythonResult.status !== 0) {
 console.log('[durability-contract-test] checking Node typed surface');
 process.env.KUNGFU_DIR = bindingDir;
 const require = createRequire(import.meta.url);
-const kungfu = require('../framework/core/lib/kungfu.js')();
+const kungfu = require('@kungfu-tech/core/kungfu')();
 const receipt = kungfu.durabilityVisibleReceiptTyped({
   request_id: 9007199254740993n,
   stream_id: 9007199254740995n,

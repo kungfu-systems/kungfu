@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { qualificationAuthority } from '../../tests/fixtures/_kfx-authority.mjs';
+import { qualificationAuthority } from '@kungfu-tech/workspaces/testing/fixtures/_kfx-authority';
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

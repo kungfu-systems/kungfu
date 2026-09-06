@@ -17,7 +17,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "ensure-electron": "node scripts/ensure-electron.mjs",
-    "dev": "pnpm run ensure-electron && node ../../product/scripts/product.mjs gui supervise-dev",
+    "dev": "pnpm run ensure-electron && pnpm --filter @kungfu-tech/product-kungfu run product gui supervise-dev",
     "build": "electron-vite build",
     "audit:bundle": "node scripts/bundle-core-audit.cjs",
     "start": "pnpm run ensure-electron && electron-vite preview",
@@ -38,6 +38,11 @@
   "devDependencies": {
     "@electron/osx-sign": "^1.3.3",
     "@kungfu-tech/core": "workspace:*",
+    "@kungfu-tech/kfx-agent-work-lab-experience": "workspace:*",
+    "@kungfu-tech/kfx-view-kfx-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-work-dashboard": "workspace:*",
+    "@kungfu-tech/product-kungfu": "workspace:*",
+    "@kungfu-tech/tui": "workspace:*",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
@@ -48,5 +53,16 @@
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "vite": "^6.4.3"
+  },
+  "exports": {
+    ".": "./out/main/index.js",
+    "./main/product-identity": "./src/main/product-identity.ts",
+    "./main/sandbox-host": "./src/main/sandbox-host.ts",
+    "./main/session-windows": "./src/main/session-windows.ts",
+    "./package.json": "./package.json",
+    "./resources/cli/kungfu": "./resources/cli/kungfu",
+    "./tooling/before-pack": "./scripts/before-pack.cjs",
+    "./tooling/gen-system-profile-kfd3": "./scripts/gen-system-profile-kfd3.mjs",
+    "./tooling/run-electron-builder": "./scripts/run-electron-builder.mjs"
   }
 }

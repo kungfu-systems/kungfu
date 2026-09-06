@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
-import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(
-  ROOT,
-  'framework',
-  'work',
-  'project-cut',
-  'bin',
-  'project-cut.mjs',
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
 );
 const [task, ...args] = process.argv.slice(2);
 

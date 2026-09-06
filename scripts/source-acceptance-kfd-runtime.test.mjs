@@ -5,7 +5,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { resolveGitBoundKfdEvidenceSourceSha } from '../product/release/buildchain-kfd-runtime.mjs';
+import { resolveGitBoundKfdEvidenceSourceSha } from '@kungfu-tech/product-kungfu/release/buildchain-kfd-runtime';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

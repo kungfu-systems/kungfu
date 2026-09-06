@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/check-agent-work-state-contract.test.mjs",
-        "sha256": "ef45e3390b7522fcf606a22ac8e89b67e1ce3754511322131218568c1c54420e"
+        "sha256": "7efab4f8f942d2df12326517f2e2c826d88f100af2d1b3e983df7337a024b31b"
       },
       "description": "Source, package, KFD-2, KFD-3, and continuity evidence-boundary checks."
     },
@@ -67,7 +67,7 @@
       },
       {
         "path": "scripts/check-agent-work-state-contract.test.mjs",
-        "sha256": "ef45e3390b7522fcf606a22ac8e89b67e1ce3754511322131218568c1c54420e"
+        "sha256": "7efab4f8f942d2df12326517f2e2c826d88f100af2d1b3e983df7337a024b31b"
       },
       {
         "path": "framework/work/agent-work/fixtures/continuity-evidence-cases.json",

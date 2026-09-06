@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { readElectronBuilderProjection } from '../../developer/maintainability/semantic-amplification.mjs';
+import { readElectronBuilderProjection } from '@kungfu-tech/workspaces/developer/maintainability/semantic-amplification';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {
@@ -47,13 +47,13 @@ import {
 import { buildCliUpgradeManifest } from './upgrade-manifest.mjs';
 
 const require = createRequire(import.meta.url);
-const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');
-const sdkPackage = require('../../developer/sdk/package.json');
-const agentHubKfdLock = require('../../tests/qualification/agent-hub-20/kfd-lock.json');
+const workDashboardPackage = require('@kungfu-tech/kfx-view-work-dashboard/kungfu.kfx.json');
+const sdkPackage = require('@kungfu-tech/sdk/package.json');
+const agentHubKfdLock = require('@kungfu-tech/workspaces/testing/agent-hub-kfd-lock');
 const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
-} = require('../../framework/gui/scripts/before-pack.cjs');
+} = require('@kungfu-tech/gui/tooling/before-pack');
 
 test('reference-only KFX suites stay outside product assembly', () => {
   const packageNames = listKfxPackages().map((pkg) => pkg.name);
@@ -889,8 +889,7 @@ test('product observability ignores errors from sibling components', () => {
 
 test('electron before-pack uses a file URL only on Windows', () => {
   const entryPath = new URL(
-    '../../framework/gui/scripts/gen-system-profile-kfd3.mjs',
-    import.meta.url,
+    import.meta.resolve('@kungfu-tech/gui/tooling/gen-system-profile-kfd3'),
   ).pathname;
   assert.equal(toEsmEntrypointSpecifier(entryPath, 'linux'), entryPath);
   assert.equal(toEsmEntrypointSpecifier(entryPath, 'darwin'), entryPath);
@@ -903,8 +902,7 @@ test('electron before-pack uses a file URL only on Windows', () => {
 
 test('electron before-pack imports its ESM entrypoint through eval', () => {
   const entryPath = new URL(
-    '../../framework/gui/scripts/gen-system-profile-kfd3.mjs',
-    import.meta.url,
+    import.meta.resolve('@kungfu-tech/gui/tooling/gen-system-profile-kfd3'),
   ).pathname;
   const specifier = toEsmEntrypointSpecifier(entryPath);
   assert.deepEqual(esmEntrypointArgs(entryPath), [
@@ -978,8 +976,7 @@ test('desktop product declares prerelease update metadata without implicit publi
   assert.equal(config.generateUpdatesFilesForAllChannels, true);
   const launcher = fs.readFileSync(
     new URL(
-      '../../framework/gui/scripts/run-electron-builder.mjs',
-      import.meta.url,
+      import.meta.resolve('@kungfu-tech/gui/tooling/run-electron-builder'),
     ),
     'utf8',
   );
@@ -1017,7 +1014,7 @@ test('desktop updater artifact selection is exact per platform', () => {
 
 test('installed SDK resolves the packaged KFX contract beside its resources', () => {
   const sdk = fs.readFileSync(
-    new URL('../../developer/sdk/src/sdk-shared.js', import.meta.url),
+    new URL(import.meta.resolve('@kungfu-tech/sdk/sdk-shared')),
     'utf8',
   );
   assert.match(

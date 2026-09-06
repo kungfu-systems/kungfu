@@ -7,6 +7,11 @@ import { homedir, constants as osConstants } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  createAttachedAgentSessionHost,
+  createDetachedAgentSessionHost,
+  prepareAgentSessionNodePty,
+} from '@kungfu-tech/agent-session/product-client';
+import {
   type AgentWorkLab,
   type AgentWorkLabStartupRoute,
   type GlobalWorkFilter,
@@ -39,11 +44,6 @@ import {
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
-import {
-  createAttachedAgentSessionHost,
-  createDetachedAgentSessionHost,
-  prepareAgentSessionNodePty,
-} from '../../agent-session/src/product-client.mjs';
 import {
   AGENT_WORK_LAB_QUICK_COMMANDS,
   AgentFirstOnboardingView,

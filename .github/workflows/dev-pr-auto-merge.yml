@@ -443,6 +443,14 @@ jobs:
           run-id: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
           github-token: ${{ github.token }}
 
+      - name: Install declared proof bootstrap workspace packages
+        if: >-
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+          node scripts/install-proof-bootstrap-packages.mjs
       - name: Project Buildchain Warrant inputs
         id: contract
         if: >-

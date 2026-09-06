@@ -32,7 +32,15 @@
     "exit/",
     "fact/",
     "runtime/",
-    "workspace-federation/"
+    "workspace-federation/",
+    "architecture/layers.json",
+    "package.json",
+    "src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json",
+    "tests/qualification/kfd4-perspective.mjs",
+    "src/libkungfu/tests/durability_powercut_fixture.cpp",
+    "tests/qualification/durability/powercut_plan.mjs",
+    "architecture/build-capabilities.json",
+    "tests/qualification/durability/fault_campaign.mjs"
   ],
   "config": {
     "build_type": "Release",
@@ -79,11 +87,34 @@
     "sywac": "^1.3.0"
   },
   "devDependencies": {
+    "@kungfu-tech/tui": "workspace:*",
+    "@kungfu-tech/agent-session": "workspace:*",
     "@kungfu-tech/libnode": "22.22.3-kf.5-alpha.3",
+    "@kungfu-tech/product-kungfu": "workspace:*",
+    "@kungfu-tech/work": "workspace:*",
     "@mapbox/node-pre-gyp": "^2.0.3",
     "cmake-js": "^8.0.0",
     "copyfiles": "^2.4.1",
     "electron": "^42.5.0",
-    "node-addon-api": "^8.0.0"
+    "node-addon-api": "^8.0.0",
+    "@kungfu-tech/workspaces": "workspace:*"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./architecture/build-capabilities.json": "./architecture/build-capabilities.json",
+    "./architecture/layers.json": "./architecture/layers.json",
+    "./core-platform-package.contract.json": "./core-platform-package.contract.json",
+    "./kungfu": "./lib/kungfu.js",
+    "./libkungfu/tests/durability_powercut_fixture.cpp": "./src/libkungfu/tests/durability_powercut_fixture.cpp",
+    "./libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json": "./src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json",
+    "./native-binding": "./dist/kungfu/kungfu_node.node",
+    "./node-api-authority.json": "./node-api-authority.json",
+    "./package.json": "./package.json",
+    "./testing/qualification/durability/fault_campaign": "./tests/qualification/durability/fault_campaign.mjs",
+    "./testing/qualification/durability/powercut_plan": "./tests/qualification/durability/powercut_plan.mjs",
+    "./testing/qualification/kfd4-perspective": "./tests/qualification/kfd4-perspective.mjs",
+    "./testing/python-source-path": "./lib/python-source-path.js",
+    "./tooling/run-build": "./.gyp/run-build.js",
+    "./tooling/run-freeze": "./.gyp/run-freeze.js"
   }
 }

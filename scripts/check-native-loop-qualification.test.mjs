@@ -11,22 +11,22 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '@kungfu-tech/work/episode-provider';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/work/project-cut/index.mjs';
-import {
-  materializeSettlementPublication,
-  planSettlementPublication,
-} from '../framework/work/project-cut/publication.mjs';
+} from '@kungfu-tech/work/project-cut';
 import {
   checkNativeLoopQualificationContract,
   sealNativeLoopQualification,
   verifyNativeLoopQualification,
-} from '../framework/work/project-cut/src/native-loop-qualification.mjs';
+} from '@kungfu-tech/work/project-cut/native-loop-qualification';
+import {
+  materializeSettlementPublication,
+  planSettlementPublication,
+} from '@kungfu-tech/work/project-cut/publication';
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

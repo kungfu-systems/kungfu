@@ -8,6 +8,7 @@
 // so it stays external.
 // @ts-check
 
+import { fileURLToPath } from 'node:url';
 import esbuild from 'esbuild';
 
 // Ink statically imports react-devtools-core for its optional devtools
@@ -53,7 +54,11 @@ await esbuild.build({
 });
 
 await esbuild.build({
-  entryPoints: ['../agent-session/src/product-worker.mjs'],
+  entryPoints: [
+    fileURLToPath(
+      import.meta.resolve('@kungfu-tech/agent-session/product-worker'),
+    ),
+  ],
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -70,7 +75,11 @@ await esbuild.build({
 });
 
 await esbuild.build({
-  entryPoints: ['../agent-session/src/mock-provider.mjs'],
+  entryPoints: [
+    fileURLToPath(
+      import.meta.resolve('@kungfu-tech/agent-session/mock-provider'),
+    ),
+  ],
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -80,7 +89,13 @@ await esbuild.build({
 });
 
 await esbuild.build({
-  entryPoints: ['../agent-session/src/native-interactive-client.mjs'],
+  entryPoints: [
+    fileURLToPath(
+      import.meta.resolve(
+        '@kungfu-tech/agent-session/native-interactive-client',
+      ),
+    ),
+  ],
   bundle: true,
   platform: 'node',
   format: 'esm',

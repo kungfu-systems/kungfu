@@ -30,5 +30,10 @@
     "productVersion": "4.0.0-alpha.4",
     "kitRoot": "sha256:819ae3f7ebd4934cadb28ee5b37f346e1feeb8d4fb1de35d290d75c35ed8c62f",
     "sdkRoot": "sha256:422a4c00c8f42a5aacc0cca8ed80c96ed433bd0e9f56a9ed297f60719264e842"
+  },
+  "exports": {
+    ".": "./package.json",
+    "./package.json": "./package.json",
+    "./test/qualify": "./test/qualify.mjs"
   }
 }

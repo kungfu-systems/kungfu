@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { spawnSpecification } from '../../scripts/libwasm-command.mjs';
+import { spawnSpecification } from '@kungfu-tech/workspaces/tooling/libwasm-command';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const DEFAULT_CATALOG = path.join(

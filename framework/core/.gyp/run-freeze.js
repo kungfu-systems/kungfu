@@ -33,9 +33,9 @@ const isWin = process.platform === 'win32';
 // freeze` (dev) leaves it unset and keeps the warn-only behavior — a dev assemble
 // without a built host is legitimate.
 const requireNativeHost = process.env.KF_REQUIRE_NATIVE_HOST === '1';
-const { copyContractArtifacts } = require(
-  path.join(CORE, '..', '..', 'scripts', 'contract-registry.cjs'),
-);
+const {
+  copyContractArtifacts,
+} = require('@kungfu-tech/workspaces/tooling/contract-registry');
 
 function copyConfigContract() {
   copyContractArtifacts(path.join(CORE, 'dist', 'kungfu'));

@@ -15,8 +15,9 @@
 //   node --import ./ts-resolve.mjs run.ts
 import { spawnSync } from 'node:child_process';
 import { platform } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import CORE_PYTHON from '@kungfu-tech/core/testing/python-source-path';
 
 import {
   createInProcessAsyncCaps,
@@ -32,7 +33,6 @@ const PY_CHILD = join(DIR, 'py-child.py');
 const PY_TRUSTED = join(DIR, 'py_trusted.py');
 const FACET_JS = join(DIR, 'facet.mjs');
 const FACET_PY = join(DIR, 'facet.py');
-const CORE_PYTHON = resolve(DIR, '../../../../core/src/python');
 
 type Report = Record<string, unknown> | null;
 
