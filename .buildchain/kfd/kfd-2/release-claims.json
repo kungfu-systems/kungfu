@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.5",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.5",
-    "sourceSha": "9895a5d635a50a89419d01acf44b4213bedc6eae"
+    "sourceSha": "8317a82508f0c92d02ad83cf6de38f95487f15d8"
   },
   "claims": [
     {
@@ -260,7 +260,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-            "sha256": "1faeb835810571104f143247cd7c67ee1c1ce0e945bfdb4ea695cd3039a1cdd9"
+            "sha256": "6d160a1f10fc900dc3e7057394131dae5fa73d93902f47a0adf329e8792909d5"
           },
           "description": "Runtime CLI parity and fail-closed contract-schema checks."
         },

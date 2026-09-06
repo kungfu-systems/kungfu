@@ -130,7 +130,7 @@ test('native capability and fault suite project the machine contract', () => {
     'framework/core/src/libyijinjing/src/io/durability.cpp',
   ).toString();
   const characterization = read(
-    'framework/core/tests/python/test_fact_kernel_characterization.py',
+    'framework/core/tests/python/_fact_kernel_durability_cases.py',
   ).toString();
   assert.match(capabilitySource, new RegExp(contract.durableAdmission.profile));
   assert.match(capabilitySource, /"default_enabled", true/u);

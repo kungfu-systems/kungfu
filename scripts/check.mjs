@@ -930,6 +930,10 @@ function checkShared() {
     'run',
     'test:kfx-profile-suite',
   ]);
+  run('global Work observer tests', 'pnpm', [
+    'run',
+    'test:global-work-observer',
+  ]);
   checkLayerQualification();
   checkDurabilityQualification();
   run('tooling type check', 'pnpm', ['run', 'check:types']);

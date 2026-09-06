@@ -1,0 +1,88 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:0cfa4cf6612b1272a9e4b16d3a9291a192b6077ff851e5fbff37dfcfb26fbfb3",
+  "issue_kind": "new-helper-proliferation",
+  "paths_or_scope": [
+    "extensions/work-control/work-control-actions/domain/_work_control_assessment_claims.py",
+    "extensions/work-control/work-control-actions/domain/_work_control_assessment_profile.py",
+    "extensions/work-control/work-control-actions/domain/_work_control_assessment_review.py",
+    "extensions/work-control/work-control-actions/domain/_work_control_assignment.py",
+    "extensions/work-control/work-control-actions/domain/_work_control_lifecycle.py",
+    "extensions/work-control/work-control-actions/domain/_work_control_state.py"
+  ],
+  "budget_classes": [
+    "first-party-handwritten-implementation:python"
+  ],
+  "baseline_measurement": [],
+  "current_measurement": [
+    {
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assessment_claims.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 443,
+      "contentRoot": "sha256:29ddba7e7eb6aa0cd64feb5c574c34d05f5b67ac0af1f9e8a20ae2b81920e409"
+    },
+    {
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assessment_profile.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 623,
+      "contentRoot": "sha256:99455279cfff94a7cb7c17443f89ed7d95acd263886d651d89278f52da35b7fb"
+    },
+    {
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assessment_review.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 482,
+      "contentRoot": "sha256:033019f7056f07ef75f02afa2738e1ad26984f0b4f6dd83be228f54392255dd0"
+    },
+    {
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assignment.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 779,
+      "contentRoot": "sha256:968890ad62206df355ca2a541213ae1307311e8b2906e0150ce75496bb94714b"
+    },
+    {
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_lifecycle.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 733,
+      "contentRoot": "sha256:3821a5815bd1d149141e1ed65774418affe40398505233c540d38c3a49d27738"
+    },
+    {
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_state.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 984,
+      "contentRoot": "sha256:8776fe6ba458b9c9aa6888a240f20ababc9056a03185624d96f77c6e1282902a"
+    }
+  ],
+  "allowed_delta": 4044,
+  "owner": "extension/work-control/work-control-actions",
+  "responsibility_boundary": "Wave 23 splits runtime-service tests into cohesive test responsibility owners and renews the unchanged protected work-control helper issue root inherited from Wave 16.",
+  "cohesion_rationale": "The exact work-control scope, measurements, and allowance are unchanged; renewal only binds the inherited issue root to the current contributor identity while Wave 23 adds no handwritten implementation helper in this budget class.",
+  "rejected_split_alternatives": [
+    "Combining read-only profile projection with purpose-bound assessment execution would mix query refresh with authority-bearing writes.",
+    "Combining claimant assessment with independent review and continuation decisions would obscure the independent-review trust boundary.",
+    "Relabeling handwritten owners or repartitioning functions by arbitrary line buckets would hide responsibility without reducing complexity."
+  ],
+  "affected_tests_and_qualification": [
+    "./shifu test:agent-profile-sdk",
+    "./shifu test:agent-review-continuation",
+    "./shifu test:action-loop-native-authority",
+    "./shifu test:assignment-runtime",
+    "./shifu check:python-structure",
+    "./shifu maintainability:function-risk",
+    "./shifu maintainability:complexity",
+    "./shifu check:source"
+  ],
+  "requested_by": "keren.dong+cx@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-08-27-kungfu-python-over-1000-line-decomposition-wave23-work-control-renewal"
+}

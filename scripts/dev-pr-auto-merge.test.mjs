@@ -169,6 +169,10 @@ test('Core source qualification emits one exact Warrant bootstrap wake', () => {
     sourceWorkflow,
     /test "\$protected_base" = "\$GITHUB_BASE_REF"/u,
   );
+  assert.match(
+    sourceWorkflow,
+    /source_repository="\$\(jq -er '\.pull_request\.head\.repo\.full_name' "\$GITHUB_EVENT_PATH"\)"[\s\S]*if \[ "\$source_repository" != "\$GITHUB_REPOSITORY" \]; then[\s\S]*protected workflow_run bootstrap[\s\S]*exit 0/u,
+  );
   assert.doesNotMatch(
     sourceWorkflow,
     /test "\$protected_base" = "\$GITHUB_REF_NAME"/u,
@@ -317,8 +321,21 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
-    /\.head\.repo\.full_name == \$repository[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
+    /\.base\.repo\.full_name == \$repository[\s\S]*\.head\.repo\.full_name \| type == "string" and length > 0[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
   );
+  assert.match(
+    bridge,
+    /source_head_repository="\$\(jq -er '\.head\.repo\.full_name' "\$live_pr"\)"/u,
+  );
+  assert.equal(
+    (
+      bridge.match(
+        /\.head_repository\.full_name == \$sourceHeadRepository/gu,
+      ) || []
+    ).length,
+    2,
+  );
+  assert.doesNotMatch(bridge, /\.head_repository\.full_name == \$repository/u);
   assert.match(
     bridge,
     /check_name=affected-native%20%2F%20linux&filter=latest&per_page=100/u,
@@ -384,6 +401,20 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
 });
 
+test('source workflow repository follows the exact live PR head repository', () => {
+  const qualifies = (liveHeadRepository, sourceRunRepository) =>
+    typeof liveHeadRepository === 'string' &&
+    liveHeadRepository.length > 0 &&
+    sourceRunRepository === liveHeadRepository;
+
+  assert.equal(
+    qualifies('kungfu-systems/kungfu', 'kungfu-systems/kungfu'),
+    true,
+  );
+  assert.equal(qualifies('dongkeren/kungfu', 'dongkeren/kungfu'), true);
+  assert.equal(qualifies('dongkeren/kungfu', 'kungfu-systems/kungfu'), false);
+});
+
 test('Dev delivery fails closed to fenced native execution without a v3 receipt', () => {
   assert.match(
     workflow,
@@ -404,6 +435,10 @@ test('Dev delivery fails closed to fenced native execution without a v3 receipt'
 });
 
 test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {
+  const projectCut = workflow.slice(
+    workflow.indexOf('      - name: Produce exact Project Cut replay proof'),
+    workflow.indexOf('  admission:\n'),
+  );
   assert.match(
     workflow,
     /Check out protected consumer adapter[\s\S]*fetch-depth: 0/u,
@@ -427,6 +462,14 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   assert.match(
     workflow,
     /project-cut-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.project-cut-proof-json \}\}/u,
+  );
+  assert.match(
+    projectCut,
+    /test "\$GITHUB_REPOSITORY" = "\$\(jq -r '\.base\.repo\.full_name' "\$pull_request"\)"/u,
+  );
+  assert.doesNotMatch(
+    projectCut,
+    /test "\$GITHUB_REPOSITORY" = "\$\(jq -r '\.head\.repo\.full_name' "\$pull_request"\)"/u,
   );
   assert.match(
     workflow,

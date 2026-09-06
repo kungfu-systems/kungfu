@@ -29,6 +29,10 @@ import {
   agentWorkLabPlaybackLines,
   agentWorkLabSessionStories,
 } from './renderer/src/agent-work-lab';
+import {
+  deferredAgentWorkStartup,
+  shouldBootRuntimeForInitialSurface,
+} from './renderer/src/product-navigation/index';
 import { openRendererProjects } from './renderer/src/projects-panel/index';
 
 const require = createRequire(import.meta.url);
@@ -106,6 +110,16 @@ test('the shell falls back to Agent Work Lab when no KFX is admitted', () => {
       false,
     ),
     [{ error: 'bundle syntax error' }],
+  );
+});
+
+test('the default All Work surface boots Core while deferred surfaces stay read-only', () => {
+  assert.equal(shouldBootRuntimeForInitialSurface('work'), true);
+  assert.equal(shouldBootRuntimeForInitialSurface('projects'), false);
+  assert.equal(shouldBootRuntimeForInitialSurface('onboarding'), false);
+  assert.equal(
+    deferredAgentWorkStartup('work', '/runtime').writeOccurred,
+    false,
   );
 });
 
@@ -351,11 +365,13 @@ test('the GUI shell uses the shared startup surface policy', () => {
     'utf8',
   );
 
-  assert.match(source, /agentWorkLabStartupSurface\(startup\)/);
-  assert.match(source, /startupSurface === 'work-graph'/);
   assert.match(
     source,
-    /const initialCoreWorkOpen =\s*!initialProjectsOpen && !agentFirst\.initialOpen/u,
+    /const initialSurface = agentFirst\.initialOpen[\s\S]*const initialCoreWorkOpen = initialSurface === 'work'/,
+  );
+  assert.match(
+    source,
+    /shouldBootRuntimeForInitialSurface\(initialSurface\)[\s\S]*\? bootRuntime\(\)/,
   );
   assert.match(
     source,
@@ -372,7 +388,7 @@ test('the GUI shell uses the shared startup surface policy', () => {
   );
   assert.match(
     source,
-    /shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
+    /const startupSurface = capability\.agentWorkLabStartupSurface\(startup\)[\s\S]*shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
   );
   assert.match(navigationSource, /shouldShowKungfuOnboarding/);
   assert.match(navigationSource, /AgentFirstOnboardingPanel/);

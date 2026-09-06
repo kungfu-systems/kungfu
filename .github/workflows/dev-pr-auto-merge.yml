@@ -374,6 +374,17 @@ jobs:
         # shifu-entry-contract: allow bootstrapping the separately checked-out exact Buildchain runtime
         run: corepack pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Install protected Work consumer dependencies
+        if: >-
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        shell: bash
+        # Project Cut executes from the protected checkout and resolves only
+        # the production workspace dependencies declared by @kungfu-tech/work. Keep the
+        # Warrant consumer independent of candidate or developer node_modules.
+        # shifu-entry-contract: allow protected Work dependency bootstrap before the candidate launcher is trusted
+        run: corepack pnpm install --filter '@kungfu-tech/work...' --prod --frozen-lockfile --ignore-scripts
+
       - name: Verify exact source qualification run
         if: >-
           needs.resolve-target.outputs.source-workflow-run-id != '' &&
@@ -599,7 +610,7 @@ jobs:
           qualification_output=.buildchain/dev-delivery-input/project-cut-qualification.log
           proof=.buildchain/dev-delivery-input/project-cut-proof.json
 
-          test "$GITHUB_REPOSITORY" = "$(jq -r '.head.repo.full_name' "$pull_request")"
+          test "$GITHUB_REPOSITORY" = "$(jq -r '.base.repo.full_name' "$pull_request")"
           test "$TARGET_BRANCH" = "$(jq -r '.base.ref' "$pull_request")"
           test "$EXPECTED_HEAD" = "$(jq -r '.head.sha' "$pull_request")"
           current_base="$(git rev-parse 'HEAD^{commit}')"
@@ -831,12 +842,14 @@ jobs:
             --arg repository "$GITHUB_REPOSITORY" \
             --arg branch "$TARGET_BRANCH" \
             --arg head "$EXPECTED_HEAD" \
-            '.head.repo.full_name == $repository
+             '.base.repo.full_name == $repository
+             and (.head.repo.full_name | type == "string" and length > 0)
              and .head.sha == $head
              and .base.ref == $branch
              and .state == "open"' \
             "$live_pr" >/dev/null
 
+          source_head_repository="$(jq -er '.head.repo.full_name' "$live_pr")"
           native_root="$(jq -er '.warrant.nativeProofRoot' "$warrant")"
           qualification_root="$(jq -er '.receiptRoot' "$warrant")"
           state_root="$(jq -er '.after.stateRoot' "$warrant")"
@@ -845,14 +858,14 @@ jobs:
           source_run_prior="$evidence/source-workflow-run-prior.json"
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$source_run_prior"
           jq -e \
-            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceHeadRepository "$source_head_repository" \
             --arg head "$EXPECTED_HEAD" \
             --argjson sourceRun "$SOURCE_RUN_ID" \
             '.id == $sourceRun
              and .name == "Core affected native"
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
-             and .head_repository.full_name == $repository
+             and .head_repository.full_name == $sourceHeadRepository
              and .head_sha == $head
              and .status == "completed"
              and (.conclusion == "failure" or .conclusion == "success")
@@ -923,7 +936,7 @@ jobs:
           fi
 
           jq -e \
-            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceHeadRepository "$source_head_repository" \
             --arg head "$EXPECTED_HEAD" \
             --argjson sourceRun "$SOURCE_RUN_ID" \
             --argjson expectedAttempt "$expected_attempt" \
@@ -931,7 +944,7 @@ jobs:
              and .name == "Core affected native"
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
-             and .head_repository.full_name == $repository
+             and .head_repository.full_name == $sourceHeadRepository
              and .head_sha == $head
              and .run_attempt == $expectedAttempt
              and .status == "completed"
