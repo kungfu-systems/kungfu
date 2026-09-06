@@ -9,8 +9,8 @@ period: 2026-09-05
 theme: framework-package-ownership
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-09-05
-ai_provenance: GPT-6 via Codex on 2026-09-05; based on checked-in source, package manifests, and the user-approved owner convergence; no claim about unpublished release evidence
+last_reviewed: 2026-09-06
+ai_provenance: GPT-6 via Codex on 2026-09-06; based on checked-in source, package manifests, and the user-approved owner convergence; no claim about unpublished release evidence
 ---
 
 # Framework package ownership
@@ -68,6 +68,12 @@ Cold proof CI installs only the declared Product and Spec workspace links
 offline before the full toolchain installation. These are ordinary installed
 packages under `node_modules`; Node enforces their public exports. The bootstrap
 installer does not register source aliases or execute dependency scripts.
+
+Package fixtures copy the package's own manifests and source, then install any
+required declared dependencies in the fixture. Installed `node_modules` may
+contain cyclic workspace links and must not be recursively copied into source
+fixtures. The native KFX bootstrap regression exercises this installed layout
+while retaining its existing confinement checks.
 
 The same rule applies to tests and repository tooling. Providers expose narrow
 `testing` and `tooling` entries for those consumers. The private root package
