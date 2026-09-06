@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9505,
+  "generation": 9506,
   "fencingCounter": 908,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:03354ea871a8eed6aa135e6b471d31420679fc5f406218c8f400d9292eecf3aa",
@@ -246,8 +246,13 @@
     "issuedAt": "2026-09-06T07:07:40.495Z",
     "expiresAt": "2026-09-06T11:48:59.634Z",
     "fencingToken": "sha256:492e717d11fec479f966d2ddf1be1e65ccd49331718a2f8af4a60bb01238a842",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-06T07:48:59.634Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-06T07:48:59.634Z",
+    "nativeProofRoot": "sha256:6e9c1aa6dea4917145acc19643b972ae784678b38b84d7666c2e2db0cdd91def",
+    "nativeExecutionReceiptRoot": "sha256:e4ec025c3cc3782c2ac2f78bafcc3fdad4436f44e932ba6aee9a960a87082933",
+    "nativeProofReuseRoot": "sha256:26ea007ca8026db4c7c7644a7ffcde4bb042f98d6b4fab7d015c11500fbfd429",
+    "qualificationReceiptRoot": "sha256:23902fffdfb8c33ad8c5f33352519588b66385b1acee71cb44062b47a2085f72",
+    "qualifiedAt": "2026-09-06T07:49:26.237Z"
   },
   "candidates": [
     {
@@ -78961,10 +78966,10 @@
       "sourceWorkflowRunId": 34017947408,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-06T07:07:35.260Z",
-      "updatedAt": "2026-09-06T07:48:59.634Z",
+      "updatedAt": "2026-09-06T07:49:26.237Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/agent-work-state-contract.json",
@@ -79171,6 +79176,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-06T07:48:59.634Z",
-  "stateRoot": "sha256:5fce9a4678828a84114c79e4245d13093388f309317360c4643192e12a72a09b"
+  "updatedAt": "2026-09-06T07:49:26.237Z",
+  "stateRoot": "sha256:84f77778953912a1e99169403ac881fb6a15246339a59ee0bf6be23c8a803cc0"
 }
