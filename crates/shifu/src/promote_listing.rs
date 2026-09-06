@@ -10,6 +10,70 @@ struct ListOptions {
     verify_current: bool,
 }
 
+fn print_builds_json(entries: &[BuildEntry], payload_verified: bool) {
+    let installed = installed_sha();
+    println!("{{");
+    println!("  \"schema\": \"shifu.local-artifact-catalog/v1\",");
+    println!("  \"product\": \"kungfu\",");
+    println!("  \"platform\": \"{}\",", json_escape(&host::os_arch()));
+    println!("  \"artifacts\": [");
+    let rows: Vec<_> = entries
+        .iter()
+        .map(|entry| {
+            let relation = build_relation(entry, &installed, entries.len());
+            let valid = if payload_verified {
+                current_payload_valid(entry)
+            } else {
+                build_recorded_valid(entry)
+            };
+            let state = state_for(relation, valid, false);
+            format!(
+                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"{}\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"releaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\"cliArchivePath\":\"{}\",\"cliArchiveDigest\":\"{}\",\"upgradeManifestPath\":\"{}\",\"upgradeManifestDigest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"integrity\":\"{}\",\"dirty\":{},\"qualified\":{},\"integrated\":{},\"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
+                json_escape(&entry.name),
+                json_escape(schema_kind(entry)),
+                json_escape(&entry.product_version),
+                json_escape(&entry.sha),
+                json_escape(&entry.branch),
+                json_escape(&entry.digest),
+                json_escape(&entry.release_cut_root),
+                json_escape(&entry.platform_slice_root),
+                json_escape(&entry.slot.join(&entry.cli_archive).display().to_string()),
+                json_escape(&entry.cli_archive_digest),
+                json_escape(
+                    &entry
+                        .slot
+                        .join(&entry.upgrade_manifest)
+                        .display()
+                        .to_string()
+                ),
+                json_escape(&entry.upgrade_manifest_digest),
+                json_escape(&entry.built_at),
+                state.as_str(),
+                relation.as_str(),
+                automatic(relation, valid, false),
+                if payload_verified {
+                    "verified"
+                } else {
+                    "recorded"
+                },
+                entry.sha.ends_with("-dirty"),
+                entry.qualified,
+                entry.integrated,
+                json_escape(&entry.mainline_ref),
+                json_escape(&entry.mainline_sha),
+                json_escape(&entry.repo),
+                json_escape(&entry.worktree),
+                json_escape(&entry.worktree),
+                json_escape(&entry.slot.join(&entry.artifact).display().to_string()),
+                relation.as_str()
+            )
+        })
+        .collect();
+    println!("{}", rows.join(",\n"));
+    println!("  ]");
+    println!("}}");
+}
+
 fn parse_list_options(args: &[String]) -> ListOptions {
     let mut options = ListOptions::default();
     for arg in args {
