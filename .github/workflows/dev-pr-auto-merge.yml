@@ -352,7 +352,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad
+          ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -674,12 +674,12 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    # Keep admission, native-check landing, and runtime checkout on one exact
-    # Buildchain SHA. A bootstrap upgrade must use a fresh source-run retry
+    # Keep admission, native-check landing, and runtime checkout on the same
+    # governed Buildchain v4 channel. An upgrade must use a fresh source-run retry
     # budget; it must not reuse an already-consumed CheckRun attempt.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad
+    uses: kungfu-systems/buildchain/.github/workflows/public-ops-dev-auto-merge.yml@v4-alpha
     with:
-      buildchain-ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad
+      buildchain-ref: v4-alpha
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -1042,9 +1042,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad
+    uses: kungfu-systems/buildchain/.github/workflows/public-ops-dev-auto-merge.yml@v4-alpha
     with:
-      buildchain-ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad
+      buildchain-ref: v4-alpha
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}

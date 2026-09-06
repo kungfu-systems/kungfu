@@ -88,9 +88,11 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@ae9bd5385cfb8060fb2574521121f1a798e83c6f
+    # Keep the supported v4 alias so smoke and full have unique policy invocations.
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v4-alpha
     with:
-      buildchain-ref: ae9bd5385cfb8060fb2574521121f1a798e83c6f
+      buildchain-visible-workflow: .github/workflows/.build.yml
+      buildchain-ref: v4-alpha
       runner-preset: aws-us-ec2-windows-jit
       aws-ec2-windows-runner-label: ${{ inputs.runner-label }}
       setup-rust: true
@@ -114,7 +116,7 @@ jobs:
       checkout-cache-github-timeout-seconds: 1200
       publish-channel: none
       release-candidate: false
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: allow-additive
       buildchain-contract-drift-issue-mode: off
 
@@ -127,9 +129,10 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@ae9bd5385cfb8060fb2574521121f1a798e83c6f
+    uses: kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha
     with:
-      buildchain-ref: ae9bd5385cfb8060fb2574521121f1a798e83c6f
+      buildchain-visible-workflow: .github/workflows/.build-engine.yml
+      buildchain-ref: v4-alpha
       runner-preset: aws-us-ec2-windows-jit
       aws-ec2-windows-runner-label: ${{ inputs.runner-label }}
       setup-rust: true
@@ -154,7 +157,7 @@ jobs:
       shifu-cache-profile-digest: sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c
       publish-channel: none
       release-candidate: false
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: allow-additive
       buildchain-contract-drift-issue-mode: off
 

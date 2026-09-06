@@ -14,11 +14,11 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LEGACY_WARRANT_RUNTIME_SHA = '8493bf140a7f567e76aff3119f3d39ff026afc84';
-const WARRANT_RUNTIME_SHA = 'cd8318d57b0506493114afcc63b9aacef741d3c4';
+const WARRANT_RUNTIME_SHA = '5cbaa22bfec20ab1970bc4a7914040d78c52ff76';
 const QUEUE_WARRANT_READBACK_RUNTIME_SHA =
-  '98a4e38bd8423569e500dbbcad3667842171ab8f';
+  '5cbaa22bfec20ab1970bc4a7914040d78c52ff76';
 const SOURCE_QUALIFICATION_READBACK_RUNTIME_SHA =
-  '98a4e38bd8423569e500dbbcad3667842171ab8f';
+  '5cbaa22bfec20ab1970bc4a7914040d78c52ff76';
 const SOURCE_HEAD = '2'.repeat(40);
 const CONTRACT = JSON.parse(
   fs.readFileSync(
@@ -222,14 +222,14 @@ test('merge-group continuation consumes the exact durable Warrant lease', () => 
   assert.match(workflow, /--branch "\$protected_base"/u);
   assert.match(workflow, /affected-native-proof\.mjs queue-lease-verify/u);
   assert.match(workflow, new RegExp(QUEUE_WARRANT_READBACK_RUNTIME_SHA, 'u'));
-  assert.doesNotMatch(workflow, new RegExp(WARRANT_RUNTIME_SHA, 'u'));
+  assert.doesNotMatch(workflow, new RegExp(LEGACY_WARRANT_RUNTIME_SHA, 'u'));
   assert.match(
     workflow,
     /name: Install pinned Buildchain Warrant runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts[\s\S]*name: Consume the exact Buildchain Warrant lease/u,
   );
 });
 
-test('mutating Warrant controllers share one runtime and read-only consumers use protected compatibility readers', () => {
+test('v4 Warrant controllers and read-only consumers share the exact protected runtime', () => {
   const workflowPaths = [
     '.github/workflows/dev-pr-auto-merge.yml',
     '.github/workflows/dev-delivery-warrant-terminal.yml',
@@ -255,10 +255,7 @@ test('mutating Warrant controllers share one runtime and read-only consumers use
     qualificationWorkflow,
     new RegExp(SOURCE_QUALIFICATION_READBACK_RUNTIME_SHA, 'u'),
   );
-  assert.doesNotMatch(
-    qualificationWorkflow,
-    new RegExp(WARRANT_RUNTIME_SHA, 'u'),
-  );
+  assert.equal(SOURCE_QUALIFICATION_READBACK_RUNTIME_SHA, WARRANT_RUNTIME_SHA);
   const queueWorkflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.authority.mergeGroup),
     'utf8',
@@ -267,7 +264,7 @@ test('mutating Warrant controllers share one runtime and read-only consumers use
     queueWorkflow,
     new RegExp(QUEUE_WARRANT_READBACK_RUNTIME_SHA, 'u'),
   );
-  assert.doesNotMatch(queueWorkflow, new RegExp(WARRANT_RUNTIME_SHA, 'u'));
+  assert.equal(QUEUE_WARRANT_READBACK_RUNTIME_SHA, WARRANT_RUNTIME_SHA);
   assert.doesNotMatch(
     queueWorkflow,
     new RegExp(LEGACY_WARRANT_RUNTIME_SHA, 'u'),

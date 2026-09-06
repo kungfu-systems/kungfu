@@ -1,0 +1,39 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:dbb29c19d014f9eb5afed572d7fc624fc07d968f16953fe17a6609725da24c5c",
+  "issue_kind": "grandfathered-file-grew",
+  "paths_or_scope": [
+    "pnpm-lock.yaml"
+  ],
+  "budget_classes": [
+    "declarative-schema-or-table:declarative"
+  ],
+  "baseline_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10143,
+      "contentRoot": "sha256:e0b1c89fd08dce937aca85194b9621787958b6d7021e70cba297cbe947822ef0"
+    }
+  ],
+  "current_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10209,
+      "contentRoot": "sha256:563361a384e9c4f5df9a67c0a82fc3bc7297492daf2db05c6cbcdb23b837b0c1"
+    }
+  ],
+  "allowed_delta": 66,
+  "owner": "kungfu/repository-contract",
+  "responsibility_boundary": "Generated pnpm dependency closure for the Buildchain v4 consumer upgrade; workspace packages and unrelated resolutions retain their existing ownership.",
+  "cohesion_rationale": "The generated lockfile shrinks by 24 lines from the protected dev source but remains 66 lines above the frozen baseline. This exact-content request supersedes no historical approval and requires protected independent review.",
+  "rejected_split_alternatives": "Splitting the workspace lockfile or deleting generated entries by hand would break frozen installation and reproducibility.",
+  "affected_tests_and_qualification": "./shifu install --frozen-lockfile --ignore-scripts; ./shifu check:source; Buildchain v4 consumer scan; Candidate source acceptance / check; Delivery Warrant; merge_group.",
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-09-06-kungfu-buildchain-v4-alpha-upgrade"
+}

@@ -78,9 +78,9 @@ jobs:
     name: Candidate source acceptance
     # Protected Buildchain merge 1342b7d preserves exact proof reuse when
     # GitHub omits a PR backlink while retaining every rooted source binding.
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@1342b7d68936ab3c31b58b255df1de49c234bc02
+    uses: kungfu-systems/buildchain/.github/workflows/public-build-check.yml@v4-alpha
     with:
-      buildchain-ref: 1342b7d68936ab3c31b58b255df1de49c234bc02
+      buildchain-ref: v4-alpha
       mode: source
       upload-artifacts: true
       source-proof-reuse: true
@@ -169,7 +169,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate .buildchain/buildchain.toml
-        uses: kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d
+        uses: kungfu-systems/buildchain/actions/validate-config@v4-alpha
         with:
           require-version-state: "true"
           require-lifecycle-stages: "install,check,build,verify"
@@ -547,9 +547,9 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          # Read the floating-v3 qualified Warrant through the protected
+          # Read the v4 qualified Warrant through the protected
           # compatibility runtime locked by dev-queue-admission.contract.json.
-          ref: 98a4e38bd8423569e500dbbcad3667842171ab8f
+          ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -1082,9 +1082,9 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          # Read the floating-v3 qualified Warrant without moving mutation
+          # Read the v4 qualified Warrant without moving mutation
           # authority out of the protected scheduler.
-          ref: 98a4e38bd8423569e500dbbcad3667842171ab8f
+          ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0

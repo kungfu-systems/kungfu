@@ -26,7 +26,7 @@
     "build": "node --check src/sdk.js && node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@kungfu-tech/buildchain": "3.0.0",
+    "@kungfu-tech/buildchain": "4.0.2-alpha.39",
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/gui": "workspace:*",
     "@kungfu-tech/kfd": "1.0.0-alpha.65",

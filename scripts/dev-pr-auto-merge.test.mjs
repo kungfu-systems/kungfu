@@ -17,9 +17,9 @@ const steadyStateDogfoodFixturePath =
 
 test('Dev auto-merge admits only explicitly ready reviewed source-bound PRs', () => {
   const reusableRef = workflow.match(
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/public-ops-dev-auto-merge\.yml@(v4-alpha)/u,
   )?.[1];
-  assert.equal(reusableRef, '3553236e52ba9daa0b83422aec269d14a6bc65ad');
+  assert.equal(reusableRef, 'v4-alpha');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
@@ -395,7 +395,7 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     landing,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/public-ops-dev-auto-merge\.yml@v4-alpha/u,
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
@@ -445,7 +445,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u,
   );
   assert.match(
     workflow,
@@ -671,7 +671,7 @@ test('the completed migration has no bootstrap bypass around Warrant admission',
   assert.match(sourceWorkflow, /Check out exact Buildchain Warrant runtime/u);
   assert.match(
     sourceWorkflow,
-    /ref: 98a4e38bd8423569e500dbbcad3667842171ab8f/u,
+    /ref: 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u,
   );
   assert.doesNotMatch(
     sourceWorkflow,
@@ -684,10 +684,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
-  assert.match(action, /ref: cd8318d57b0506493114afcc63b9aacef741d3c4/u);
+  assert.match(action, /ref: 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u);
   assert.match(
     action,
-    /test "\$\(git rev-parse HEAD\)" = cd8318d57b0506493114afcc63b9aacef741d3c4/u,
+    /test "\$\(git rev-parse HEAD\)" = 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u,
   );
   assert.match(
     action,
