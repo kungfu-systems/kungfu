@@ -16,7 +16,7 @@ import {
   evaluateKfxSiteImpact,
   repositoryChanges,
   validateImpactContract,
-} from '../framework/site/tooling/check-kfx-site-impact.mjs';
+} from '@kungfu-tech/site/tooling/check-kfx-site-impact';
 import { sourceAcceptancePlan } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');

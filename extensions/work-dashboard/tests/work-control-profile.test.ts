@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type { Profile } from '../../../framework/api/src/capability/profile.ts';
+import type { Profile } from '@kungfu-tech/api/capability/profile';
 import {
   openKfd3ProfileApplication,
   openWorkControlProfile,

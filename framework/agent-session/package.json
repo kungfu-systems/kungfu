@@ -13,37 +13,42 @@
   },
   "exports": {
     ".": "./src/capsule-host.mjs",
-    "./interaction-port": "./src/interaction-port.mjs",
+    "./active-work-lease": "./src/active-work-lease.mjs",
+    "./capsule-transport-runtime": "./src/capsule-transport-runtime.mjs",
     "./codex-app-server-contract": "./src/codex-app-server-contract.mjs",
     "./codex-app-server-interaction": "./src/codex-app-server-interaction.mjs",
     "./codex-app-server-product": "./src/codex-app-server-product.mjs",
     "./codex-app-server-recovery": "./src/codex-app-server-recovery.mjs",
     "./codex-app-server-runtime": "./src/codex-app-server-runtime.mjs",
     "./command-launch": "./src/command-launch.mjs",
+    "./interaction-port": "./src/interaction-port.mjs",
+    "./mock-provider": "./src/mock-provider.mjs",
+    "./native-interactive-client": "./src/native-interactive-client.mjs",
+    "./package.json": "./package.json",
     "./peer-transport": "./src/peer-transport.mjs",
-    "./product-surface": "./src/product-surface.mjs",
-    "./product-runtime": "./src/product-runtime.mjs",
     "./product-client": "./src/product-client.mjs",
     "./product-rpc": "./src/product-rpc.mjs",
+    "./product-runtime": "./src/product-runtime.mjs",
+    "./product-surface": "./src/product-surface.mjs",
     "./product-worker": "./src/product-worker.mjs",
-    "./capsule-transport-runtime": "./src/capsule-transport-runtime.mjs",
-    "./work-console-registry": "./src/work-console-registry.mjs",
-    "./work-console-model": "./src/work-console-model.mjs",
-    "./active-work-lease": "./src/active-work-lease.mjs",
-    "./session-lifecycle-service": "./src/session-lifecycle-service.mjs",
-    "./work-projection-service": "./src/work-projection-service.mjs",
     "./provider-adapters": "./src/provider-adapters.mjs",
-    "./work-attention": "./src/work-attention.mjs",
-    "./mock-provider": "./src/mock-provider.mjs",
     "./runtime-port": "./src/runtime-port.mjs",
-    "./worker": "./src/capsule-worker.mjs",
-    "./vt-snapshot": "./src/vt-snapshot.mjs"
+    "./session-lifecycle-service": "./src/session-lifecycle-service.mjs",
+    "./testing/fixtures/agent-session-core-golden.json": "./tests/fixtures/agent-session-core-golden.json",
+    "./vt-snapshot": "./src/vt-snapshot.mjs",
+    "./work-attention": "./src/work-attention.mjs",
+    "./work-console-model": "./src/work-console-model.mjs",
+    "./work-console-registry": "./src/work-console-registry.mjs",
+    "./work-projection-service": "./src/work-projection-service.mjs",
+    "./worker": "./src/capsule-worker.mjs"
   },
   "files": [
     "src",
     "kungfu-agent-session.contract.json",
     "kungfu-codex-app-server.contract.json",
-    "schemas"
+    "schemas",
+    "tests/fixtures/agent-session-core-golden.json",
+    "package.json"
   ],
   "scripts": {
     "test": "node --test tests/*.test.mjs",
@@ -51,5 +56,10 @@
   },
   "dependencies": {
     "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "@kungfu-tech/kfx-view-terminal": "workspace:*",
+    "@kungfu-tech/workspaces": "workspace:*",
+    "@kungfu-tech/core": "workspace:*"
   }
 }

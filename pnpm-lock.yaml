@@ -44,6 +44,12 @@ importers:
       '@biomejs/biome':
         specifier: 1.9.4
         version: 1.9.4
+      '@kungfu-tech/agent-session':
+        specifier: workspace:*
+        version: link:framework/agent-session
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:framework/api
       '@kungfu-tech/buildchain':
         specifier: 3.0.9-alpha.17
         version: 3.0.9-alpha.17
@@ -53,9 +59,36 @@ importers:
       '@kungfu-tech/buildchain-stable':
         specifier: npm:@kungfu-tech/buildchain@3.0.7
         version: '@kungfu-tech/buildchain@3.0.7'
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:framework/core
+      '@kungfu-tech/gui':
+        specifier: workspace:*
+        version: link:framework/gui
       '@kungfu-tech/kfd':
         specifier: 1.0.0-alpha.65
         version: 1.0.0-alpha.65
+      '@kungfu-tech/product-kungfu':
+        specifier: workspace:*
+        version: link:product
+      '@kungfu-tech/site':
+        specifier: workspace:*
+        version: link:framework/site
+      '@kungfu-tech/skill':
+        specifier: workspace:*
+        version: link:framework/skill
+      '@kungfu-tech/spec':
+        specifier: workspace:*
+        version: link:framework/spec
+      '@kungfu-tech/storage':
+        specifier: workspace:*
+        version: link:framework/storage
+      '@kungfu-tech/tui':
+        specifier: workspace:*
+        version: link:framework/tui
+      '@kungfu-tech/work':
+        specifier: workspace:*
+        version: link:framework/work
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -116,6 +149,10 @@ importers:
       esbuild:
         specifier: ^0.28.1
         version: 0.28.1
+    devDependencies:
+      '@kungfu-tech/workspaces':
+        specifier: workspace:*
+        version: link:../..
 
   examples/opencode-kungfu:
     dependencies:
@@ -424,6 +461,16 @@ importers:
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0
+    devDependencies:
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../core
+      '@kungfu-tech/kfx-view-terminal':
+        specifier: workspace:*
+        version: link:../../extensions/terminal
+      '@kungfu-tech/workspaces':
+        specifier: workspace:*
+        version: link:../..
 
   framework/api:
     dependencies:
@@ -479,6 +526,18 @@ importers:
         specifier: 1.8.1
         version: 1.8.1
     devDependencies:
+      '@kungfu-tech/agent-session':
+        specifier: workspace:*
+        version: link:../agent-session
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../core
+      '@kungfu-tech/gui':
+        specifier: workspace:*
+        version: link:../gui
+      '@kungfu-tech/tui':
+        specifier: workspace:*
+        version: link:../tui
       '@types/find-root':
         specifier: ^1.1.2
         version: 1.1.4
@@ -507,9 +566,24 @@ importers:
         specifier: ^1.3.0
         version: 1.3.0
     devDependencies:
+      '@kungfu-tech/agent-session':
+        specifier: workspace:*
+        version: link:../agent-session
       '@kungfu-tech/libnode':
         specifier: 22.22.3-kf.5-alpha.3
         version: 22.22.3-kf.5-alpha.3
+      '@kungfu-tech/product-kungfu':
+        specifier: workspace:*
+        version: link:../../product
+      '@kungfu-tech/tui':
+        specifier: workspace:*
+        version: link:../tui
+      '@kungfu-tech/work':
+        specifier: workspace:*
+        version: link:../work
+      '@kungfu-tech/workspaces':
+        specifier: workspace:*
+        version: link:../..
       '@mapbox/node-pre-gyp':
         specifier: ^2.0.3
         version: 2.0.3(encoding@0.1.13)
@@ -559,6 +633,21 @@ importers:
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../core
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:../../extensions/agent-work-lab/experience
+      '@kungfu-tech/kfx-view-kfx-manager':
+        specifier: workspace:*
+        version: link:../../extensions/system/kfx-manager
+      '@kungfu-tech/kfx-view-work-dashboard':
+        specifier: workspace:*
+        version: link:../../extensions/work-dashboard
+      '@kungfu-tech/product-kungfu':
+        specifier: workspace:*
+        version: link:../../product
+      '@kungfu-tech/tui':
+        specifier: workspace:*
+        version: link:../tui
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31
@@ -614,6 +703,9 @@ importers:
       '@kungfu-tech/spec':
         specifier: workspace:*
         version: link:../spec
+      '@kungfu-tech/workspaces':
+        specifier: workspace:*
+        version: link:../..
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -643,7 +735,11 @@ importers:
         specifier: ^5.0.0
         version: 5.0.10
 
-  framework/storage: {}
+  framework/storage:
+    devDependencies:
+      '@kungfu-tech/workspaces':
+        specifier: workspace:*
+        version: link:../..
 
   framework/tui:
     dependencies:
@@ -659,6 +755,9 @@ importers:
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:../../extensions/agent-work-lab/experience
       ink:
         specifier: ^5.2.0
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
@@ -690,6 +789,13 @@ importers:
       ajv:
         specifier: 8.20.0
         version: 8.20.0
+    devDependencies:
+      '@kungfu-tech/product-kungfu':
+        specifier: workspace:*
+        version: link:../../product
+      '@kungfu-tech/workspaces':
+        specifier: workspace:*
+        version: link:../..
 
   product:
     dependencies:
@@ -774,10 +880,16 @@ importers:
       '@kungfu-tech/tui':
         specifier: workspace:*
         version: link:../framework/tui
+      '@kungfu-tech/work':
+        specifier: workspace:*
+        version: link:../framework/work
     devDependencies:
       '@kungfu-tech/buildchain':
         specifier: 3.0.9-alpha.17
         version: 3.0.9-alpha.17
+      '@kungfu-tech/workspaces':
+        specifier: workspace:*
+        version: link:..
 
 packages:
 

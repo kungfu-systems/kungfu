@@ -13,9 +13,9 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
-import { CODEX_APP_SERVER_FEATURE_FLAG } from '../framework/agent-session/src/codex-app-server-product.mjs';
-import { createDetachedAgentSessionHost } from '../framework/agent-session/src/product-client.mjs';
-import { probeProviderVersion } from '../framework/agent-session/src/provider-adapters.mjs';
+import { CODEX_APP_SERVER_FEATURE_FLAG } from '@kungfu-tech/agent-session/codex-app-server-product';
+import { createDetachedAgentSessionHost } from '@kungfu-tech/agent-session/product-client';
+import { probeProviderVersion } from '@kungfu-tech/agent-session/provider-adapters';
 
 const PROFILE_ROOT = `sha256:${'8'.repeat(64)}`;
 const PRIVATE_ENV_NAMES = new Set(['ANTHROPIC_API_KEY', 'OPENAI_API_KEY']);
@@ -24,7 +24,7 @@ const CLAUDE_APPROVAL_SETTINGS = JSON.stringify({
   sandbox: { autoAllowBashIfSandboxed: false },
 });
 const require = createRequire(
-  new URL('../framework/agent-session/package.json', import.meta.url),
+  new URL(import.meta.resolve('@kungfu-tech/agent-session/package.json')),
 );
 
 function argument(name) {

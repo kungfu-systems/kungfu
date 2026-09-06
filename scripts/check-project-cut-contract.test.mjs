@@ -12,7 +12,7 @@ import {
   semanticRoot,
   verifyProjectCut,
   verifyProjectCutReceipt,
-} from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut';
 import {
   checkProjectCutContract,
   loadProjectCutFixture,

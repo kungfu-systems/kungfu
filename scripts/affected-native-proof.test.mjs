@@ -1201,13 +1201,10 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
     path.join(ROOT, 'scripts/affected-native-proof.mjs'),
     'utf8',
   );
-  const artifactLookup = fs.readFileSync(
-    new URL(
-      '../product/release/affected-native-artifact-lookup.mjs',
-      import.meta.url,
-    ),
-    'utf8',
+  const lookupUrl = import.meta.resolve(
+    '@kungfu-tech/product-kungfu/release/affected-native-artifact-lookup',
   );
+  const artifactLookup = fs.readFileSync(new URL(lookupUrl), 'utf8');
   assert.match(artifactLookup, /head_repository_id === repositoryId/u);
   assert.match(
     artifactLookup,

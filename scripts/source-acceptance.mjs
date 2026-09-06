@@ -620,6 +620,10 @@ export function sourceAcceptancePlan(
     ['npm Release package registry', 'scripts/check-npm-package-registry.mjs'],
     ['framework layout boundary', 'scripts/check-framework-layout.mjs'],
     [
+      'npm package consumption boundaries',
+      'scripts/check-package-boundaries.mjs',
+    ],
+    [
       'component distribution boundary',
       'scripts/check-npm-package-registry.mjs',
       '--component-distribution',
@@ -957,6 +961,7 @@ export function sourceAcceptancePlan(
               'scripts/check-npm-package-registry.test.mjs',
               'scripts/npm-release-inventory.test.mjs',
               'scripts/check-framework-layout.test.mjs',
+              'scripts/check-package-boundaries.test.mjs',
               'scripts/check-upgrade-contract.test.mjs',
               'scripts/probe-cpp-cmake-contract.test.mjs',
               'scripts/check-upgrade-qualification.test.mjs',

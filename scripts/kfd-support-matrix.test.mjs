@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { resolveKfd10AdopterWitnessPath } from '../product/release/kfd-adopter-release.mjs';
+import { resolveKfd10AdopterWitnessPath } from '@kungfu-tech/product-kungfu/release/kfd-adopter-release';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'kfd-support-matrix.mjs');

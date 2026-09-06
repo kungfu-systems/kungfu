@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const contract = require('../core-platform-package.contract.json');
 const sourcePackage = require('../package.json');
-const stdlibPrune = require('../../../product/stdlib-prune.json');
+const stdlibPrune = require('@kungfu-tech/product-kungfu/stdlib-prune.json');
 const {
   platformPackages,
   resolveExecutable,

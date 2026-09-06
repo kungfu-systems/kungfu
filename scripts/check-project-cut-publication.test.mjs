@@ -11,14 +11,14 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '@kungfu-tech/work/episode-provider';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/work/project-cut/index.mjs';
-import * as publicationBoundary from '../framework/work/project-cut/publication.mjs';
+} from '@kungfu-tech/work/project-cut';
+import * as publicationBoundary from '@kungfu-tech/work/project-cut/publication';
 
 const {
   advanceSettlementPublication,

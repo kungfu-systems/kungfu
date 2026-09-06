@@ -308,39 +308,69 @@ function boundaryCycles(entries) {
   return cycles;
 }
 
-export function discoverFrameworkDependencies({ root = ROOT } = {}) {
+function legacyFrameworkDependencies(root, directories) {
   const frameworkRoot = path.join(root, 'framework');
-  const directories = immediateFrameworkDirectories(root);
   const known = new Set(directories);
-  const dependencies = new Map(
-    directories.map((directory) => [directory, new Set()]),
-  );
-
-  for (const directory of directories) {
-    const ownerRoot = path.join(root, directory);
-    for (const file of sourceFiles(ownerRoot)) {
-      const source = fs.readFileSync(file, 'utf8');
-      for (const match of source.matchAll(RELATIVE_LITERAL)) {
-        const target = path.resolve(path.dirname(file), match[2]);
-        const relative = path.relative(frameworkRoot, target);
-        if (
-          !relative ||
-          relative === '..' ||
-          relative.startsWith(`..${path.sep}`) ||
-          path.isAbsolute(relative)
-        )
-          continue;
-        const targetDirectory = `framework/${relative.split(path.sep)[0]}`;
-        if (targetDirectory !== directory && known.has(targetDirectory))
-          dependencies.get(directory).add(targetDirectory);
-      }
-    }
-  }
-
   return Object.fromEntries(
-    [...dependencies.entries()].map(([directory, values]) => [
+    directories.map((directory) => {
+      const targets = sourceFiles(path.join(root, directory)).flatMap((file) =>
+        [...fs.readFileSync(file, 'utf8').matchAll(RELATIVE_LITERAL)].map(
+          (match) => {
+            const relative = path.relative(
+              frameworkRoot,
+              path.resolve(path.dirname(file), match[2]),
+            );
+            return `framework/${relative.split(path.sep)[0]}`;
+          },
+        ),
+      );
+      return [
+        directory,
+        [...new Set(targets)]
+          .filter((target) => target !== directory && known.has(target))
+          .sort(),
+      ];
+    }),
+  );
+}
+
+function declaredDependencies(manifest, names, directory) {
+  const declared = Object.assign(
+    {},
+    manifest.dependencies,
+    manifest.devDependencies,
+    manifest.peerDependencies,
+    manifest.optionalDependencies,
+  );
+  return [...new Set(Object.keys(declared).map((name) => names.get(name)))]
+    .filter((target) => target && target !== directory)
+    .sort();
+}
+
+export function discoverFrameworkDependencies({ root = ROOT } = {}) {
+  const directories = immediateFrameworkDirectories(root);
+  const manifests = new Map(
+    directories
+      .filter((directory) =>
+        fs.existsSync(path.join(root, directory, 'package.json')),
+      )
+      .map((directory) => [
+        directory,
+        readJson(root, `${directory}/package.json`),
+      ]),
+  );
+  const names = new Map(
+    [...manifests].map(([directory, manifest]) => [manifest.name, directory]),
+  );
+  const legacy = directories.some((directory) => !manifests.has(directory))
+    ? legacyFrameworkDependencies(root, directories)
+    : {};
+  return Object.fromEntries(
+    directories.map((directory) => [
       directory,
-      [...values].sort(),
+      manifests.has(directory)
+        ? declaredDependencies(manifests.get(directory), names, directory)
+        : legacy[directory],
     ]),
   );
 }

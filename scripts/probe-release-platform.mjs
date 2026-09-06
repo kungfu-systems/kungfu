@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { cliSpawnSpecification } from '../product/scripts/cli-surface-qualification.mjs';
+import { cliSpawnSpecification } from '@kungfu-tech/product-kungfu/tooling/cli-surface-qualification';
 import { readMetadataContract } from './document-metadata-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

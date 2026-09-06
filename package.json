@@ -403,7 +403,8 @@
     "version": "node scripts/sync-shifu-version.mjs && git add crates/shifu/Cargo.toml crates/xinfa/Cargo.toml crates/Cargo.lock crates/xinfa/Cargo.lock",
     "prepare": "node scripts/install-hooks.mjs",
     "hooks:install": "node scripts/require-shifu.mjs hooks:install && node scripts/install-hooks.mjs --force",
-    "check:route-topology": "node scripts/require-shifu.mjs check:route-topology && node scripts/route-topology-contract.mjs"
+    "check:route-topology": "node scripts/require-shifu.mjs check:route-topology && node scripts/route-topology-contract.mjs",
+    "check:package-boundaries": "node scripts/require-shifu.mjs check:package-boundaries && node scripts/check-package-boundaries.mjs && node --test scripts/check-package-boundaries.test.mjs"
   },
   "dependencies": {
     "core-js": "^3.20.0",
@@ -413,10 +414,21 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@kungfu-tech/agent-session": "workspace:*",
+    "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/buildchain": "3.0.9-alpha.17",
     "@kungfu-tech/buildchain-alpha": "npm:@kungfu-tech/buildchain@3.0.9-alpha.17",
     "@kungfu-tech/buildchain-stable": "npm:@kungfu-tech/buildchain@3.0.7",
+    "@kungfu-tech/core": "workspace:*",
+    "@kungfu-tech/gui": "workspace:*",
     "@kungfu-tech/kfd": "1.0.0-alpha.65",
+    "@kungfu-tech/product-kungfu": "workspace:*",
+    "@kungfu-tech/site": "workspace:*",
+    "@kungfu-tech/skill": "workspace:*",
+    "@kungfu-tech/spec": "workspace:*",
+    "@kungfu-tech/storage": "workspace:*",
+    "@kungfu-tech/tui": "workspace:*",
+    "@kungfu-tech/work": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/markdown-it": "14.1.2",
     "@types/node": "^22.0.0",
@@ -428,5 +440,32 @@
     "tar-stream": "2.2.0",
     "typescript": "^5.6.0",
     "yaml": "2.9.0"
-  }
+  },
+  "exports": {
+    "./developer/maintainability/semantic-amplification": "./developer/maintainability/semantic-amplification.mjs",
+    "./package.json": "./package.json",
+    "./testing/agent-hub-kfd-lock": "./tests/qualification/agent-hub-20/kfd-lock.json",
+    "./testing/durability-institutional-profile": "./docs/qualification/evidence/durability/c7c0c680e/single-host-institutional-profile-v1.json",
+    "./testing/fixtures/_kfx-authority": "./tests/fixtures/_kfx-authority.mjs",
+    "./testing/qualification/agent-repository-work/fixture-catalog": "./tests/qualification/agent-repository-work/fixture-catalog.mjs",
+    "./testing/qualification/agent-repository-work/incident-board-replay-v1-oracle": "./tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs",
+    "./testing/qualification/agent-repository-work/kungfu-agent-patrol-real-module-snapshot-v1-oracle": "./tests/qualification/agent-repository-work/kungfu-agent-patrol-real-module-snapshot-v1-oracle.mjs",
+    "./tooling/affected-native-proof": "./scripts/affected-native-proof.mjs",
+    "./tooling/build": "./scripts/build.mjs",
+    "./tooling/candidate-timeline-events": {
+      "types": "./scripts/candidate-timeline-events.d.cts",
+      "default": "./scripts/candidate-timeline-events.cjs"
+    },
+    "./tooling/check-shifu-cache-contract": "./scripts/check-shifu-cache-contract.mjs",
+    "./tooling/contract-registry": {
+      "types": "./scripts/contract-registry.d.cts",
+      "default": "./scripts/contract-registry.cjs"
+    },
+    "./tooling/generate-codex-app-server-schema-manifest": "./scripts/generate-codex-app-server-schema-manifest.mjs",
+    "./tooling/libwasm-command": "./scripts/libwasm-command.mjs",
+    "./tooling/platform-command": "./scripts/platform-command.mjs",
+    "./tooling/source-acceptance": "./scripts/source-acceptance.mjs",
+    "./tooling/upgrade-qualification": "./scripts/upgrade-qualification.mjs"
+  },
+  "version": "0.0.0"
 }

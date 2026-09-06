@@ -19,7 +19,8 @@
     "dist",
     "package.json",
     "README.md",
-    "kungfu.kfx.json"
+    "kungfu.kfx.json",
+    "src/view/index.tsx"
   ],
   "scripts": {
     "build": "kungfu sdk kfx build",
@@ -35,5 +36,10 @@
   },
   "peerDependencies": {
     "react": "^18.3.1"
+  },
+  "exports": {
+    ".": "./package.json",
+    "./package.json": "./package.json",
+    "./view/index": "./src/view/index.tsx"
   }
 }
