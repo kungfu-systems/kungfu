@@ -9,6 +9,8 @@ from pathlib import Path
 import click
 import pytest
 
+from kungfu import host
+
 
 CORE = Path(__file__).resolve().parents[2]
 COMMAND = CORE / "src/python/kungfu/cli/commands/action.py"
@@ -35,6 +37,7 @@ def load_action_module(tmp_path, monkeypatch, status=0):
     binding_file.write_bytes(b"")
     libnode = FakeLibnode(status)
     kungfu = types.ModuleType("kungfu")
+    kungfu.host = host
     kungfu.__binding__ = types.SimpleNamespace(
         __file__=str(binding_file), libnode=libnode
     )
@@ -109,3 +112,19 @@ def test_action_propagates_embedded_node_exit_code(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as raised:
         module._run_action(("unknown", "--json"))
     assert raised.value.code == 64
+
+
+def test_source_action_uses_the_declared_public_package_entry(tmp_path, monkeypatch):
+    module, _libnode = load_action_module(tmp_path, monkeypatch)
+    entry = tmp_path / "public-action.mjs"
+    entry.write_text("export {};\n")
+    requested = []
+
+    def resolve(specifier):
+        requested.append(specifier)
+        return str(entry)
+
+    monkeypatch.setattr(host, "node_package_entry", resolve)
+    monkeypatch.delenv("KUNGFU_ACTION_ENTRY", raising=False)
+    assert module._resolve_action_entry() == str(entry)
+    assert requested == ["@kungfu-tech/work/action/cli"]

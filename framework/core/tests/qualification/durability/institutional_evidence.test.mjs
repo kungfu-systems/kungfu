@@ -7,8 +7,9 @@ import { test } from 'node:test';
 const report = JSON.parse(
   fs.readFileSync(
     new URL(
-      '../../../../../docs/qualification/evidence/durability/c7c0c680e/single-host-institutional-profile-v1.json',
-      import.meta.url,
+      import.meta.resolve(
+        '@kungfu-tech/workspaces/testing/durability-institutional-profile',
+      ),
     ),
     'utf8',
   ),

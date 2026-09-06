@@ -13,12 +13,12 @@ import {
   qualifiedCorePlatformMatrix,
   qualifiedCorePlatformRow,
   qualifiedCorePlatformRowForIdentity,
-} from '../../framework/work/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
-import { validateDeliveryAttempt } from '../../scripts/affected-native-proof.mjs';
+} from '@kungfu-tech/work/assignment-capture/qualified-assignment-core-platform-matrix';
+import { validateDeliveryAttempt } from '@kungfu-tech/workspaces/tooling/affected-native-proof';
 import {
   qualifiedAssignmentCoreRoot,
   verifyQualifiedAssignmentCoreArtifact,
-} from '../../scripts/check-shifu-cache-contract.mjs';
+} from '@kungfu-tech/workspaces/tooling/check-shifu-cache-contract';
 import { requireSha } from './affected-native-artifact-lookup.mjs';
 
 export const QUALIFIED_CORE_CANDIDATE_SCHEMA =

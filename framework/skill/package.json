@@ -22,7 +22,8 @@
     "schema",
     "fixtures",
     "README.md",
-    "kungfu-skill.contract.json"
+    "kungfu-skill.contract.json",
+    "scripts/context.mjs"
   ],
   "dependencies": {
     "ajv": "^8.20.0"
@@ -36,5 +37,10 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./tooling/context": "./scripts/context.mjs"
   }
 }

@@ -4,7 +4,7 @@
 // the host, and subscriptions bridge back. Headless — the enforcement logic
 // under framework/api/src/capability/sandbox.ts; the live in-Electron isolation
 // (node stripped) is proven separately by the electron harness.
-import { createCapabilityHost, createCapabilityGuest } from '../../../framework/api/src/capability/sandbox.ts';
+import { createCapabilityHost, createCapabilityGuest } from '@kungfu-tech/api/capability/sandbox';
 
 let emitted = null;
 const realCaps = {

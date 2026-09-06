@@ -13,6 +13,7 @@ import sys
 import click
 
 import kungfu
+from kungfu import host
 from kungfu.cli.commands import kfc
 
 
@@ -28,17 +29,7 @@ def _resolve_sdk_entry():
     ):
         if os.path.exists(candidate):
             return os.path.abspath(candidate)
-    # Dev / workspace: walk up to the monorepo's developer/sdk source.
-    directory = binding_dir
-    for _ in range(8):
-        candidate = os.path.join(directory, "developer", "sdk", "src", "sdk.js")
-        if os.path.exists(candidate):
-            return os.path.abspath(candidate)
-        parent = os.path.dirname(directory)
-        if parent == directory:
-            break
-        directory = parent
-    return None
+    return host.node_package_entry("@kungfu-tech/sdk")
 
 
 @kfc.command(
@@ -58,7 +49,7 @@ def sdk(commands):
     if not entry:
         raise click.ClickException(
             "kungfu SDK entry not found; set KUNGFU_SDK_ENTRY to a built sdk.js, "
-            "or run inside the monorepo where developer/sdk/src/sdk.js exists"
+            "or install the declared @kungfu-tech/sdk workspace dependency"
         )
     argv = [sys.argv[0], entry, *commands]
     kungfu.__binding__.libnode.run(*argv)

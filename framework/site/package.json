@@ -18,21 +18,22 @@
   "main": "index.js",
   "exports": {
     ".": "./index.js",
-    "./site-bundle.json": "./dist/site/site-bundle.json",
-    "./agent-index.json": "./dist/site/agent-index.json",
-    "./kfx/site-bundle.json": "./dist/site/kfx/site-bundle.json",
-    "./kfx/agent-index.json": "./dist/site/kfx/agent-index.json",
-    "./kfx/human-index.json": "./dist/site/kfx/human-index.json",
-    "./kfx/source-manifest.json": "./dist/site/kfx/source-manifest.json",
-    "./kfx/manifest.json": "./dist/site/kfx/manifest.json",
-    "./kfx/schema": "./schema/kfx-site-bundle.schema.json",
     "./adr-map.json": "./dist/site/adr-map.json",
+    "./agent-index.json": "./dist/site/agent-index.json",
+    "./experience-schema": "./schema/site-experience-config.schema.json",
     "./format/*": "./dist/site/format/*",
     "./installer-publication": "./installer-publication.mjs",
     "./installer-publication-schema": "./schema/installer-publication-bundle.schema.json",
+    "./kfx/agent-index.json": "./dist/site/kfx/agent-index.json",
+    "./kfx/human-index.json": "./dist/site/kfx/human-index.json",
+    "./kfx/manifest.json": "./dist/site/kfx/manifest.json",
+    "./kfx/schema": "./schema/kfx-site-bundle.schema.json",
+    "./kfx/site-bundle.json": "./dist/site/kfx/site-bundle.json",
+    "./kfx/source-manifest.json": "./dist/site/kfx/source-manifest.json",
+    "./package.json": "./package.json",
     "./schema": "./schema/site-bundle.schema.json",
-    "./experience-schema": "./schema/site-experience-config.schema.json",
-    "./package.json": "./package.json"
+    "./site-bundle.json": "./dist/site/site-bundle.json",
+    "./tooling/check-kfx-site-impact": "./tooling/check-kfx-site-impact.mjs"
   },
   "files": [
     "index.js",
@@ -40,7 +41,8 @@
     "installer-publication.mjs",
     "dist/site/",
     "schema/",
-    "README.md"
+    "README.md",
+    "tooling/check-kfx-site-impact.mjs"
   ],
   "scripts": {
     "prepare:spec": "pnpm --filter @kungfu-tech/spec verify",
@@ -54,6 +56,7 @@
   },
   "devDependencies": {
     "@kungfu-tech/spec": "workspace:*",
+    "@kungfu-tech/workspaces": "workspace:*",
     "ajv": "8.20.0",
     "rimraf": "^6.0.0"
   }

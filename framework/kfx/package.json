@@ -12,8 +12,12 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./project-work-run": "./src/project-work-run.tsx",
     "./query-view": "./src/query-view.tsx",
-    "./shared-modules": "./shared-modules.json"
+    "./shared-modules": "./shared-modules.json",
+    "./tsconfig.json": "./tsconfig.json",
+    "./tooling/run-identity-neutral-terminal-qualification": "./tooling/run-identity-neutral-terminal-qualification.mjs"
   },
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
@@ -28,7 +32,9 @@
     "schema",
     "README.md",
     "kungfu-kfx.contract.json",
-    "shared-modules.json"
+    "shared-modules.json",
+    "tsconfig.json",
+    "tooling/run-identity-neutral-terminal-qualification.mjs"
   ],
   "scripts": {
     "build": "tsc --noEmit"

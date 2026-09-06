@@ -13,8 +13,8 @@ import {
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/work/project-cut/index.mjs';
-import { sourceProjectionAtCommit } from '../framework/work/project-cut/settlement.mjs';
+} from '@kungfu-tech/work/project-cut';
+import { sourceProjectionAtCommit } from '@kungfu-tech/work/project-cut/settlement';
 import {
   admitFamilyQueueLease,
   createFamilyQueueLease,

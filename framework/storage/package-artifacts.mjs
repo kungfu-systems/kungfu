@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   platformCommand,
   platformCommandOptions,
-} from '../../scripts/platform-command.mjs';
+} from '@kungfu-tech/workspaces/tooling/platform-command';
 import {
   SDK_PACKAGE_PLATFORMS,
   sdkPackagePlatformDescriptor,

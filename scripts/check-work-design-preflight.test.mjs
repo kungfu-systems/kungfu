@@ -7,24 +7,24 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { semanticRoot } from '../framework/work/project-cut/index.mjs';
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
 import {
   buildWorkDesignPolicy,
   workDesignAdvisoryBoundary,
-} from '../framework/work/work-design-advisor/src/work-design-advisor.mjs';
+} from '@kungfu-tech/work/work-design-advisor';
 import {
   WORK_DESIGN_PREFLIGHT_SCHEMA,
   buildAssignmentHistorySelectionRequest,
   buildAssignmentOutcomeHistory,
   runAssignmentPreflight,
   verifyAssignmentPreflight,
-} from '../framework/work/work-design-preflight/src/work-design-preflight.mjs';
+} from '@kungfu-tech/work/work-design-preflight';
 import {
   buildWorkHistoryCandidate,
   buildWorkHistoryIndexSnapshot,
   buildWorkHistorySelectionPolicy,
   selectWorkHistory,
-} from '../framework/work/work-history-selector/src/work-history-selector.mjs';
+} from '@kungfu-tech/work/work-history-selector';
 
 const AS_OF = '2026-07-30T08:00:00Z';
 const AUTHORITY_ROOT = semanticRoot({ authority: 'native-work-control' });

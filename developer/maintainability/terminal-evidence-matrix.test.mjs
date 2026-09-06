@@ -7,12 +7,12 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../../framework/work/project-cut/index.mjs';
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
 import {
   observeRun,
   parseCommandJson,
   parseTerminalReviewAttestation,
-} from '../../framework/work/terminal-evidence/live-observations.mjs';
+} from '@kungfu-tech/work/terminal-evidence/live-observations';
 import {
   digestBytes,
   resolveRetainedPath,

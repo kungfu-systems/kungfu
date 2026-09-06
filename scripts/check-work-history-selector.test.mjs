@@ -3,15 +3,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { semanticRoot } from '../framework/work/project-cut/index.mjs';
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
 import {
   buildWorkHistoryCandidate,
   buildWorkHistoryIndexSnapshot,
   buildWorkHistorySelectionPolicy,
   selectWorkHistory,
   verifyWorkHistorySelectionManifest,
-} from '../framework/work/work-history-selector/src/work-history-selector.mjs';
-import { checkWorkHistorySelectorContract } from '../framework/work/work-history-selector/tooling/work-history-selector-contract.mjs';
+} from '@kungfu-tech/work/work-history-selector';
+import { checkWorkHistorySelectorContract } from '@kungfu-tech/work/work-history-selector/tooling/work-history-selector-contract';
 
 const AS_OF = '2026-07-29T08:00:00Z';
 const AUTHORITY_ROOT = semanticRoot({ authority: 'work-control' });

@@ -78,7 +78,7 @@ jobs:
           test "$(node -p "require('./framework/core/build/kungfu-core-build-identity.json').profile")" = "$KUNGFU_BUILD_PROFILE"
           ctest --test-dir framework/core/build -R "yijinjing_(custom_provider|fact_authority|mmap)|kungfu_public_contract_compatibility" --output-on-failure
           # shifu-entry-contract: allow standalone external-consumer qualification outside the parent build
-          node framework/core/slices/custom-provider/run.mjs
+          node scripts/run-project-cut-entry.mjs @kungfu-tech/core/testing/custom-provider
 
       - name: Verify build identity and custom provider contract (Windows)
         if: runner.os == 'Windows'
@@ -91,7 +91,7 @@ jobs:
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vsInstall = & $vswhere -latest -property installationPath
           $vsDevCmd = Join-Path $vsInstall "Common7\Tools\VsDevCmd.bat"
-          cmd.exe /d /s /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 >nul && node framework/core/slices/custom-provider/run.mjs"
+          cmd.exe /d /s /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 >nul && node scripts/run-project-cut-entry.mjs @kungfu-tech/core/testing/custom-provider"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Qualify installed KFD-7 consumers (POSIX full profile)

@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { stageActionPackage } from '../../../product/scripts/dist.mjs';
+import { stageActionPackage } from '@kungfu-tech/product-kungfu/tooling/dist';
 import {
   ActionKernelError,
   canonicalJson,

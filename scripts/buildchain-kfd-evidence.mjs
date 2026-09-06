@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   KFD4_QUALIFICATION_PATH,
   loadKfd4PerspectiveQualification,
-} from '../framework/core/tests/qualification/kfd4-perspective.mjs';
+} from '@kungfu-tech/core/testing/qualification/kfd4-perspective';
 import {
   BUILDCHAIN_KFD1_CONTRACT_WORLD_WITNESS_PATH,
   BUILDCHAIN_KFD1_RELEASE_GATE_PATH,
@@ -27,9 +27,9 @@ import {
   releaseCandidateKfdRoot,
   renderKfdJson,
   resolveGitBoundKfdEvidenceSourceSha,
-} from '../product/release/buildchain-kfd-runtime.mjs';
-import { syncKfdAdopterRelease } from '../product/release/kfd-adopter-release.mjs';
-import { KFD_ARTIFACT_WITNESS_JSONS } from '../product/release/kfd-candidate-evidence.mjs';
+} from '@kungfu-tech/product-kungfu/release/buildchain-kfd-runtime';
+import { syncKfdAdopterRelease } from '@kungfu-tech/product-kungfu/release/kfd-adopter-release';
+import { KFD_ARTIFACT_WITNESS_JSONS } from '@kungfu-tech/product-kungfu/release/kfd-candidate-evidence';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   assertKfdEvidenceSourceBinding,

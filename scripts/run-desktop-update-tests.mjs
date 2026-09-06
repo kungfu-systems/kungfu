@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const guiRequire = createRequire(
-  path.join(root, 'framework', 'gui', 'package.json'),
+  import.meta.resolve('@kungfu-tech/gui/package.json'),
 );
 const tsxCli = process.env.KUNGFU_READONLY_TSX || guiRequire.resolve('tsx/cli');
 const result = spawnSync(

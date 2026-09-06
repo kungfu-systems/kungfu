@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.5",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.5",
-    "sourceSha": "79fdd7981b6b7cd8756a66477dd9af4789c7ad22"
+    "sourceSha": "e0ec61b28bb9e0bf36a9c1aeef2daa788a1d1a4d"
   },
   "claims": [
     {
@@ -242,7 +242,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-agent-work-state-contract.test.mjs",
-            "sha256": "ef45e3390b7522fcf606a22ac8e89b67e1ce3754511322131218568c1c54420e"
+            "sha256": "7efab4f8f942d2df12326517f2e2c826d88f100af2d1b3e983df7337a024b31b"
           },
           "description": "Source, package, KFD-2, KFD-3, and continuity evidence-boundary checks."
         },
@@ -324,7 +324,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-native-authority-membrane.test.mjs",
-            "sha256": "79cd49995902dc760cbf4c84bb6696487813a7ae5cf18a12fe09c9c32000ea88"
+            "sha256": "64249251e34abf917180f300118abef923f0a796a557b9a0cbc84646f6111a9a"
           },
           "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
         },
@@ -342,7 +342,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/layers/sdk/run.mjs",
-            "sha256": "00581d7d1bc595afa604f77d92ba4a9d538ce2905afad8f49afe3c950367dd57"
+            "sha256": "86d4d7575bdbdbd47b076a7510221080ba147800479563a31e69ae9dba4bfc00"
           },
           "description": "Installed C++, Python, Node.js, and Rust SDK qualification against one exact native runtime."
         },

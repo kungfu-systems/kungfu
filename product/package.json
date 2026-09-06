@@ -6,7 +6,7 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.5",
-  "description": "Kungfu Product — inert assembly and distribution metadata for desktop and CLI products, the bundled runtime, terminal surface, SDK, and product-declared KFX.",
+  "description": "Kungfu Product \u2014 inert assembly and distribution metadata for desktop and CLI products, the bundled runtime, terminal surface, SDK, and product-declared KFX.",
   "license": "Apache-2.0",
   "private": true,
   "kungfuProduct": {
@@ -33,7 +33,13 @@
     "dist:cli": "node scripts/dist.mjs --product cli",
     "product": "node scripts/product.mjs",
     "cli": "pnpm --filter @kungfu-tech/tui run dev",
-    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('extensions',{recursive:true,force:true})\" && pnpm --filter @kungfu-tech/gui run clean"
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('extensions',{recursive:true,force:true})\" && pnpm --filter @kungfu-tech/gui run clean",
+    "test:alpha-promotion-preflight": "node --test scripts/cli-surface-qualification.test.mjs",
+    "test:cli-surface-qualification": "node --test scripts/archive.test.mjs scripts/cli-launcher.test.mjs scripts/cli-surface-qualification.test.mjs scripts/finalize-signed-cli-qualification.test.mjs scripts/finalize-macos-release-artifacts.test.mjs scripts/dist.test.mjs",
+    "test:cli-surface-qualification:2": "node --test scripts/dist-windows-trunk.test.mjs scripts/dist-kfx.test.mjs scripts/dist-cli-executable-layout.test.mjs scripts/installed-kungfu/index.test.mjs",
+    "test:product-cache-home": "node --test scripts/qualify-product-cache-home.test.mjs",
+    "test:release-channel": "node --test scripts/release-channel-index.test.mjs scripts/release-channel-trust.test.mjs scripts/bootstrap-installer.test.mjs",
+    "test:dist": "node --test scripts/dist.test.mjs"
   },
   "dependencies": {
     "@kungfu-tech/core": "workspace:*",
@@ -62,12 +68,36 @@
     "@kungfu-tech/kfx-work-control-contract": "workspace:*",
     "@kungfu-tech/kfx-work-control-views": "workspace:*",
     "@kungfu-tech/sdk": "workspace:*",
-    "@kungfu-tech/tui": "workspace:*"
+    "@kungfu-tech/tui": "workspace:*",
+    "@kungfu-tech/work": "workspace:*"
   },
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
   },
   "devDependencies": {
-    "@kungfu-tech/buildchain": "3.0.9-alpha.17"
+    "@kungfu-tech/buildchain": "3.0.9-alpha.17",
+    "@kungfu-tech/workspaces": "workspace:*"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./release/affected-native-artifact-lookup": "./release/affected-native-artifact-lookup.mjs",
+    "./release/affected-native-proof-cli": "./release/affected-native-proof-cli.mjs",
+    "./release/buildchain-kfd-runtime": "./release/buildchain-kfd-runtime.mjs",
+    "./release/kfd-adopter-release": "./release/kfd-adopter-release.mjs",
+    "./release/kfd-candidate-evidence": "./release/kfd-candidate-evidence.mjs",
+    "./release/qualified-assignment-core-artifact": "./release/qualified-assignment-core-artifact.mjs",
+    "./stdlib-prune.json": "./stdlib-prune.json",
+    "./tooling/archive": "./scripts/archive.mjs",
+    "./tooling/cli-surface-qualification": "./scripts/cli-surface-qualification.mjs",
+    "./tooling/compatibility": "./scripts/compatibility.mjs",
+    "./tooling/dist": "./scripts/dist.mjs",
+    "./tooling/libwasm-artifact": "./scripts/libwasm-artifact.mjs",
+    "./tooling/product": "./scripts/product.mjs",
+    "./tooling/upgrade-manifest": "./scripts/upgrade-manifest.mjs",
+    "./upgrade/kungfu-upgrade.contract.json": "./upgrade/kungfu-upgrade.contract.json",
+    "./version-line/check-version-line-authority": "./version-line/check-version-line-authority.mjs",
+    "./version-line/version-line-authority": "./version-line/version-line-authority.mjs",
+    "./tooling/qualify-product-cache-home": "./scripts/qualify-product-cache-home.mjs",
+    "./tooling/verify-cli-surface-qualification": "./scripts/verify-cli-surface-qualification.mjs"
   }
 }

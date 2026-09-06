@@ -42,7 +42,7 @@ import {
   assertLibwasmArtifact,
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
-} from '../product/scripts/libwasm-artifact.mjs';
+} from '@kungfu-tech/product-kungfu/tooling/libwasm-artifact';
 import { sourceMypyCommand } from './source-acceptance.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -176,14 +176,8 @@ function runEpisodeQualificationSmoke() {
     return;
   }
 
-  const harness = path.join(
-    ROOT,
-    'framework',
-    'core',
-    'tests',
-    'qualification',
-    'episode',
-    'run.mjs',
+  const harness = fileURLToPath(
+    import.meta.resolve('@kungfu-tech/core/testing/qualification/episode/run'),
   );
   const runRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kf-verify-episode-'));
   const reportPath = path.join(runRoot, 'episode-trust-report.json');
