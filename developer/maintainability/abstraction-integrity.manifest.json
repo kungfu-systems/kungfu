@@ -392,5 +392,64 @@
       ]
     }
   ],
+  "generatedProjections": [
+    {
+      "id": "flatbuffers-reflection-python-v25.9.23",
+      "owner": "core/rewind-schema",
+      "generator": "flatc 25.9.23 --python",
+      "source": "framework/core/src/python/kungfu/rewind/reflection.fbs",
+      "sourceRoot": "sha256:353463a046c61e6266698ad4b33b06e748ccb23c13b8bcbb051fc60e276384fa",
+      "outputs": [
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/AdvancedFeatures.py",
+          "contentRoot": "sha256:282af61f0940c87f502efe18c4c3c40e4ca236b0bf8900aa2932984d98ad17fa"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/BaseType.py",
+          "contentRoot": "sha256:ff9209381a724840afe028986b592635511d670822accfacd332e5c7fa89f0d7"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/Enum.py",
+          "contentRoot": "sha256:9a2112b9571e40ed0d16d29e2bbee6ddbb73b70678240d1696f5717022d31d93"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/EnumVal.py",
+          "contentRoot": "sha256:c824365debae4ba07e27f7cec5207ac6d8001e7cc05d7d6b1c211d464bafdffd"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/Field.py",
+          "contentRoot": "sha256:44b999408ddf94729039e913a1ae14d2ea62275ed38498fab9f2ff9499d34cf2"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/KeyValue.py",
+          "contentRoot": "sha256:800379ca243c638455f1209bfe5c9cdfb24bde1cb9d2fc297e56723302b8b9e1"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/Object.py",
+          "contentRoot": "sha256:95f6318680c40b2787f447353bfefbd8f147f47f18b6b3c749024e8c6b2bbdf1"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/RPCCall.py",
+          "contentRoot": "sha256:b24ca0f797ade328c6c748f7f3fe54c71e6d7ea2d8b22f4ee301c235ff698c45"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/Schema.py",
+          "contentRoot": "sha256:2223bf996ed3d86b7cca38d656c6d25de73b2f244e24f3978c65cd5a43eb986f"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/SchemaFile.py",
+          "contentRoot": "sha256:27a0767cffa715993b0fe37031bdc66699b3aa6ac73c889afefa2fed2ee5d156"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/Service.py",
+          "contentRoot": "sha256:f2b0d21eb0f2423b9a9b24391ac10008dfd3d69999e026e3f1e62936bce1a5a6"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/rewind/reflection/Type.py",
+          "contentRoot": "sha256:b49ab6cb2fe47612cd159f0432734bf0f0591d29d9cb3aaaea54a6cc45ab0b50"
+        }
+      ]
+    }
+  ],
   "exceptions": []
 }
