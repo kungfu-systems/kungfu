@@ -92,3 +92,33 @@ def test_assembled_host_is_blessed_unconditionally():
         )
         is None
     )
+
+
+def test_node_package_entry_uses_public_exports_without_source_fallback(tmp_path):
+    package = tmp_path / "node_modules/@test/provider"
+    package.mkdir(parents=True)
+    (package / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "@test/provider",
+                "type": "module",
+                "exports": {"./public": "./public.mjs"},
+            }
+        )
+    )
+    public = package / "public.mjs"
+    public.write_text("export const value = 1;\n")
+    (package / "private.mjs").write_text("export const hidden = true;\n")
+    assert host.node_package_entry("@test/provider/public", tmp_path) == str(
+        public.resolve()
+    )
+    assert host.node_package_entry("@test/provider/private.mjs", tmp_path) is None
+    (package / "package.json").write_text(
+        json.dumps({"name": "@test/provider", "exports": {}})
+    )
+    assert host.node_package_entry("@test/provider/public", tmp_path) is None
+
+
+def test_node_package_entry_reports_a_missing_node_runtime(monkeypatch):
+    monkeypatch.setenv("PATH", "")
+    assert host.node_package_entry("@test/provider/public") is None

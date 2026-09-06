@@ -60,7 +60,7 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
 test('desktop companion delegates bytecode cache ownership to the native trunk', () => {
   const launcher = readFileSync(
     fileURLToPath(
-      new URL('../../framework/gui/resources/cli/kungfu', import.meta.url),
+      new URL(import.meta.resolve('@kungfu-tech/gui/resources/cli/kungfu')),
     ),
     'utf8',
   );

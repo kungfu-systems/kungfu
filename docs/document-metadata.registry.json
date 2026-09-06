@@ -178,16 +178,17 @@
         "local-files",
         "user-decision"
       ],
-      "last_reviewed": "2026-07-27",
+      "last_reviewed": "2026-09-05",
       "period": "2026-07-28",
       "theme": "kfx-extension-authoring",
       "confidence": "high",
       "evidence_grade": "B",
       "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
+        "model_family": "GPT-6",
         "product": "Codex",
-        "generated_at": "2026-07-28",
-        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+        "generated_at": "2026-09-05",
+        "visible_context": "Package-consumption section verified against repository manifests and local tests; existing document scope retained",
+        "invisible_context_boundary": "No unseen runtime state or public release evidence claimed"
       }
     },
     "docs/architecture/fact-episode-action-runtime.md": {
@@ -330,16 +331,17 @@
         "local-files",
         "user-decision"
       ],
-      "last_reviewed": "2026-07-28",
+      "last_reviewed": "2026-09-05",
       "period": "2026-07-28",
       "theme": "kfx-identity-neutral-authority",
       "confidence": "high",
       "evidence_grade": "B",
       "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
+        "model_family": "GPT-6",
         "product": "Codex",
-        "generated_at": "2026-07-28",
-        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+        "generated_at": "2026-09-05",
+        "visible_context": "Package-consumption section verified against repository manifests and local tests; existing document scope retained",
+        "invisible_context_boundary": "No unseen runtime state or public release evidence claimed"
       }
     },
     "docs/architecture/kungfu-format-contract.md": {

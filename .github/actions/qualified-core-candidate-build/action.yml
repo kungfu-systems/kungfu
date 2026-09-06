@@ -69,7 +69,7 @@ runs:
           ./shifu test:node-watcher-runtime-boundary
           ./shifu test:agent-session-peer-transport:native
         fi
-        node product/release/qualified-assignment-core-artifact.mjs seal \
+        node scripts/run-project-cut-entry.mjs @kungfu-tech/product-kungfu/release/qualified-assignment-core-artifact seal \
           --repository-root . \
           --payload-root framework/core/dist/kungfu \
           --plan product/qualification/qualified-core/input/plan.json \
@@ -105,7 +105,7 @@ runs:
           .\shifu.cmd test:agent-session-peer-transport:native
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
-        node product/release/qualified-assignment-core-artifact.mjs seal `
+        node scripts/run-project-cut-entry.mjs @kungfu-tech/product-kungfu/release/qualified-assignment-core-artifact seal `
           --repository-root . `
           --payload-root framework/core/dist/kungfu `
           --plan product/qualification/qualified-core/input/plan.json `

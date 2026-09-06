@@ -474,9 +474,9 @@
         "functionRisk": { "functions": 55, "total": 585, "maximum": 95 }
       },
       "current": {
-        "physicalLines": 930,
-        "responsibilities": 28,
-        "functionRisk": { "functions": 17, "total": 223, "maximum": 66 }
+        "physicalLines": 932,
+        "responsibilities": 29,
+        "functionRisk": { "functions": 17, "total": 214, "maximum": 66 }
       },
       "ownerFiles": [
         "framework/core/src/python/kungfu/profile_sdk_source.py",

@@ -2,7 +2,7 @@
 
 import process from 'node:process';
 
-import { createPowerCutPlan } from '../framework/core/tests/qualification/durability/powercut_plan.mjs';
+import { createPowerCutPlan } from '@kungfu-tech/core/testing/qualification/durability/powercut_plan';
 
 function options(args) {
   const parsed = {};

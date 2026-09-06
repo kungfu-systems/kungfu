@@ -18,7 +18,7 @@ import {
 import {
   qualificationAuthority,
   removalAuthority,
-} from '../../tests/fixtures/_kfx-authority.mjs';
+} from '@kungfu-tech/workspaces/testing/fixtures/_kfx-authority';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { qualifyCliSurface } from './cli-surface-qualification.mjs';
@@ -1268,7 +1268,7 @@ function bundleSdkForCli(stageRoot, esbuildRuntime) {
   try {
     process.env.ESBUILD_BINARY_PATH = esbuildRuntime.binaryPath;
     esbuild.buildSync({
-      entryPoints: [path.join(SDK_DIR, 'src', 'sdk.js')],
+      entryPoints: [require.resolve('@kungfu-tech/sdk')],
       bundle: true,
       platform: 'node',
       format: 'esm',

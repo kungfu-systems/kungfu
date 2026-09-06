@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: Apache-2.0
+import {
+  resolveShifuCachedTool, observeQualifiedCoreCheckout,
+  downloadGithubArtifact, downloadHttpArtifact, discoverGithubBundle,
+  materializeQualifiedCoreBundle, consumeQualifiedCoreForCheckout,
+  qualifiedCoreUsageStatus, runQualifiedCoreUsageStatusCommand,
+} from '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer';
+
+const checkout = observeQualifiedCoreCheckout('.');
+const commit: string = checkout.commit;
+const tool: string = resolveShifuCachedTool({ tool: 'uv' });
+const github: Promise<string> = downloadGithubArtifact({
+  repository: checkout.repository, artifactId: 1, destination: '/tmp/archive',
+});
+const http: Promise<string> = downloadHttpArtifact({
+  url: 'https://example.invalid/archive', destination: '/tmp/archive', expectedBytes: 1,
+});
+const bundle = await discoverGithubBundle(checkout, '/tmp', { cacheRoot: '/tmp/cache' });
+const materialized = await materializeQualifiedCoreBundle({
+  bundleRoot: bundle.bundleRoot, repositoryRoot: '.', checkout, cacheRoot: '/tmp/cache',
+});
+const status: 'materialized' | 'already-materialized' = materialized.status;
+const consumed = await consumeQualifiedCoreForCheckout({ repositoryRoot: '.', checkout });
+const objectRoot: string = consumed.objectRoot;
+const eligible: boolean = qualifiedCoreUsageStatus({ repositoryRoot: '.' }).currentCheckout.eligible;
+const observations: number = runQualifiedCoreUsageStatusCommand(['status']).totals.observations;
+// @ts-expect-error repositoryRoot is required.
+consumeQualifiedCoreForCheckout({});
+// @ts-expect-error archive byte count is numeric.
+downloadHttpArtifact({ url: 'https://example.invalid', destination: '/tmp/a', expectedBytes: '1' });
+// @ts-expect-error CLI arguments must be strings.
+runQualifiedCoreUsageStatusCommand([1]);
+// @ts-expect-error Private implementation paths are not public type entries.
+import '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer.mjs';

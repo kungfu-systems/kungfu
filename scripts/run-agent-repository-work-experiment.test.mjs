@@ -12,7 +12,7 @@ import {
   dockerArgs,
   dockerIsRootless,
   validateDockerHost,
-} from '../framework/work/agent-repository-work/opencode-docker-proxy.mjs';
+} from '@kungfu-tech/work/agent-repository-work/opencode-docker-proxy';
 import {
   classifyFailure,
   parseInvestigationClaim,
@@ -20,7 +20,7 @@ import {
   runExperiment,
   runtimeProfile,
   validateExperimentReport,
-} from '../framework/work/agent-repository-work/run.mjs';
+} from '@kungfu-tech/work/agent-repository-work/run';
 import {
   REPOSITORY_WORK_FIXTURES,
   SYNTHETIC_REPOSITORY_WORK_FIXTURES,

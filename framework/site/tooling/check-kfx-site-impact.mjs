@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   sourceChangedFiles,
   sourceMergeBase,
-} from '../../../scripts/source-acceptance.mjs';
+} from '@kungfu-tech/workspaces/tooling/source-acceptance';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

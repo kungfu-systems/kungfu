@@ -15,7 +15,7 @@ import {
   resolveKfdSourcePlatform,
   sealKfdPrebuiltLayerArtifacts,
   sealKfdSourceEvidence,
-} from '../product/release/kfd-candidate-evidence.mjs';
+} from '@kungfu-tech/product-kungfu/release/kfd-candidate-evidence';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   lifecycleEnvironment,
