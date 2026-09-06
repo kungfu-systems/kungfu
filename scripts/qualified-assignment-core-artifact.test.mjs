@@ -324,7 +324,11 @@ function compatibilityCheckoutFixture(temporary) {
     'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
     'docs/shifu/qualified-assignment-core-platform-matrix.json',
     'scripts/check-shifu-cache-contract.mjs',
-    'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
+    fileURLToPath(
+      import.meta.resolve(
+        '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer',
+      ),
+    ),
     'framework/work/assignment-capture/qualified-assignment-core-observability.mjs',
     'product/release/qualified-assignment-core-artifact.mjs',
     'framework/work/assignment-capture/qualified-assignment-core-platform-matrix.mjs',
@@ -1346,9 +1350,10 @@ test('usage status reads only the bounded cache root and reports current checkou
   const result = spawnSync(
     process.execPath,
     [
-      path.join(
-        ROOT,
-        'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer',
+        ),
       ),
       'status',
       '--repository-root',
@@ -1481,7 +1486,11 @@ test('consumer CLI emits one source-build diagnosis and durable fallback observa
   const result = spawnSync(
     process.execPath,
     [
-      'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer',
+        ),
+      ),
       'materialize',
       '--repository-root',
       repositoryRoot,
@@ -2139,7 +2148,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /product\/release\/qualified-assignment-core-artifact\.mjs promote[\s\S]*--target-commit "\$TARGET_SHA"[\s\S]*--protected-ref "\$GITHUB_REF"[\s\S]*--merge-group-run-id "\$\{\{ steps\.producer\.outputs\.run-id \}\}"[\s\S]*--producer-run-id "\$\{\{ steps\.qualified_core_producer\.outputs\.run-id \}\}"[\s\S]*--producer-event push[\s\S]*--producer-workflow-path \.github\/workflows\/dev-post-merge-advisory\.yml[\s\S]*--delivery-attempt/u,
+    /@kungfu-tech\/product-kungfu\/release\/qualified-assignment-core-artifact promote[\s\S]*--target-commit "\$TARGET_SHA"[\s\S]*--protected-ref "\$GITHUB_REF"[\s\S]*--merge-group-run-id "\$\{\{ steps\.producer\.outputs\.run-id \}\}"[\s\S]*--producer-run-id "\$\{\{ steps\.qualified_core_producer\.outputs\.run-id \}\}"[\s\S]*--producer-event push[\s\S]*--producer-workflow-path \.github\/workflows\/dev-post-merge-advisory\.yml[\s\S]*--delivery-attempt/u,
   );
   assert.match(
     promotionWorkflow,
@@ -2151,7 +2160,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /Promote or resolve the exact Qualified Core platform matrix[\s\S]*darwin-arm64-cp313[\s\S]*linux-x86_64-cp313[\s\S]*windows-x86_64-cp313[\s\S]*qualified-assignment-core-candidate-\$\{TARGET_SHA\}-\$\{row\}[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active for \$\{row\}[\s\S]*status:"unqualified"[\s\S]*reason:"no-exact-or-compatible-authority"[\s\S]*uses: \.\/\.github\/actions\/upload-qualified-core-matrix/u,
+    /Promote or resolve the exact Qualified Core platform matrix[\s\S]*darwin-arm64-cp313[\s\S]*linux-x86_64-cp313[\s\S]*windows-x86_64-cp313[\s\S]*qualified-assignment-core-candidate-\$\{TARGET_SHA\}-\$\{row\}[\s\S]*@kungfu-tech\/product-kungfu\/release\/qualified-assignment-core-artifact reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active for \$\{row\}[\s\S]*status:"unqualified"[\s\S]*reason:"no-exact-or-compatible-authority"[\s\S]*uses: \.\/\.github\/actions\/upload-qualified-core-matrix/u,
   );
   assert.match(
     promotionWorkflow,

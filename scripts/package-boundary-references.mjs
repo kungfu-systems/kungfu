@@ -3,6 +3,7 @@
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
+import { parse } from 'yaml';
 
 function evaluateCall(node, context, seen) {
   const callee = node.expression.getText(context.tree);
@@ -144,7 +145,8 @@ function inspectCall(node, context) {
     if (
       callee === 'import' ||
       context.requires.has(callee.replace(/\.resolve$/u, '')) ||
-      callee === 'import.meta.resolve'
+      callee === 'import.meta.resolve' ||
+      /(?:^|\.)createRequire$/u.test(callee)
     )
       add(node.arguments[0], context);
   }
@@ -157,7 +159,40 @@ function inspectCall(node, context) {
   }
 }
 
+function inspectExecutable(node, context) {
+  if (!ts.isCallExpression(node) || !node.arguments[0]) return;
+  const callee = node.expression.getText(context.tree);
+  if (!/(?:^|\.)(?:spawn|spawnSync|execFile|execFileSync|fork)$/u.test(callee))
+    return;
+  const command = evaluate(node.arguments[0], context);
+  const nodeCommand =
+    node.arguments[0].getText(context.tree) === 'process.execPath' ||
+    (command !== null && /(?:^|[/\\])node(?:\.exe)?$/u.test(command));
+  if (!nodeCommand) {
+    add(node.arguments[0], context, 'executable');
+    return;
+  }
+  const args = node.arguments[1];
+  if (!args || !ts.isArrayLiteralExpression(args)) return;
+  let testMode = false;
+  for (const arg of args.elements) {
+    const value = evaluate(arg, context);
+    if (value === null) return;
+    if (['-e', '--eval', '-p', '--print'].includes(value)) return;
+    if (value === '--test') testMode = true;
+    if (value.startsWith('-')) continue;
+    add(arg, context, 'executable');
+    if (!testMode) break;
+  }
+}
+
 function visit(node, context) {
+  if (
+    ts.isVariableDeclaration(node) &&
+    node.name.getText(context.tree) === 'nodeChecks' &&
+    node.initializer
+  )
+    configurationEntries(node.initializer, context, 'executable');
   if (
     (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
     node.moduleSpecifier
@@ -172,6 +207,7 @@ function visit(node, context) {
   if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument))
     add(node.argument.literal, context);
   inspectCall(node, context);
+  inspectExecutable(node, context);
   inspectConfiguration(node, context);
   ts.forEachChild(node, (child) => visit(child, context));
 }
@@ -187,4 +223,48 @@ export function moduleReferences(source, filename) {
   discover(context.tree, context);
   visit(context.tree, context);
   return context.references;
+}
+
+export function workflowCommands(source) {
+  const commands = [];
+  function visit(value) {
+    if (!value || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      if (
+        (key === 'run' || key.endsWith('-command')) &&
+        typeof child === 'string'
+      )
+        commands.push(child.replaceAll('\\', '/'));
+      else visit(child);
+    }
+  }
+  visit(parse(source));
+  return commands;
+}
+
+export function pythonPackageReferences(source) {
+  const code = source.replace(/^\s*#.*$/gmu, '');
+  const constants = new Map(
+    [
+      ...code.matchAll(
+        /^([A-Z_][A-Z_0-9]*)\s*=\s*\(?\s*['"]([^'"\r\n]+)['"]/gmu,
+      ),
+    ].map((match) => [match[1], match[2]]),
+  );
+  return [
+    ...code.matchAll(
+      /\bnode_package_entry\(\s*(?:['"]([^'"\r\n]+)['"]|([A-Z_][A-Z_0-9]*))/gu,
+    ),
+  ].flatMap((match) => {
+    const specifier = match[1] || constants.get(match[2]);
+    return specifier
+      ? [
+          {
+            specifier,
+            kind: 'module',
+            line: code.slice(0, match.index).split('\n').length,
+          },
+        ]
+      : [];
+  });
 }

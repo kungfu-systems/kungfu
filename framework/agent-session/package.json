@@ -52,7 +52,20 @@
   ],
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "test:control-plane": "node --test --test-concurrency=1 --test-skip-pattern=installed tests/*.test.mjs"
+    "test:control-plane": "node --test --test-concurrency=1 --test-skip-pattern=installed tests/*.test.mjs",
+    "test:agent-session-peer-transport": "node --test tests/peer-transport.test.mjs tests/runtime-port.test.mjs",
+    "test:agent-session-peer-transport:native": "node --test tests/runtime-port.native.test.mjs",
+    "test:agent-session-interaction-adapters": "node --test tests/provider-adapters.test.mjs tests/interaction-port.test.mjs",
+    "test:agent-session-work-attention": "node --test tests/mock-provider.test.mjs tests/mock-product-session.test.mjs tests/work-attention.test.mjs",
+    "test:agent-session-interaction-adapters:native": "node --test tests/provider-version.native.test.mjs",
+    "test:codex-app-server-contract": "node --test tests/codex-app-server-contract.test.mjs",
+    "test:codex-app-server-contract:native": "node --test tests/codex-app-server-schema.native.test.mjs",
+    "test:codex-app-server-interaction": "node --test tests/codex-app-server-interaction.test.mjs",
+    "test:codex-app-server-product": "node --test tests/codex-app-server-product.test.mjs",
+    "test:codex-app-server-recovery": "node --test tests/codex-app-server-recovery.test.mjs",
+    "test:codex-app-server-runtime": "node --test tests/codex-app-server-runtime.test.mjs",
+    "test:agent-session-product-surfaces": "node --test tests/product-surface.test.mjs tests/product-status-events.test.mjs",
+    "test:agent-session-recovery-qualification": "node --test tests/product-recovery-qualification.test.mjs"
   },
   "dependencies": {
     "node-pty": "^1.1.0"

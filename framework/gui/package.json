@@ -23,7 +23,11 @@
     "start": "pnpm run ensure-electron && electron-vite preview",
     "pack": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && node scripts/run-electron-builder.mjs --dir",
     "dist": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && node scripts/run-electron-builder.mjs",
-    "clean": "rimraf out dist node_modules/.vite"
+    "clean": "rimraf out dist node_modules/.vite",
+    "test:assignment-runtime": "node --test src/main/assignment-runtime-host.test.ts src/product-search.test.ts",
+    "test:assignment-runtime-gui": "node --test src/main/assignment-runtime-host.test.ts src/product-search.test.ts",
+    "test:cli-surface-qualification": "node --test scripts/electron-builder-config.test.mjs",
+    "test:global-work-observer": "tsx --test src/main/global-work-observer-host.test.ts"
   },
   "dependencies": {
     "@kungfu-tech/agent-session": "workspace:*",

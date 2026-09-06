@@ -44,9 +44,8 @@ const PROJECT_CUT_FIXTURE = JSON.parse(
     'utf8',
   ),
 );
-const CLI = path.join(
-  REPO_ROOT,
-  'framework/work/project-cut/bin/project-cut.mjs',
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
 );
 
 test('publication boundary exposes only the stable operations', () => {

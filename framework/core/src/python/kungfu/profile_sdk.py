@@ -28,6 +28,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Iterator, Mapping
 
+from kungfu import host
+
 from kungfu import agent as agent_pack
 from kungfu import runtime_broker  # noqa: F401 -- private owner seam
 from kungfu import kfx_contract
@@ -91,6 +93,13 @@ from kungfu.profile_sdk_kfd3 import (  # noqa: F401 -- private owner seams
 )
 
 SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
+_WORK_CONFORMANCE_PACKAGE_ENTRY = (
+    "@kungfu-tech/work/work-profile-conformance/work-profile-conformance"
+)
+_WORK_CONFORMANCE_BUNDLE = (
+    Path(__file__).resolve().parent
+    / "work_profile_conformance/work-profile-conformance.mjs"
+)
 
 _VALIDATION_SCOPE: ContextVar[dict[tuple[str, str], dict[str, Any]] | None] = (
     ContextVar("kungfu_profile_validation_scope", default=None)
@@ -119,21 +128,14 @@ def validation_scope() -> Iterator[None]:
         _VALIDATION_SCOPE.reset(token)
 
 
-def _work_profile_conformance_script() -> Path | None:
-    relative = Path(
-        "framework/work/work-profile-conformance/work-profile-conformance.mjs"
-    )
-    roots = (*Path(__file__).resolve().parents, *Path.cwd().resolve().parents)
-    candidates = (
-        Path(__file__).resolve().parent
-        / "work_profile_conformance/work-profile-conformance.mjs",
-        *(parent / relative for parent in roots),
-    )
-    return next((candidate for candidate in candidates if candidate.is_file()), None)
+def _work_profile_conformance_script() -> Path | str | None:
+    if _WORK_CONFORMANCE_BUNDLE.is_file():
+        return _WORK_CONFORMANCE_BUNDLE
+    return host.node_package_entry(_WORK_CONFORMANCE_PACKAGE_ENTRY)
 
 
 def _work_profile_conformance_invocation(
-    checker: Path,
+    checker: Path | str,
 ) -> tuple[list[str], dict[str, str] | None]:
     for variable in (
         "KUNGFU_CONTROLLER_ENTRYPOINT",

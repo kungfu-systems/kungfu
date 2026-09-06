@@ -34,6 +34,7 @@ process main thread; the forwarding seam is stage 3 work.
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -42,6 +43,7 @@ FORM_SOURCE = "source"
 
 _MARKER_NAME = "kungfu-host.json"
 _MARKER_SCHEMA = "kungfu.host/v1"
+_NODE_PACKAGE_BASE = Path(__file__).resolve().parent
 
 
 def _assembled_marker() -> dict | None:
@@ -88,3 +90,17 @@ def entry_command() -> list[str]:
     ):
         return [str(argv0.resolve())]
     return [sys.executable, "-m", "kungfu"]
+
+
+def node_package_entry(specifier: str, base: Path = _NODE_PACKAGE_BASE) -> str | None:
+    """Resolve a source-host Node entry using the installed package's exports."""
+    try:
+        return subprocess.check_output(
+            ["node", "--print", "require.resolve(process.argv[1])", specifier],
+            cwd=base,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+        ).removesuffix("\n")
+    except (OSError, subprocess.SubprocessError):
+        return None

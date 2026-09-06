@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
-// Offline installation of the two workspace packages needed before the full
+// Offline installation of the workspace packages needed before the full
 // toolchain is available. Node still enforces each package's exports; this does
 // not register a resolver hook, execute package scripts, or fetch dependencies.
 import assert from 'node:assert/strict';
@@ -13,6 +13,8 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const PROOF_BOOTSTRAP_PACKAGES = {
   '@kungfu-tech/product-kungfu': 'product',
   '@kungfu-tech/spec': 'framework/spec',
+  '@kungfu-tech/work': 'framework/work',
+  '@kungfu-tech/workspaces': '.',
 };
 
 export function installProofBootstrapPackages(root = ROOT) {
@@ -25,7 +27,7 @@ export function installProofBootstrapPackages(root = ROOT) {
   };
   for (const [name, directory] of Object.entries(PROOF_BOOTSTRAP_PACKAGES)) {
     assert.equal(
-      dependencies[name],
+      name === manifest.name ? 'workspace:*' : dependencies[name],
       'workspace:*',
       `Bootstrap requires a declared workspace dependency: ${name}`,
     );

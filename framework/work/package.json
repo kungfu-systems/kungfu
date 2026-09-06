@@ -45,7 +45,15 @@
     "./work-design-policy-replay/tooling/work-design-policy-replay-contract": "./work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs",
     "./work-design-preflight": "./work-design-preflight/src/work-design-preflight.mjs",
     "./work-history-selector": "./work-history-selector/src/work-history-selector.mjs",
-    "./work-history-selector/tooling/work-history-selector-contract": "./work-history-selector/tooling/work-history-selector-contract.mjs"
+    "./work-history-selector/tooling/work-history-selector-contract": "./work-history-selector/tooling/work-history-selector-contract.mjs",
+    "./project-cut/hook": "./project-cut/hooks/project-cut-hook.mjs",
+    "./work-history-selector/tooling/check-work-history-selector": "./work-history-selector/tooling/check-work-history-selector.mjs",
+    "./work-design-advisor/tooling/check-work-design-advisor": "./work-design-advisor/tooling/check-work-design-advisor.mjs",
+    "./work-design-policy-replay/tooling/check-work-design-policy-replay": "./work-design-policy-replay/tooling/check-work-design-policy-replay.mjs",
+    "./work-design-preflight/tooling/check-work-design-preflight": "./work-design-preflight/tooling/check-work-design-preflight.mjs",
+    "./work-design-preflight/tooling/work-design-preflight": "./work-design-preflight/tooling/work-design-preflight.mjs",
+    "./work-profile-conformance/work-profile-conformance": "./work-profile-conformance/work-profile-conformance.mjs",
+    "./action/cli": "./action/action.mjs"
   },
   "files": [
     "index.mjs",
@@ -77,10 +85,20 @@
     "assignment-capture/qualified-assignment-core-observability.mjs",
     "agent-repository-work/opencode-docker-proxy.mjs",
     "agent-repository-work/run.mjs",
-    "assignment-capture/qualified-assignment-core-consumer.d.mts"
+    "assignment-capture/qualified-assignment-core-consumer.d.mts",
+    "work-history-selector/tooling/check-work-history-selector.mjs",
+    "work-design-advisor/tooling/check-work-design-advisor.mjs",
+    "work-design-policy-replay/tooling/check-work-design-policy-replay.mjs",
+    "work-design-preflight/tooling/check-work-design-preflight.mjs",
+    "work-design-preflight/tooling/work-design-preflight.mjs",
+    "work-profile-conformance/work-profile-conformance.mjs"
   ],
   "scripts": {
-    "test": "node --test package-boundary.test.mjs action/*.test.mjs assignment-runtime/*.test.mjs"
+    "test": "node --test package-boundary.test.mjs action/*.test.mjs assignment-runtime/*.test.mjs",
+    "test:action-kernel": "node --test action/action.test.mjs action/action-loop-contract.test.mjs action/action-loop-begin.test.mjs action/action-loop-settle.test.mjs",
+    "test:assignment-capture": "node --test assignment-capture/assignment-capture.test.mjs",
+    "test:assignment-runtime": "node --test assignment-runtime/assignment-runtime.test.mjs",
+    "check:work-profile-conformance": "node --test work-profile-conformance/work-profile-conformance.test.mjs"
   },
   "dependencies": {
     "@kungfu-tech/spec": "workspace:*",

@@ -16,7 +16,7 @@ import { sourceMergeBase } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const requireFromGui = createRequire(
-  path.join(ROOT, 'framework/gui/package.json'),
+  import.meta.resolve('@kungfu-tech/gui/package.json'),
 );
 
 function copyFile(sourceRoot, targetRoot, relative) {

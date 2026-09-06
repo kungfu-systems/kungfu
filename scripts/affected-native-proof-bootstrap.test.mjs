@@ -28,6 +28,12 @@ const sourceOnlyModules = [
   'product/release/affected-native-artifact-lookup.mjs',
   'product/release/affected-native-proof-cli.mjs',
   'framework/spec/format/project-cut-canonical-json.mjs',
+  'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
+  'framework/work/assignment-capture/qualified-assignment-core-platform-matrix.mjs',
+  'framework/work/assignment-capture/qualified-assignment-core-observability.mjs',
+  'product/release/qualified-assignment-core-artifact.mjs',
+  'scripts/check-shifu-cache-contract.mjs',
+  'scripts/shifu-uv-cache-adapter.mjs',
 ];
 
 test('proof bootstrap needs only builtins and its declared offline workspace packages', () => {
@@ -59,12 +65,15 @@ test('cold proof bootstrap uses normal package exports and rejects private impor
     'package.json',
     'product/package.json',
     'framework/spec/package.json',
+    'framework/work/package.json',
+    'scripts/run-project-cut-entry.mjs',
+    'docs/shifu/qualified-assignment-core-platform-matrix.json',
   ]) {
     const destination = path.join(root, relative);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.copyFileSync(path.join(ROOT, relative), destination);
   }
-  const probe = `import assert from 'node:assert/strict'; import {digest} from './scripts/affected-native-proof.mjs'; import './scripts/dev-delivery-warrant-input.mjs'; import {planFromChanged} from './scripts/run-core-affected-native.mjs'; import {runNativeExecutionUnderWarrant} from './developer/dev-delivery/native-execution-under-warrant.mjs'; assert.equal(typeof digest, 'function'); assert.equal(typeof planFromChanged, 'function'); assert.equal(typeof runNativeExecutionUnderWarrant, 'function'); await assert.rejects(import('@kungfu-tech/spec/format/project-cut-canonical-json.mjs'), {code:'ERR_PACKAGE_PATH_NOT_EXPORTED'});`;
+  const probe = `import assert from 'node:assert/strict'; import {digest} from './scripts/affected-native-proof.mjs'; import './scripts/dev-delivery-warrant-input.mjs'; import {planFromChanged} from './scripts/run-core-affected-native.mjs'; import {runNativeExecutionUnderWarrant} from './developer/dev-delivery/native-execution-under-warrant.mjs'; import * as consumer from '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer'; assert.ok(Object.keys(consumer).length > 0); assert.equal(typeof digest, 'function'); assert.equal(typeof planFromChanged, 'function'); assert.equal(typeof runNativeExecutionUnderWarrant, 'function'); await assert.rejects(import('@kungfu-tech/spec/format/project-cut-canonical-json.mjs'), {code:'ERR_PACKAGE_PATH_NOT_EXPORTED'});`;
   const run = () =>
     spawnSync(process.execPath, ['--input-type=module', '--eval', probe], {
       cwd: root,

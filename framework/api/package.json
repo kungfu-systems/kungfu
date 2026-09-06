@@ -20,7 +20,9 @@
   "scripts": {
     "build": "tsc --noEmit",
     "test:query": "node --test tests/query.test.ts tests/ledger.test.ts tests/profile.test.ts tests/storage.test.ts tests/exit.test.ts tests/agent-console.test.ts tests/work-loop.test.ts tests/agent-work-lab.test.ts tests/product-search.test.ts tests/projects.test.ts tests/onboarding.test.ts tests/assignment-runtime.test.ts",
-    "clean": "rimraf build dist"
+    "clean": "rimraf build dist",
+    "test:assignment-runtime": "node --test tests/assignment-runtime.test.ts",
+    "test:assignment-runtime-gui": "node --test tests/assignment-runtime.test.ts"
   },
   "dependencies": {
     "@fast-csv/format": "^4.3.5",

@@ -54,18 +54,23 @@ registries and documentation must use the current owner paths.
 A shared checkout does not relax a package boundary. Every consuming package
 must declare the provider in `dependencies`, `devDependencies`,
 `peerDependencies`, or `optionalDependencies`, according to the consumer's role.
-Imports and build entrypoints use the provider's package name and explicit
-`exports`; relative imports remain local to their owning package.
+Imports, build entrypoints, and subprocess executables use the provider's
+package name and explicit `exports`; relative imports remain local to their
+owning package. Repository test tasks delegate to the provider's declared npm
+scripts with `pnpm --filter <package> run <task>`. Tests resolve their fixtures
+from their own module location, so they also run from the package directory.
 
 For example, use `@kungfu-tech/work/project-cut` and
 `@kungfu-tech/agent-session/product-client`. Do not import a sibling's `src/`
 path or redirect its package name through TypeScript or bundler source aliases.
 The package manager's workspace links provide local resolution. A TypeScript
 source file can be an explicit public export; its consumer must use a compatible
-TypeScript loader or bundler.
+TypeScript loader or bundler. Python source-host Node bridges use the host's
+`node_package_entry` resolver, which asks Node to resolve the declared public
+package entry; they do not scan sibling source directories.
 
-Cold proof CI installs only the declared Product and Spec workspace links
-offline before the full toolchain installation. These are ordinary installed
+Cold proof CI installs the declared Product, Spec, Work, and repository tooling
+workspace links offline before the full toolchain installation. These are ordinary installed
 packages under `node_modules`; Node enforces their public exports. The bootstrap
 installer does not register source aliases or execute dependency scripts.
 
@@ -84,7 +89,9 @@ standalone distribution or claim a public npm release.
 
 [`check-package-boundaries.mjs`](../scripts/check-package-boundaries.mjs)
 checks module imports, constant constructed paths, build aliases/entrypoints,
-TypeScript configuration, and cross-package script dispatch. Runtime-selected
+TypeScript configuration, subprocess and declarative check executables, and
+cross-package script dispatch (including dependency and npm task existence),
+including commands in GitHub workflows and composite actions. Runtime-selected
 external plugins remain dynamic; the static check does not evaluate arbitrary
 programs. Layout dependencies are derived from declared package dependencies,
 including development and peer relationships.

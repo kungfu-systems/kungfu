@@ -25,7 +25,10 @@
   "scripts": {
     "build": "kungfu sdk kfx build",
     "clean": "kungfu sdk kfx clean",
-    "test": "node --test tests/*.test.ts"
+    "test": "node --test tests/*.test.ts",
+    "test:assignment-runtime": "node --test tests/work-control-profile.test.ts",
+    "test:assignment-runtime-gui": "node --test tests/work-control-profile.test.ts",
+    "test:global-work-observer": "tsx --test tests/global-work-observer.test.ts"
   },
   "dependencies": {
     "@kungfu-tech/api": "workspace:*",
@@ -34,7 +37,8 @@
   "devDependencies": {
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/sdk": "workspace:*",
-    "@types/react": "^18.3.3"
+    "@types/react": "^18.3.3",
+    "tsx": "^4.19.0"
   },
   "peerDependencies": {
     "react": "^18.3.1"

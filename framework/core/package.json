@@ -40,7 +40,19 @@
     "src/libkungfu/tests/durability_powercut_fixture.cpp",
     "tests/qualification/durability/powercut_plan.mjs",
     "architecture/build-capabilities.json",
-    "tests/qualification/durability/fault_campaign.mjs"
+    "tests/qualification/durability/fault_campaign.mjs",
+    "architecture/check-build-capabilities.mjs",
+    "architecture/query-health.mjs",
+    "architecture/check-layers.mjs",
+    "tests/qualification/kfd-agent-runtime/run.mjs",
+    "tests/qualification/health-preflight/run.mjs",
+    "tests/qualification/episode/run.mjs",
+    "tests/qualification/episode/release_evidence.mjs",
+    "tests/qualification/durability/run.mjs",
+    "tests/qualification/live-peer-continuity/run.mjs",
+    "tests/qualification/runtime-activation/run.mjs",
+    "tests/qualification/python-kfx-asyncio-performance/run.mjs",
+    "slices/custom-provider/run.mjs"
   ],
   "config": {
     "build_type": "Release",
@@ -79,7 +91,10 @@
     "kungfu": "node lib/kungfu-cli.js",
     "test:tooling": "node --test tests/shell-exit-code.test.js tests/run-conan.test.js tests/sdk-core-build.test.js tests/gen-stubs.test.js tests/episode-release-evidence.test.mjs tests/core-platform-package.test.js tests/node-api-authority.test.js tests/kungfu-cli.test.js",
     "test:storage-binding": "node --test tests/storage-node-binding.test.js",
-    "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py"
+    "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py",
+    "test:node-watcher-runtime-boundary": "node --test tests/watcher-runtime-boundary.test.js",
+    "test:npm-core-platform-distribution": "node --test tests/core-platform-package.test.js",
+    "test:python-kfx-asyncio-performance": "node --test tests/qualification/python-kfx-asyncio-performance/run.test.mjs"
   },
   "dependencies": {
     "fs-extra": "^10.1.0",
@@ -97,7 +112,9 @@
     "copyfiles": "^2.4.1",
     "electron": "^42.5.0",
     "node-addon-api": "^8.0.0",
-    "@kungfu-tech/workspaces": "workspace:*"
+    "@kungfu-tech/workspaces": "workspace:*",
+    "@kungfu-tech/sdk": "workspace:*",
+    "@kungfu-tech/skill": "workspace:*"
   },
   "exports": {
     ".": "./lib/index.js",
@@ -115,6 +132,18 @@
     "./testing/qualification/kfd4-perspective": "./tests/qualification/kfd4-perspective.mjs",
     "./testing/python-source-path": "./lib/python-source-path.js",
     "./tooling/run-build": "./.gyp/run-build.js",
-    "./tooling/run-freeze": "./.gyp/run-freeze.js"
+    "./tooling/run-freeze": "./.gyp/run-freeze.js",
+    "./architecture/check-build-capabilities": "./architecture/check-build-capabilities.mjs",
+    "./architecture/query-health": "./architecture/query-health.mjs",
+    "./architecture/check-layers": "./architecture/check-layers.mjs",
+    "./testing/qualification/kfd-agent-runtime/run": "./tests/qualification/kfd-agent-runtime/run.mjs",
+    "./testing/qualification/health-preflight/run": "./tests/qualification/health-preflight/run.mjs",
+    "./testing/qualification/episode/run": "./tests/qualification/episode/run.mjs",
+    "./testing/qualification/episode/release_evidence": "./tests/qualification/episode/release_evidence.mjs",
+    "./testing/qualification/durability/run": "./tests/qualification/durability/run.mjs",
+    "./testing/qualification/live-peer-continuity/run": "./tests/qualification/live-peer-continuity/run.mjs",
+    "./testing/qualification/runtime-activation/run": "./tests/qualification/runtime-activation/run.mjs",
+    "./testing/qualification/python-kfx-asyncio-performance/run": "./tests/qualification/python-kfx-asyncio-performance/run.mjs",
+    "./testing/custom-provider": "./slices/custom-provider/run.mjs"
   }
 }

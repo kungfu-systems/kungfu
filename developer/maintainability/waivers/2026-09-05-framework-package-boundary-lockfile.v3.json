@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.code-complexity-budget-waiver/v3",
-  "issue_root": "sha256:78d38d1f13e72170bc2bcd2bebc30c741b5bf57629b9c7fee866985a2f1b280f",
+  "issue_root": "sha256:8c89121d4a09e5c2ba45f7959e900fa625a5ee37700bb27ca11fdbe4600fc754",
   "issue_kind": "grandfathered-file-grew",
   "paths_or_scope": [
     "pnpm-lock.yaml"
@@ -24,11 +24,11 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 10345,
-      "contentRoot": "sha256:31760e02c99956210c15ee48fe977b92142577d04b9da0e21339a668b960e8d6"
+      "lines": 10369,
+      "contentRoot": "sha256:b35c765795963d06e3b65ac6f893e426b85e3d8deafb82da0a45b0389b20361b"
     }
   ],
-  "allowed_delta": 202,
+  "allowed_delta": 226,
   "owner": "kungfu/repository-contract",
   "responsibility_boundary": "One pnpm lockfile records the declared workspace package dependency graph. This request covers only the exact generated lockfile required by the framework package-boundary migration.",
   "cohesion_rationale": "The added workspace links replace implicit relative imports; they introduce no new external package resolutions. The single lockfile must remain reproducible under frozen install.",

@@ -20,11 +20,14 @@
     "generated",
     "README.md",
     "LICENSE",
-    "kungfu-storage.contract.json"
+    "kungfu-storage.contract.json",
+    "package-platforms.test.mjs",
+    "package-platforms.mjs"
   ],
   "scripts": {
     "build": "node package-artifacts.mjs --validate",
-    "pack": "node package-artifacts.mjs"
+    "pack": "node package-artifacts.mjs",
+    "test:platforms": "node --test package-platforms.test.mjs"
   },
   "devDependencies": {
     "@kungfu-tech/workspaces": "workspace:*"
@@ -32,6 +35,7 @@
   "exports": {
     ".": "./index.js",
     "./generated/work-lifecycle-v1": "./generated/work-lifecycle-v1.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./testing/package-platforms": "./package-platforms.test.mjs"
   }
 }

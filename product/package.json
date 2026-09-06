@@ -33,7 +33,13 @@
     "dist:cli": "node scripts/dist.mjs --product cli",
     "product": "node scripts/product.mjs",
     "cli": "pnpm --filter @kungfu-tech/tui run dev",
-    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('extensions',{recursive:true,force:true})\" && pnpm --filter @kungfu-tech/gui run clean"
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('extensions',{recursive:true,force:true})\" && pnpm --filter @kungfu-tech/gui run clean",
+    "test:alpha-promotion-preflight": "node --test scripts/cli-surface-qualification.test.mjs",
+    "test:cli-surface-qualification": "node --test scripts/archive.test.mjs scripts/cli-launcher.test.mjs scripts/cli-surface-qualification.test.mjs scripts/finalize-signed-cli-qualification.test.mjs scripts/finalize-macos-release-artifacts.test.mjs scripts/dist.test.mjs",
+    "test:cli-surface-qualification:2": "node --test scripts/dist-windows-trunk.test.mjs scripts/dist-kfx.test.mjs scripts/dist-cli-executable-layout.test.mjs scripts/installed-kungfu/index.test.mjs",
+    "test:product-cache-home": "node --test scripts/qualify-product-cache-home.test.mjs",
+    "test:release-channel": "node --test scripts/release-channel-index.test.mjs scripts/release-channel-trust.test.mjs scripts/bootstrap-installer.test.mjs",
+    "test:dist": "node --test scripts/dist.test.mjs"
   },
   "dependencies": {
     "@kungfu-tech/core": "workspace:*",
@@ -90,6 +96,8 @@
     "./tooling/upgrade-manifest": "./scripts/upgrade-manifest.mjs",
     "./upgrade/kungfu-upgrade.contract.json": "./upgrade/kungfu-upgrade.contract.json",
     "./version-line/check-version-line-authority": "./version-line/check-version-line-authority.mjs",
-    "./version-line/version-line-authority": "./version-line/version-line-authority.mjs"
+    "./version-line/version-line-authority": "./version-line/version-line-authority.mjs",
+    "./tooling/qualify-product-cache-home": "./scripts/qualify-product-cache-home.mjs",
+    "./tooling/verify-cli-surface-qualification": "./scripts/verify-cli-surface-qualification.mjs"
   }
 }

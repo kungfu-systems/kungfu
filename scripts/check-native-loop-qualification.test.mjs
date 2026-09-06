@@ -32,9 +32,8 @@ const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-const CLI = path.join(
-  REPO_ROOT,
-  'framework/work/project-cut/bin/project-cut.mjs',
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
 );
 const PROJECT_CUT_FIXTURE = JSON.parse(
   fs.readFileSync(

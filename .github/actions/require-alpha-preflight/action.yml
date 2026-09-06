@@ -43,6 +43,9 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Install declared proof bootstrap workspace packages
+      shell: bash
+      run: node scripts/install-proof-bootstrap-packages.mjs
     - name: Resolve exact-source preflight run
       id: run
       if: ${{ fromJSON(inputs.controller-request-json).mode != 'control' }}

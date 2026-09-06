@@ -51,6 +51,57 @@ test('public package imports and local implementation imports pass', (t) => {
   assert.deepEqual(check().issues, []);
 });
 
+test('subprocess consumers cannot execute another package through source paths', (t) => {
+  const { write, check } = fixture(t);
+  write(
+    'framework/consumer/runner.mjs',
+    `
+    const target = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../provider/internal.js');
+    spawnSync(process.execPath, [target]);
+    execFileSync('node', ['--enable-source-maps', '../provider/index.js']);
+    fork('../provider/internal.js');
+  `,
+  );
+  assert.equal(check().issues.length, 3);
+  assert.ok(
+    check().issues.every((issue) => issue.code === 'cross-package-path'),
+  );
+  write(
+    'framework/consumer/runner.mjs',
+    `
+    const target = fileURLToPath(import.meta.resolve('@test/provider/feature'));
+    spawnSync(process.execPath, [target]);
+  `,
+  );
+  assert.deepEqual(check().issues, []);
+});
+
+test('root npm scripts must use package entrypoints rather than repository paths', (t) => {
+  const { write, check } = fixture(t);
+  write('package.json', {
+    name: 'repository',
+    private: true,
+    dependencies: { '@test/provider': 'workspace:*' },
+    scripts: { probe: 'node framework/provider/internal.js' },
+  });
+  assert.deepEqual(
+    check().issues.map((issue) => issue.code),
+    ['cross-package-path'],
+  );
+});
+
+test('declarative source check executables obey the same package boundary', (t) => {
+  const { write, check } = fixture(t);
+  write(
+    'scripts/gate.mjs',
+    "const nodeChecks = [['provider check', 'framework/provider/internal.js']];",
+  );
+  assert.deepEqual(
+    check().issues.map((issue) => issue.code),
+    ['cross-package-path'],
+  );
+});
+
 test('cross-package imports fail for ESM, CommonJS, type imports and file URLs', (t) => {
   const { write, check } = fixture(t);
   write(
@@ -204,5 +255,128 @@ test('a bundler alias cannot expose a private package subpath', (t) => {
   assert.deepEqual(
     check().issues.map((issue) => issue.code),
     ['private-package-entry'],
+  );
+});
+
+test('test mode checks every file and public npm tasks must exist', (t) => {
+  const { write, check } = fixture(t);
+  write('package.json', {
+    name: 'repository',
+    dependencies: { '@test/provider': 'workspace:*' },
+    scripts: {
+      test: 'node --test local.test.mjs framework/provider/internal.js',
+      missing: 'pnpm --filter @test/provider run missing',
+    },
+  });
+  assert.deepEqual(
+    check().issues.map(({ code }) => code),
+    ['cross-package-path', 'missing-package-task'],
+  );
+});
+
+test('the public entry runner preserves cwd, argv, main entry and exit status', (t) => {
+  const { root, write } = fixture(t);
+  write('package.json', {
+    name: 'repository',
+    dependencies: { '@test/provider': 'workspace:*' },
+  });
+  write(
+    'scripts/run-project-cut-entry.mjs',
+    fs.readFileSync(
+      new URL('./run-project-cut-entry.mjs', import.meta.url),
+      'utf8',
+    ),
+  );
+  write(
+    'framework/provider/feature.js',
+    `
+    import {pathToFileURL} from 'node:url';
+    if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+      console.log(JSON.stringify({cwd:process.cwd(), args:process.argv.slice(2)}));
+      process.exitCode = 7;
+    }
+  `,
+  );
+  installFixturePackages(root);
+  const cwd = path.join(root, 'framework/consumer');
+  const runner = path.join(root, 'scripts/run-project-cut-entry.mjs');
+  const result = spawnSync(
+    process.execPath,
+    [runner, '@test/provider/feature', 'one two', '--flag'],
+    { cwd, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 7, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    cwd: fs.realpathSync(cwd),
+    args: ['one two', '--flag'],
+  });
+  const privateEntry = spawnSync(
+    process.execPath,
+    [runner, '@test/provider/internal.js'],
+    { cwd, encoding: 'utf8' },
+  );
+  assert.equal(privateEntry.status, 1);
+  assert.match(privateEntry.stderr, /ERR_PACKAGE_PATH_NOT_EXPORTED/);
+});
+
+test('filtered exec paths use the selected package directory', (t) => {
+  const { write, check } = fixture(t);
+  write('package.json', {
+    name: 'repository',
+    dependencies: { '@test/consumer': 'workspace:*' },
+    scripts: {
+      test: 'pnpm --filter @test/consumer exec node ../provider/internal.js',
+    },
+  });
+  assert.ok(check().issues.some(({ code }) => code === 'cross-package-path'));
+});
+
+test('workflow and composite-action commands consume declared public entries', (t) => {
+  const { write, check } = fixture(t);
+  write(
+    '.github/workflows/probe.yml',
+    `jobs:
+  probe:
+    steps:
+      - run: node framework/provider/internal.js
+      - uses: ./action
+        with:
+          verify-command: node scripts/run-project-cut-entry.mjs @test/provider/feature
+`,
+  );
+  assert.deepEqual(
+    check().issues.map(({ code }) => code),
+    ['cross-package-path', 'undeclared-workspace-dependency'],
+  );
+  write('package.json', {
+    name: 'repository',
+    dependencies: { '@test/provider': 'workspace:*' },
+  });
+  write(
+    '.github/workflows/probe.yml',
+    'jobs: {probe: {steps: [{run: "node scripts/run-project-cut-entry.mjs @test/provider/feature"}]}}',
+  );
+  assert.deepEqual(check().issues, []);
+});
+
+test('Python Node bridges declare dependencies and resolve only public exports', (t) => {
+  const { write, check } = fixture(t);
+  write(
+    'framework/consumer/probe.py',
+    'ENTRY = "@test/provider/feature"\nentry = host.node_package_entry(ENTRY)',
+  );
+  assert.deepEqual(check().issues, []);
+  write(
+    'framework/consumer/probe.py',
+    'entry = host.node_package_entry("@test/provider/internal.js")',
+  );
+  assert.deepEqual(
+    check().issues.map(({ code }) => code),
+    ['private-package-entry'],
+  );
+  write('framework/consumer/package.json', { name: '@test/consumer' });
+  assert.deepEqual(
+    check().issues.map(({ code }) => code),
+    ['undeclared-workspace-dependency', 'private-package-entry'],
   );
 });

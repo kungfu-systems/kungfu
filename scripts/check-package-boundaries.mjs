@@ -6,11 +6,15 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { parse } from 'yaml';
-import { moduleReferences } from './package-boundary-references.mjs';
+import {
+  moduleReferences,
+  pythonPackageReferences,
+  workflowCommands,
+} from './package-boundary-references.mjs';
 export { moduleReferences } from './package-boundary-references.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const SOURCE = /\.(?:[cm]?[jt]sx?)$/u;
+const SOURCE = /\.(?:[cm]?[jt]sx?|py)$/u;
 const SKIP = new Set([
   '.git',
   '.kungfu',
@@ -77,12 +81,16 @@ function sourceFiles(root, packages) {
       if (item.isDirectory()) visit(target);
       else if (
         item.isFile() &&
-        (SOURCE.test(item.name) || /^tsconfig.*\.json$/u.test(item.name))
+        (SOURCE.test(item.name) ||
+          /^tsconfig.*\.json$/u.test(item.name) ||
+          (target.startsWith(path.join(root, '.github')) &&
+            /\.ya?ml$/u.test(item.name)))
       )
         files.push(target);
     }
   }
   for (const directory of [
+    '.github',
     'framework',
     'developer',
     'extensions',
@@ -238,6 +246,10 @@ function inspect(context, file, reference, base = path.dirname(file)) {
   const owner = ownerOf(context.packages, file);
   if (!owner) return;
   const { specifier } = reference;
+  if (reference.kind === 'executable' && !specifier.startsWith('@')) {
+    inspectPath(context, owner, file, reference, owner.absolute);
+    return;
+  }
   if (
     specifier.startsWith('.') ||
     path.isAbsolute(specifier) ||
@@ -246,26 +258,106 @@ function inspect(context, file, reference, base = path.dirname(file)) {
     inspectPath(context, owner, file, reference, base);
   else inspectPackage(context, owner, file, reference);
 }
-function inspectScripts(context, pkg, file) {
-  for (const command of Object.values(pkg.manifest.scripts || {})) {
-    for (const match of command.matchAll(/--filter\s+(@[\w.-]+\/[\w.-]+)/gu)) {
-      const target = context.names.get(match[1]);
-      if (target && target !== pkg && !declared(pkg, match[1]))
-        report(
-          context,
-          'undeclared-workspace-dependency',
-          file,
-          { line: 1, specifier: match[1] },
-          `${pkg.manifest.name} must declare its package task dependency`,
-        );
+function inspectNodeScript(context, pkg, file, command) {
+  const executables = new Set();
+  for (const match of command.matchAll(
+    /(?:^|\s)node(?:js)?(?:\.exe)?\s+(?:--[^\s]+\s+)*['"]?([^\s'";]+\.(?:[cm]?js|tsx?))/gu,
+  )) {
+    executables.add(match[1]);
+    inspect(
+      context,
+      file,
+      { line: 1, specifier: match[1], kind: 'executable' },
+      pkg.absolute,
+    );
+  }
+  // In test mode every positional file is an executable input, not just the first.
+  for (const match of command.matchAll(
+    /(?:^|[;&]\s*)node\s+--test\s+([^;&]+)/gu,
+  )) {
+    for (const argument of match[1].matchAll(
+      /(?:^|\s)([^\s'";]+\.(?:[cm]?js|tsx?))/gu,
+    )) {
+      if (executables.has(argument[1])) continue;
+      executables.add(argument[1]);
+      inspect(
+        context,
+        file,
+        { line: 1, specifier: argument[1], kind: 'executable' },
+        pkg.absolute,
+      );
     }
-    for (const match of command.matchAll(/(?:^|\s)(\.\.\/[^\s'";]+)/gu))
+  }
+  return executables;
+}
+function inspectFilteredScript(context, pkg, file, command) {
+  for (const match of command.matchAll(
+    /--filter\s+(@[\w.-]+\/[\w.-]+)(?:\s+run\s+([\w:.-]+))?/gu,
+  )) {
+    const target = context.names.get(match[1]);
+    if (
+      target &&
+      match[2] &&
+      !Object.hasOwn(target.manifest.scripts || {}, match[2])
+    )
+      report(
+        context,
+        'missing-package-task',
+        file,
+        { line: 1, specifier: `${match[1]}#${match[2]}` },
+        'The provider must declare the consumed npm task',
+      );
+    if (target && target !== pkg && !declared(pkg, match[1]))
+      report(
+        context,
+        'undeclared-workspace-dependency',
+        file,
+        { line: 1, specifier: match[1] },
+        `${pkg.manifest.name} must declare its package task dependency`,
+      );
+  }
+  for (const match of command.matchAll(
+    /--filter\s+(@[\w.-]+\/[\w.-]+)\s+exec\s+([^;&]+)/gu,
+  )) {
+    const target = context.names.get(match[1]);
+    if (!target) continue;
+    for (const argument of match[2].matchAll(/(?:^|\s)(\.\.\/[^\s'";]+)/gu))
+      inspectPath(
+        context,
+        target,
+        file,
+        { line: 1, specifier: argument[1], kind: 'executable' },
+        target.absolute,
+      );
+  }
+}
+function inspectScripts(
+  context,
+  pkg,
+  file,
+  commands = Object.values(pkg.manifest.scripts || {}),
+) {
+  for (const command of commands) {
+    const executables = inspectNodeScript(context, pkg, file, command);
+    inspectFilteredScript(context, pkg, file, command);
+    for (const match of command.matchAll(
+      /scripts\/run-project-cut-entry\.mjs\s+(@[\w.-]+\/[\w./-]+)/gu,
+    ))
       inspect(
         context,
         file,
         { line: 1, specifier: match[1], kind: 'module' },
         pkg.absolute,
       );
+    for (const match of command.matchAll(/(?:^|\s)(\.\.\/[^\s'";]+)/gu)) {
+      if (executables.has(match[1])) continue;
+      inspect(
+        context,
+        file,
+        { line: 1, specifier: match[1], kind: 'module' },
+        pkg.absolute,
+      );
+    }
   }
 }
 function inspectManifest(context, pkg) {
@@ -334,8 +426,17 @@ export function collectPackageBoundaryIssues({ root = ROOT } = {}) {
     const source = fs.readFileSync(file, 'utf8');
     if (/^tsconfig.*\.json$/u.test(path.basename(file)))
       inspectConfig(context, file, source);
+    else if (/\.ya?ml$/u.test(file))
+      inspectScripts(
+        context,
+        ownerOf(packages, file),
+        file,
+        workflowCommands(source),
+      );
     else
-      for (const reference of moduleReferences(source, file))
+      for (const reference of file.endsWith('.py')
+        ? pythonPackageReferences(source)
+        : moduleReferences(source, file))
         inspect(context, file, reference);
   }
   return {

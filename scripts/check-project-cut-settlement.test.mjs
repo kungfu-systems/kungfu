@@ -29,13 +29,11 @@ const EPISODE_ROOT = `sha256:${'a'.repeat(64)}`;
 const PROJECT_ROOT = `sha256:${'5'.repeat(64)}`;
 const CONTEXT_PACK_ROOT = `sha256:${'6'.repeat(64)}`;
 const SCHEMA_ROOT = `sha256:${'7'.repeat(64)}`;
-const HOOK = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../framework/work/project-cut/hooks/project-cut-hook.mjs',
+const HOOK = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/hook'),
 );
-const CLI = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../framework/work/project-cut/bin/project-cut.mjs',
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
 );
 const SHIFU = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

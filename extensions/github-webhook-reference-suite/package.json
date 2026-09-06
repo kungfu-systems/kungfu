@@ -24,7 +24,9 @@
     "migrations",
     "permissions.json",
     "qualification",
-    "views"
+    "views",
+    "test/qualify.mjs",
+    "scripts/real-github-canary.mjs"
   ],
   "dependencies": {
     "@kungfu-tech/kfx-view-github-events": "workspace:*",
@@ -33,5 +35,12 @@
   },
   "kungfuProduct": {
     "assembly": "reference-only"
+  },
+  "scripts": {
+    "test:kfx-github-webhook-reference": "node --test test/real-github-canary.test.mjs"
+  },
+  "exports": {
+    "./test/qualify": "./test/qualify.mjs",
+    "./tooling/real-github-canary": "./scripts/real-github-canary.mjs"
   }
 }

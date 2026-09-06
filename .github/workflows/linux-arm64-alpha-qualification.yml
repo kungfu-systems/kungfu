@@ -90,7 +90,7 @@ jobs:
       build-command: node scripts/run-shifu-lifecycle.mjs cache-apply dist:cli
       require-verify: true
       verify-command: >-
-        node product/scripts/verify-cli-surface-qualification.mjs
+        node scripts/run-project-cut-entry.mjs @kungfu-tech/product-kungfu/tooling/verify-cli-surface-qualification
         --qualification product/release/cli/kungfu-cli-linux-arm64.qualification.json
         --archive product/release/cli/kungfu-cli-linux-arm64.tar.gz
         --platform linux-arm64
