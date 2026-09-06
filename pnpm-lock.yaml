@@ -56,6 +56,9 @@ importers:
       '@kungfu-tech/kfd':
         specifier: 1.0.0-alpha.65
         version: 1.0.0-alpha.65
+      '@kungfu-tech/kfd-xinfa':
+        specifier: npm:@kungfu-tech/kfd@1.0.0-alpha.53
+        version: '@kungfu-tech/kfd@1.0.0-alpha.53'
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -1507,6 +1510,10 @@ packages:
   '@kungfu-tech/buildchain@4.0.2-alpha.39':
     resolution: {integrity: sha512-SORiUKpeYTelu5uQAXE7OLiewCHniDSbf4DhXjJkBN9A4Qv32jGggK6hofcqqBhFZXLiIqwlbobRoLLF9v0ECA==}
     engines: {node: '>=22.14.0'}
+    hasBin: true
+
+  '@kungfu-tech/kfd@1.0.0-alpha.53':
+    resolution: {integrity: sha512-t7ZyBXhhfYKNYo+KgBan/SBsBK1UygTf8RaTxQ+toTStwuq4wR5Z85sSAO/kmC2F/oqHeYVaan6nU28e1sVERw==}
     hasBin: true
 
   '@kungfu-tech/kfd@1.0.0-alpha.62':
@@ -5874,6 +5881,8 @@ snapshots:
     dependencies:
       '@kungfu-tech/kfd': 1.0.0-alpha.62
       smol-toml: 1.7.0
+
+  '@kungfu-tech/kfd@1.0.0-alpha.53': {}
 
   '@kungfu-tech/kfd@1.0.0-alpha.62': {}
 
