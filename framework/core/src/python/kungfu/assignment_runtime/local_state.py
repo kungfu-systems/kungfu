@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from kungfu.coordination import locks
 
@@ -44,8 +44,20 @@ class LocalAssignmentStateMixin:
     event_retention: int
     fault_hook: Any
     authority: Any
+    _started: bool
     _state: dict[str, Any]
     _state_path: Any
+
+    if TYPE_CHECKING:
+
+        def _finalize_pending(
+            self,
+            pending: Mapping[str, Any],
+            snapshot: Mapping[str, Any],
+            revision: Mapping[str, Any],
+            *,
+            recovered: bool,
+        ) -> dict[str, Any]: ...
 
     def _empty_state(self) -> dict[str, Any]:
         return {
