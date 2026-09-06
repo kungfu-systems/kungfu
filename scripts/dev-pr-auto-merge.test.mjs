@@ -195,6 +195,7 @@ test('active Warrant handoff inputs are accepted without becoming source authori
   for (const name of [
     'target-branch',
     'assignment-root',
+    'native-roots-json',
     'initiative-root',
     'source-identity-root',
     'source-patch-root',
@@ -445,7 +446,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f/u,
   );
   assert.match(
     workflow,
@@ -671,7 +672,7 @@ test('the completed migration has no bootstrap bypass around Warrant admission',
   assert.match(sourceWorkflow, /Check out exact Buildchain Warrant runtime/u);
   assert.match(
     sourceWorkflow,
-    /ref: 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u,
+    /ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f/u,
   );
   assert.doesNotMatch(
     sourceWorkflow,
@@ -684,10 +685,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
-  assert.match(action, /ref: 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u);
+  assert.match(action, /ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f/u);
   assert.match(
     action,
-    /test "\$\(git rev-parse HEAD\)" = 5cbaa22bfec20ab1970bc4a7914040d78c52ff76/u,
+    /test "\$\(git rev-parse HEAD\)" = ad2699ab8f09c031c3a6d668830bb302752c5a7f/u,
   );
   assert.match(
     action,

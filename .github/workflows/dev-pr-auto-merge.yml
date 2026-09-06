@@ -48,6 +48,11 @@ on:
         required: false
         type: string
         default: ""
+      native-roots-json:
+        description: Handoff compatibility only; native roots are rebuilt from exact source evidence
+        required: false
+        type: string
+        default: ""
       initiative-root:
         description: Handoff compatibility only; rebuilt from the exact source descriptor
         required: false

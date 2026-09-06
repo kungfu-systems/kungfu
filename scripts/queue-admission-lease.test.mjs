@@ -14,11 +14,11 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LEGACY_WARRANT_RUNTIME_SHA = '8493bf140a7f567e76aff3119f3d39ff026afc84';
-const WARRANT_RUNTIME_SHA = '5cbaa22bfec20ab1970bc4a7914040d78c52ff76';
+const WARRANT_RUNTIME_SHA = 'ad2699ab8f09c031c3a6d668830bb302752c5a7f';
 const QUEUE_WARRANT_READBACK_RUNTIME_SHA =
-  '5cbaa22bfec20ab1970bc4a7914040d78c52ff76';
+  'ad2699ab8f09c031c3a6d668830bb302752c5a7f';
 const SOURCE_QUALIFICATION_READBACK_RUNTIME_SHA =
-  '5cbaa22bfec20ab1970bc4a7914040d78c52ff76';
+  'ad2699ab8f09c031c3a6d668830bb302752c5a7f';
 const SOURCE_HEAD = '2'.repeat(40);
 const CONTRACT = JSON.parse(
   fs.readFileSync(
