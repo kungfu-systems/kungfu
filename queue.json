@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9545,
+  "generation": 9546,
   "fencingCounter": 912,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:a07f546bc157124a9eb548de6e4e9abde59d22daa034b12e709b58ec764eb67d",
@@ -56,8 +56,13 @@
     "issuedAt": "2026-09-06T15:32:25.409Z",
     "expiresAt": "2026-09-06T19:37:58.726Z",
     "fencingToken": "sha256:2c85a9b92c67c7b395e82b228259e1c710ca92ddaa473c4761a6ecd9c36d608b",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-06T15:37:58.726Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-06T15:37:58.726Z",
+    "nativeProofRoot": "sha256:8552f4798c68c8b0cc6f47c28b297d1e44fb354a333796c366c86712d81b61e0",
+    "nativeExecutionReceiptRoot": "sha256:a51d8ee917ed5827353710682ae35e490d782558c53afc400458fbffec17d91f",
+    "nativeProofReuseRoot": "sha256:92f4045d4c13561026c41babdcc63a0c3251af89613d2c3d0b3f46c375711200",
+    "qualificationReceiptRoot": "sha256:d777f4fb745493a9ef2cab10c1dad61fc096239015cd5234961a5763048a5cec",
+    "qualifiedAt": "2026-09-06T15:38:28.886Z"
   },
   "candidates": [
     {
@@ -79671,10 +79676,10 @@
       "sourceWorkflowRunId": 34042233303,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-06T15:32:19.136Z",
-      "updatedAt": "2026-09-06T15:37:58.726Z",
+      "updatedAt": "2026-09-06T15:38:28.886Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".xinfa/portable-atlas-classification.json.gz",
@@ -79691,6 +79696,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-06T15:37:58.726Z",
-  "stateRoot": "sha256:1c08e334050f508be546921d0d84180d3b84a9341bee97f3edb4130b8117ac74"
+  "updatedAt": "2026-09-06T15:38:28.886Z",
+  "stateRoot": "sha256:ac491baea90c92651d1d98bd47f45e60c2bd6afbe47377332d59ec29b40158e3"
 }
