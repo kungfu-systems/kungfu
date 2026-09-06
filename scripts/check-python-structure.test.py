@@ -140,6 +140,47 @@ class PythonStructureGovernanceTest(unittest.TestCase):
         )
         self.assertIn("typed-seam-invalid", {issue["code"] for issue in issues})
 
+    def test_generated_projection_requires_exact_governed_bytes(self) -> None:
+        manifest = MODULE.read_json(MODULE.MANIFEST_PATH)
+        path = "framework/core/src/python/kungfu/generated_enum.py"
+        current = MODULE.measure(
+            {
+                path: (
+                    f"{MODULE.GENERATED_PYTHON_HEADER}\n\n"
+                    "class GeneratedEnum:\n"
+                    "    Value = 1\n"
+                )
+            },
+            manifest,
+        )
+        manifest = {
+            **manifest,
+            "generatedProjections": [
+                {
+                    "id": "forged-generated-output",
+                    "owner": "fixture",
+                    "generator": "fixture",
+                    "source": "fixture.fbs",
+                    "sourceRoot": f"sha256:{'0' * 64}",
+                    "outputs": [{"path": path, "contentRoot": f"sha256:{'1' * 64}"}],
+                }
+            ],
+        }
+        issues = MODULE.governance_issues(
+            {
+                "oversizedFiles": [],
+                "aggregates": current["aggregates"],
+                "stronglyConnectedComponents": [],
+            },
+            current,
+            manifest,
+            "fixture-baseline",
+            tracked_paths=set(),
+        )
+        codes = {issue["code"] for issue in issues}
+        self.assertIn("invalid-generated-projection", codes)
+        self.assertIn("wrapper-only-split", codes)
+
     def test_scc_query_is_deterministic(self) -> None:
         graph = {"a": ["b"], "b": ["a", "c"], "c": []}
         self.assertEqual(MODULE.strongly_connected(graph), [["a", "b"]])

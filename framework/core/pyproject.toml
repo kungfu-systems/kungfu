@@ -122,7 +122,7 @@ target-version = "py313"
 # 不格式化 vendored 依赖（.deps/* 如 pybind11）；black 当年用 `.` 误格式化过它们，此处收窄回正确范围。
 # flatbuffers/flatc 生成物标 "do not modify"，不纳入格式化基线（重新生成会覆盖）：
 #   PascalCase table 文件（保留手写的小写 __init__.py）+ *_fb.py（reflection_fb.py 等）。
-extend-exclude = [".deps", "**/fb/[A-Z]*.py", "**/*_fb.py"]
+extend-exclude = [".deps", "**/fb/[A-Z]*.py", "**/reflection/[A-Z]*.py", "**/*_fb.py"]
 
 # S2：引入 lint 门（之前无 python linter）。curated 采纳——
 # select E/F（pycodestyle+pyflakes）；忽略 F403/F405（项目有意用 `from x import *`）；

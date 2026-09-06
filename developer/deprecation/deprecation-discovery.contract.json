@@ -86,6 +86,13 @@
       "reason": "Generated reflection vocabulary is rebuilt from schema authority and is not an authored compatibility promise."
     },
     {
+      "classification": "generated-code",
+      "match": "exact",
+      "path": "framework/core/src/python/kungfu/rewind/reflection.fbs",
+      "dialects": ["persisted-schema-protocol"],
+      "reason": "The pinned FlatBuffers compiler reflection vocabulary is a code-generation authority, not an authored product deprecation promise."
+    },
+    {
       "classification": "historical-evidence",
       "match": "exact",
       "path": "docs/research/libkungfu-embedding-membrane-spike.md",
