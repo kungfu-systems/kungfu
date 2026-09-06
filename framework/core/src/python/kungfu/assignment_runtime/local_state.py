@@ -49,6 +49,7 @@ class LocalAssignmentStateMixin:
     _state_path: Any
 
     if TYPE_CHECKING:
+        # The concrete runtime owns finalization without adding a runtime MRO shim.
 
         def _finalize_pending(
             self,
