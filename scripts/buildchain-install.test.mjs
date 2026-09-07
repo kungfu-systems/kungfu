@@ -284,14 +284,17 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', 
     path.join(repositoryRoot, '.github/workflows/build.yml'),
     'utf8',
   );
-  const macosImmutableBuildSource = buildWorkflow.match(
-    /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@([0-9a-f]{40})/u,
-  )?.[1];
-  assert.match(macosImmutableBuildSource || '', /^[0-9a-f]{40}$/u);
-  assert.match(
-    buildWorkflow,
-    new RegExp(`buildchain-ref: ${macosImmutableBuildSource}`, 'u'),
+  const governedBuildchainRef = 'v4-alpha';
+  const lock = JSON.parse(
+    fs.readFileSync(
+      path.join(repositoryRoot, '.buildchain/alpha-contract-lock.json'),
+      'utf8',
+    ),
   );
+  assert.equal(lock.buildchain.ref, governedBuildchainRef);
+  assert.match(lock.buildchain.resolvedSha, /^[0-9a-f]{40}$/u);
+  assert.match(buildWorkflow, /\.build-engine\.yml@v4-alpha/u);
+  assert.match(buildWorkflow, /buildchain-ref: v4-alpha/u);
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
@@ -302,16 +305,8 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', 
       path.join(repositoryRoot, '.github/workflows', name),
       'utf8',
     );
-    const expectedWorkflowShell =
-      name === 'aws-us-windows-burst-qualification.yml'
-        ? windowsUsd80PhaseCapSource
-        : name === 'aws-us-macos-burst-qualification.yml'
-          ? macosImmutableBuildSource
-          : buildchainSource;
-    const expectedBuildchainSource =
-      name === 'aws-us-macos-burst-qualification.yml'
-        ? macosImmutableBuildSource
-        : expectedWorkflowShell;
+    const expectedWorkflowShell = governedBuildchainRef;
+    const expectedBuildchainSource = governedBuildchainRef;
     assert.match(workflow, /workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
     if (name === 'aws-us-windows-burst-qualification.yml') {
@@ -324,7 +319,7 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', 
     const shellPins =
       workflow.match(
         new RegExp(
-          `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${expectedWorkflowShell}`,
+          `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build(?:-engine)?\\.yml@${expectedWorkflowShell}`,
           'g',
         ),
       ) || [];
@@ -369,7 +364,7 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', 
   }
 });
 
-test('AWS Linux burst workflow is a manual-only CodeBuild v3 caller', () => {
+test('AWS Linux burst workflow is a manual-only CodeBuild v4 caller', () => {
   const workflow = fs.readFileSync(
     path.join(
       repositoryRoot,

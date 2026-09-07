@@ -1153,14 +1153,14 @@ test('source plan cannot enter build, compiler, artifact, or release lifecycles'
   );
 });
 
-test('reusable workflow is bound to source mode and the pinned stable runtime', () => {
+test('reusable workflow is bound to source mode and the governed v4 Alpha runtime', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/source-acceptance.yml'),
     'utf8',
   );
   assert.match(workflow, /mode: source/);
-  assert.match(workflow, /check\.yml@9e904de2c85dbea7c799780ee166510b3336d812/);
-  assert.match(workflow, /buildchain-ref: v3/);
+  assert.match(workflow, /public-build-check\.yml@v4-alpha/);
+  assert.match(workflow, /buildchain-ref: v4-alpha/);
   assert.doesNotMatch(workflow, /self-hosted/);
 });
 

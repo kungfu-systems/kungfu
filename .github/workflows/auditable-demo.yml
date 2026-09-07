@@ -39,10 +39,11 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
+    uses: kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha
     with:
-      buildchain-ref: 41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-visible-workflow: .github/workflows/.build-engine.yml
+      buildchain-ref: v4-alpha
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: off
       runner-preset: custom
@@ -152,7 +153,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
+    uses: kungfu-systems/buildchain/.github/workflows/public-build-demo.yml@v4-alpha
     secrets:
       DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
     with:

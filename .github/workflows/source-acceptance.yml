@@ -11,8 +11,8 @@ permissions:
 jobs:
   source-acceptance:
     name: Source acceptance
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812 # v3.0.0
+    uses: kungfu-systems/buildchain/.github/workflows/public-build-check.yml@v4-alpha
     with:
-      buildchain-ref: v3
+      buildchain-ref: v4-alpha
       mode: source
       upload-artifacts: true

@@ -20,9 +20,9 @@
       "adapter": {
         "type": "buildchain-source-staged",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812",
+        "uses": "kungfu-systems/buildchain/.github/workflows/public-build-check.yml@v4-alpha",
         "with": {
-          "buildchain-ref": "v3",
+          "buildchain-ref": "v4-alpha",
           "mode": "source",
           "upload-artifacts": true
         }
@@ -65,9 +65,9 @@
       "adapter": {
         "type": "buildchain-source",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@1342b7d68936ab3c31b58b255df1de49c234bc02",
+        "uses": "kungfu-systems/buildchain/.github/workflows/public-build-check.yml@v4-alpha",
         "with": {
-          "buildchain-ref": "1342b7d68936ab3c31b58b255df1de49c234bc02",
+          "buildchain-ref": "v4-alpha",
           "mode": "source",
           "upload-artifacts": true,
           "source-proof-reuse": true,
@@ -93,13 +93,29 @@
       "adapter": {
         "type": "buildchain-config-staged",
         "kind": "step-uses",
-        "uses": "kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v4-alpha",
         "name": "Validate .buildchain/buildchain.toml",
         "with": {
           "require-version-state": "true",
           "require-lifecycle-stages": "install,check,build,verify"
         }
-      }
+      },
+      "measurementHistory": [
+        {
+          "sourceSha": "df3b02b28e56068d8fcaa266cd4704b2fbb07ddc",
+          "receipt": "docs/qualification/evidence/gate-measurements/df3b02b28e/linux/governance.buildchain-config.controller-receipt.json",
+          "adapter": {
+            "type": "buildchain-config-staged",
+            "kind": "step-uses",
+            "uses": "kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
+            "name": "Validate .buildchain/buildchain.toml",
+            "with": {
+              "require-version-state": "true",
+              "require-lifecycle-stages": "install,check,build,verify"
+            }
+          }
+        }
+      ]
     },
     {
       "id": "dev-candidate-dco",
@@ -228,7 +244,7 @@
       "adapter": {
         "type": "buildchain-config",
         "kind": "step-uses",
-        "uses": "kungfu-systems/buildchain/actions/validate-config@v3",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v4-alpha",
         "name": "Validate .buildchain/buildchain.toml",
         "with": {
           "require-version-state": "true",
@@ -427,20 +443,21 @@
       "adapter": {
         "type": "buildchain-aws-macos-burst",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha",
         "with": {
-          "buildchain-ref": "675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+          "buildchain-ref": "v4-alpha",
           "buildchain-contract-expected-channel": "alpha",
-          "buildchain-contract-expected-major": "v3",
+          "buildchain-contract-expected-major": "v4",
           "runner-preset": "aws-us-ec2-macos-jit",
           "aws-ec2-macos-runner-label": "${{ inputs.runner-label }}",
           "require-build": true,
           "require-verify": true,
           "publish-channel": "none",
           "release-candidate": false,
-          "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
+          "buildchain-contract-lock-path": ".buildchain/alpha-contract-lock.json",
           "buildchain-contract-compatibility-policy": "allow-additive",
-          "buildchain-contract-drift-issue-mode": "off"
+          "buildchain-contract-drift-issue-mode": "off",
+          "buildchain-visible-workflow": ".github/workflows/.build-engine.yml"
         }
       }
     },
@@ -468,7 +485,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha",
         "job": {
           "secrets": {
             "BUILDCHAIN_PROMOTION_TOKEN": "${{ secrets.KUNGFU_GITHUB_TOKEN }}",
@@ -478,33 +495,34 @@
           }
         },
         "with": {
-          "buildchain-ref": "675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+          "buildchain-ref": "v4-alpha",
           "buildchain-contract-expected-channel": "alpha",
-          "buildchain-contract-expected-major": "v3",
+          "buildchain-contract-expected-major": "v4",
           "runner-preset": "custom",
-          "platforms-json": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 self-hosted primary\",\"platform\":\"macos\",\"runner\":\"[\\\"self-hosted\\\",\\\"macOS\\\",\\\"ARM64\\\",\\\"kungfu-build-v4-macos-arm64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 GitHub-hosted overflow\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]' || (inputs.platforms-json || '[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"],\"environment\":{\"CC\":\"gcc-14\",\"CXX\":\"g++-14\"}},{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"windows-2022\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]')) }}",
+          "platforms-json": "[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"],\"environment\":{\"CC\":\"gcc-14\",\"CXX\":\"g++-14\"}},{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"windows-2022\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]",
           "self-hosted-offline-fallback": false,
-          "install-command": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' || 'node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' }}",
+          "install-command": "node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs",
           "github-artifact-attestation-subject-path": "product/release/cli/kungfu-cli-linux-x64.tar.gz",
           "github-artifact-attestation-signer-sha": "375b2d4b8a904776453773a33b4c4e4556c8c999",
           "github-artifact-attestation-platform-id": "linux-x64",
           "require-install": true,
           "require-build": true,
           "require-verify": true,
-          "verify-command": "node scripts/run-shifu-lifecycle.mjs cache-apply ${{ startsWith(github.base_ref, 'release/') && 'release:qualify:candidate' || 'alpha:qualify' }} --kfd-source-input-root ${{ needs.preflight.outputs.kfd-source-input-root }} --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}",
+          "verify-command": "node scripts/run-shifu-lifecycle.mjs cache-apply alpha:qualify",
           "release-candidate": true,
-          "publish-channel": "${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}",
+          "publish-channel": "alpha",
           "artifact-transfer-mode": "s3-to-github-artifacts",
-          "checkout-cache-mode": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && 'auto' || (inputs.platforms-json && 'auto' || 'off') }}",
-          "shifu-cache-profile-ref": "${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'docs/shifu/qualification-portable-off.cache-profile.json' || 'docs/shifu/windows-alpha-sccache.cache-profile.json' }}",
-          "shifu-cache-profile-digest": "${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || 'sha256:581c430b959c0b45272031cad85a3fae740a6398abf7c1051d1d43b098ee0adb' }}",
-          "compiler-cache-provider": "${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'none' || 'sccache' }}",
-          "compiler-cache-platforms-json": "${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && '[]' || '[\"windows-x64\"]' }}",
-          "compiler-cache-required": "${{ github.event_name != 'workflow_dispatch' || inputs.windows-compiler-cache-mode != 'off' }}",
+          "checkout-cache-mode": "off",
+          "shifu-cache-profile-ref": "docs/shifu/windows-alpha-sccache.cache-profile.json",
+          "shifu-cache-profile-digest": "sha256:581c430b959c0b45272031cad85a3fae740a6398abf7c1051d1d43b098ee0adb",
+          "compiler-cache-provider": "sccache",
+          "compiler-cache-platforms-json": "[\"windows-x64\"]",
+          "compiler-cache-required": true,
           "buildchain-contract-lock-path": ".buildchain/alpha-contract-lock.json",
           "buildchain-contract-compatibility-policy": "major-compatible",
           "pre-upload-transport-smoke-scenario-path": ".buildchain/auditable-demo-transport-smoke.json",
-          "pre-upload-transport-smoke-artifact-root": "."
+          "pre-upload-transport-smoke-artifact-root": ".",
+          "buildchain-visible-workflow": ".github/workflows/.build-engine.yml"
         }
       }
     },
@@ -525,7 +543,7 @@
       "adapter": {
         "type": "buildchain-hub-cli-linux-arm64",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -546,8 +564,9 @@
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",
           "shifu-cache-profile-ref": "docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json",
-          "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
-          "buildchain-contract-compatibility-policy": "major-compatible"
+          "buildchain-contract-lock-path": ".buildchain/alpha-contract-lock.json",
+          "buildchain-contract-compatibility-policy": "major-compatible",
+          "buildchain-visible-workflow": ".github/workflows/.build-engine.yml"
         }
       }
     },

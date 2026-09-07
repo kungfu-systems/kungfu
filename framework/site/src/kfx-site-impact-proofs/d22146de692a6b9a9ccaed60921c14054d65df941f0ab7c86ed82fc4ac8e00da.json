@@ -1,0 +1,419 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "e0ec61b28bb9e0bf36a9c1aeef2daa788a1d1a4d",
+  "changeRoot": "sha256:03a1e4349a9e189437a18e8c3950fd2b675c7a7a7221fdaca7268fb5186f39f1",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:318d42fca119c09c934435449539f2971ce967407f4c3fd305e5a3f82dd16d30",
+      "contentRoot": "sha256:19eb21ca4dafba7bd51532cf3e242953bb589f556ef9bfd5d3579543abfdf9c5",
+      "path": ".buildchain-version",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a937f67a7c0493bbbef2e1a9175dd29ca48d3858b1a3f0b9e460d2252f96b6bb",
+      "contentRoot": "sha256:11be85ad7f163a224c95f4143ae64e927a5c7a1fa0c1c210afed435624073dcc",
+      "path": ".buildchain/alpha-contract-lock.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9c113eac3e9ccf74e95a17ffacfac9b9c9efb637a348f61aa90fc99972585f92",
+      "contentRoot": "sha256:2551677b04ac241ea5a1c1869bb9879b6fb3efb485785bd7916ff20f596be1ee",
+      "path": ".buildchain/buildchain.toml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8bfec71fa6023a3031c91e972d6ca815819799f3ce425068b84f6003e67456be",
+      "contentRoot": "sha256:3dc34ce3d4405859d9d5eae87c82ef320133cef4a7fd2d9d8701d618802dfdf2",
+      "path": ".buildchain/contract-lock.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:abe1e6233e07abee356e2c74619ad84b5e2ac3a109a51dbb6fe047b8e0528725",
+      "contentRoot": "sha256:5c619463903d81c09bb8b8ce4eced9ce777f058f9fdc9422a296b3bf79804c73",
+      "path": ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d9686b2c2744d3a7e9af7fd7f79e4d4eae21a42038a21b3482a70f3404cac468",
+      "contentRoot": "sha256:061b13b3bf02bf5ea1a96ae684cf19a80bbfbcd0c940ac432b44e02f5e7d9895",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9291730b2ee9611c8edd918b53eb0b7425f0da91059a05d71032d653049b8e9d",
+      "contentRoot": "sha256:7d2001732196e72d565e892747ed3001c6ce90f2423acd97b81d13e5e5368aaa",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1c4b3156d2e4b4a04c8774bc03eadf9868b3217c1f0ac3d495a460934bad7b1f",
+      "contentRoot": "sha256:2b67e5c9373f2fa33ead4f7733325b98e37e37580e335ddbeb3c9ae32904a976",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e6e0ef0b28de6780e3ee639aebf80b229ac52cc56d2af5052a8e9858d1b6b94b",
+      "contentRoot": "sha256:f6b71f4d222e26571184238f6e48407e2f208b7e9117db92942cf303b41538ca",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:39e17c164d9fc4bba02de1a91f906588c9b1b48938e327b276a20c804b96ab9a",
+      "contentRoot": "sha256:7ae1d41afc1af5ae696956d29b18332151c0226321c1027453f1502e7b803c34",
+      "path": ".buildchain/kfd/kfd-3/surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:40bb6a1d039b480477ebb14434e258380580cc5f026ff7f3fd3372c6201fa97e",
+      "contentRoot": "sha256:3835c1335a7fc98f815adcb007302b6eb909528b9f63c319292779881191587d",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1b3c8ea46bcf624186be76624ab11df94cb0f8f129100f3c7d10c215690dbbd9",
+      "contentRoot": "sha256:f01be5abaf91eb022f34a18bd3c2cfb4f38cc7427a14d45de693c621d3f19819",
+      "path": ".github/actions/native-execution-under-warrant/action.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:075cfefcf560150673ddda035f4b1c2add69cd40dbefdea13e20be116d4b9366",
+      "contentRoot": "sha256:f0162a9a2f37213c7d55276c5493aa0a753d60a4227ef995e4842d8a645202bd",
+      "path": ".github/workflows/affected-native-pr.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6fb29ab1556c19feaf8245ed4d79121681aa33c6771de140d269154bf8f32717",
+      "contentRoot": "sha256:4aa46dbd08ebe986ffd20b040c6fc191b7a3b9fc689505ea1f9d367ae382b4a3",
+      "path": ".github/workflows/auditable-demo.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ada2b7c9e6587502e4db254a139e340b7ec27c3a7994c1947c322bc9e1336bf6",
+      "contentRoot": "sha256:7bdb951af0eb64c61a51166ee8d50edd3453e9c1b093eb5dc6e27a1201b2e0ad",
+      "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e8552047f420b6a69de4d8dcb1c15c3c3a31eb07a161f64b96d38da376b26794",
+      "contentRoot": "sha256:8c98119f3da7f532fd17611b00bdd581fb842b71358417d273a212d067f6e513",
+      "path": ".github/workflows/aws-us-macos-burst-qualification.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:bbaa81705979fe216eca197a7439ee1f5173d2c480cb7011d8d643b0ebc7cb50",
+      "contentRoot": "sha256:ae29398d41b6655ab292e79fc9b60bf395f07a3726ff593ad962e5b4e08d150f",
+      "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c08a92907824052b169b34831cbb4dbe8e2c63d9498cc9cfde09b48460115e57",
+      "contentRoot": "sha256:bbcc5c02f5c0ad6a648e428915b36ba26dbd7b8b015de079a40390fa6e312851",
+      "path": ".github/workflows/build.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f8aee160b041890af14fba0a5cc8f9e4f0d9f7ce7b41583540a3dbe083d8f82a",
+      "contentRoot": "sha256:1817457ebb98d53d941750c0f296a00a45425c977924fca09c1e63efc63c6e4d",
+      "path": ".github/workflows/buildchain-validate.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7e14f469e6f8ac3210096cd05e1da2e328a74a5e52fc76e211baac5ad88461a9",
+      "contentRoot": "sha256:885a52e17e7ebf0323456c791dedc6d9470907b6178d7f87596d7f3a5f088fe0",
+      "path": ".github/workflows/dev-alpha-candidate-patrol.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c09c7094ca4c7328f31645b1fa54ac5a550a55bb3de47d9c6a3949ab2349b286",
+      "contentRoot": "sha256:441f4cf8562af7ee783d3249bf6e67bcc5e4e78008a1581b86becd6beb70e289",
+      "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:924f03ab4cc6d3d80cbdc30fb2a0ee073cff5e5bd304a612243192b239d9633a",
+      "contentRoot": "sha256:23799075f23a01eb9303b96e42454ac85235537c110c33f874d2f56ca2a1ab8f",
+      "path": ".github/workflows/dev-pr-auto-merge.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2c43ef28613d7823bb48abddf730267f45a877934326c9a580c015f2c69cb708",
+      "contentRoot": "sha256:388e189ad2c2f37f137f6c2bd71c3aee6c451dc05c93596fc8534ec243533d25",
+      "path": ".github/workflows/dev-qualification-patrol.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:fe6b676dcdcab77234d225eb00ca126ae718a00c496b87a3734134c4039b8ecc",
+      "contentRoot": "sha256:d914a093fdfdb84e0d7625680d3d1d69a5bd926c0383928ba565a7f3092b3e82",
+      "path": ".github/workflows/dev-verify-patrol.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d884a2ed2c7eb683fc45687b4c9a63528debf11bff1060059f08ead6461f9c28",
+      "contentRoot": "sha256:9c038fa492bcb874d2cafd2bccb10f36910f3e550f82797d4ed42586d5eb4d4a",
+      "path": ".github/workflows/gate-measurement.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0501da8e27fb7042ac00cada298e25462fc20333e212e855c60393a74c42c454",
+      "contentRoot": "sha256:04a47d9b023a8262277bc45ff3f6b1b4ab42062e9d0b00b826d6447ded0ff003",
+      "path": ".github/workflows/linux-arm64-alpha-qualification.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:427b86756e1258b26602808ea5680e3294a9fbece139e217e948bb80c5d7adc3",
+      "contentRoot": "sha256:5ed1ac0c1c2cc4aa64079b375db9b8d541480450e08184a10409c5566fa123be",
+      "path": ".github/workflows/queue-admission-lease.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:14924c40cbb7dbc0bc44a91df1d8d0be7ebfa97548c6917252fd1d129ffae93a",
+      "contentRoot": "sha256:d4b2a62c4bcaf8b2c7972f75a882c9929e0c6195b5d4464ecfd1163d63d767b5",
+      "path": ".github/workflows/source-acceptance.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6af66965fdfe536109f0f1be8aaadf53ea21a5dbb9ab601fb3b7137467b5861d",
+      "contentRoot": "sha256:521acb4e995e0fd325b2a4492bb2b01ab830183a3232aac9e3e1da8b2e598934",
+      "path": ".github/workflows/stable-candidate-patrol.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c6eacda3c1f9431411aa548d9dab6aad56611156111314e6bc967afe6d2acf61",
+      "contentRoot": "sha256:2e72bafd594885c5443dcac91015a8d2b73d189d15ab9d5a0089549389cd2e83",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:189a412b2ddc100ee1185f4f18273974e29ef5bf892c7e7f8498973b2073009c",
+      "contentRoot": "sha256:6ecd0172680d8c570746e450689ae04bf34e9439ac54279508962e84db4726af",
+      "path": ".xinfa/product-atlas-bundle.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8479b318c8ffbd5d49561efeb4dbc040bd6fbf4b18ab4efaba0e59c350c250ca",
+      "contentRoot": "sha256:715d261f9023af9d73907a047908348d7ec1efc5474f35f63b42f00d30c7b88e",
+      "path": ".xinfa/project.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d632c1ecd9ebef80248316e17a5c2430ac594e06e99eee385c0bc4b9c18d3c74",
+      "contentRoot": "sha256:b9b0b1f0305307ac0870bc18c2f02ba870ca6cb68284d1e03f5968cf64df2847",
+      "path": "config/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:0861e152f7ad067261058b56466fd97e5bcc1ba5bf1de033e9cac78ca2c9aefd",
+      "path": "developer/maintainability/waivers/2026-09-06-buildchain-v4-lock-closure.v3.json",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:abe1e6233e07abee356e2c74619ad84b5e2ac3a109a51dbb6fe047b8e0528725",
+      "contentRoot": "sha256:5c619463903d81c09bb8b8ce4eced9ce777f058f9fdc9422a296b3bf79804c73",
+      "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d9686b2c2744d3a7e9af7fd7f79e4d4eae21a42038a21b3482a70f3404cac468",
+      "contentRoot": "sha256:061b13b3bf02bf5ea1a96ae684cf19a80bbfbcd0c940ac432b44e02f5e7d9895",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9291730b2ee9611c8edd918b53eb0b7425f0da91059a05d71032d653049b8e9d",
+      "contentRoot": "sha256:7d2001732196e72d565e892747ed3001c6ce90f2423acd97b81d13e5e5368aaa",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:39e17c164d9fc4bba02de1a91f906588c9b1b48938e327b276a20c804b96ab9a",
+      "contentRoot": "sha256:7ae1d41afc1af5ae696956d29b18332151c0226321c1027453f1502e7b803c34",
+      "path": "developer/sdk/kfd/kfd-3-surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:40bb6a1d039b480477ebb14434e258380580cc5f026ff7f3fd3372c6201fa97e",
+      "contentRoot": "sha256:3835c1335a7fc98f815adcb007302b6eb909528b9f63c319292779881191587d",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:843fdf12a368ed65076dce1fdd435a8790ccd1d605fcb46fb22032b8a625be57",
+      "contentRoot": "sha256:f39d4a6821c990b7c20ec0aec8003def429bb707fd2d6d254043b4dc164a27c0",
+      "path": "developer/sdk/kfd/upstream-aggregate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9ee019fb1395f8ebdc85a415d683d8c3db04d5ecd499f17d06620aec7a2e827c",
+      "contentRoot": "sha256:a60d8e729ca108eb07ee3bd809429880f825f11c1b34b823cd0660593061ffa3",
+      "path": "developer/sdk/package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1c4eaf840c6518187f4741e607226571c08af3387b7a8f5c6bbf7c53aede0420",
+      "contentRoot": "sha256:3a5193f80553e6ac902c8252cdd4ab130a343b5192cb69b8df2f867dd823c730",
+      "path": "docs/qualification/gates/dev-queue-admission.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f82510a0dbb2e05be47c8e1a5e5ad0c74b503c72369462f8efd92b73cf9363a7",
+      "contentRoot": "sha256:30120ffd2053c25797d003bf733c49654bd64a09f444e8bf00de42b077bc4612",
+      "path": "docs/qualification/gates/workflow-bindings.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:155b8fa307fcd4e295df9f8f04290982c3ead3aae187c1eab9fc4e21b425c42d",
+      "contentRoot": "sha256:e31d4aa13db93aab7c7cdc8f56abe34ee8a629d318e5518dcc9fe6acf3ec0d79",
+      "path": "extensions/work-control/profile.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:41237ba7efd506929716bb90900241044f72eda737163b7367f309a6d60618a4",
+      "contentRoot": "sha256:8d34cbbdb6453335adc50d9160ff0c919fd9b78f018ab782415826ef306cde4b",
+      "path": "extensions/work-control/qualification/work-profile-conformance.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d632c1ecd9ebef80248316e17a5c2430ac594e06e99eee385c0bc4b9c18d3c74",
+      "contentRoot": "sha256:b9b0b1f0305307ac0870bc18c2f02ba870ca6cb68284d1e03f5968cf64df2847",
+      "path": "framework/spec/contract/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:45283c0c0489b1e33c518f42eadf6077edae1d97e1dba99adbef825c9c1d0511",
+      "contentRoot": "sha256:c79e37a392535990ae9fba13da7284249b1aea2a8913ab43558196536d8e31c3",
+      "path": "framework/work/work-profile-conformance/authority-manifest.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:665644f50dc49619cbc7ca1387cc976abab614bcdca1c24fc400a60f085d644c",
+      "contentRoot": "sha256:fe32bad39464badc2db3c0028cbe36f44ddd8ac31ade991dc7950f2b59c1070f",
+      "path": "framework/work/work-profile-conformance/qualification/negative-witnesses.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f193a9cdeb9471fc0624c3d38e78bde04714aef2c25a113d85c775c874a99624",
+      "contentRoot": "sha256:d429771dfff4f3476e6159086c076a8a36103d0b5b86eba2405e16a34d47d517",
+      "path": "framework/work/work-profile-conformance/qualification/reference-scenarios.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dbe1d03ab6f3797c9ac7ead040e2775e0d93137d465c1cc400d893ca0f7f2431",
+      "contentRoot": "sha256:e5fe820c4aade88bd676ce75cc9b204e744c0c49afec7f0f8b698ed669537e73",
+      "path": "package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1aa938a3071a9709d400c9e2cc4518a070605a8881518a3c3a8f73a5d1997ed9",
+      "contentRoot": "sha256:e9d0cecf29ceed0f9959d55224d04fe25b2dc0efffeda7ae5655f3b4589d2512",
+      "path": "pnpm-lock.yaml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5bd9e0a39f85c660f6c220d917652e0a5f53514f39da4574165a702b66d55efe",
+      "contentRoot": "sha256:dce49a25a321ccb269be3d8ca5201dd08cd7833a7948501b5b2a1d781a0cb5a4",
+      "path": "product/package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:10e2c80cab3c3b524189227fa868be597b89050ad8d1a9786dde570256ca653c",
+      "contentRoot": "sha256:b5e327e21f6cf7a8c1e0627dbbc42bdeed651a772e2ccd0293333a5abe708e23",
+      "path": "product/release/buildchain-kfd-runtime.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b2e3e3477e13cddae2860d01a76643f0d1f8eb41aad53c10dca90160fc65b1d1",
+      "contentRoot": "sha256:55b98ced4291696c57b4caa58751ae7e6fbcb209add28212ae5a7b19053ac0d2",
+      "path": "scripts/auditable-demo-workflow.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:abaec8842a57037fbbb42fb5cab33c8e95e1a41da905e8aa40e8c5da0f8393a9",
+      "contentRoot": "sha256:5b90b65009407b812983ae6c772ed491c4734c9b455093f125a6759165a70b51",
+      "path": "scripts/buildchain-install.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9556c25bd39367a1adf77b919d8e64009d3be39666a023f099ce520e07551ce4",
+      "contentRoot": "sha256:419fa2126855ef80a2c6cd1f2ff48e7772fedec66bb150d8f7f9a80463b4cd6d",
+      "path": "scripts/check-kungfu-gate-catalog.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3fc307530cdf69f4d098e6fcb0d5ce1e1e63c9e0d0fd584ae69d04ff7f19037c",
+      "contentRoot": "sha256:b031dcad7bd0b783376ba936c74f678c9f9cca11f9bc8e2f1c35d106e5036cc1",
+      "path": "scripts/check-shifu-cache-contract.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:579aa7d5920da4448caa964319e5c2c1a237ba92ca2668acf80387834ebf11e5",
+      "contentRoot": "sha256:183c51caec24f6e0a33d03879ff7c1aca5bdbbbf9f7b1e02599ae6a89392b73e",
+      "path": "scripts/dev-delivery-proof-consumer.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:fff7739cccad4a165e5bea2c9c14836565a6660c3e56d83410ee5e53297a3add",
+      "contentRoot": "sha256:fb8c331938ae66199792cd11c05d39b845951335249acd0ef95e6b67684088ee",
+      "path": "scripts/dev-delivery-warrant-input.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b65a2759e95be62258c6d7142ec562707ea947a254d7263e3c38dfc1cbda0d2a",
+      "contentRoot": "sha256:d0356caaa4c0dd2ee58353b6e0f3cce569d6915965b1240467b5383265418400",
+      "path": "scripts/dev-pr-auto-merge.test.mjs",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:1ca4deb90ecef3f3e6095a14b579e3bc03bc86e7dcb7d29b3d599eefea2d9bf3",
+      "path": "scripts/gate-measurement-history.test.mjs",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:68d1a8ec93fd1edfab40fa8034f9d235c1befd731d0079dc7b76c94dac18c064",
+      "contentRoot": "sha256:481e547b0afe21c553726b4f1afba189088cdf5cb6eb05ba7363471c53f58649",
+      "path": "scripts/kungfu-gate-controller-adapters.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7ae0e3bf8017f2e49ba3a505cf24cfedb572e090f47a38218d8d331adf39998d",
+      "contentRoot": "sha256:44bff8de9e935d1cd0f6ef30a27e234dc7684d8f6d654176ad3eeff78199b140",
+      "path": "scripts/queue-admission-lease.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e6588d51d44188a05ff64b75842ee801fc92c8581f79b4cdaf0802e5cbd84253",
+      "contentRoot": "sha256:d39d5fbd2ccee546c5dee98b5f9d6cb0cddf13c16d091568669d31c5abd89193",
+      "path": "scripts/source-acceptance-kfd-runtime.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b8ff2aa70b51b7a02d4064a1cf26987264a64362770a2ec5b03a35c60480d8e4",
+      "contentRoot": "sha256:d9c455aecc48442ea0430250c288685d4d384ada446a65aaae10ca066169a10e",
+      "path": "scripts/source-acceptance.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4c36ce15d6596f54fb3b8c4eb36c8acce77032dd8bff3fec959eab4783847d1e",
+      "contentRoot": "sha256:9ffba1282a7b5ca046c2bd114c0cee21bfdf059e1eb52a0a1a23773b64ff7c79",
+      "path": "scripts/source-acceptance.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f1c54b2a9dcdfa802e6d1b20edc470ad7b085a3fac4d9692302b4e4fb46288f2",
+      "contentRoot": "sha256:bb30f2cf4efbd8df9de157a2a126e9a2f4ce1c0fef8441eb7c2f38cb212bf0f9",
+      "path": "scripts/verify-kfd-owned-fixtures.mjs",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Buildchain v4 release migration retains the protected Dev Shifu promotion decomposition and its ADR delivery record; only generated documentation and qualification evidence are reconciled, with no site behavior change.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:d22146de692a6b9a9ccaed60921c14054d65df941f0ab7c86ed82fc4ac8e00da"
+}

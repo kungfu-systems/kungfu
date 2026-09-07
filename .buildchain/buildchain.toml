@@ -1,6 +1,6 @@
 schema = 1
 
-# Kungfu monorepo lifecycle contract for Buildchain v3. Development PRs run
+# Kungfu monorepo lifecycle contract for Buildchain v4. Development PRs run
 # lifecycle.check as a GitHub-hosted source gate; promotion keeps the existing
 # install, build, and verify stages.
 #

@@ -42,11 +42,10 @@ jobs:
 
   stable:
     needs: resolve-version-line
-    # The reusable workflow and runtime are pinned to the same reviewed,
-    # immutable Buildchain source.
-    uses: kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@978520e86134683f66b607bc70c2d18f623e2410
+    # The workflow and default runtime select the governed Buildchain v4 Alpha channel.
+    uses: kungfu-systems/buildchain/.github/workflows/public-ops-stable-candidate-patrol.yml@v4-alpha
     with:
-      buildchain-ref: 978520e86134683f66b607bc70c2d18f623e2410
+      buildchain-ref: v4-alpha
       target-branch: ${{ needs.resolve-version-line.outputs.stable-branch }}
       ledger-ref: ${{ needs.resolve-version-line.outputs.candidate-ledger }}
       release-now: ${{ inputs.release-now }}
