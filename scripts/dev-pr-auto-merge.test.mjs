@@ -610,6 +610,13 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
     const relativeEnd = remainder.search(/\n {2}[a-z][a-z0-9_]*:\n/u);
     const end = relativeEnd === -1 ? undefined : start + 3 + relativeEnd;
     const body = sourceWorkflow.slice(start, end);
+    assert.match(body, /runs-on: ubuntu-(?:22|24)\.04/u);
+    assert.match(body, /contents: read/u);
+    assert.doesNotMatch(body, /contents: write|(?:GH_TOKEN|GITHUB_TOKEN):/u);
+    assert.match(
+      body,
+      /uses: actions\/checkout@[^\n]+\n\s+with:\n(?:\s+fetch-depth: 0\n)?\s+persist-credentials: false/u,
+    );
     assert.match(body, /- warrant_admission/u);
     assert.match(body, /needs\.warrant_admission\.result == 'success'/u);
     assert.match(
@@ -686,6 +693,12 @@ test('native execution uses one exact protected runtime and continuous fence wra
     'utf8',
   );
   assert.match(action, /ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f/u);
+  assert.match(
+    action,
+    /BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker\/v1/u,
+  );
+  assert.doesNotMatch(action, /(?:GH_TOKEN|GITHUB_TOKEN):/u);
+  assert.match(action, /persist-credentials: false/u);
   assert.match(
     action,
     /test "\$\(git rev-parse HEAD\)" = ad2699ab8f09c031c3a6d668830bb302752c5a7f/u,

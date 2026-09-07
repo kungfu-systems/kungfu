@@ -219,3 +219,17 @@ test('transient credentialless observation failure fails closed', async () => {
   );
   assert.equal(attempts, 2);
 });
+
+test('protected runtime credential ancestry rejection cannot issue a consumer receipt', async () => {
+  const value = fixture();
+  const rejection = new Error('credential ancestry contains GITHUB_TOKEN');
+  value.dependencies.runNative = async (input) => {
+    assert.equal(Object.hasOwn(input, 'ancestryCheck'), false);
+    throw rejection;
+  };
+  await assert.rejects(
+    runNativeExecutionUnderWarrant(options(), value.dependencies),
+    (error) => error === rejection,
+  );
+  assert.equal(value.spawned, false);
+});
