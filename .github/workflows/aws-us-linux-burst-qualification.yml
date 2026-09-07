@@ -19,6 +19,11 @@ concurrency:
 jobs:
   qualify:
     name: Exact-source Linux core qualification after Buildchain trust gate
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      id-token: write
     uses: kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha
     with:
       buildchain-visible-workflow: .github/workflows/.build-engine.yml

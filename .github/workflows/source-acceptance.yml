@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
+  pull-requests: read
 
 jobs:
   source-acceptance:

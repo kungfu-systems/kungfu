@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
 import {
   createCodeBuildQualification,
@@ -19,6 +20,47 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
+
+test('v4 build and source callers grant their reusable workflow permissions', () => {
+  const contracts = {
+    '.build-engine.yml': {
+      actions: 'read',
+      contents: 'read',
+      issues: 'write',
+      'id-token': 'write',
+    },
+    'public-build-check.yml': {
+      actions: 'read',
+      contents: 'read',
+      'pull-requests': 'read',
+    },
+  };
+  const levels = { none: 0, read: 1, write: 2 };
+  const covered = new Set();
+  const directory = path.join(repositoryRoot, '.github/workflows');
+  for (const file of fs
+    .readdirSync(directory)
+    .filter((name) => name.endsWith('.yml'))) {
+    const workflow = parseYaml(
+      fs.readFileSync(path.join(directory, file), 'utf8'),
+    );
+    for (const [jobId, job] of Object.entries(workflow.jobs || {})) {
+      const callee = job.uses?.match(
+        /^kungfu-systems\/buildchain\/\.github\/workflows\/(.+)@v4-alpha$/u,
+      )?.[1];
+      if (!Object.hasOwn(contracts, callee)) continue;
+      covered.add(callee);
+      const permissions = job.permissions ?? workflow.permissions;
+      for (const [scope, required] of Object.entries(contracts[callee])) {
+        assert.ok(
+          (levels[permissions?.[scope] ?? 'none'] ?? 0) >= levels[required],
+          `${file}/${jobId} must grant ${scope}:${required} to ${callee}`,
+        );
+      }
+    }
+  }
+  assert.deepEqual([...covered].sort(), Object.keys(contracts).sort());
+});
 
 test('source install provisions only build-free tools from wheels', () => {
   const plan = installPlan({
@@ -359,7 +401,10 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', 
         1,
       );
     } else {
-      assert.doesNotMatch(workflow, /id-token:\s*write/);
+      assert.match(
+        workflow,
+        /qualify:[\s\S]*?permissions:\n {6}actions: read\n {6}contents: read\n {6}issues: write\n {6}id-token: write/u,
+      );
     }
   }
 });
