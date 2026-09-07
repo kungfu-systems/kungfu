@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -232,4 +234,74 @@ test('protected runtime credential ancestry rejection cannot issue a consumer re
     (error) => error === rejection,
   );
   assert.equal(value.spawned, false);
+});
+
+test('native shard commands reconstruct required build settings from a minimal child environment', () => {
+  const workflow = fs.readFileSync(
+    new URL('../.github/workflows/affected-native-pr.yml', import.meta.url),
+    'utf8',
+  );
+  const shard = workflow.slice(workflow.indexOf('  affected_native_shards:\n'));
+  const start = shard.indexOf('          command: |\n');
+  const end = shard.indexOf(
+    '            ./shifu install --frozen-lockfile',
+    start,
+  );
+  assert.ok(start >= 0 && end > start);
+  const prelude = shard.slice(start + '          command: |\n'.length, end);
+  for (const partition of [0, 1]) {
+    for (const cache of ['true', 'false']) {
+      const command = prelude
+        .replaceAll('${{ steps.revisions.outputs.base_sha }}', BASE)
+        .replaceAll('${{ steps.revisions.outputs.head_sha }}', HEAD)
+        .replaceAll('${{ matrix.partition }}', String(partition))
+        .replaceAll(
+          '${{ steps.compiler-cache-tool.outputs.available }}',
+          cache,
+        );
+      assert.doesNotMatch(command, /\$\{\{/u);
+      const output = execFileSync(
+        'bash',
+        ['--noprofile', '--norc', '-c', `${command}\nenv -0`],
+        {
+          env: { PATH: process.env.PATH, HOME: process.env.HOME },
+          encoding: 'utf8',
+        },
+      );
+      const environment = Object.fromEntries(
+        output
+          .split('\0')
+          .filter(Boolean)
+          .map((entry) => {
+            const separator = entry.indexOf('=');
+            return [entry.slice(0, separator), entry.slice(separator + 1)];
+          }),
+      );
+      assert.equal(
+        environment.KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX,
+        String(partition),
+      );
+      assert.equal(environment.KUNGFU_AFFECTED_NATIVE_PARTITION_COUNT, '2');
+      assert.equal(environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD, '1');
+      assert.equal(environment.GITHUB_BASE_SHA, BASE);
+      assert.equal(environment.GITHUB_HEAD_SHA, HEAD);
+      assert.equal(environment.GITHUB_WORKSPACE, process.cwd());
+      assert.equal(environment.CC, 'gcc-14');
+      assert.equal(environment.CXX, 'g++-14');
+      assert.equal(
+        environment.KUNGFU_CANDIDATE_GATE_ID,
+        'source.changed-scope',
+      );
+      assert.equal(
+        environment.KUNGFU_CANDIDATE_TIMELINE_EVENTS,
+        `${process.cwd()}/product/qualification/affected-native/candidate-events.jsonl`,
+      );
+      assert.equal(
+        environment.CMAKE_C_COMPILER_LAUNCHER,
+        cache === 'true' ? 'ccache' : undefined,
+      );
+      assert.equal(environment.GITHUB_TOKEN, undefined);
+      assert.equal(environment.GH_TOKEN, undefined);
+    }
+  }
 });
