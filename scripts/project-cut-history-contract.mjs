@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../framework/work/project-cut/index.mjs';
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
 
 const DEFAULT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

@@ -11,7 +11,7 @@ import {
   JsonFileWorkConsoleRegistryStore,
   WorkConsoleRegistry,
   normalizeWorkConsoleRegistry,
-} from '../framework/agent-session/src/work-console-registry.mjs';
+} from '@kungfu-tech/agent-session/work-console-registry';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');

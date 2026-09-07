@@ -32,8 +32,9 @@ test('TypeScript canonical roots match the Agent Session golden fixture', async 
   const fixture = JSON.parse(
     fs.readFileSync(
       new URL(
-        '../../agent-session/tests/fixtures/agent-session-core-golden.json',
-        import.meta.url,
+        import.meta.resolve(
+          '@kungfu-tech/agent-session/testing/fixtures/agent-session-core-golden.json',
+        ),
       ),
       'utf8',
     ),

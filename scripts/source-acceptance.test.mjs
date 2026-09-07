@@ -793,7 +793,7 @@ test('source plan covers representative source-only checks', () => {
     (step) => step.label === 'agent-first canonical policy',
   );
   assert.deepEqual(canonicalPolicy.args, [
-    'developer/sdk/src/sdk.js',
+    fileURLToPath(import.meta.resolve('@kungfu-tech/sdk')),
     'contract',
     'policy',
     '--check',
@@ -803,7 +803,7 @@ test('source plan covers representative source-only checks', () => {
     (step) => step.label === 'agent-first contract audit',
   );
   assert.deepEqual(contractAudit.args, [
-    'developer/sdk/src/sdk.js',
+    fileURLToPath(import.meta.resolve('@kungfu-tech/sdk')),
     'contract',
     'audit',
     '--json',

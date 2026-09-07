@@ -17,7 +17,9 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const sdk = join(repoRoot, 'developer', 'sdk', 'src', 'sdk.js');
 const require = createRequire(import.meta.url);
-const { contractArtifacts } = require('../../../scripts/contract-registry.cjs');
+const {
+  contractArtifacts,
+} = require('@kungfu-tech/workspaces/tooling/contract-registry');
 const kfdPackage = require('@kungfu-tech/kfd/package.json');
 const buildchainPackagePath = require.resolve(
   '@kungfu-tech/buildchain/package.json',
@@ -31,7 +33,7 @@ const buildchainAlphaRequire = createRequire(buildchainAlphaPackagePath);
 const buildchainAlphaPackage = buildchainAlphaRequire(
   '@kungfu-tech/buildchain-alpha/package.json',
 );
-const corePackage = require('../../../framework/core/package.json');
+const corePackage = require('@kungfu-tech/core/package.json');
 const buildchainKfdVersion = buildchainPackage.dependencies['@kungfu-tech/kfd'];
 const sdkKfd2ReleaseClaims = JSON.parse(
   readFileSync(

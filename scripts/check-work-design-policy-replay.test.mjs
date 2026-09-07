@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { semanticRoot } from '../framework/work/project-cut/index.mjs';
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
 import {
   MINIMUM_DEFAULT_PROMOTION_SAMPLES,
   WORK_DESIGN_REPLAY_REQUEST_SCHEMA,
@@ -31,8 +31,8 @@ import {
   verifyWorkDesignPromotionArtifact,
   verifyWorkDesignReplayReport,
   workDesignReplayAuthorityBoundary,
-} from '../framework/work/work-design-policy-replay/src/index.mjs';
-import { checkWorkDesignPolicyReplayContract } from '../framework/work/work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs';
+} from '@kungfu-tech/work/work-design-policy-replay';
+import { checkWorkDesignPolicyReplayContract } from '@kungfu-tech/work/work-design-policy-replay/tooling/work-design-policy-replay-contract';
 
 const AS_OF = '2026-07-29T12:00:00Z';
 const baselinePolicy = buildWorkDesignReplayPolicy({

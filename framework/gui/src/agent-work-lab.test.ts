@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import type {
   AgentWorkLabEvent,
@@ -10,11 +11,11 @@ import type {
 import {
   AGENT_WORK_LAB_SUITE,
   agentWorkLabRecommendation,
-} from '../../../extensions/agent-work-lab/experience/src/index.js';
+} from '@kungfu-tech/kfx-agent-work-lab-experience';
 import {
   projectInventoryWorkRows,
   resolveSelectedProjectWorkRow,
-} from '../../../extensions/work-dashboard/src/view/index';
+} from '@kungfu-tech/kfx-view-work-dashboard/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -33,6 +34,8 @@ import {
   shouldBootRuntimeForInitialSurface,
 } from './renderer/src/product-navigation/index';
 import { openRendererProjects } from './renderer/src/projects-panel/index';
+
+const require = createRequire(import.meta.url);
 
 const qualifiedReport = {
   status: 'qualified',
@@ -411,14 +414,11 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
     'utf8',
   );
   const work = readFileSync(
-    new URL(
-      '../../../extensions/work-dashboard/src/view/index.tsx',
-      import.meta.url,
-    ),
+    require.resolve('@kungfu-tech/kfx-view-work-dashboard/view/index'),
     'utf8',
   );
   const runSurface = readFileSync(
-    new URL('../../kfx/src/project-work-run.tsx', import.meta.url),
+    require.resolve('@kungfu-tech/kfx/project-work-run'),
     'utf8',
   );
 

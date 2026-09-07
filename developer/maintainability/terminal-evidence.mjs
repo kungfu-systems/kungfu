@@ -9,19 +9,19 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { semanticRoot } from '../../framework/work/project-cut/index.mjs';
-import { collectTerminalLiveObservations } from '../../framework/work/terminal-evidence/live-observations.mjs';
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
+import { collectTerminalLiveObservations } from '@kungfu-tech/work/terminal-evidence/live-observations';
 import {
   verifyLiveAssignment,
   verifyLiveReconciliation,
   verifyLiveRuns,
-} from '../../framework/work/terminal-evidence/live-verification.mjs';
+} from '@kungfu-tech/work/terminal-evidence/live-verification';
 import {
   exact,
   issue,
   requiredRoot,
   uniqueBy,
-} from '../../framework/work/terminal-evidence/verification-primitives.mjs';
+} from '@kungfu-tech/work/terminal-evidence/verification-primitives';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

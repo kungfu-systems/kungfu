@@ -11,7 +11,7 @@ import {
   checkVersionLineAuthority,
   narrowMatches,
   scanNarrowBindings,
-} from '../product/version-line/check-version-line-authority.mjs';
+} from '@kungfu-tech/product-kungfu/version-line/check-version-line-authority';
 import {
   deriveProjection,
   digest,
@@ -19,7 +19,7 @@ import {
   renderedProjections,
   rulesetContract,
   validateAuthority,
-} from '../product/version-line/version-line-authority.mjs';
+} from '@kungfu-tech/product-kungfu/version-line/version-line-authority';
 
 test('checked-in version-line authority and projections are qualifying', () => {
   const result = checkVersionLineAuthority();

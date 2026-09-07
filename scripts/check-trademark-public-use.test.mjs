@@ -7,7 +7,7 @@ import {
   PRODUCT_NAME,
   productAboutPanelOptions,
   versionFirstLine,
-} from '../framework/gui/src/main/product-identity.ts';
+} from '@kungfu-tech/gui/main/product-identity';
 import {
   EXACT_MARK,
   loadTrademarkPublicUse,

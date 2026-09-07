@@ -24,7 +24,7 @@ const {
   workDesignRuntimeFiles,
   workDesignRuntimePackageDependencies,
   workDesignRuntimePath,
-} = require(path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'));
+} = require('@kungfu-tech/core/tooling/run-freeze');
 const SELECTOR = JSON.parse(
   fs.readFileSync(path.join(ROOT, '.xinfa', 'product-documentation-pack.json')),
 );

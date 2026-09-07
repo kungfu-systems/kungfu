@@ -12,12 +12,48 @@
   "exports": {
     ".": "./index.mjs",
     "./action": "./action/index.mjs",
+    "./agent-repository-work/opencode-docker-proxy": "./agent-repository-work/opencode-docker-proxy.mjs",
+    "./agent-repository-work/report": "./agent-repository-work/report.mjs",
+    "./agent-repository-work/run": "./agent-repository-work/run.mjs",
+    "./agent-work/validate-profile": "./agent-work/validate-profile.mjs",
+    "./assignment-capture/qualified-assignment-core-consumer": {
+      "types": "./assignment-capture/qualified-assignment-core-consumer.d.mts",
+      "default": "./assignment-capture/qualified-assignment-core-consumer.mjs"
+    },
+    "./assignment-capture/qualified-assignment-core-observability": "./assignment-capture/qualified-assignment-core-observability.mjs",
+    "./assignment-capture/qualified-assignment-core-platform-matrix": "./assignment-capture/qualified-assignment-core-platform-matrix.mjs",
     "./assignment-runtime": "./assignment-runtime/index.mjs",
+    "./cut": "./cut/src/cut.mjs",
+    "./cut/migration": "./cut/src/project-cut-migration.mjs",
+    "./episode-provider": "./episode-provider/src/git-workspace-episode-provider.mjs",
     "./evidence": "./evidence/index.mjs",
+    "./package.json": "./package.json",
     "./project-cut": "./project-cut/index.mjs",
+    "./project-cut/cli": "./project-cut/bin/project-cut.mjs",
     "./project-cut/composition": "./project-cut/composition.mjs",
+    "./project-cut/history": "./project-cut/src/history.mjs",
+    "./project-cut/native-loop-qualification": "./project-cut/src/native-loop-qualification.mjs",
+    "./project-cut/publication": "./project-cut/publication.mjs",
+    "./project-cut/receipt-evidence": "./project-cut/src/receipt-evidence.mjs",
     "./project-cut/settlement": "./project-cut/settlement.mjs",
-    "./project-cut/publication": "./project-cut/publication.mjs"
+    "./terminal-evidence/live-observations": "./terminal-evidence/live-observations.mjs",
+    "./terminal-evidence/live-verification": "./terminal-evidence/live-verification.mjs",
+    "./terminal-evidence/verification-primitives": "./terminal-evidence/verification-primitives.mjs",
+    "./work-design-advisor": "./work-design-advisor/src/work-design-advisor.mjs",
+    "./work-design-advisor/tooling/work-design-advisor-contract": "./work-design-advisor/tooling/work-design-advisor-contract.mjs",
+    "./work-design-policy-replay": "./work-design-policy-replay/src/index.mjs",
+    "./work-design-policy-replay/tooling/work-design-policy-replay-contract": "./work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs",
+    "./work-design-preflight": "./work-design-preflight/src/work-design-preflight.mjs",
+    "./work-history-selector": "./work-history-selector/src/work-history-selector.mjs",
+    "./work-history-selector/tooling/work-history-selector-contract": "./work-history-selector/tooling/work-history-selector-contract.mjs",
+    "./project-cut/hook": "./project-cut/hooks/project-cut-hook.mjs",
+    "./work-history-selector/tooling/check-work-history-selector": "./work-history-selector/tooling/check-work-history-selector.mjs",
+    "./work-design-advisor/tooling/check-work-design-advisor": "./work-design-advisor/tooling/check-work-design-advisor.mjs",
+    "./work-design-policy-replay/tooling/check-work-design-policy-replay": "./work-design-policy-replay/tooling/check-work-design-policy-replay.mjs",
+    "./work-design-preflight/tooling/check-work-design-preflight": "./work-design-preflight/tooling/check-work-design-preflight.mjs",
+    "./work-design-preflight/tooling/work-design-preflight": "./work-design-preflight/tooling/work-design-preflight.mjs",
+    "./work-profile-conformance/work-profile-conformance": "./work-profile-conformance/work-profile-conformance.mjs",
+    "./action/cli": "./action/action.mjs"
   },
   "files": [
     "index.mjs",
@@ -31,10 +67,38 @@
     "profile/",
     "project-cut/",
     "work-lifecycle/",
-    "work-loop/"
+    "work-loop/",
+    "agent-repository-work/report.mjs",
+    "terminal-evidence/live-observations.mjs",
+    "terminal-evidence/live-verification.mjs",
+    "terminal-evidence/verification-primitives.mjs",
+    "assignment-capture/qualified-assignment-core-platform-matrix.mjs",
+    "episode-provider/src/git-workspace-episode-provider.mjs",
+    "work-design-advisor/src/work-design-advisor.mjs",
+    "work-design-advisor/tooling/work-design-advisor-contract.mjs",
+    "work-design-policy-replay/src/",
+    "work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs",
+    "work-design-preflight/src/work-design-preflight.mjs",
+    "work-history-selector/src/work-history-selector.mjs",
+    "work-history-selector/tooling/work-history-selector-contract.mjs",
+    "assignment-capture/qualified-assignment-core-consumer.mjs",
+    "assignment-capture/qualified-assignment-core-observability.mjs",
+    "agent-repository-work/opencode-docker-proxy.mjs",
+    "agent-repository-work/run.mjs",
+    "assignment-capture/qualified-assignment-core-consumer.d.mts",
+    "work-history-selector/tooling/check-work-history-selector.mjs",
+    "work-design-advisor/tooling/check-work-design-advisor.mjs",
+    "work-design-policy-replay/tooling/check-work-design-policy-replay.mjs",
+    "work-design-preflight/tooling/check-work-design-preflight.mjs",
+    "work-design-preflight/tooling/work-design-preflight.mjs",
+    "work-profile-conformance/work-profile-conformance.mjs"
   ],
   "scripts": {
-    "test": "node --test package-boundary.test.mjs action/*.test.mjs assignment-runtime/*.test.mjs"
+    "test": "node --test package-boundary.test.mjs action/*.test.mjs assignment-runtime/*.test.mjs",
+    "test:action-kernel": "node --test action/action.test.mjs action/action-loop-contract.test.mjs action/action-loop-begin.test.mjs action/action-loop-settle.test.mjs",
+    "test:assignment-capture": "node --test assignment-capture/assignment-capture.test.mjs",
+    "test:assignment-runtime": "node --test assignment-runtime/assignment-runtime.test.mjs",
+    "check:work-profile-conformance": "node --test work-profile-conformance/work-profile-conformance.test.mjs"
   },
   "dependencies": {
     "@kungfu-tech/spec": "workspace:*",
@@ -46,5 +110,9 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
+  },
+  "devDependencies": {
+    "@kungfu-tech/product-kungfu": "workspace:*",
+    "@kungfu-tech/workspaces": "workspace:*"
   }
 }

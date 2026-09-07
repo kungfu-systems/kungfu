@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   activeProjection,
   readAuthority,
-} from '../product/version-line/version-line-authority.mjs';
+} from '@kungfu-tech/product-kungfu/version-line/version-line-authority';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const AUTHORITY = readAuthority();

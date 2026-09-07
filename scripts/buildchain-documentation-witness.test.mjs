@@ -8,7 +8,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { canonicalJson } from '../framework/work/project-cut/index.mjs';
+import { canonicalJson } from '@kungfu-tech/work/project-cut';
 import {
   LEGACY_ATLAS_ROOTS_DIGEST,
   LEGACY_ATLAS_ROOTS_PATH,

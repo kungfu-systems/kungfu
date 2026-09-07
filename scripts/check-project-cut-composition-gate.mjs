@@ -10,7 +10,7 @@ import {
   compositionChanged,
   observeComposition,
   verifyComposition,
-} from '../framework/work/project-cut/composition.mjs';
+} from '@kungfu-tech/work/project-cut/composition';
 import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 import { sourceMergeGroupBase } from './source-acceptance.mjs';
 

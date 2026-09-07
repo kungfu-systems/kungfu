@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';
-import { openProfile } from '../../../framework/api/src/capability/profile.ts';
+import { openProfile } from '@kungfu-tech/api/capability/profile';
 
 const repo = process.cwd();
 const runtimeRoot = process.env.KUNGFU_QUALIFICATION_RUNTIME_ROOT || repo;

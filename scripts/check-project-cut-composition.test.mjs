@@ -12,20 +12,20 @@ import {
   buildGitEpisodeSegment,
   episodeProviderPaths,
   sealGitEpisode,
-} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '@kungfu-tech/work/episode-provider';
 
-import * as compositionApi from '../framework/work/project-cut/composition.mjs';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
   sha256Bytes,
-} from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut';
+import * as compositionApi from '@kungfu-tech/work/project-cut/composition';
 import {
   sourceProjectionAtCommit,
   sourceProjectionAtTree,
-} from '../framework/work/project-cut/settlement.mjs';
+} from '@kungfu-tech/work/project-cut/settlement';
 import { checkProjectCutCompositionContract } from './project-cut-composition-contract.mjs';
 
 const { observeComposition, verifyComposition } = compositionApi;

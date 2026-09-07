@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-// This leaf stays source-relative because affected-native delivery identity is
-// captured before workspace dependencies are installed on hosted runners.
-import { semanticRoot } from '../framework/spec/format/project-cut-canonical-json.mjs';
+// Hosted bootstrap installs the declared Spec package before capturing identity.
+import { semanticRoot } from '@kungfu-tech/spec/format/project-cut-canonical-json';
 
 export const FAMILY_QUEUE_LEASE_SCHEMA = 'project.cut.family-queue-lease/v1';
 export const FAMILY_QUEUE_RELEASE_SCHEMA =

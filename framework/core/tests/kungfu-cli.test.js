@@ -4,6 +4,8 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
@@ -13,8 +15,25 @@ const {
   sourceCliEnvironment,
 } = require('../lib/kungfu-cli');
 
-test('source kungfu launcher resolves the sibling built TUI bundle', () => {
-  const coreLibDir = path.join('workspace', 'framework', 'core', 'lib');
+function installedTui(t) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-cli-package-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const provider = path.join(root, 'node_modules', '@kungfu-tech', 'tui');
+  fs.mkdirSync(provider, { recursive: true });
+  fs.writeFileSync(
+    path.join(provider, 'package.json'),
+    JSON.stringify({
+      name: '@kungfu-tech/tui',
+      exports: { './bundle': './public-bundle.mjs' },
+    }),
+  );
+  const bundle = path.join(provider, 'public-bundle.mjs');
+  fs.writeFileSync(bundle, 'export {};');
+  return { coreLibDir: path.join(root, 'core', 'lib'), bundle };
+}
+
+test('source kungfu launcher resolves the declared TUI public bundle regardless of layout', (t) => {
+  const { coreLibDir, bundle } = installedTui(t);
   let inspected = '';
   const entry = resolveSourceTuiEntry(coreLibDir, (candidate) => {
     inspected = candidate;
@@ -22,10 +41,7 @@ test('source kungfu launcher resolves the sibling built TUI bundle', () => {
   });
 
   assert.equal(entry, inspected);
-  assert.equal(
-    entry?.endsWith(path.join('framework', 'tui', 'dist', 'tui.mjs')),
-    true,
-  );
+  assert.equal(entry, bundle);
 });
 
 test('source kungfu launcher preserves an explicit TUI entry', () => {
@@ -38,17 +54,15 @@ test('source kungfu launcher preserves an explicit TUI entry', () => {
   assert.equal(env.KUNGFU_TUI_ENTRY, '/explicit/tui.mjs');
 });
 
-test('source kungfu launcher ignores a blank explicit TUI entry', () => {
+test('source kungfu launcher ignores a blank explicit TUI entry', (t) => {
+  const { coreLibDir, bundle } = installedTui(t);
   const env = sourceCliEnvironment(
     { KUNGFU_TUI_ENTRY: '' },
-    '/workspace/framework/core/lib',
+    coreLibDir,
     () => true,
   );
 
-  assert.equal(
-    env.KUNGFU_TUI_ENTRY,
-    path.resolve('/workspace/framework/tui/dist/tui.mjs'),
-  );
+  assert.equal(env.KUNGFU_TUI_ENTRY, bundle);
 });
 
 test('source kungfu launcher does not invent an unbuilt TUI entry', () => {

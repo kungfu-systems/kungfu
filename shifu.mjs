@@ -482,12 +482,7 @@ async function main() {
   }
   if (cmd === 'qualified-core') {
     const { runQualifiedCoreUsageStatusCommand } = await import(
-      pathToFileURL(
-        path.join(
-          __dirname,
-          'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
-        ),
-      ).href
+      '@kungfu-tech/work/assignment-capture/qualified-assignment-core-consumer'
     );
     console.log(
       JSON.stringify(

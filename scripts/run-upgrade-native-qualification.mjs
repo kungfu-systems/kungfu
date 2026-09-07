@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { sha256File } from '../product/scripts/compatibility.mjs';
+import { sha256File } from '@kungfu-tech/product-kungfu/tooling/compatibility';
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-import workLifecycle from '../framework/storage/generated/work-lifecycle-v1.js';
+import workLifecycle from '@kungfu-tech/storage/generated/work-lifecycle-v1';
 
 const read = (relative) => fs.readFileSync(relative, 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));

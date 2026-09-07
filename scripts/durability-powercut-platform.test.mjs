@@ -6,8 +6,9 @@ import { test } from 'node:test';
 
 const source = fs.readFileSync(
   new URL(
-    '../framework/core/src/libkungfu/tests/durability_powercut_fixture.cpp',
-    import.meta.url,
+    import.meta.resolve(
+      '@kungfu-tech/core/libkungfu/tests/durability_powercut_fixture.cpp',
+    ),
   ),
   'utf8',
 );

@@ -15,8 +15,8 @@ import {
   qualifiedCoreCheckoutRoots,
   validateQualifiedCoreCandidate,
   verifyQualifiedCoreBundle,
-} from '../../../product/release/qualified-assignment-core-artifact.mjs';
-import { qualifiedAssignmentCoreRoot } from '../../../scripts/check-shifu-cache-contract.mjs';
+} from '@kungfu-tech/product-kungfu/release/qualified-assignment-core-artifact';
+import { qualifiedAssignmentCoreRoot } from '@kungfu-tech/workspaces/tooling/check-shifu-cache-contract';
 import {
   appendQualifiedCoreUsage,
   qualifiedCoreUsageObservation,

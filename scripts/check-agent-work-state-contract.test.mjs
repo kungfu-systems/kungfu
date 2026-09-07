@@ -12,7 +12,7 @@ import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const Ajv2020 = optionalAjv2020();
 const validateAgentWorkProfile = Ajv2020
-  ? (await import('../framework/work/agent-work/validate-profile.mjs'))
+  ? (await import('@kungfu-tech/work/agent-work/validate-profile'))
       .validateAgentWorkProfile
   : null;
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');

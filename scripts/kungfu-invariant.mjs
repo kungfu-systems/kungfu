@@ -558,7 +558,13 @@ function synchronizePackagedArtifacts(write = false) {
     }
     const policy = spawnSync(
       'node',
-      ['developer/sdk/src/sdk.js', 'contract', 'policy', '--write', '--json'],
+      [
+        fileURLToPath(import.meta.resolve('@kungfu-tech/sdk')),
+        'contract',
+        'policy',
+        '--write',
+        '--json',
+      ],
       { cwd: ROOT, encoding: 'utf8' },
     );
     if (policy.status !== 0)

@@ -184,7 +184,7 @@ if (!bindingDir) {
 }
 process.env.KUNGFU_DIR = bindingDir;
 const require = createRequire(import.meta.url);
-const binding = require('../framework/core/lib/kungfu.js')();
+const binding = require('@kungfu-tech/core/kungfu')();
 const nodeRuntime = fs.mkdtempSync(
   path.join(os.tmpdir(), 'kungfu-profile-node-'),
 );

@@ -310,3 +310,20 @@ test('the repository matches its framework layout manifest', () => {
     [],
   );
 });
+
+test('npm framework dependencies come from manifests after package-name migration', (t) => {
+  const { root } = fixture(t);
+  const manifest = path.join(root, 'framework/alpha/package.json');
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+  pkg.devDependencies = { '@kungfu-tech/beta': 'workspace:*' };
+  fs.writeFileSync(manifest, JSON.stringify(pkg));
+  fs.writeFileSync(
+    path.join(root, 'framework/beta/package.json'),
+    JSON.stringify({ name: '@kungfu-tech/beta' }),
+  );
+  assert.deepEqual(discoverFrameworkDependencies({ root }), {
+    'framework/alpha': ['framework/beta'],
+    'framework/beta': [],
+    'framework/release': [],
+  });
+});

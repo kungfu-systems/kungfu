@@ -1,0 +1,57 @@
+{
+  "schema": "kungfu.wrapper-only-responsibility-map/v1",
+  "assignmentId": "2026-09-06-kungfu-wrapper-only-responsibility-convergence",
+  "baselineRevision": "276a22e0c05a9a0c1ab17610c2efc7de6e87bfa2",
+  "owner": "core/package",
+  "measurement": {
+    "command": "./shifu maintainability:function-risk --json",
+    "algorithm": "qualified-occurrence-v2",
+    "cohortPaths": [
+      "framework/core/src/python/kungfu/cli/commands/_assignment/start.py",
+      "framework/core/src/python/kungfu/cli/commands/assignment.py"
+    ]
+  },
+  "before": {
+    "wrapperOnlyFindings": 10,
+    "cohort": {
+      "functions": 41,
+      "aggregateBaseRisk": 568,
+      "aggregateCyclomatic": 100,
+      "aggregateCognitive": 146,
+      "maximumBaseRisk": 57
+    },
+    "statusOwnership": [
+      "The public status command owned Click argument binding and JSON emission.",
+      "A nested operation function owned only read-only runtime resolution followed by the status query.",
+      "The generic operation symbol coupled this two-call wrapper to unrelated new same-owner operation helpers in the function-risk transition graph."
+    ]
+  },
+  "after": {
+    "wrapperOnlyFindings": 9,
+    "cohort": {
+      "functions": 40,
+      "aggregateBaseRisk": 565,
+      "aggregateCyclomatic": 99,
+      "aggregateCognitive": 146,
+      "maximumBaseRisk": 57
+    },
+    "statusOwnership": [
+      "The public status command owns read-only runtime resolution, the status query, and JSON emission as one command responsibility.",
+      "The existing _run boundary still owns OSError, RuntimeError, ValueError, JSON decoding diagnostics, and exit-code translation.",
+      "No replacement helper or second status authority is introduced."
+    ]
+  },
+  "invariants": [
+    "The work status command name, options, defaults, and output schema are unchanged.",
+    "Runtime resolution remains read-only and executes exactly once.",
+    "The status query receives the same runtime path, initiative id, assignment id, and time cut.",
+    "Runtime and status exceptions remain inside the existing _run diagnostic boundary.",
+    "No detector, threshold, owner, exclusion, persistence, ABI, or public API policy changes."
+  ],
+  "focusedEvidence": [
+    "framework/core/tests/python/_work_authority_surface_cli_cases.py::test_work_status_keeps_read_only_runtime_resolution_in_its_command_owner",
+    "./shifu test:work-authority",
+    "./shifu maintainability:function-risk --json",
+    "./shifu maintainability:complexity"
+  ]
+}

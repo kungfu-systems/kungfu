@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url';
 import {
   loadUpgradeQualificationContract,
   verifyUpgradeQualificationEvidence,
-} from '../../scripts/upgrade-qualification.mjs';
+} from '@kungfu-tech/workspaces/tooling/upgrade-qualification';
 import {
   internalSymlinkTarget,
   isPythonBytecodePath,

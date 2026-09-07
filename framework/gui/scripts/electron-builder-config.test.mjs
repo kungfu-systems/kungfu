@@ -79,7 +79,9 @@ test('desktop product identity converges on Kungfu without changing upgrade iden
   const framework = readProjection('framework/gui/electron-builder.yml');
   const product = readProjection('product/electron-builder.yml');
   const productPackage = JSON.parse(
-    fs.readFileSync(new URL('../../../product/package.json', import.meta.url)),
+    fs.readFileSync(
+      new URL(import.meta.resolve('@kungfu-tech/product-kungfu/package.json')),
+    ),
   );
   assert.equal(framework.appId, 'com.kungfu.app');
   assert.equal(product.appId, 'com.kungfu.app');

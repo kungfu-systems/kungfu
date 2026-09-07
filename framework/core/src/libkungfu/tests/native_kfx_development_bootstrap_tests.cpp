@@ -44,14 +44,19 @@ fs::path control_suite_source() {
                               "extensions" / "system" / "kfx-manager");
 }
 
-fs::path copy_development_control_source(const fs::path &home) {
+fs::path copy_development_control_source(const fs::path &home,
+                                         const fs::path &control_source = control_suite_source()) {
   const auto source_root = home / "source";
   fs::create_directories(source_root / ".git");
   std::ofstream(source_root / "shifu") << "#!/bin/sh\n";
   fs::create_directories(source_root / "framework" / "kfx");
   std::ofstream(source_root / "framework" / "kfx" / "kungfu-kfx.contract.json") << "{}\n";
   fs::create_directories(source_root / "extensions" / "system");
-  fs::copy(control_suite_source(), source_root / "extensions" / "system" / "kfx-manager", fs::copy_options::recursive);
+  const auto candidate = source_root / "extensions" / "system" / "kfx-manager";
+  fs::create_directories(candidate);
+  fs::copy_file(control_source / "package.json", candidate / "package.json");
+  fs::copy_file(control_source / "kungfu.kfx.json", candidate / "kungfu.kfx.json");
+  fs::copy(control_source / "src", candidate / "src", fs::copy_options::recursive);
   fs::create_directories(source_root / ".kungfu" / "runtime");
   return source_root;
 }
@@ -97,7 +102,13 @@ nlohmann::json control_mutation(const nlohmann::json &request, const nlohmann::j
 
 void test_development_source_bootstrap_is_local_and_confined() {
   const auto home = temp_root();
-  const auto source_root = copy_development_control_source(home);
+  const auto installed_source = copy_development_control_source(home / "installed");
+  const auto installed_candidate = installed_source / "extensions" / "system" / "kfx-manager";
+  fs::create_directories(installed_candidate / "node_modules");
+  fs::create_directory_symlink(installed_candidate, installed_candidate / "node_modules" / "workspace-cycle");
+  const auto source_root = copy_development_control_source(home, installed_candidate);
+  require(!fs::exists(source_root / "extensions" / "system" / "kfx-manager" / "node_modules"),
+          "development fixture copied installed workspace dependencies");
   const auto workspace_root = home / "workspace";
   const auto workspace_git_dir = source_root / ".git" / "worktrees" / "workspace";
   fs::create_directories(workspace_root / ".kungfu" / "runtime");

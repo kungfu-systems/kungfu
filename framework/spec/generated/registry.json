@@ -78,7 +78,7 @@
       "protocol_id": "kungfu.layered-api-encoding-boundary.contract/v1",
       "source": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
       "source_role": "Hana-POD-versus-FlatBuffers-payload-schema-ownership",
-      "source_root": "sha256:aac64b8bc1814ec81f4fa3df6defa31727734cde2473584efca6f7ffdcaf7662",
+      "source_root": "sha256:7c5a2f109bb3f81f541dd0389a17f57155c5d48587eabdeacc267decfac23311",
       "version_axis": "payload schema owner and protocol-selected encoding"
     },
     {
@@ -149,7 +149,7 @@
       },
       {
         "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-        "root": "sha256:aac64b8bc1814ec81f4fa3df6defa31727734cde2473584efca6f7ffdcaf7662"
+        "root": "sha256:7c5a2f109bb3f81f541dd0389a17f57155c5d48587eabdeacc267decfac23311"
       },
       {
         "path": "framework/spec/schema/manifest.schema.json",

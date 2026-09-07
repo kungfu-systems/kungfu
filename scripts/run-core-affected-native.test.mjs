@@ -54,14 +54,15 @@ test('affected-native planning retains deleted source paths', () => {
 const workflowPath = '.github/workflows/affected-native-pr.yml';
 const architecture = JSON.parse(
   fs.readFileSync(
-    new URL('../framework/core/architecture/layers.json', import.meta.url),
+    new URL(import.meta.resolve('@kungfu-tech/core/architecture/layers.json')),
   ),
 );
 const buildAuthority = JSON.parse(
   fs.readFileSync(
     new URL(
-      '../framework/core/architecture/build-capabilities.json',
-      import.meta.url,
+      import.meta.resolve(
+        '@kungfu-tech/core/architecture/build-capabilities.json',
+      ),
     ),
   ),
 );

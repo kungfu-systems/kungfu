@@ -9,13 +9,13 @@ import { fileURLToPath } from 'node:url';
 import {
   createEvidenceEnvelope,
   verifyEvidenceEnvelope,
-} from '../framework/work/evidence/index.mjs';
-import { semanticRoot } from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/evidence';
+import { semanticRoot } from '@kungfu-tech/work/project-cut';
 import {
   compositionReceiptEvidence,
   projectCutReceiptEvidence,
   settlementReceiptEvidence,
-} from '../framework/work/project-cut/src/receipt-evidence.mjs';
+} from '@kungfu-tech/work/project-cut/receipt-evidence';
 import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { canonicalJson } from '../framework/work/project-cut/index.mjs';
+import { canonicalJson } from '@kungfu-tech/work/project-cut';
 import { legacyAtlasRoots } from './backfill-legacy-atlas-roots.mjs';
 
 function sha(value) {

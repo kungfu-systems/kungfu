@@ -5,7 +5,7 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.5",
-  "description": "SDK for assembling Kungfu applications — scaffold a complete app on the platform stack",
+  "description": "SDK for assembling Kungfu applications \u2014 scaffold a complete app on the platform stack",
   "license": "Apache-2.0",
   "type": "module",
   "repository": {
@@ -20,7 +20,8 @@
     "src",
     "kfd",
     "templates",
-    "README.md"
+    "README.md",
+    "package.json"
   ],
   "scripts": {
     "build": "node --check src/sdk.js && node --test tests/*.test.mjs"
@@ -34,5 +35,13 @@
     "@kungfu-tech/tui": "workspace:*",
     "ajv": "^8.20.0",
     "esbuild": "^0.28.1"
+  },
+  "devDependencies": {
+    "@kungfu-tech/workspaces": "workspace:*"
+  },
+  "exports": {
+    ".": "./src/sdk.js",
+    "./package.json": "./package.json",
+    "./sdk-shared": "./src/sdk-shared.js"
   }
 }

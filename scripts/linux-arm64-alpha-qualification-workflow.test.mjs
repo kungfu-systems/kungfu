@@ -6,8 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { activeProjection } from '@kungfu-tech/product-kungfu/version-line/version-line-authority';
 import { parse } from 'yaml';
-import { activeProjection } from '../product/version-line/version-line-authority.mjs';
 
 const ROOT = process.cwd();
 const BUILD_WORKFLOW = path.join(ROOT, '.github', 'workflows', 'build.yml');
@@ -67,7 +67,7 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
   assert.equal(inputs['require-verify'], true);
   assert.equal(
     inputs['verify-command'],
-    'node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-cli-linux-arm64.qualification.json --archive product/release/cli/kungfu-cli-linux-arm64.tar.gz --platform linux-arm64',
+    'node scripts/run-project-cut-entry.mjs @kungfu-tech/product-kungfu/tooling/verify-cli-surface-qualification --qualification product/release/cli/kungfu-cli-linux-arm64.qualification.json --archive product/release/cli/kungfu-cli-linux-arm64.tar.gz --platform linux-arm64',
   );
   assert.equal(inputs['lifecycle-timeout-minutes'], 240);
   assert.equal(inputs['checkout-cache-mode'], 'off');

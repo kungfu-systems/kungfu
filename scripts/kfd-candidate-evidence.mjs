@@ -10,7 +10,7 @@ import {
   verifyKfdCandidatePayloadSet,
   verifyKfdManifestSet,
   verifyReleaseArtifactRoot,
-} from '../product/release/kfd-candidate-evidence.mjs';
+} from '@kungfu-tech/product-kungfu/release/kfd-candidate-evidence';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

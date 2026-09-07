@@ -316,9 +316,7 @@ export function runInternalCoreProductionStage(
     );
   }
   const runStage =
-    runner ||
-    require(path.join(ROOT, 'framework/core/.gyp/run-build.js'))
-      .runProductionStage;
+    runner || require('@kungfu-tech/core/tooling/run-build').runProductionStage;
   runStage(argv[0]);
 }
 

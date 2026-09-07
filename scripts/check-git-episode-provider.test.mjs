@@ -17,12 +17,12 @@ import {
   inspectEpisodeProviderTemps,
   recoverGitEpisodeLease,
   sealGitEpisode,
-} from '../framework/work/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '@kungfu-tech/work/episode-provider';
 import {
   canonicalJson,
   semanticRoot,
   sha256Bytes,
-} from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut';
 
 const ROOT = 'a'.repeat(64);
 const Ajv2020 = optionalAjv2020();

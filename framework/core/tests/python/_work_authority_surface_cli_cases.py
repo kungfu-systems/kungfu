@@ -116,6 +116,53 @@ def test_reused_work_identity_decorator_preserves_every_command_signature():
         assert identity_options <= flags, name
 
 
+def test_work_status_keeps_read_only_runtime_resolution_in_its_command_owner(
+    monkeypatch, tmp_path
+):
+    runtime_dir = tmp_path / "runtime"
+    runtime_calls = []
+    status_calls = []
+
+    def runtime(workspace_root, home, operation_class):
+        runtime_calls.append((workspace_root, home, operation_class))
+        return SimpleNamespace(), runtime_dir, {}
+
+    def status(runtime_root, initiative_id, assignment_id, now):
+        status_calls.append((runtime_root, initiative_id, assignment_id, now))
+        return {"phase": "executing"}
+
+    monkeypatch.setattr(assignment_command, "_runtime", runtime)
+    monkeypatch.setattr(assignment_command, "_status", status)
+
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "work",
+            "status",
+            "--workspace",
+            str(tmp_path),
+            "--initiative-id",
+            "initiative-1",
+            "--assignment-id",
+            "assignment-1",
+            "--now",
+            "2026-09-07T00:00:00Z",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output) == {"phase": "executing"}
+    assert runtime_calls == [(str(tmp_path), False, "read-only")]
+    assert status_calls == [
+        (
+            runtime_dir,
+            "initiative-1",
+            "assignment-1",
+            "2026-09-07T00:00:00Z",
+        )
+    ]
+
+
 def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeypatch):
     report_path = tmp_path / "agent-runs" / "run-1" / "bundle" / "report.json"
     report_path.parent.mkdir(parents=True)

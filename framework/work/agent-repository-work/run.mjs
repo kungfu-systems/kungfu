@@ -12,17 +12,17 @@ import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_REPOSITORY_WORK_FIXTURE_ID,
   getRepositoryWorkFixture,
-} from '../../../tests/qualification/agent-repository-work/fixture-catalog.mjs';
+} from '@kungfu-tech/workspaces/testing/qualification/agent-repository-work/fixture-catalog';
 import {
   materializeIncidentBoardFixture,
   qualifySeededIncidentBoardFixture,
   verifyIncidentBoardWorkspace,
-} from '../../../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
+} from '@kungfu-tech/workspaces/testing/qualification/agent-repository-work/incident-board-replay-v1-oracle';
 import {
   materializeRealModuleSnapshot,
   qualifySeededRealModuleSnapshot,
   verifyRealModuleSnapshotWorkspace,
-} from '../../../tests/qualification/agent-repository-work/kungfu-agent-patrol-real-module-snapshot-v1-oracle.mjs';
+} from '@kungfu-tech/workspaces/testing/qualification/agent-repository-work/kungfu-agent-patrol-real-module-snapshot-v1-oracle';
 import { validateExperimentReport } from './report.mjs';
 
 const ROOT = path.resolve(

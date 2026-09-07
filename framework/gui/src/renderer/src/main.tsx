@@ -30,11 +30,11 @@ import type {
   StatusBarItem,
 } from '@kungfu-tech/kfx';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
+import { ProjectWorkControlView } from '@kungfu-tech/kfx-view-work-dashboard/view/index';
 import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
-import { ProjectWorkControlView } from '../../../../../extensions/work-dashboard/src/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,

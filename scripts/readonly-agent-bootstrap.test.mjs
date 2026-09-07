@@ -10,12 +10,13 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { installFixturePackages } from './check-package-boundaries.mjs';
 import { portableClassificationPaths } from './portable-atlas-bundle.mjs';
 import { sourceMergeBase } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const requireFromGui = createRequire(
-  path.join(ROOT, 'framework/gui/package.json'),
+  import.meta.resolve('@kungfu-tech/gui/package.json'),
 );
 
 function copyFile(sourceRoot, targetRoot, relative) {
@@ -957,35 +958,18 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     }
   }
   for (const relative of evidencePaths) copyFile(ROOT, fixture, relative);
-  for (const relative of [
-    'node_modules/@kungfu-tech/kfd/package.json',
-    'node_modules/@kungfu-tech/kfd/standards.json',
-    'node_modules/@kungfu-tech/kfd/kfd.release.json',
-    'node_modules/@kungfu-tech/kfd/profiles/adopter-conformance/category-profiles.json',
-    'node_modules/@kungfu-tech/kfd/scripts/adopter-category-profile-contract.mjs',
-    'node_modules/@kungfu-tech/kfd/scripts/adopter-category-instance-contract.mjs',
-    'node_modules/@kungfu-tech/kfd/scripts/adopter-toolchain.mjs',
-    'node_modules/@kungfu-tech/kfd/scripts/adopter-conformance-contract.mjs',
-    'node_modules/@kungfu-tech/kfd/scripts/self-conformance-contract.mjs',
-    'node_modules/@kungfu-tech/buildchain/package.json',
-    'node_modules/@kungfu-tech/buildchain/packages/core/adopter-delivery-gate.js',
-    'node_modules/@kungfu-tech/buildchain/packages/core/adopter-delivery-json.js',
-    'node_modules/@kungfu-tech/buildchain/packages/core/kfd-adopter-category-driver.js',
-    'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
-    'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
-  ])
-    copyFile(ROOT, fixture, relative);
+  // Install the complete pinned package assets rather than a hand-picked
+  // subset: the KFD gate consumes case data, profiles, and toolchain metadata.
+  for (const name of ['@kungfu-tech/kfd', '@kungfu-tech/buildchain']) {
+    fs.cpSync(
+      fs.realpathSync(path.join(ROOT, 'node_modules', name)),
+      path.join(fixture, 'node_modules', name),
+      { recursive: true },
+    );
+  }
   syncChangedWorktree(ROOT, fixture, git);
   pruneEmptyDirectories(fixture);
-  const workPackageScope = path.join(
-    fixture,
-    'framework',
-    'work',
-    'node_modules',
-    '@kungfu-tech',
-  );
-  fs.mkdirSync(workPackageScope, { recursive: true });
-  fs.symlinkSync('../../../spec', path.join(workPackageScope, 'spec'));
+  installFixturePackages(ROOT, fixture);
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   const sourceAuthor = spawnSync(
@@ -1184,8 +1168,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     sourceAcceptance.status,
     0,
     `check:source (bounded tail):\n${boundedDiagnosticTail(
-      sourceAcceptance.stderr,
       sourceAcceptance.stdout,
+      sourceAcceptance.stderr,
     )}`,
   );
   const after = snapshotSource(fixture);

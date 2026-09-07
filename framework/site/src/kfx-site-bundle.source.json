@@ -105,6 +105,22 @@
       "nonClaim": "Catalog availability does not bypass command mutation policy."
     },
     {
+      "id": "kfx-cli-facade",
+      "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+      "role": "public-cli-surface",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "A registered CLI command does not bypass native package admission or lifecycle authority."
+    },
+    {
+      "id": "kfx-package-lifecycle",
+      "path": "framework/core/src/python/kungfu/cli/commands/kfx_package.py",
+      "role": "cli-implementation",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Package lifecycle implementation does not grant capabilities or replace Core-owned mutation authority."
+    },
+    {
       "id": "kfd7-release-passport",
       "path": "framework/core/architecture/kfd7-release-passport.json",
       "role": "release-passport-evidence",
@@ -194,7 +210,7 @@
       "summary": "The 4.0.0-alpha.5 KFX manifest and staged public npm inventory declare package identity, composable Suite/member closure, facets, requested capabilities, and host inputs; after separate native admission, executable product hosts consume a distinct Core-issued Runtime Warrant lease.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "extensions-guide", "installed-authoring-contract", "github-webhook-qualification", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
+      "sourceIds": ["kfx-contract", "extensions-guide", "installed-authoring-contract", "github-webhook-qualification", "npm-release-package-registry", "runtime-warrant-adopter-evidence", "kfx-cli-facade", "kfx-package-lifecycle"],
       "nonClaim": "A conforming manifest remains inert and is neither a capability grant nor a Runtime Warrant."
     },
     {
@@ -203,7 +219,7 @@
       "summary": "On the 4.0.0-alpha.5 development line, production package mutations require a pinned Fact cut, Work, Warrant, policy, exact roots, and CAS. A separate developer-only route may bootstrap only the checked-out Control Suite into a same-Git local workspace runtime with the exact kfxControl grant; it cannot publish, update, remove, share-install, or acquire external capabilities.",
       "maturity": "pre-release",
       "status": "staged",
-      "sourceIds": ["kfx-domain-profile", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification"],
+      "sourceIds": ["kfx-domain-profile", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification", "kfx-cli-facade", "kfx-package-lifecycle"],
       "nonClaim": "Filesystem discovery and package metadata are observations, not registry authority."
     },
     {
@@ -230,7 +246,7 @@
       "summary": "The installed 4.0.0-alpha.5-matched kit supports inert authoring and lifecycle steps from source or a staged public npm package. For local debugging, the public native Control Suite command can bootstrap only the checked-out manager into a same-Git workspace runtime with kfxControl; it does not issue a Release Passport, Warrant, publication right, or external capability.",
       "maturity": "pre-release",
       "status": "experimental",
-      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme", "npm-release-package-registry", "runtime-warrant-adopter-evidence"],
+      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme", "npm-release-package-registry", "runtime-warrant-adopter-evidence", "kfx-cli-facade", "kfx-package-lifecycle"],
       "nonClaim": "Authoring output and draft adopter evidence remain inert; neither can issue a Runtime Warrant or expose a public listener."
     },
     {
@@ -239,7 +255,7 @@
       "summary": "The 4.0.0-alpha.5 runtime SDK projection exposes typed Runtime Warrant adoption, heartbeat, revocation, and settlement edges while Core alone owns issuance, recovery fencing, and authoritative lease state.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["installed-authoring-brief", "installed-authoring-contract", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence"],
+      "sourceIds": ["installed-authoring-brief", "installed-authoring-contract", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme", "runtime-warrant-adopter-evidence", "kfx-cli-facade", "kfx-package-lifecycle"],
       "nonClaim": "A visible SDK type or CLI route does not mint, recover, or widen Runtime Warrant authority."
     },
     {

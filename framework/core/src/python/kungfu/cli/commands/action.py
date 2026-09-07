@@ -6,6 +6,7 @@ import sys
 import click
 
 import kungfu
+from kungfu import host
 from kungfu.cli.commands import kfc
 
 
@@ -20,16 +21,7 @@ def _resolve_action_entry():
     ):
         if os.path.isfile(candidate):
             return os.path.realpath(candidate)
-    directory = binding_dir
-    for _ in range(8):
-        candidate = os.path.join(directory, "framework", "work", "action", "action.mjs")
-        if os.path.isfile(candidate):
-            return os.path.realpath(candidate)
-        parent = os.path.dirname(directory)
-        if parent == directory:
-            break
-        directory = parent
-    return None
+    return host.node_package_entry("@kungfu-tech/work/action/cli")
 
 
 def _action_layout(entry):

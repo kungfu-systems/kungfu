@@ -12,12 +12,12 @@ import {
   buildProjectCut,
   canonicalJson,
   semanticRoot,
-} from '../framework/work/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut';
 import {
   observeHistory,
   reconcileHistory,
   verifyHistoryObservation,
-} from '../framework/work/project-cut/src/history.mjs';
+} from '@kungfu-tech/work/project-cut/history';
 import { checkProjectCutHistoryContract } from './project-cut-history-contract.mjs';
 
 const REPO_ROOT = path.resolve(
@@ -33,9 +33,8 @@ const FIXTURE = JSON.parse(
     'utf8',
   ),
 );
-const CLI = path.join(
-  REPO_ROOT,
-  'framework/work/project-cut/bin/project-cut.mjs',
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
 );
 
 function git(root, ...args) {

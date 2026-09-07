@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import nodeBinding from '../framework/storage/generated/work-lifecycle-v1.js';
+import nodeBinding from '@kungfu-tech/storage/generated/work-lifecycle-v1';
 
 const fixture = JSON.parse(
   fs.readFileSync(

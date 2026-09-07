@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.code-complexity-budget-waiver/v3",
-  "issue_root": "sha256:04244c2f77c97666741dd22052a0bee2f71a8a0df21a055bb457e6930022fa69",
+  "issue_root": "sha256:79e0b8f1c7ec682727d5a2da3ce131d91a9460d15bab9cc2b7ed4738df7ed437",
   "issue_kind": "grandfathered-file-grew",
   "paths_or_scope": [
     "pnpm-lock.yaml"
@@ -24,14 +24,14 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 10218,
-      "contentRoot": "sha256:e9d0cecf29ceed0f9959d55224d04fe25b2dc0efffeda7ae5655f3b4589d2512"
+      "lines": 10354,
+      "contentRoot": "sha256:8121dd2285db8a7a0ba233c98ddabe8f97d806870dfb0f51862db1aecb7409c8"
     }
   ],
-  "allowed_delta": 75,
+  "allowed_delta": 211,
   "owner": "kungfu/repository-contract",
   "responsibility_boundary": "Generated pnpm dependency closure for the Buildchain v4 consumer upgrade; workspace packages and unrelated resolutions retain their existing ownership.",
-  "cohesion_rationale": "The generated lockfile shrinks by 15 lines from the protected dev source but remains 75 lines above the frozen baseline. The explicit Xinfa KFD alias retains the pre-upgrade compiler verifier cut independently of Buildchain. This exact-content request supersedes no historical approval and requires protected independent review.",
+  "cohesion_rationale": "The generated lockfile shrinks by 15 lines from protected dev 35e498d but remains 211 lines above the frozen baseline. New protected workspace links and package boundaries are preserved. The explicit Xinfa KFD alias retains the pre-upgrade compiler verifier cut independently of Buildchain. This exact-content request supersedes no historical approval and requires protected independent review.",
   "rejected_split_alternatives": "Splitting the workspace lockfile or deleting generated entries by hand would break frozen installation and reproducibility.",
   "affected_tests_and_qualification": "./shifu install --frozen-lockfile --ignore-scripts; ./shifu check:source; Buildchain v4 consumer scan; Candidate source acceptance / check; Delivery Warrant; merge_group.",
   "requested_by": "keren.dong@kungfu.link",

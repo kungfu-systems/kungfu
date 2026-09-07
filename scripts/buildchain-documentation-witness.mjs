@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { canonicalJson } from '../framework/work/project-cut/index.mjs';
+import { canonicalJson } from '@kungfu-tech/work/project-cut';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(

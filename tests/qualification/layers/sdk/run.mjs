@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { extractTarGz } from '../../../../product/scripts/archive.mjs';
+import { extractTarGz } from '@kungfu-tech/product-kungfu/tooling/archive';
 import telemetry from '../../../../scripts/candidate-timeline-events.cjs';
 import {
   platformCommand,

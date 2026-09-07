@@ -21,7 +21,7 @@ const manifest = JSON.parse(
 );
 const layers = JSON.parse(
   fs.readFileSync(
-    new URL('../../framework/core/architecture/layers.json', import.meta.url),
+    new URL(import.meta.resolve('@kungfu-tech/core/architecture/layers.json')),
     'utf8',
   ),
 );

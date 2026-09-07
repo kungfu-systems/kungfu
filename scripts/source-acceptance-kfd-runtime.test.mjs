@@ -9,7 +9,7 @@ import {
   checkColdBuildchainKfd,
   loadBuildchainKfdRuntime,
   resolveGitBoundKfdEvidenceSourceSha,
-} from '../product/release/buildchain-kfd-runtime.mjs';
+} from '@kungfu-tech/product-kungfu/release/buildchain-kfd-runtime';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
