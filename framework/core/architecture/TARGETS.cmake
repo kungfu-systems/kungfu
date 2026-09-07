@@ -81,6 +81,7 @@ set(KUNGFU_STORAGE_SERVICES_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/service_lifecycle.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/service_operation_catalog.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/service_projection.cpp"
+  "${PROJECT_SOURCE_DIR}/src/runtime/storage/service_views.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/source_registry_projection.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/transfer_service.cpp"
 )

@@ -88,12 +88,12 @@
   "parallelism": 4,
   "baseline": {
     "toolMajor": 22,
-    "scopeFiles": 54,
-    "scopeRoot": "sha256:c09dabc15c431d4450901fad790db5f385592fdf2cb8213d63ef81a516561bd9",
+    "scopeFiles": 62,
+    "scopeRoot": "sha256:8767c584c4c58216121cf8b9b3d1d5d094db843612b4f912db92cbaec1085398",
     "diagnostics": 3,
     "diagnosticsByCheck": {
       "performance-no-int-to-ptr": 3
     },
-    "diagnosticsRoot": "sha256:00b41229bac4af9db13813e7b354e75b0443c0d7b85f040b0126c043c1cb2054"
+    "diagnosticsRoot": "sha256:cb3c8df7961a11e6f3d7832ac8d01c6df67d90cb1d1670eb861af81c5561b52e"
   }
 }
