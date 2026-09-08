@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9646,
+  "generation": 9647,
   "fencingCounter": 922,
   "policy": {
     "agingSeconds": 900,
@@ -13,7 +13,7 @@
   },
   "activeWarrant": {
     "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "phase": "provisional",
+    "phase": "qualified",
     "repository": "kungfu-systems/kungfu",
     "protectedBase": "dev/v4/v4.0",
     "candidateId": "sha256:e5c52bb58a6df01da3d7443918fabdb58c55586d9c08659a78b87c08ff59969e",
@@ -130,8 +130,13 @@
     "issuedAt": "2026-09-08T15:13:11.484Z",
     "expiresAt": "2026-09-08T19:57:24.209Z",
     "fencingToken": "sha256:51ba6245331ae2ec64142a82fac5fae7de0c0f8578b621bdab7f7ebc3cd0720a",
-    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission.",
-    "heartbeatAt": "2026-09-08T15:57:24.209Z"
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "heartbeatAt": "2026-09-08T15:57:24.209Z",
+    "nativeProofRoot": "sha256:ac73c8018407fd87b69e9ae8b8c9733a216a1e9e8bd95d4e17868cc2b1fe11f7",
+    "nativeExecutionReceiptRoot": "sha256:8f3f82b04fb4fa559dd5637e150dcca282a6d55bbd947ec002fa1183901e5dc9",
+    "nativeProofReuseRoot": "sha256:500736f3ddb10fd210c5950de59f0edaee8e3a3b7fd3116f2742a652eafec83d",
+    "qualificationReceiptRoot": "sha256:d288bf7f09b1819f3cb7df69ebd3c9c90e59513121d953e934ec9a1447bd2e1c",
+    "qualifiedAt": "2026-09-08T15:57:55.094Z"
   },
   "candidates": [
     {
@@ -80712,10 +80717,10 @@
       "sourceWorkflowRunId": 34101365882,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-07T09:03:19.283Z",
-      "updatedAt": "2026-09-08T15:57:24.209Z",
+      "updatedAt": "2026-09-08T15:57:55.094Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         ".buildchain-version",
@@ -80861,6 +80866,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-08T15:57:24.209Z",
-  "stateRoot": "sha256:898e74729f046b2c2695b0cc003fb8883232b5c89cb716764351565d282c3156"
+  "updatedAt": "2026-09-08T15:57:55.094Z",
+  "stateRoot": "sha256:dbca68b3ff2d68ff03f0f6acbe755f734de9ddb9721b79a475357077e39a9ce3"
 }
