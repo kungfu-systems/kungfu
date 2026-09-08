@@ -3,15 +3,69 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 9650,
-  "fencingCounter": 922,
+  "generation": 9651,
+  "fencingCounter": 923,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "phase": "provisional",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:348975e45744632641fbe37eabf9ff42252b8a17fefed3ed95767a42439b10bc",
+    "pullRequestNumber": 3732,
+    "sourceHead": "dbdd6b9be7e7ce118ca92bb881b8c07e259df44d",
+    "assignmentRoot": "sha256:9057fdef5273c2dba0120f09591e6f6142c1a83e40e0f50da6b1db225a7c6dee",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:557b6b4685091d2d31040beb9e8263280498ad98423ef73ab67b221978c5bfb1",
+    "sourcePatchRoot": "sha256:2bb7fb93c39ec8ae75699bc9273eaf13dd830021c380156794a2421477fac5da",
+    "sourceProofRoot": "sha256:4ddff70041a306bab9be6c52d94818e01bb7d9edb6faa36b83688e95168b1bca",
+    "planRoot": "sha256:e0ee7f65511be722f0b9bdf756ce9031efcca370637d5ce316bcbcd8ebec5b67",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:e10b4fa5c65f38d4eac8f20719d57c2dbbbfdb7c831324b266af73ad04051839",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "nativeCommandContract": {
+      "schema": "kungfu.buildchain.native-command-contract/v1",
+      "runner": "bash-lc",
+      "command": "KUNGFU_FNM_DIST_MIRROR=https://kungfu-prebuilt-staging.s3.amazonaws.com/tool-cache/fnm KUNGFU_FNM_SHA256=7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224 ./shifu dev-delivery:native-under-warrant -- --repository kungfu-systems/kungfu --target-branch dev/v4/v4.0 --pull-request 3732 --expected-head dbdd6b9be7e7ce118ca92bb881b8c07e259df44d --status-context 'affected-native / linux' --output ../dev-delivery/kungfu-native-receipt.json",
+      "commandRoot": "sha256:2931e868fef53a340af0c3cb3c5d97c9cd7a93e6384dae1d156ac8e44320ef4f"
+    },
+    "affectedPaths": [
+      ".xinfa/portable-atlas-classification.json.gz",
+      ".xinfa/product-atlas-bundle.json",
+      "developer/maintainability/cpp-safety-policy.json",
+      "developer/production-graph/compiler/polyglot.fixture.mjs",
+      "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
+      "docs/architecture/adr-map.json",
+      "docs/architecture/adr-map.md",
+      "framework/core/architecture/ARCHITECTURE_HEALTH.md",
+      "framework/core/architecture/ARCHITECTURE_INDEX.md",
+      "framework/core/architecture/LAYERS.md",
+      "framework/core/architecture/TARGETS.cmake",
+      "framework/core/architecture/layers.json",
+      "framework/core/architecture/review-routes.json",
+      "framework/core/src/libkungfu/src/runtime/storage/service.cpp",
+      "framework/core/src/libkungfu/src/runtime/storage/service_views.cpp"
+    ],
+    "shardEvidenceRoots": [
+      "sha256:937995b635e10cbcb9e71d163cc457be0414f052197eb26e5a0ac6df2619eb72",
+      "sha256:d0f690f0dcd99065d6e8edc0eee3d8a2101756d6d69c76941af9856976fda744"
+    ],
+    "sourceWorkflowRunId": 34262953489,
+    "deliveryClass": "native-proof-required",
+    "priority": "ordinary",
+    "generation": 923,
+    "expectedOldStateRoot": "sha256:5992336819c9c23a69b8f9a74bd69bf12aa233b12486f30ff23c3c7cbaa7f3f8",
+    "issuedAt": "2026-09-08T18:34:20.692Z",
+    "expiresAt": "2026-09-08T22:34:20.692Z",
+    "fencingToken": "sha256:627106caf384a5fbced8dbbd8355cb80563e5aaf7c55fe6e470ac49c1ac6d98a",
+    "nextAction": "Run or reuse exact native proof under this fence, then atomically qualify before merge admission."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -80828,10 +80882,10 @@
       "sourceWorkflowRunId": 34262953489,
       "priority": "ordinary",
       "enqueuedAt": "2026-09-08T18:34:12.834Z",
-      "updatedAt": "2026-09-08T18:34:12.834Z",
+      "updatedAt": "2026-09-08T18:34:20.692Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".xinfa/portable-atlas-classification.json.gz",
@@ -80856,6 +80910,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-08T18:34:12.834Z",
-  "stateRoot": "sha256:5992336819c9c23a69b8f9a74bd69bf12aa233b12486f30ff23c3c7cbaa7f3f8"
+  "updatedAt": "2026-09-08T18:34:20.692Z",
+  "stateRoot": "sha256:92e72656ebbf03d6e46c024d07d1ac900be16628363d5e518b2ad3b0c77fecfc"
 }
