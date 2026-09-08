@@ -100,7 +100,7 @@ dev = [
     "setuptools>=83.0.0,<84.0.0",
     "virtualenv>=20.36.1,<21.0.0",
     "wheel>=0.46.2,<0.47.0",
-    "pip>=26.1,<27.0",
+    "pip>=26.2,<27.0",
     "plotly>=6.8.0,<7.0.0",
     # was Pipfile [packages] os-specific（带平台 marker）
     "xattr==1.1.4 ; sys_platform != 'win32'",
