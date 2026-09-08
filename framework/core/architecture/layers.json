@@ -289,8 +289,8 @@
   "source_constraints": [
     {
       "file": "src/libkungfu/src/runtime/storage/service.cpp",
-      "responsibility": "Storage projection, qualification and journal-derived shared helpers",
-      "max_lines": 1600,
+      "responsibility": "Storage qualification and journal-derived shared helpers",
+      "max_lines": 1050,
       "required_text": [
         "episode_fsck_typed_impl",
         "source_registry_status_view"
@@ -305,6 +305,22 @@
         "storage_repair_subject repair_subject",
         "storage_query_result query_journal_projection",
         "std::string base64_encode"
+      ]
+    },
+    {
+      "file": "src/libkungfu/src/runtime/storage/service_views.cpp",
+      "responsibility": "Workspace layout and storage projection read-model rendering",
+      "max_lines": 260,
+      "required_text": [
+        "workspace_episode_layout_json",
+        "projection_verification_json",
+        "projection_status_json"
+      ],
+      "forbidden_text": [
+        "#include <rocksdb/",
+        "rocksdb::",
+        "class file_storage_service : public storage_service",
+        "dispatch_storage_service"
       ]
     },
     {
@@ -966,6 +982,7 @@
         "src/libkungfu/src/runtime/storage/service_facade.cpp",
         "src/libkungfu/src/runtime/storage/service_lifecycle.cpp",
         "src/libkungfu/src/runtime/storage/service_projection.cpp",
+        "src/libkungfu/src/runtime/storage/service_views.cpp",
         "src/libkungfu/src/runtime/storage/maintenance_service.cpp"
       ],
       "contract_tests": [
@@ -1237,6 +1254,11 @@
       "question": "Storage facade or shared application helpers",
       "component": "runtime-storage-services",
       "entry_point": "src/libkungfu/src/runtime/storage/service_facade.cpp"
+    },
+    {
+      "question": "Workspace layout or storage projection read-model rendering",
+      "component": "runtime-storage-services",
+      "entry_point": "src/libkungfu/src/runtime/storage/service_views.cpp"
     },
     {
       "question": "Storage status, fsck, rebuild, GC or compact planning",
