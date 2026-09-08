@@ -13,6 +13,35 @@ import { digest } from '../../scripts/affected-native-proof.mjs';
 const SHA = /^[0-9a-f]{40}$/u;
 const ROOT = /^sha256:[0-9a-f]{64}$/u;
 const PUBLIC_WARRANT_QUEUE_MAX_BUFFER = 16 * 1024 * 1024;
+const HOSTED_RUNNER_FACT_NAMES = [
+  'RUNNER_ENVIRONMENT',
+  'RUNNER_OS',
+  'RUNNER_ARCH',
+  'ImageOS',
+  'ImageVersion',
+];
+
+function commandWithHostedRunnerFacts(command, environment) {
+  if (
+    environment.RUNNER_ENVIRONMENT !== 'github-hosted' &&
+    environment.BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY !==
+      'github-actions-runner-worker/v1'
+  )
+    return command;
+  const declarations = HOSTED_RUNNER_FACT_NAMES.map((name) => {
+    const value = environment[name];
+    if (
+      typeof value !== 'string' ||
+      !/^[A-Za-z0-9._-]+$/u.test(value) ||
+      (name === 'RUNNER_ENVIRONMENT' && value !== 'github-hosted')
+    )
+      throw new Error(`hosted runner fact ${name} is missing or invalid`);
+    return `export ${name}='${value}'`;
+  });
+  // Bind only observed, noncredential runner facts into the native command.
+  // Buildchain retains its credentialless child environment and ancestry gate.
+  return `${declarations.join('\n')}\n${command}`;
+}
 
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
@@ -261,13 +290,17 @@ export async function runNativeExecutionUnderWarrant(
       fencingToken: warrant.fencingToken,
       leaseGeneration: warrant.generation,
     };
+    const command = commandWithHostedRunnerFacts(
+      options.command,
+      dependencies.environment || process.env,
+    );
 
     const fenceObservation = async () => {
       const latest = await runtime.observe({ repository, branch });
       assertLiveBinding(latest, { ...warrantBinding, allowedPhases }, clock());
     };
     const native = await runtime.runNative({
-      command: options.command,
+      command,
       cwd,
       heartbeat: fenceObservation,
       executionBinding: {
@@ -293,7 +326,7 @@ export async function runNativeExecutionUnderWarrant(
       qualifiedBase,
       toolchainRoot,
       environmentRoot,
-      commandRoot: digest({ command: options.command }),
+      commandRoot: digest({ command }),
       nativeRunReceiptRoot: native.receiptRoot,
       nativeExecutionReceipt: native,
     };

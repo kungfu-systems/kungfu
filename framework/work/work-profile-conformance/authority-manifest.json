@@ -3,7 +3,7 @@
   "files": [
     {
       "path": ".buildchain/alpha-contract-lock.json",
-      "sha256": "sha256:a937f67a7c0493bbbef2e1a9175dd29ca48d3858b1a3f0b9e460d2252f96b6bb"
+      "sha256": "sha256:11be85ad7f163a224c95f4143ae64e927a5c7a1fa0c1c210afed435624073dcc"
     },
     {
       "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
@@ -99,7 +99,7 @@
     },
     {
       "path": "framework/work/work-profile-conformance/qualification/reference-scenarios.json",
-      "sha256": "sha256:f193a9cdeb9471fc0624c3d38e78bde04714aef2c25a113d85c775c874a99624"
+      "sha256": "sha256:d429771dfff4f3476e6159086c076a8a36103d0b5b86eba2405e16a34d47d517"
     },
     {
       "path": "framework/work/work-profile-conformance/qualification/retained-witnesses.json",
@@ -154,5 +154,5 @@
       "sha256": "sha256:132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
     }
   ],
-  "bundleRoot": "sha256:188a08269777416e46be73a853c6c91c1f0f5caf8f28fe4aabeb3132b5052384"
+  "bundleRoot": "sha256:8a12d05983c76697fbfdd19fcbbb2730bd4aacbb79a9dcdb884054f7478534f6"
 }

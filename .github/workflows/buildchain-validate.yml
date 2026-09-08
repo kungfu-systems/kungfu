@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate .buildchain/buildchain.toml
-        uses: kungfu-systems/buildchain/actions/validate-config@v3
+        uses: kungfu-systems/buildchain/actions/validate-config@v4-alpha
         with:
           require-version-state: "true"
           require-lifecycle-stages: "install,check,build,verify"
