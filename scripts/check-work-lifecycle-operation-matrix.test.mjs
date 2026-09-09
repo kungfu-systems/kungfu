@@ -26,9 +26,11 @@ const Ajv2020 = optionalAjv2020();
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const contract = readContract();
-const registry = readJson('framework/contract/kungfu-contracts.registry.json');
+const registry = readJson(
+  'framework/spec/contract/kungfu-contracts.registry.json',
+);
 const policy = readJson(
-  'framework/contract/kungfu-agent-first-canonical-policy.json',
+  'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
 );
 const apiHeader = read('framework/core/src/libkungfu/include/kungfu/api.h');
 const rustSdk = read('crates/kungfu-sdk/src/lib.rs');

@@ -57,7 +57,7 @@ Kungfu config is a KFD-1 registered welded surface, `config-contract`. The
 single source is:
 
 ```text
-framework/config/kungfu-config.contract.json
+framework/core/config/kungfu-config.contract.json
 ```
 
 That contract contains:

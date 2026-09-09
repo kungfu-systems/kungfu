@@ -864,11 +864,16 @@ def stage(ctx, workspace_root, home, initiative_id, assignment_id, actor, reason
 @click.option("--now", default="", help="ISO-8601 cut used to test lease expiry")
 @assignment_context
 def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
-    def operation():
-        _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
-        return _status(runtime_dir, initiative_id, assignment_id, now)
-
-    _emit(_run(operation))
+    _emit(
+        _run(
+            lambda: _status(
+                _runtime(workspace_root, home, "read-only")[1],
+                initiative_id,
+                assignment_id,
+                now,
+            )
+        )
+    )
 
 
 @assignment.command(help="evaluate the native run or closeout gate")

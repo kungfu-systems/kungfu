@@ -28,7 +28,7 @@ function assertNoLegacyProductIdentity() {
   const roots = ['framework', 'extensions', 'product', 'scripts', 'docs'];
   const ignored = new Set([
     'docs/development/versioning.md',
-    'framework/maintainability/code-complexity-baseline.json',
+    'developer/maintainability/code-complexity-baseline.json',
     'scripts/run-kfx-profile-suite-tests.mjs',
   ]);
   const ignoredPrefixes = ['docs/qualification/evidence/'];

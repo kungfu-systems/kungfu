@@ -26,6 +26,7 @@ def _preflight_entry() -> Path:
         Path(__file__).resolve().parents[2]
         / "work_design_runtime"
         / "framework"
+        / "work"
         / "work-design-preflight"
         / "tooling"
         / "work-design-preflight.mjs"

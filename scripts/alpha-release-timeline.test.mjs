@@ -483,27 +483,3 @@ test('retry remains visible without becoming a second SLO sample', () => {
   const receipt = fixture('release', { runs: retried });
   assert.equal(receipt.timing.retries, 1);
 });
-
-test('workflow consumes exact dev receipt before promotion and emits timeline', () => {
-  const workflow = fs.readFileSync(
-    '.github/workflows/release-new-version.yml',
-    'utf8',
-  );
-  assert.match(
-    workflow,
-    /uses: \.\/\.github\/actions\/require-alpha-preflight/u,
-  );
-  assert.match(workflow, /Verify Alpha candidate tree survives channel merge/u);
-  assert.match(workflow, /^ {2}alpha-timeline:$/mu);
-  assert.doesNotMatch(
-    workflow,
-    /Restore compatible historical Alpha timeline samples/u,
-  );
-  assert.match(workflow, /ref: alpha-release-history\/v1/u);
-  assert.match(workflow, /\.\/shifu alpha:release:history append/u);
-  assert.match(workflow, /--cache-evidence/u);
-  assert.match(workflow, /\.\/shifu alpha:release:timeline write/u);
-  assert.match(workflow, /alpha-release-timeline-\$\{\{ github\.run_id \}\}/u);
-  assert.match(workflow, /runner-preset: kungfu-v4-native/u);
-  assert.doesNotMatch(workflow, /^\s+platforms-json:/mu);
-});

@@ -13,8 +13,8 @@ on:
   push:
     paths:
       - .github/workflows/kungfu-agent-patrol.yml
-      - framework/agent-patrol/**
-      - framework/agent-repository-work/**
+      - developer/agent-patrol/**
+      - framework/work/agent-repository-work/**
       - tests/qualification/agent-repository-work/**
       - scripts/agent-patrol*.mjs
       - scripts/run-agent-repository-work-experiment.test.mjs

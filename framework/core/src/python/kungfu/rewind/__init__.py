@@ -14,6 +14,13 @@
 #                       "$tmp/kungfu/rewind/fb/*.py" here. Never `-o ../../` in
 #                       place: flatc writes empty namespace __init__.py files and
 #                       would clobber this module and kungfu/__init__.py.
+#   reflection.fbs      exact FlatBuffers 25.9.23 schema-of-schemas authority.
+#   reflection.bfbs     canonical binary projection of reflection.fbs.
+#   reflection/         canonical multi-file `flatc --python` output (do not edit).
+#   reflection_fb.py    generated compatibility facade for the former one-file output.
+#                       Regenerate both with
+#                       `node scripts/generate-rewind-reflection-python.mjs
+#                       --flatc /path/to/flatc` from the repository root.
 #   events.py           serializers: python values -> FlatBuffers event bytes
 #   bundle.py           bundle format pieces: content-addressed schema blob +
 #                       run manifest with per-run schema bindings

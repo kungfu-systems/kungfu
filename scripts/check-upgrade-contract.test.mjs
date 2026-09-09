@@ -23,8 +23,8 @@ test('every reason keeps one complete user message', () => {
   );
   try {
     for (const relative of [
-      'framework/upgrade/kungfu-upgrade.contract.json',
-      'framework/contract/kungfu-contracts.registry.json',
+      'product/upgrade/kungfu-upgrade.contract.json',
+      'framework/spec/contract/kungfu-contracts.registry.json',
       'tests/fixtures/runtime-upgrade-control-plane/cases.json',
     ]) {
       const target = path.join(root, relative);
@@ -33,7 +33,7 @@ test('every reason keeps one complete user message', () => {
     }
     const contractPath = path.join(
       root,
-      'framework/upgrade/kungfu-upgrade.contract.json',
+      'product/upgrade/kungfu-upgrade.contract.json',
     );
     const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
     contract.messageRegistry.reasonMessages['readiness-failed'] = undefined;
@@ -53,8 +53,8 @@ test('activation authority drift fails closed', () => {
   );
   try {
     for (const relative of [
-      'framework/upgrade/kungfu-upgrade.contract.json',
-      'framework/contract/kungfu-contracts.registry.json',
+      'product/upgrade/kungfu-upgrade.contract.json',
+      'framework/spec/contract/kungfu-contracts.registry.json',
       'tests/fixtures/runtime-upgrade-control-plane/cases.json',
     ]) {
       const target = path.join(root, relative);
@@ -63,7 +63,7 @@ test('activation authority drift fails closed', () => {
     }
     const contractPath = path.join(
       root,
-      'framework/upgrade/kungfu-upgrade.contract.json',
+      'product/upgrade/kungfu-upgrade.contract.json',
     );
     const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
     contract.authority.activation = 'desktop-installer';

@@ -26,7 +26,9 @@ test('root build uses the same reference-only product assembly policy', () => {
   const result = spawnSync(
     process.execPath,
     [
-      fileURLToPath(new URL('../../scripts/build.mjs', import.meta.url)),
+      fileURLToPath(
+        new URL(import.meta.resolve('@kungfu-tech/workspaces/tooling/build')),
+      ),
       '--dry-run',
     ],
     { cwd: root, encoding: 'utf8' },

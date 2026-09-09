@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
+import { activeProjection } from '@kungfu-tech/product-kungfu/version-line/version-line-authority';
 import {
   compareRuleset,
   digest,

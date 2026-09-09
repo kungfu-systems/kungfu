@@ -39,17 +39,20 @@ function json(root, relative, value) {
   return write(root, relative, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function signingFixture({ updateMetadata = 'latest-mac.yml' } = {}) {
+function signingFixture({
+  updateMetadata = 'latest-mac.yml',
+  finalProductName = 'Kungfu',
+} = {}) {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-macos-release-finalization-'),
   );
   const finalArtifacts = [
     {
-      path: `product/release/Kungfu-Episodes-${VERSION}-macos-arm64.dmg`,
+      path: `product/release/${finalProductName}-${VERSION}-macos-arm64.dmg`,
       bytes: Buffer.from('signed-and-notarized-dmg'),
     },
     {
-      path: `product/release/Kungfu-Episodes-${VERSION}-macos-arm64.zip`,
+      path: `product/release/${finalProductName}-${VERSION}-macos-arm64.zip`,
       bytes: Buffer.from('signed-and-notarized-updater-zip'),
     },
   ];
@@ -58,19 +61,19 @@ function signingFixture({ updateMetadata = 'latest-mac.yml' } = {}) {
 
   const intermediateArtifacts = [
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64.dmg`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64.dmg`,
       bytes: Buffer.from('electron-builder-dmg'),
     },
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64.dmg.blockmap`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64.dmg.blockmap`,
       bytes: Buffer.from('dmg-blockmap'),
     },
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64-mac.zip`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64-mac.zip`,
       bytes: Buffer.from('electron-builder-zip'),
     },
     {
-      path: `product/release/desktop/Kungfu Episodes-${VERSION}-arm64-mac.zip.blockmap`,
+      path: `product/release/desktop/Kungfu-${VERSION}-arm64-mac.zip.blockmap`,
       bytes: Buffer.from('zip-blockmap'),
     },
   ];
@@ -306,12 +309,26 @@ test('finalization fails closed before deletion when signing source does not mat
   }
 });
 
+test('finalization rejects retired Kungfu Episodes final artifact names before deletion', async () => {
+  const fixture = signingFixture({ finalProductName: 'Kungfu-Episodes' });
+  try {
+    await assert.rejects(
+      finalizeMacosReleaseArtifacts(options(fixture.root)),
+      /credential manifest must retain exactly one final macOS DMG and ZIP/u,
+    );
+    for (const artifact of fixture.intermediateArtifacts)
+      assert.equal(fs.existsSync(path.join(fixture.root, artifact.path)), true);
+  } finally {
+    cleanup(fixture);
+  }
+});
+
 test('finalization rejects ambiguous electron-builder archives', async () => {
   const fixture = signingFixture();
   try {
     write(
       fixture.root,
-      `product/release/desktop/Kungfu Episodes-${VERSION}-second-arm64.dmg`,
+      `product/release/desktop/Kungfu-${VERSION}-second-arm64.dmg`,
       'unexpected-second-dmg',
     );
     await assert.rejects(

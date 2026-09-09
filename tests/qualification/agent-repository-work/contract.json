@@ -58,7 +58,7 @@
     "lineCount": 4001,
     "seededFailure": "volatile numeric failure identifiers share one Finding identity",
     "writablePaths": [
-      "framework/agent-patrol/classify.mjs"
+      "developer/agent-patrol/classify.mjs"
     ],
     "sourcePolicy": "exact-commit-tracked-regular-files",
     "weeklyScheduleEnabled": true

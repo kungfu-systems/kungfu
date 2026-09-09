@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH = path.join(
   ROOT,
-  'framework',
   'product',
+  'contracts',
   'project-work-agent.contract.json',
 );
 const CATALOG_PATH = path.join(

@@ -120,7 +120,7 @@ function prependPaxHeader(archiveFile, bodySource) {
   const body =
     typeof bodySource === 'function' ? bodySource(entryPath) : bodySource;
   header.fill(0, 0, 100);
-  header.write('././@PaxHeader', 0, 100, 'utf8');
+  header.write('./@PaxHeader', 0, 100, 'utf8');
   header.write('x', 156, 1, 'ascii');
   header.fill(0, 124, 136);
   header.write(body.length.toString(8).padStart(11, '0'), 124, 11, 'ascii');

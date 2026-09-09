@@ -7,12 +7,12 @@ const path = require('node:path');
 const { prebuilt, shell } = require('../lib');
 
 const CORE = path.join(__dirname, '..');
-const { copyContractArtifacts } = require(
-  path.join(CORE, '..', '..', 'scripts', 'contract-registry.cjs'),
-);
-const { measureCandidateStageSync } = require(
-  path.join(CORE, '..', '..', 'scripts', 'candidate-timeline-events.cjs'),
-);
+const {
+  copyContractArtifacts,
+} = require('@kungfu-tech/workspaces/tooling/contract-registry');
+const {
+  measureCandidateStageSync,
+} = require('@kungfu-tech/workspaces/tooling/candidate-timeline-events');
 const SDK_BUILD_PLAN = require('../architecture/sdk-build-plan.json');
 
 function selectedBuildBindings() {

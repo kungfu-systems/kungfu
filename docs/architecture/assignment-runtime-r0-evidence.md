@@ -3,11 +3,11 @@
 ## Evidence cut and claim boundary
 
 - Audited source commit: `9277c15752b810f71e1666fbd1ba777a4b94678d`
-- Contract: `framework/assignment-runtime/assignment-runtime.contract.json`
+- Contract: `framework/work/assignment-runtime/assignment-runtime.contract.json`
 - Envelope schema:
-  `framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json`
+  `framework/work/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json`
 - Runnable cases:
-  `framework/assignment-runtime/fixtures/contract-cases-v1.json`
+  `framework/work/assignment-runtime/fixtures/contract-cases-v1.json`
 - Decision: `KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8`
 
 R0 proves a coherent, runnable protocol contract and an exact source inventory.
@@ -18,7 +18,7 @@ clients already consume this protocol.
 
 | Surface | Exact current authority or path | R0 finding | Contract mapping | Phase disposition |
 | --- | --- | --- | --- | --- |
-| Build-free Assignment capture | `framework/assignment-capture/assignment-capture.mjs`, `assignment-request.schema.json` | Writes immutable pre-admission request and receipt bytes under the selected data-home inbox; intentionally creates no runtime or Assignment authority | `command.submit` may later wrap capture, but capture remains a distinct pre-admission compatibility ingress | retain; R1 adapter must preserve content roots |
+| Build-free Assignment capture | `framework/work/assignment-capture/assignment-capture.mjs`, `assignment-request.schema.json` | Writes immutable pre-admission request and receipt bytes under the selected data-home inbox; intentionally creates no runtime or Assignment authority | `command.submit` may later wrap capture, but capture remains a distinct pre-admission compatibility ingress | retain; R1 adapter must preserve content roots |
 | Workspace and Home selection | `framework/core/src/python/kungfu/workspace.py`; `cli/commands/assignment.py::_runtime` | CLI resolves logical Home/project identity, prepares writes, and receives a physical runtime directory | `realm.realmId`, `realmKind`, and `generation`; no physical path in public envelopes | R1 moves path resolution behind Local Runtime |
 | Native state writer | `extensions/work-control/work-control-actions/domain/work_control_runtime.py` | Work Control Profile appends Initiative, Assignment, execution-claim, phase, completion, review, and continuation facts | one `realm-runtime` writer; `command.submit`, CAS, idempotency, receipts | preserve as R1 domain adapter, not client API |
 | Native state fold | `work_control_runtime.py::assignment_orchestration_status`; `domain/native_state.py` | Fact-backed query and completion-cycle fold own canonical phase and proof roots | snapshot/get/query revision and canonical root parity | R1 exposes this fold; clients do not reproduce it |

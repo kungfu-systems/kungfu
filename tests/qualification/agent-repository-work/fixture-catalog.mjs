@@ -116,7 +116,7 @@ const realModuleSnapshot = Object.freeze({
     },
     agentB: {
       mode: 'bounded-repair',
-      writablePaths: ['framework/agent-patrol/classify.mjs'],
+      writablePaths: ['developer/agent-patrol/classify.mjs'],
     },
   },
   investigation: {

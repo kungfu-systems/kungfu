@@ -5,7 +5,7 @@
     "releases": [
       {
         "cutRoot": "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42",
-        "durabilityReceiptRoot": "sha256:c0d302b65a60319d3ca8f07c317f0570830d75166d8da05e3e29a40c551f8f86",
+        "durabilityReceiptRoot": "sha256:4ba4377a6d23b3dc62a8579180cd4244fb400aa1217cdcf080eb012af56fe4e0",
         "kernelReceiptRoot": "sha256:068ab99e448900b6452e2ee5948742c994e21d5768c078ce5d04792da02bca3d",
         "objectId": "fact:f4563095b1a14077edc7dab5ec6a7759",
         "refName": "release-provenance/v4.0.0-alpha.1",
@@ -17,7 +17,7 @@
       },
       {
         "cutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
-        "durabilityReceiptRoot": "sha256:5b08f86f57d11e82d634c02008d06c778fb632f85d99b19513c0fb5c17ab08d6",
+        "durabilityReceiptRoot": "sha256:72a4f2044d19ec7473f956c2eec7651579e1df132d9afa9605fec55f32b59ba7",
         "kernelReceiptRoot": "sha256:ef710cf7f5ddedfc07086528195e67380b9f7dca188992e7146f48966872e5c5",
         "objectId": "fact:8c1705e96209b79344b1722dea6905b1",
         "refName": "release-provenance/v4.0.0-alpha.2",
@@ -29,11 +29,11 @@
       }
     ]
   },
-  "contractRoot": "sha256:3b0ad61c24055b48125015d6ec78d4275db451fd2ec80a2f576e819471af7be2",
+  "contractRoot": "sha256:76a5a8c0b4089a8f9150413e30c71fdeca848a325892b32d03e12effbb8f7421",
   "defaultEnabled": true,
   "nativeArtifact": {
     "name": "pykungfu.cpython-313-darwin.so",
-    "root": "sha256:9ab7505bc364955dc8930b6010bb7e39cdb0b8108a63448f90b34da523f8bd42"
+    "root": "sha256:96da5c03fddd0575287c4c731a0b622a1f961604c32a1e94fcd620b0bd22e8a7"
   },
   "nonClaims": [
     "general mutable key-value production eligibility",
@@ -106,15 +106,6 @@
     ],
     "gitOrGitHubReads": 0,
     "historicalCutCount": 2,
-    "normalProtectedNonPublicReleaseRehearsal": {
-      "gate": "governance.promotion-rehearsal",
-      "handMaintainedAllowlist": false,
-      "mode": "normal-protected-non-public",
-      "prooflessFallback": false,
-      "publication": false,
-      "specialPromotionRoute": false,
-      "topologyRequirement": "none"
-    },
     "restoredCutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
     "restoredFsckRoot": "sha256:d004eb075a80e2b9a11f894453f6bd36aa9598f7a47d9cd9052e00f2120f148b",
     "rollback": {
@@ -131,7 +122,7 @@
     "semanticReplayEqual": true,
     "sourceFsckRoot": "sha256:d004eb075a80e2b9a11f894453f6bd36aa9598f7a47d9cd9052e00f2120f148b"
   },
-  "qualificationRoot": "sha256:f2811af12069046ab787fab6b1908f69c0c8cadd5db83d1a99885daafabb3924",
+  "qualificationRoot": "sha256:9cfaa60ad7a24c08f3f80f8dc21d5dd50646125c607dd3d2850ff98dad786af4",
   "retirement": {
     "activeModes": {
       "dualRead": "retired",
@@ -143,7 +134,7 @@
     "retainedOfflineOnly": [
       ".buildchain/alpha-release-cut-lock.json",
       "docs/qualification/evidence/kungfu-temporal-provenance-cutover.json",
-      "framework/release/kungfu-temporal-release-rollback.contract.json"
+      "product/release/kungfu-temporal-release-rollback.contract.json"
     ]
   },
   "schema": "kungfu.durable-provenance-authority-qualification/v1",
@@ -151,8 +142,8 @@
   "source": {
     "files": [
       {
-        "path": "framework/release/kungfu-durable-provenance-authority.contract.json",
-        "root": "sha256:26adbbf448a1206a671fe7d6a9855edc5349e2db1fc43ce0462364c5b62faa4e"
+        "path": "product/release/kungfu-durable-provenance-authority.contract.json",
+        "root": "sha256:57c69e07c85c163fce0b3249f73a547c32409c439bf1222fba258c69e41f63d0"
       },
       {
         "path": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
@@ -176,10 +167,10 @@
       },
       {
         "path": "scripts/qualify-durable-provenance-authority.py",
-        "root": "sha256:476873105eb7ceae6a186888af78c8b52aa40e31a393d7bc1d29a350e95071f1"
+        "root": "sha256:db55e641664600acfefa91cc38456212f9fe3c025e394ea3174de6be363ddfcf"
       }
     ],
-    "sourceSetRoot": "sha256:0306fdbcf0bd8fe758ad456466cf404dd07edc192ed8af1404eca821f49c79a5"
+    "sourceSetRoot": "sha256:e4a1c04f632fa2a534d87c4270587f8e0fff5347875f57ef85b9acb1d2dccef0"
   },
   "status": "production-qualified"
 }

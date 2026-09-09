@@ -19,7 +19,7 @@ from kungfu.storage import fact_kernel_integrity, service
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = Path(
-    "framework/release/kungfu-durable-provenance-authority.contract.json"
+    "product/release/kungfu-durable-provenance-authority.contract.json"
 )
 PREDECESSOR_REPORT = Path(
     "docs/qualification/evidence/fact-durable-admission/"
@@ -412,7 +412,6 @@ def qualify(output_root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
                 ),
             },
             "failureCampaigns": failures,
-            "normalProtectedNonPublicReleaseRehearsal": contract["releaseRehearsal"],
         },
         "retirement": contract["retirement"],
         "nonClaims": contract["nonClaims"],

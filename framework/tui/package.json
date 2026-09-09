@@ -5,7 +5,7 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.5",
-  "description": "Kungfu reference TUI — the platform's shell-native reference surface (Ink)",
+  "description": "Kungfu reference TUI \u2014 the platform's shell-native reference surface (Ink)",
   "license": "Apache-2.0",
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
@@ -27,6 +27,7 @@
     "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/kfx": "workspace:*",
+    "@kungfu-tech/kfx-agent-work-lab-experience": "workspace:*",
     "ink": "^5.2.0",
     "react": "^18.3.1"
   },
@@ -36,5 +37,10 @@
     "esbuild": "^0.28.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
+  },
+  "exports": {
+    "./bundle": "./dist/tui.mjs",
+    "./kfx-host": "./src/kfx-host.ts",
+    "./package.json": "./package.json"
   }
 }

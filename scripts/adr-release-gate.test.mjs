@@ -12,7 +12,7 @@ import {
   compareSemver,
   evaluateZeroReferenceAudit,
   parseSemver,
-} from '../framework/deprecation/deprecation-lifecycle.mjs';
+} from '../developer/deprecation/deprecation-lifecycle.mjs';
 import {
   changedFilesBetween,
   evaluateReleaseGate,
@@ -26,7 +26,7 @@ const DEPRECATION_CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/deprecation/deprecation-lifecycle.contract.json',
+      'developer/deprecation/deprecation-lifecycle.contract.json',
     ),
     'utf8',
   ),
@@ -662,7 +662,7 @@ function deprecationFixture(selected, releaseHistory = []) {
     root,
     registry: {
       schema: 'kungfu.deprecation-registry/v1',
-      contract: 'framework/deprecation/deprecation-lifecycle.contract.json',
+      contract: 'developer/deprecation/deprecation-lifecycle.contract.json',
       productVersion: '5.0.0',
       releaseHistory,
       entries: [selected],
@@ -780,7 +780,7 @@ test('classification provenance prevents stable and artifact downgrades', () => 
         ],
       },
       classification: {
-        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authority: 'developer/deprecation/deprecation-lifecycle.contract.json',
         authorityType: 'kind-policy',
         ruleId: 'cli-command',
       },
@@ -811,7 +811,7 @@ test('classification provenance prevents stable and artifact downgrades', () => 
         ],
       },
       classification: {
-        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authority: 'developer/deprecation/deprecation-lifecycle.contract.json',
         authorityType: 'kind-policy',
         ruleId: 'document',
       },
@@ -907,7 +907,7 @@ test('protocol removal fails closed without qualified historical support', () =>
         ],
       },
       classification: {
-        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authority: 'developer/deprecation/deprecation-lifecycle.contract.json',
         authorityType: 'kind-policy',
         ruleId: 'wire-protocol',
       },
@@ -953,7 +953,7 @@ test('protocol support claims require exact authority and evidence', () => {
         ],
       },
       classification: {
-        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authority: 'developer/deprecation/deprecation-lifecycle.contract.json',
         authorityType: 'kind-policy',
         ruleId: 'wire-protocol',
       },

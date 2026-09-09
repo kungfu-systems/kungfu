@@ -9,9 +9,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const CONTRACT_PATH =
-  'framework/invariant/kungfu-invariant-system.contract.json';
+  'framework/spec/invariant/kungfu-invariant-system.contract.json';
 export const REGISTRY_PATH =
-  'framework/invariant/kungfu-invariant.registry.json';
+  'framework/spec/invariant/kungfu-invariant.registry.json';
 
 export function buildInvariantDiscovery(registry) {
   return {

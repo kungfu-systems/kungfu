@@ -9,7 +9,7 @@ import test from 'node:test';
 
 import Ajv2020 from 'ajv/dist/2020.js';
 
-import { qualificationContentRoot } from '../../scripts/upgrade-qualification.mjs';
+import { qualificationContentRoot } from '@kungfu-tech/workspaces/tooling/upgrade-qualification';
 
 import {
   buildChannelIndex,
@@ -174,8 +174,9 @@ test('channel index generation is deterministic and signs exact canonical bytes'
   );
   const schema = JSON.parse(
     fs.readFileSync(
-      path.resolve(
-        'framework/upgrade/kungfu-release-channel-index.schema.json',
+      new URL(
+        '../upgrade/kungfu-release-channel-index.schema.json',
+        import.meta.url,
       ),
       'utf8',
     ),

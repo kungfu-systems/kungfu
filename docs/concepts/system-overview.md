@@ -25,8 +25,8 @@ Claims require Proof before they support Decisions.
 This open monorepo contains the low-latency runtime, CLI and TUI, desktop GUI,
 language bindings, SDKs, extension system, product assembly, and the shared
 qualification contracts that keep them aligned. The user-facing distribution
-is named **Kungfu Episodes**; the runtime, command, SDKs, and extension system
-use the Kungfu, `libkungfu`, and `kfx` names.
+is named **Kungfu**; the runtime, command, SDKs, and extension system use the
+Kungfu, `libkungfu`, and `kfx` names.
 
 ## Why an Episode?
 

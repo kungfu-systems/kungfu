@@ -30,11 +30,11 @@ import type {
   StatusBarItem,
 } from '@kungfu-tech/kfx';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
+import { ProjectWorkControlView } from '@kungfu-tech/kfx-view-work-dashboard/view/index';
 import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
-import { ProjectWorkControlView } from '../../../../../extensions/work-dashboard/src/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -92,6 +92,7 @@ import {
   type WindowChromeControl,
   createLabOnboardingRoutes,
   deferredAgentWorkStartup,
+  shouldBootRuntimeForInitialSurface,
   useAgentFirstEntry,
   useWindowChrome,
 } from './product-navigation';
@@ -521,7 +522,7 @@ function ShellTitleBar({
             fontWeight: 600,
           }}
         >
-          Kungfu Episodes
+          Kungfu
         </div>
         <form
           ref={searchRoot}
@@ -1436,23 +1437,21 @@ function useAppFoundation() {
     window.process.env.KFE_INITIAL_SURFACE === 'projects';
   const initialFocusedProjectPath =
     window.process.env.KFE_FOCUSED_PROJECT_PATH || '';
-  const initialCoreWorkOpen = !initialProjectsOpen && !agentFirst.initialOpen;
+  const initialSurface = agentFirst.initialOpen
+    ? 'onboarding'
+    : initialProjectsOpen
+      ? 'projects'
+      : 'work';
+  const initialCoreWorkOpen = initialSurface === 'work';
   const [startup] = React.useState(() =>
     deferredAgentWorkStartup(
-      agentFirst.initialOpen
-        ? 'onboarding'
-        : initialProjectsOpen
-          ? 'projects'
-          : 'work',
+      initialSurface,
       window.process.env.KF_RUNTIME_DIR || '',
     ),
   );
   const startupSurface = capability.agentWorkLabStartupSurface(startup);
   const [runtime] = React.useState(() =>
-    !initialProjectsOpen &&
-    !agentFirst.initialOpen &&
-    !initialCoreWorkOpen &&
-    startupSurface === 'work-graph'
+    shouldBootRuntimeForInitialSurface(initialSurface)
       ? bootRuntime()
       : deferredRuntime(
           agentWorkLab,
@@ -2256,13 +2255,13 @@ function App() {
     onOpenLabExistingProject: () => setShellSurface('projects'),
     onLabComplete: labOnboarding.completeLab,
     onOpenStarterProject: labOnboarding.openStarterProject,
-    work: runtime.assignmentRuntime ? (
+    work: (
       <ProjectWorkControlView
         projects={projects}
         shell={shell}
         assignmentRuntime={runtime.assignmentRuntime}
       />
-    ) : null,
+    ),
   };
   const activeKfxProps: React.ComponentProps<typeof ActiveKfxSurface> | null =
     shellSurface === 'kfx'

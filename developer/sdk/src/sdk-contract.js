@@ -108,6 +108,7 @@ function locateRepoRoot(startDir) {
     const candidate = path.join(
       dir,
       'framework',
+      'spec',
       'contract',
       CONTRACT_REGISTRY_FILE,
     );
@@ -232,7 +233,7 @@ function registryEntryTemplate(surface, source) {
  * @returns {string}
  */
 function contractFixturePath(surface) {
-  return `framework/contract/fixtures/${surface}.contract-evidence.json`;
+  return `framework/spec/contract/fixtures/${surface}.contract-evidence.json`;
 }
 
 /**
@@ -242,7 +243,7 @@ function contractFixturePath(surface) {
 function resolveContractRegistryPath(repoRoot) {
   const explicit = process.env[CONTRACT_REGISTRY_ENV];
   if (explicit) return path.resolve(explicit);
-  return path.join(repoRoot, 'framework', 'contract', CONTRACT_REGISTRY_FILE);
+  return path.join(repoRoot, 'framework/spec/contract', CONTRACT_REGISTRY_FILE);
 }
 
 /**
@@ -344,7 +345,7 @@ function canonicalPolicyPaths(repoRoot) {
     source:
       typeof declared.source === 'string'
         ? declared.source
-        : path.join('framework', 'contract', CANONICAL_POLICY_FILE),
+        : path.join('framework', 'spec', 'contract', CANONICAL_POLICY_FILE),
     artifact:
       typeof declared.artifact === 'string'
         ? declared.artifact
@@ -1092,7 +1093,7 @@ function contractAudit(options) {
           {
             code: 'canonical-policy.mismatched',
             message:
-              'framework/contract canonical policy file differs from SDK-rendered policy',
+              'framework/spec/contract canonical policy file differs from SDK-rendered policy',
           },
         ]),
     ...contractRows
@@ -1192,7 +1193,7 @@ function contractAdd(surfaceArg, options) {
   }
   const source = options.source
     ? repoRelativePath(repoRoot, options.source)
-    : `framework/contract/${surface}.contract.json`;
+    : `framework/spec/contract/${surface}.contract.json`;
   const contractPath = path.resolve(repoRoot, source);
   if (fs.existsSync(contractPath)) {
     fail(`contract source already exists: ${source}`);

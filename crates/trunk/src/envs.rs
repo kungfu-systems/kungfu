@@ -30,7 +30,7 @@ const ENV_META_FILE: &str = "kungfu-env.meta";
 // ---------------------------------------------------------------- locations
 
 /// The kungfu runtime home, resolved like the config contract's
-/// `runtimeHomeEnv` / `defaultRuntimeHome` (framework/config/
+/// `runtimeHomeEnv` / `defaultRuntimeHome` (framework/core/config/
 /// kungfu-config.contract.json — the welded surface for these constants;
 /// keep them in sync).
 pub fn kf_home() -> PathBuf {

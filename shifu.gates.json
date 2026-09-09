@@ -143,50 +143,6 @@
       }
     },
     {
-      "id": "governance.promotion-rehearsal",
-      "title": "Promotion contract rehearsal",
-      "summary": "Rehearses alpha and stable promotion admission without publishing.",
-      "category": "release",
-      "documentation": "docs/qualification/gates/release-and-promotion.md",
-      "dependencies": [
-        "gate.catalog"
-      ],
-      "platforms": [
-        "linux",
-        "macos",
-        "windows"
-      ],
-      "runner": {
-        "capabilities": [
-          "node"
-        ]
-      },
-      "cost": {
-        "class": "light",
-        "timeoutSeconds": 180
-      },
-      "action": {
-        "kind": "task",
-        "task": "release:promotion:rehearse",
-        "args": [
-          "--",
-          "--github-event",
-          "--report",
-          "product/release/qualification/release-promotion-rehearsal.json"
-        ]
-      },
-      "artifacts": [
-        {
-          "id": "promotion-rehearsal",
-          "path": "product/release/qualification/release-promotion-rehearsal.json",
-          "required": true
-        }
-      ],
-      "receipt": {
-        "expectation": "optional"
-      }
-    },
-    {
       "id": "source.acceptance",
       "title": "Build-free source acceptance",
       "summary": "Runs the immutable dev source gate without compiler or release lifecycles.",
@@ -527,40 +483,6 @@
         "args": [
           "--fuzz"
         ]
-      },
-      "artifacts": [],
-      "receipt": {
-        "expectation": "optional"
-      }
-    },
-    {
-      "id": "release.artifact-admission",
-      "title": "Release artifact admission",
-      "summary": "Requires build status, three full-product platform payloads, one exact Linux ARM64 Core payload, one authoritative signed and notarized macOS credential-island payload, release passport, and KFD witnesses.",
-      "category": "release",
-      "documentation": "docs/qualification/gates/release-and-promotion.md",
-      "dependencies": [
-        "governance.promotion-rehearsal"
-      ],
-      "platforms": [
-        "linux"
-      ],
-      "runner": {
-        "capabilities": [
-          "buildchain-release"
-        ]
-      },
-      "cost": {
-        "class": "heavy",
-        "timeoutSeconds": 1800
-      },
-      "action": {
-        "kind": "handler",
-        "handler": "kungfu.buildchain.artifact-admission",
-        "parameters": {
-          "workflow": ".github/workflows/release-new-version.yml",
-          "requiredArtifactCount": 4
-        }
       },
       "artifacts": [],
       "receipt": {
@@ -1378,10 +1300,6 @@
           "mode": "required",
           "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
         },
-        "governance.promotion-rehearsal": {
-          "mode": "required",
-          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
-        },
         "source.acceptance": {
           "mode": "required",
           "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
@@ -1419,10 +1337,6 @@
           "reason": "Not selected by the current dev-pr workflow policy."
         },
         "product.verify-fuzz": {
-          "mode": "off",
-          "reason": "Not selected by the current dev-pr workflow policy."
-        },
-        "release.artifact-admission": {
           "mode": "off",
           "reason": "Not selected by the current dev-pr workflow policy."
         },
@@ -1536,10 +1450,6 @@
           "mode": "off",
           "reason": "Not selected by the current dev-patrol workflow policy."
         },
-        "governance.promotion-rehearsal": {
-          "mode": "off",
-          "reason": "Not selected by the current dev-patrol workflow policy."
-        },
         "source.acceptance": {
           "mode": "off",
           "reason": "Not selected by the current dev-patrol workflow policy."
@@ -1577,10 +1487,6 @@
           "reason": "Selected by the current dev-patrol workflow policy when its activation condition matches."
         },
         "product.verify-fuzz": {
-          "mode": "off",
-          "reason": "Not selected by the current dev-patrol workflow policy."
-        },
-        "release.artifact-admission": {
           "mode": "off",
           "reason": "Not selected by the current dev-patrol workflow policy."
         },
@@ -1694,10 +1600,6 @@
           "mode": "required",
           "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
         },
-        "governance.promotion-rehearsal": {
-          "mode": "required",
-          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
-        },
         "source.acceptance": {
           "mode": "off",
           "reason": "Not selected by the current alpha-pr workflow policy."
@@ -1737,10 +1639,6 @@
         "product.verify-fuzz": {
           "mode": "required",
           "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
-        },
-        "release.artifact-admission": {
-          "mode": "off",
-          "reason": "Not selected by the current alpha-pr workflow policy."
         },
         "layers.contract": {
           "mode": "required",
@@ -1829,164 +1727,6 @@
         "toolchain.libwasm-cache": {
           "mode": "off",
           "reason": "Not selected by the current alpha-pr workflow policy."
-        }
-      }
-    },
-    {
-      "id": "release-pr",
-      "title": "Release pull request",
-      "decisions": {
-        "gate.catalog": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "governance.dco": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "governance.adr-delivery": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "governance.buildchain-config": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "governance.promotion-rehearsal": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "source.acceptance": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "source.changed-scope": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "source.whole-tree": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "docs.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "docs.prose": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "docs.external-links": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "shifu.workspace": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "product.distribution": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "product.verify-full": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "product.verify-fuzz": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "release.artifact-admission": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "layers.contract": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "layers.format": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "layers.sdk": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "layers.surfaces": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "layers.release": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "episode.smoke": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "episode.release": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "embedding.membranes": {
-          "mode": "required",
-          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
-        },
-        "mmap.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "mmap.performance": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "durability.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "state-service.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "profile.suite": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "profile.lifecycle": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "profile.agent-sdk": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "profile.kfd3": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "runtime.durable-ingest": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "runtime.projection-bootstrap": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "runtime.crash-recovery": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "runtime.errors": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "toolchain.cpp-modules": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
-        },
-        "toolchain.libwasm-cache": {
-          "mode": "off",
-          "reason": "Not selected by the current release-pr workflow policy."
         }
       }
     },
@@ -1998,7 +1738,6 @@
         "governance.dco": { "mode": "off", "reason": "Measured only by its GitHub pull-request controller." },
         "governance.adr-delivery": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "governance.buildchain-config": { "mode": "off", "reason": "Measured only by its Buildchain validation controller." },
-        "governance.promotion-rehearsal": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "source.acceptance": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "source.changed-scope": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "source.whole-tree": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
@@ -2009,7 +1748,6 @@
         "product.distribution": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "product.verify-full": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "product.verify-fuzz": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
-        "release.artifact-admission": { "mode": "off", "reason": "Measured only by its source-locked Buildchain release-admission controller." },
         "layers.contract": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "layers.format": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
         "layers.sdk": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
@@ -2035,164 +1773,6 @@
       }
     },
     {
-      "id": "release-promotion",
-      "title": "Release promotion",
-      "decisions": {
-        "gate.catalog": {
-          "mode": "required",
-          "reason": "The promotion rehearsal enters through Shifu Gate and fail-closes catalog, documentation, matrix, and workflow drift first."
-        },
-        "governance.dco": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "governance.adr-delivery": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "governance.buildchain-config": {
-          "mode": "required",
-          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
-        },
-        "governance.promotion-rehearsal": {
-          "mode": "required",
-          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
-        },
-        "source.acceptance": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "source.changed-scope": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "source.whole-tree": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "docs.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "docs.prose": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "docs.external-links": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "shifu.workspace": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "product.distribution": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "product.verify-full": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "product.verify-fuzz": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "release.artifact-admission": {
-          "mode": "required",
-          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
-        },
-        "layers.contract": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "layers.format": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "layers.sdk": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "layers.surfaces": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "layers.release": {
-          "mode": "off",
-          "reason": "Seven-layer public-coordinate qualification runs only after its separately authorized layer publication; it cannot grant pre-publication product authority."
-        },
-        "episode.smoke": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "episode.release": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "embedding.membranes": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "mmap.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "mmap.performance": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "durability.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "state-service.contracts": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "profile.suite": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "profile.lifecycle": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "profile.agent-sdk": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "profile.kfd3": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "runtime.durable-ingest": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "runtime.projection-bootstrap": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "runtime.crash-recovery": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "runtime.errors": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "toolchain.cpp-modules": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        },
-        "toolchain.libwasm-cache": {
-          "mode": "off",
-          "reason": "Not selected by the current release-promotion workflow policy."
-        }
-      }
-    },
-    {
       "id": "layer-publication",
       "title": "Seven-layer public-coordinate qualification",
       "decisions": {
@@ -2200,7 +1780,6 @@
         "governance.dco": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "governance.adr-delivery": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "governance.buildchain-config": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
-        "governance.promotion-rehearsal": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "source.acceptance": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "source.changed-scope": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "source.whole-tree": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
@@ -2211,7 +1790,6 @@
         "product.distribution": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "product.verify-full": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "product.verify-fuzz": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
-        "release.artifact-admission": { "mode": "off", "reason": "Product publication authority is completed before this independent public-coordinate qualification." },
         "layers.contract": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "layers.format": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
         "layers.sdk": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },

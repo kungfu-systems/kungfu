@@ -452,7 +452,7 @@ def agent_activity_history_projection(
         "selfReportSettlesWork": False,
         "nextAction": "independent-assessment-required",
         "authority": {
-            "contract": "framework/data-protection/work-agent-history.contract.json",
+            "contract": "framework/core/data-protection/work-agent-history.contract.json",
             "semanticOwner": "profile-kfd-action-episode",
             "observer": "agent-session",
         },

@@ -1,21 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createRequire } from 'node:module';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { NativeKungfuJournalNoticePort } from '../src/runtime-port.mjs';
 
-const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(TEST_DIR, '..', '..', '..');
-const BINDING_PATH = path.join(
-  ROOT,
-  'framework',
-  'core',
-  'dist',
-  'kungfu',
-  'kungfu_node.node',
-);
 const require = createRequire(import.meta.url);
 // Core keeps the live-peer registration handshake open for 60 seconds. The
 // fixture must not declare failure earlier than the production contract,
@@ -48,7 +36,7 @@ if (!['writer', 'reader'].includes(role) || !runtimeDir) {
   );
 }
 
-const binding = require(BINDING_PATH);
+const binding = require('@kungfu-tech/core/native-binding');
 const port = new NativeKungfuJournalNoticePort({
   binding,
   runtimeDir,

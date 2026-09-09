@@ -17,7 +17,7 @@ import { runProjectCutProductLoopRelease } from './run-project-cut-product-loop-
 
 const contract = JSON.parse(
   fs.readFileSync(
-    'framework/work-loop/project-cut-product-loop.release-contract.json',
+    'framework/work/work-loop/project-cut-product-loop.release-contract.json',
     'utf8',
   ),
 );
@@ -329,12 +329,15 @@ test('executable runner derives source and emits digest-bound Shifu evidence', (
     path.join(os.tmpdir(), 'kungfu-project-cut-loop-runner-'),
   );
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(root, 'framework', 'work-loop'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'framework', 'work', 'work-loop'), {
+    recursive: true,
+  });
   fs.copyFileSync(
-    'framework/work-loop/project-cut-product-loop.release-contract.json',
+    'framework/work/work-loop/project-cut-product-loop.release-contract.json',
     path.join(
       root,
       'framework',
+      'work',
       'work-loop',
       'project-cut-product-loop.release-contract.json',
     ),

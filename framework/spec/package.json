@@ -15,6 +15,10 @@
     "access": "public"
   },
   "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./format/project-cut-canonical-json": "./format/project-cut-canonical-json.mjs"
+  },
   "bin": {
     "kungfu-spec": "bin/kungfu-spec.js"
   },
@@ -26,6 +30,12 @@
     "docs/reader-journey.json",
     "reference-readers/",
     "schema/",
+    "contract/",
+    "format/",
+    "incubation/",
+    "invariant/",
+    "primitive/",
+    "registry/",
     "dist/",
     "README.md",
     "CONSUMING.md"

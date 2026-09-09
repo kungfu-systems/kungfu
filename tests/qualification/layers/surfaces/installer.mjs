@@ -326,7 +326,7 @@ export function findGuiExecutable(installRoot) {
       installRoot,
       (target, entry) =>
         entry.isFile() &&
-        path.basename(target) === 'Kungfu Episodes' &&
+        path.basename(target) === 'Kungfu' &&
         target.includes(`${path.sep}Contents${path.sep}MacOS${path.sep}`),
       'macOS GUI executable',
     );
@@ -334,7 +334,7 @@ export function findGuiExecutable(installRoot) {
     return findOne(
       installRoot,
       (target, entry) =>
-        entry.isFile() && path.basename(target) === 'Kungfu Episodes.exe',
+        entry.isFile() && path.basename(target) === 'Kungfu.exe',
       'Windows GUI executable',
     );
   return findOne(

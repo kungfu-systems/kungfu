@@ -154,8 +154,9 @@ test('bootstrap publication is deterministic and pins signed release identity', 
     );
     const schema = JSON.parse(
       fs.readFileSync(
-        path.resolve(
-          'framework/upgrade/kungfu-bootstrap-installer.schema.json',
+        new URL(
+          '../upgrade/kungfu-bootstrap-installer.schema.json',
+          import.meta.url,
         ),
         'utf8',
       ),

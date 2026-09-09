@@ -267,7 +267,7 @@ test('cached pinned uv activates Work after Qualified Core materialization', (t)
   );
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const launcher = path.join(temp, 'shifu');
-  const capture = path.join(temp, 'framework', 'assignment-capture');
+  const capture = path.join(temp, 'framework', 'work', 'assignment-capture');
   const core = path.join(temp, 'framework', 'core');
   const dist = path.join(core, 'dist', 'kungfu');
   const cache = path.join(temp, 'cache');
@@ -429,7 +429,7 @@ test('work-design Work Design preflight is build-free on both shims', () => {
   }
   assert.match(
     readonly,
-    /framework[\\/]work-design-preflight[\\/]tooling[\\/]work-design-preflight\.mjs/u,
+    /framework[\\/]work[\\/]work-design-preflight[\\/]tooling[\\/]work-design-preflight\.mjs/u,
   );
   assert.doesNotMatch(
     readonly,
@@ -450,7 +450,7 @@ test('Work Design outcome feedback and status are build-free on both shims', () 
   }
   assert.match(
     readonly,
-    /framework[\\/]work-design-policy-replay[\\/]tooling[\\/]check-work-design-policy-replay\.mjs/u,
+    /framework[\\/]work[\\/]work-design-policy-replay[\\/]tooling[\\/]check-work-design-policy-replay\.mjs/u,
   );
   assert.doesNotMatch(
     readonly,

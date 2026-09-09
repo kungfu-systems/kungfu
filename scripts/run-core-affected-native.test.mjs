@@ -9,22 +9,22 @@ import test from 'node:test';
 
 import { createDiagnosticsArtifact } from '@kungfu-tech/buildchain-alpha/diagnostics';
 
-import { createExecutionAdmissionDecision } from '../framework/production-graph/admission/index.mjs';
+import { createExecutionAdmissionDecision } from '../developer/production-graph/admission/index.mjs';
 import {
   checkProductionGraphContract,
   materializeExecutionAdmissionFixture,
-} from '../framework/production-graph/check.mjs';
+} from '../developer/production-graph/check.mjs';
 import {
   contractRoot,
   createPlan,
   fileRoot,
   rooted,
   semanticRoot,
-} from '../framework/production-graph/contract.mjs';
+} from '../developer/production-graph/contract.mjs';
 import {
   runProductionGraphShadow,
   verifyProductionGraphShadowInput,
-} from '../framework/production-graph/contract.mjs';
+} from '../developer/production-graph/contract.mjs';
 import { observeNativeToolchain } from './affected-native-proof.mjs';
 import {
   affectedNativeWorkflowSdkProjection,
@@ -54,14 +54,15 @@ test('affected-native planning retains deleted source paths', () => {
 const workflowPath = '.github/workflows/affected-native-pr.yml';
 const architecture = JSON.parse(
   fs.readFileSync(
-    new URL('../framework/core/architecture/layers.json', import.meta.url),
+    new URL(import.meta.resolve('@kungfu-tech/core/architecture/layers.json')),
   ),
 );
 const buildAuthority = JSON.parse(
   fs.readFileSync(
     new URL(
-      '../framework/core/architecture/build-capabilities.json',
-      import.meta.url,
+      import.meta.resolve(
+        '@kungfu-tech/core/architecture/build-capabilities.json',
+      ),
     ),
   ),
 );
@@ -87,9 +88,9 @@ test('affected-native diagnostics accepts the declarative signing contract', () 
     diagnostics.buildchain.config.validation.signing.artifacts;
   assert.equal(cliArtifact.entitlementsProfile, 'jit-executable-v1');
   assert.deepEqual(cliArtifact.entitlementsPaths, [
-    'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
-    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
-    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+    'kungfu-cli-darwin-arm64/runtime/kungfu',
+    'kungfu-cli-darwin-arm64/runtime/python/bin/python3',
+    'kungfu-cli-darwin-arm64/runtime/python/bin/python3.13',
   ]);
 });
 
@@ -517,7 +518,7 @@ test('standalone execution admission verifies the live checkout cut', async (t) 
   const result = spawnSync(
     process.execPath,
     [
-      'framework/production-graph/admission/index.mjs',
+      'developer/production-graph/admission/index.mjs',
       '--request',
       fixture.options.executionAdmissionRequest,
     ],
@@ -724,7 +725,7 @@ test('graph feedback CLI preserves artifacts and keeps human and JSON facts alig
     ]),
   );
   const baseArgs = [
-    'framework/production-graph/feedback/index.mjs',
+    'developer/production-graph/feedback/index.mjs',
     '--graph',
     fixture.options.graph,
     '--plan',

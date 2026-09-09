@@ -16,7 +16,7 @@ platform. Product version numbers alone are not proof.
 | Can a major release break the contract? | **Only with a documented and qualified reader, export, or migration path for data from every still-supported qualified stable line.** Unknown majors fail closed. |
 
 The machine authority for these statements is
-[`kungfu-exit-bundle.contract.json`](../../framework/exit/kungfu-exit-bundle.contract.json),
+[`kungfu-exit-bundle.contract.json`](../../framework/core/exit/kungfu-exit-bundle.contract.json),
 under `supportPolicy`.
 
 ## What “same semantics” means

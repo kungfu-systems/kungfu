@@ -4,7 +4,7 @@ This page is generated from the append-only Era and Stage corpus. It is a
 longitudinal learning path, not a replacement for current architecture, runtime,
 or qualification authority.
 
-Coverage: **5 eras**, **12 stages**, and **40 evidence references**.
+Coverage: **5 eras**, **13 stages**, and **43 evidence references**.
 
 ## Era 1: Journal substrate
 
@@ -155,6 +155,16 @@ Initiative, Assignment, Work Control, Primitive governance, and native KFX manag
 **Compression:** Project-specific adapters, aliases, readers, fixtures, and terminology collapse into native product concepts with no compatibility path.
 
 [Open the immutable Stage record](stages/12-project-compatibility-zero-residue.md) for the full capability, authority transition, downstream consumers, and evidence.
+
+### 13. Framework package owner convergence
+
+**Period:** 2026-09-04 to ongoing · **Recorded status:** open
+
+**Pressure:** Framework mixed public npm packages with dozens of ownerless contract, internal-library, product, and repository-tool roots, so directory placement did not communicate distribution or semantic authority.
+
+**Compression:** Forty-six source-only framework roots converge into three semantic package owners or their product and developer homes, leaving framework as an npm-package-only boundary.
+
+[Open the immutable Stage record](stages/13-framework-package-owner-convergence.md) for the full capability, authority transition, downstream consumers, and evidence.
 
 ## Maintenance
 

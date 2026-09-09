@@ -22,7 +22,7 @@ test('electron-builder projections are deterministic and current', () => {
   const result = spawnSync(
     process.execPath,
     [
-      'framework/maintainability/semantic-amplification.mjs',
+      'developer/maintainability/semantic-amplification.mjs',
       '--electron-builder-config-check',
     ],
     { cwd: ROOT, encoding: 'utf8' },
@@ -73,6 +73,43 @@ test('product overlay preserves common policy and owns only product resources', 
     'kungfu-codex-app-server.contract.json',
     'schemas/**/*',
   ]);
+});
+
+test('desktop product identity converges on Kungfu without changing upgrade identity', () => {
+  const framework = readProjection('framework/gui/electron-builder.yml');
+  const product = readProjection('product/electron-builder.yml');
+  const productPackage = JSON.parse(
+    fs.readFileSync(
+      new URL(import.meta.resolve('@kungfu-tech/product-kungfu/package.json')),
+    ),
+  );
+  assert.equal(framework.appId, 'com.kungfu.app');
+  assert.equal(product.appId, 'com.kungfu.app');
+  assert.equal(framework.productName, 'Kungfu');
+  assert.equal(product.productName, 'Kungfu');
+  assert.equal(productPackage.kungfuProduct.displayName, 'Kungfu');
+
+  const sourceContracts = [
+    'framework/gui/src/main/product-identity.ts',
+    'framework/gui/src/renderer/index.html',
+    '.buildchain/buildchain.toml',
+    'scripts/publish-alpha-run.mjs',
+  ].map((file) =>
+    fs.readFileSync(new URL(`../../../${file}`, import.meta.url)),
+  );
+  for (const source of sourceContracts) {
+    assert.doesNotMatch(source.toString(), /Kungfu Episodes|Kungfu-Episodes/u);
+  }
+  assert.match(sourceContracts[0].toString(), /PRODUCT_NAME = 'Kungfu'/u);
+  assert.match(sourceContracts[1].toString(), /<title>Kungfu<\/title>/u);
+  assert.match(
+    sourceContracts[2].toString(),
+    /product\/dist\/desktop\/mac-arm64\/Kungfu\.app/u,
+  );
+  assert.match(sourceContracts[3].toString(), /Kungfu-\\d\+.*\\\.AppImage/u);
+  assert.match(sourceContracts[3].toString(), /Kungfu Setup \\d\+.*\\\.exe/u);
+  assert.match(sourceContracts[3].toString(), /-macos-arm64/u);
+  assert.match(sourceContracts[3].toString(), /Kungfu\.Setup\./u);
 });
 
 test('Windows uninstall retries the owned native runtime subtree', () => {

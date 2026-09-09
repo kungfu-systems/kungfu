@@ -16,7 +16,7 @@ import {
 
 const ROOT = process.cwd();
 const ENVELOPE_SCHEMA_PATH =
-  'framework/registry/schema/registry-envelope-v1.schema.json';
+  'framework/spec/registry/schema/registry-envelope-v1.schema.json';
 const readJson = (root, relative) =>
   JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
 

@@ -353,7 +353,7 @@ The tray menu exposes explicit lifecycle choices:
 - GUI startup runs `kungfu runtime ensure --json` against the resolved
   `KF_HOME` / `KF_RUNTIME_DIR` / `KF_CONFIG_HOME`, so product GUI sessions
   register the current data root with the per-user supervisor automatically.
-- `Show Kungfu Episodes` / `Hide Window` changes only the GUI window visibility.
+- `Show Kungfu` / `Hide Window` changes only the GUI window visibility.
 - The tray menu includes a read-only supervisor/coordinator summary and the current
   data root before the lifecycle actions.
 - `Runtime Status`, `Start Runtime`, and `Stop Runtime` call the same

@@ -78,9 +78,9 @@ jobs:
     name: Candidate source acceptance
     # Protected Buildchain merge 1342b7d preserves exact proof reuse when
     # GitHub omits a PR backlink while retaining every rooted source binding.
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@1342b7d68936ab3c31b58b255df1de49c234bc02
+    uses: kungfu-systems/buildchain/.github/workflows/public-build-check.yml@v4-alpha
     with:
-      buildchain-ref: 1342b7d68936ab3c31b58b255df1de49c234bc02
+      buildchain-ref: v4-alpha
       mode: source
       upload-artifacts: true
       source-proof-reuse: true
@@ -131,6 +131,7 @@ jobs:
           set -euo pipefail
           pull_request="$(jq -er '.pull_request.number' "$GITHUB_EVENT_PATH")"
           source_head="$(jq -er '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+          source_repository="$(jq -er '.pull_request.head.repo.full_name' "$GITHUB_EVENT_PATH")"
           protected_base="$(jq -er '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
           # pull_request runs use refs/pull/<number>/merge for GITHUB_REF_NAME;
           # only GITHUB_BASE_REF is the event's protected target branch.
@@ -148,6 +149,10 @@ jobs:
               exit 1
               ;;
           esac
+          if [ "$source_repository" != "$GITHUB_REPOSITORY" ]; then
+            echo "Fork candidate relies on the protected workflow_run bootstrap."
+            exit 0
+          fi
           payload="$(jq -cn \
             --arg targetBranch "$protected_base" \
             --argjson pullRequestNumber "$pull_request" \
@@ -164,7 +169,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate .buildchain/buildchain.toml
-        uses: kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d
+        uses: kungfu-systems/buildchain/actions/validate-config@v4-alpha
         with:
           require-version-state: "true"
           require-lifecycle-stages: "install,check,build,verify"
@@ -184,6 +189,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
       - name: Verify protected merge-queue replay
         if: ${{ github.event_name == 'pull_request' }}
         shell: bash
@@ -221,8 +229,6 @@ jobs:
             --candidate-tree "$candidate_tree"
       - name: Verify ADR delivery intent
         run: ./shifu gate run governance.adr-delivery
-      - name: Rehearse alpha and stable promotion contracts
-        run: ./shifu gate run governance.promotion-rehearsal
       - name: Plan exact dev candidate qualification
         id: plan
         shell: bash
@@ -319,6 +325,11 @@ jobs:
             echo "base_sha=${base_sha}"
             echo "head_sha=${head_sha}"
           } >> "$GITHUB_OUTPUT"
+      - name: Install declared proof bootstrap workspace packages
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+          node scripts/install-proof-bootstrap-packages.mjs
       - name: Capture exact family delivery binding
         id: delivery
         shell: bash
@@ -541,9 +552,9 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          # Read the floating-v3 qualified Warrant through the protected
+          # Read the v4 qualified Warrant through the protected
           # compatibility runtime locked by dev-queue-admission.contract.json.
-          ref: 98a4e38bd8423569e500dbbcad3667842171ab8f
+          ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -633,7 +644,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     strategy:
       fail-fast: false
@@ -652,6 +663,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: "24"
@@ -683,6 +695,11 @@ jobs:
             echo "base_sha=${base_sha}"
             echo "head_sha=${head_sha}"
           } >> "$GITHUB_OUTPUT"
+      - name: Install declared proof bootstrap workspace packages
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+          node scripts/install-proof-bootstrap-packages.mjs
       - name: Plan affected native closure from source
         id: plan
         shell: bash
@@ -847,9 +864,21 @@ jobs:
           output: product/qualification/affected-native/warrant-execution-${{ matrix.partition }}.json
           command: |
             set -euo pipefail
+            export GITHUB_WORKSPACE="$PWD"
             export GITHUB_BASE_SHA='${{ steps.revisions.outputs.base_sha }}'
             export GITHUB_HEAD_SHA='${{ steps.revisions.outputs.head_sha }}'
+            export KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
+            export KUNGFU_AFFECTED_NATIVE_PARTITION_COUNT=2
+            export KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX='${{ matrix.partition }}'
             export KUNGFU_AFFECTED_NATIVE_PLAN=product/qualification/affected-native/plan.json
+            export CC=gcc-14 CXX=g++-14
+            export KUNGFU_CANDIDATE_GATE_ID=source.changed-scope
+            export KUNGFU_CANDIDATE_TIMELINE_EVENTS="$PWD/product/qualification/affected-native/candidate-events.jsonl"
+            if [ '${{ steps.compiler-cache-tool.outputs.available }}' = true ]; then
+              export CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache
+              export CCACHE_BASEDIR="$PWD" CCACHE_NOHASHDIR=true
+              export CCACHE_COMPRESS=true CCACHE_MAXSIZE=1G
+            fi
             ./shifu install --frozen-lockfile
             if [ '${{ steps.plan.outputs.sdk-required }}' = true ] && [ '${{ matrix.partition }}' = 0 ]; then
               cmake_js_bin=""
@@ -971,12 +1000,13 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: 24
@@ -1012,10 +1042,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24"
@@ -1076,14 +1108,16 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          # Read the floating-v3 qualified Warrant without moving mutation
+          # Read the v4 qualified Warrant without moving mutation
           # authority out of the protected scheduler.
-          ref: 98a4e38bd8423569e500dbbcad3667842171ab8f
+          ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: "24"
+      - name: Install source workspace dependencies
+        run: ./shifu install --frozen-lockfile
       - name: Install pinned Buildchain proof runtime
         working-directory: .buildchain/dev-delivery-runtime
         run: |

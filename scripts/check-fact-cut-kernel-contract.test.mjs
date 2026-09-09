@@ -13,23 +13,33 @@ const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const Ajv2020 = optionalAjv2020();
 const contract = readJson(
-  'framework/fact/kungfu-fact-cut-kernel.contract.json',
+  'framework/core/fact/kungfu-fact-cut-kernel.contract.json',
 );
 const fixtures = readJson('tests/fixtures/fact-cut-kernel-contract/cases.json');
-const registry = readJson('framework/contract/kungfu-contracts.registry.json');
+const registry = readJson(
+  'framework/spec/contract/kungfu-contracts.registry.json',
+);
 const canonicalPolicy = readJson(
-  'framework/contract/kungfu-agent-first-canonical-policy.json',
+  'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
 );
 const portableAdr = read(
   'docs/adr/KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367.md',
 );
 const writerAuthority = readJson(
-  'framework/fact/kungfu-fact-writer-authority-v2.json',
+  'framework/core/fact/kungfu-fact-writer-authority-v2.json',
 );
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const OBJECT_PATTERN = /^fact:[0-9a-f]{32}$/;
 const REF_PATTERN = /^[a-z][a-z0-9._/-]{0,127}$/;
+const FACT_KERNEL_CHARACTERIZATION_FACADE =
+  'framework/core/tests/python/test_fact_kernel_characterization.py';
+const FACT_KERNEL_CHARACTERIZATION_OWNERS = [
+  'framework/core/tests/python/_fact_kernel_durability_cases.py',
+  'framework/core/tests/python/_fact_kernel_format_cases.py',
+  'framework/core/tests/python/_fact_kernel_recovery_cases.py',
+  'framework/core/tests/python/_fact_kernel_validation_cases.py',
+];
 
 const canonicalJson = (value) => {
   if (Array.isArray(value))
@@ -133,7 +143,7 @@ test('registers one accepted contract with the native writer stage implemented',
   assert.ok(entry);
   assert.equal(
     entry.source,
-    'framework/fact/kungfu-fact-cut-kernel.contract.json',
+    'framework/core/fact/kungfu-fact-cut-kernel.contract.json',
   );
   assert.equal(entry.weldedSurface, 'fact-cut-kernel-contract');
   assert.equal(
@@ -145,7 +155,7 @@ test('registers one accepted contract with the native writer stage implemented',
   );
   const sourceRoot = `sha256:${crypto
     .createHash('sha256')
-    .update(read('framework/fact/kungfu-fact-cut-kernel.contract.json'))
+    .update(read('framework/core/fact/kungfu-fact-cut-kernel.contract.json'))
     .digest('hex')}`;
   const policyEntry = canonicalPolicy.surfaces.find(
     (candidate) => candidate.surface === 'fact-cut-kernel',
@@ -202,8 +212,16 @@ test('keeps Fact lifecycle claims aligned with current implementation evidence',
   for (const evidence of contract.qualification.completedEvidence) {
     const [relative, testName] = evidence.test.split('::');
     assert.equal(fs.existsSync(path.join(ROOT, relative)), true, evidence.id);
-    if (testName)
-      assert.match(read(relative), new RegExp(`def ${testName}\\b`, 'u'));
+    if (!testName) continue;
+    const definition = new RegExp(`def ${testName}\\b`, 'u');
+    if (relative !== FACT_KERNEL_CHARACTERIZATION_FACADE) {
+      assert.match(read(relative), definition);
+      continue;
+    }
+    const owners = FACT_KERNEL_CHARACTERIZATION_OWNERS.filter((candidate) =>
+      definition.test(read(candidate)),
+    );
+    assert.deepEqual(owners.length, 1, `${evidence.id}: ${owners.join(', ')}`);
   }
 });
 
@@ -229,7 +247,7 @@ test('separates every authoritative role and freezes the Cut root inputs', () =>
   assert.equal(contract.rootCanonical.portable.writerDefault, true);
   assert.equal(
     contract.rootCanonical.portable.writerAuthority,
-    'framework/fact/kungfu-fact-writer-authority-v2.json',
+    'framework/core/fact/kungfu-fact-writer-authority-v2.json',
   );
   assert.equal(
     writerAuthority.writer.rootProtocol,
@@ -243,7 +261,7 @@ test('separates every authoritative role and freezes the Cut root inputs', () =>
   ]);
   assert.equal(
     contract.rootCanonical.portable.contract,
-    'framework/fact/kungfu-fact-root-canonical-v2.json',
+    'framework/core/fact/kungfu-fact-root-canonical-v2.json',
   );
   assert.equal(
     contract.rootCanonical.portable.corpus,
@@ -316,7 +334,7 @@ test('every declared falsifier fails for the declared reason', () => {
 
 test('the machine contract contains no product workflow vocabulary', () => {
   const machineContract = read(
-    'framework/fact/kungfu-fact-cut-kernel.contract.json',
+    'framework/core/fact/kungfu-fact-cut-kernel.contract.json',
   ).toLowerCase();
   for (const forbidden of ['pursuit', 'warrant', 'mission', 'goal', 'go-card'])
     assert.equal(

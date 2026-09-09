@@ -116,7 +116,7 @@
         "role": { "type": "string", "minLength": 1 },
         "maturity": { "$ref": "#/$defs/maturity" },
         "status": { "$ref": "#/$defs/status" },
-        "path": { "type": "string", "pattern": "^(docs|framework|extensions)/" },
+        "path": { "type": "string", "pattern": "^(?:(?:docs|framework|extensions)/|product/release/npm-package-registry\\.json$)" },
         "revision": { "$ref": "#/$defs/revision" },
         "coordinate": { "type": "string", "pattern": "^https://github\\.com/kungfu-systems/kungfu/blob/[0-9a-f]{40}/" },
         "contentRoot": { "$ref": "#/$defs/root" },

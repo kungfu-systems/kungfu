@@ -17,11 +17,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 function fixture() {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-v4-baseline-'));
   for (const relative of [
-    'framework/format/compatibility/v4-alpha',
-    'framework/format/kungfu-portable-format-authority.contract.json',
-    'framework/format/kungfu-required-reader.contract.json',
-    'framework/format/kungfu-format-migration.contract.json',
-    'framework/format/conformance/portable-format-vectors/index.json',
+    'framework/spec/format/compatibility/v4-alpha',
+    'framework/spec/format/kungfu-portable-format-authority.contract.json',
+    'framework/spec/format/kungfu-required-reader.contract.json',
+    'framework/spec/format/kungfu-format-migration.contract.json',
+    'framework/spec/format/conformance/portable-format-vectors/index.json',
   ]) {
     const source = path.join(ROOT, relative);
     const target = path.join(temp, relative);
@@ -33,10 +33,10 @@ function fixture() {
 
 test('accepts the immutable current v4 alpha baseline', () => {
   const result = checkPortableFormatBaseline();
-  assert.equal(result.release, '4.0.0-alpha.2');
+  assert.equal(result.release, '4.0.0-alpha.5');
   assert.equal(
     result.releaseRoot,
-    'sha256:297d25fa8b38b57ef7c43ab94096f266d1e8a88e48c81f86064d82b7c41cce55',
+    'sha256:b79b0228bdb566d8f721430c5d81bf897db59f151a690d82f1838e0bdc38ef17',
   );
   assert.equal(result.sources, 4);
 });
@@ -45,7 +45,10 @@ test('rejects an authority mutation without an explicit successor', () => {
   const temp = fixture();
   try {
     fs.appendFileSync(
-      path.join(temp, 'framework/format/kungfu-required-reader.contract.json'),
+      path.join(
+        temp,
+        'framework/spec/format/kungfu-required-reader.contract.json',
+      ),
       ' ',
     );
     assert.throws(

@@ -5,8 +5,8 @@
   "repository": "kungfu-systems/kungfu",
   "adrRoots": ["docs/adr"],
   "deprecationLifecycle": {
-    "contract": "framework/deprecation/deprecation-lifecycle.contract.json",
-    "registry": "framework/deprecation/deprecation-registry.json",
+    "contract": "developer/deprecation/deprecation-lifecycle.contract.json",
+    "registry": "developer/deprecation/deprecation-registry.json",
     "candidateVersionFile": "framework/core/package.json"
   },
   "dev": {

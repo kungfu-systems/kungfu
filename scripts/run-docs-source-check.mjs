@@ -49,7 +49,6 @@ try {
     path.join('scripts', 'adr-navigation.test.mjs'),
     path.join('scripts', 'evolution-map.test.mjs'),
     path.join('scripts', 'adr-release-gate.test.mjs'),
-    path.join('scripts', 'release-promotion-rehearsal.test.mjs'),
     path.join('scripts', 'check-docs.test.mjs'),
     path.join('scripts', 'document-metadata-contract.test.mjs'),
     path.join('scripts', 'vocabulary-contract.test.mjs'),

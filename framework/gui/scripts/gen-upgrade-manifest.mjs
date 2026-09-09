@@ -4,7 +4,7 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { writeBundledUpgradeManifest } from '../../../product/scripts/upgrade-manifest.mjs';
+import { writeBundledUpgradeManifest } from '@kungfu-tech/product-kungfu/tooling/upgrade-manifest';
 
 const guiDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const root = path.resolve(guiDir, '..', '..');

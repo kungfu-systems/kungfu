@@ -153,7 +153,7 @@
     {
       "context_status": "complete",
       "critical_sources": [
-        "framework/episode-provider/README.md",
+        "framework/work/episode-provider/README.md",
         "docs/architecture/episode-manifest-trust-boundary.md"
       ],
       "critical_sources_recalled": 2,
@@ -219,7 +219,7 @@
       "context_status": "complete",
       "critical_sources": [
         "docs/adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md",
-        "framework/project-cut/README.md"
+        "framework/work/project-cut/README.md"
       ],
       "critical_sources_recalled": 2,
       "expansion_handles": 0,
@@ -240,7 +240,7 @@
     {
       "context_status": "complete",
       "critical_sources": [
-        "framework/project-cut/README.md",
+        "framework/work/project-cut/README.md",
         "docs/guides/xinfa-agent-context.md"
       ],
       "critical_sources_recalled": 2,
@@ -262,7 +262,7 @@
     {
       "context_status": "complete",
       "critical_sources": [
-        "framework/project-cut/README.md"
+        "framework/work/project-cut/README.md"
       ],
       "critical_sources_recalled": 1,
       "expansion_handles": 0,

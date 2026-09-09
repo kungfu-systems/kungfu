@@ -18,7 +18,7 @@ from scripts.prepare_kungfu_phase_b_package import (
 SOURCE_SHA = "a" * 40
 BUILD_IMAGES_SHA = "b" * 40
 VERSION = "4.0.0-alpha.1"
-ROOT = "kungfu-episodes-cli-linux-x64"
+ROOT = "kungfu-cli-linux-x64"
 
 
 def metadata_files(

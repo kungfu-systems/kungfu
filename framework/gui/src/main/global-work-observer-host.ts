@@ -75,7 +75,7 @@ function cachedObserverSnapshot(value: string): GlobalWorkObserverEvent | null {
     };
     const query = state.query;
     const globalWork = query?.global_work as
-      | { visible_work?: unknown }
+      | Record<string, unknown>
       | undefined;
     if (
       state.schema !== 'kungfu.gui.global-work-observer/v2' ||
@@ -92,7 +92,30 @@ function cachedObserverSnapshot(value: string): GlobalWorkObserverEvent | null {
         typeof query.observed_at === 'string' ? query.observed_at : '',
       latency_ms: 0,
       changed_workspace_ids: [],
-      snapshot: query,
+      snapshot: {
+        schema: 'kungfu.gui.global-work-snapshot/v1',
+        observed_at: query.observed_at,
+        aggregate: query.aggregate,
+        verification: query.verification,
+        proof: {
+          proof_root: (query.proof as Record<string, unknown> | undefined)
+            ?.proof_root,
+          catalog_cut: (query.proof as Record<string, unknown> | undefined)
+            ?.catalog_cut,
+          catalog_changed_during_query: (
+            query.proof as Record<string, unknown> | undefined
+          )?.catalog_changed_during_query,
+        },
+        global_work: {
+          schema: globalWork.schema,
+          projection_root: globalWork.projection_root,
+          visible_work: globalWork.visible_work,
+          visible_work_count: globalWork.visible_work_count,
+          canonical_work_count: globalWork.canonical_work_count,
+          conflict_count: globalWork.conflict_count,
+          label_collision_count: globalWork.label_collision_count,
+        },
+      },
     };
   } catch {
     return null;
@@ -245,16 +268,22 @@ export function bindElectronGlobalWorkObserver(
   host: ReturnType<typeof createGlobalWorkObserverHost>,
 ) {
   const cleanupWired = new Set<number>();
+  const subscriptionCounts = new Map<number, number>();
   ipcMain.handle(GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL, (event) => {
     const sender = event.sender;
     const clientKey = String(sender.id);
     if (!cleanupWired.has(sender.id)) {
       cleanupWired.add(sender.id);
       sender.once?.('destroyed', () => {
+        subscriptionCounts.delete(sender.id);
         host.unsubscribe(clientKey);
         cleanupWired.delete(sender.id);
       });
     }
+    subscriptionCounts.set(
+      sender.id,
+      (subscriptionCounts.get(sender.id) ?? 0) + 1,
+    );
     host.subscribe(clientKey, (payload) => {
       if (!sender.isDestroyed?.()) {
         sender.send(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, payload);
@@ -263,11 +292,19 @@ export function bindElectronGlobalWorkObserver(
     return undefined;
   });
   ipcMain.handle(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL, (event) => {
-    host.unsubscribe(String(event.sender.id));
+    const senderId = event.sender.id;
+    const count = subscriptionCounts.get(senderId) ?? 0;
+    if (count <= 1) {
+      subscriptionCounts.delete(senderId);
+      host.unsubscribe(String(senderId));
+    } else {
+      subscriptionCounts.set(senderId, count - 1);
+    }
     return undefined;
   });
   return {
     dispose() {
+      subscriptionCounts.clear();
       host.dispose();
       ipcMain.removeHandler(GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL);
       ipcMain.removeHandler(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL);

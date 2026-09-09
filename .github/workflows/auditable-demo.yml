@@ -6,7 +6,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
-      - alpha/v*/v*
       - release/v*/v*
   workflow_dispatch:
     inputs:
@@ -40,10 +39,11 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
+    uses: kungfu-systems/buildchain/.github/workflows/.build-engine.yml@v4-alpha
     with:
-      buildchain-ref: 41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-visible-workflow: .github/workflows/.build-engine.yml
+      buildchain-ref: v4-alpha
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: off
       runner-preset: custom
@@ -59,11 +59,11 @@ jobs:
       artifact-name: kungfu
       artifact-name-template: "{artifact}-{platform}-{sha}"
       artifact-paths: |
-        product/dist/cli/kungfu-episodes-cli-linux-x64
+        product/dist/cli/kungfu-cli-linux-x64
       pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo-transport-smoke.json
       pre-upload-transport-smoke-artifact-root: .
       expected-artifacts-json: >-
-        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu","product/dist/cli/kungfu-episodes-cli-linux-x64/auditable-demo-binary.json"]}
+        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/dist/cli/kungfu-cli-linux-x64/kungfu","product/dist/cli/kungfu-cli-linux-x64/auditable-demo-binary.json"]}
       release-candidate: false
       publish-channel: none
       artifact-retention-days: 14
@@ -153,7 +153,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
+    uses: kungfu-systems/buildchain/.github/workflows/public-build-demo.yml@v4-alpha
     secrets:
       DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
     with:

@@ -10,13 +10,13 @@ import test from 'node:test';
 const ROOT = process.cwd();
 const protocol = JSON.parse(
   fs.readFileSync(
-    path.join(ROOT, 'framework/fact/kungfu-fact-root-canonical-v2.json'),
+    path.join(ROOT, 'framework/core/fact/kungfu-fact-root-canonical-v2.json'),
     'utf8',
   ),
 );
 const writerAuthority = JSON.parse(
   fs.readFileSync(
-    path.join(ROOT, 'framework/fact/kungfu-fact-writer-authority-v2.json'),
+    path.join(ROOT, 'framework/core/fact/kungfu-fact-writer-authority-v2.json'),
     'utf8',
   ),
 );

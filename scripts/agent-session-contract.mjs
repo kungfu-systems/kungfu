@@ -331,7 +331,13 @@ export async function checkAgentSessionContract(root = ROOT) {
   const fixtureRoot = path.join(root, path.relative(ROOT, FIXTURE_ROOT));
   const contract = readJson(contractPath);
   const registry = readJson(
-    path.join(root, 'framework', 'contract', 'kungfu-contracts.registry.json'),
+    path.join(
+      root,
+      'framework',
+      'spec',
+      'contract',
+      'kungfu-contracts.registry.json',
+    ),
   );
   if (contract.schema !== 'kungfu.agent-session.contract/v1')
     throw new Error('agent-session contract schema mismatch');

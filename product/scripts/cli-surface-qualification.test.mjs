@@ -232,7 +232,7 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
     expectedCatalog: catalog(),
     label: 'cli-archive',
     identity: {
-      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archive: 'kungfu-cli-fixture.tar.gz',
       archiveSha256: `sha256:${'a'.repeat(64)}`,
       sourceCommit: '1'.repeat(40),
     },
@@ -363,7 +363,7 @@ test('verification binds the qualification to the exact archive digest', () => {
     expectedCatalog: catalog(),
     label: 'cli-archive',
     identity: {
-      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archive: 'kungfu-cli-fixture.tar.gz',
       archiveSha256: `sha256:${'a'.repeat(64)}`,
       sourceCommit: '1'.repeat(40),
     },
@@ -387,7 +387,7 @@ test('verification rejects a tampered qualification root', () => {
     expectedCatalog: catalog(),
     label: 'cli-archive',
     identity: {
-      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archive: 'kungfu-cli-fixture.tar.gz',
       archiveSha256: `sha256:${'a'.repeat(64)}`,
       sourceCommit: '1'.repeat(40),
     },
@@ -412,7 +412,7 @@ test('verification rejects a qualified platform OS non-claim', () => {
     expectedCatalog: catalog(),
     label: 'cli-archive',
     identity: {
-      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archive: 'kungfu-cli-fixture.tar.gz',
       archiveSha256: `sha256:${'a'.repeat(64)}`,
       sourceCommit: '1'.repeat(40),
     },

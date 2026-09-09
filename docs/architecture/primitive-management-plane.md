@@ -53,7 +53,7 @@ must carry both:
 - a top-level `primitiveId` matching its passport declaration.
 
 The source gate scans every tracked or unignored JSON file in the repository,
-not only `framework/primitive/`. A marker outside the conventional scaffold
+not only `framework/spec/primitive/`. A marker outside the conventional scaffold
 directories is therefore still governed and fails closed when it is missing
 from the matching passport. Files inside the managed contract, operation-slot,
 SDK-slot, and primitive-vector roots remain governed even if their marker is

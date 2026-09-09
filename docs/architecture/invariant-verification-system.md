@@ -13,9 +13,9 @@ authoritative domain contract + domain model
 ```
 
 The machine contract is
-[`framework/invariant/kungfu-invariant-system.contract.json`](../../framework/invariant/kungfu-invariant-system.contract.json).
+[`framework/spec/invariant/kungfu-invariant-system.contract.json`](../../framework/spec/invariant/kungfu-invariant-system.contract.json).
 The registry is
-[`framework/invariant/kungfu-invariant.registry.json`](../../framework/invariant/kungfu-invariant.registry.json).
+[`framework/spec/invariant/kungfu-invariant.registry.json`](../../framework/spec/invariant/kungfu-invariant.registry.json).
 
 ## Ownership boundary
 

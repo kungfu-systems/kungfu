@@ -1,0 +1,88 @@
+{
+  "schema": "kungfu.durable-history-qualification.contract/v1",
+  "id": "kungfu-durable-history-source-qualification",
+  "version": 1,
+  "status": {
+    "sourceQualification": "accepted",
+    "installedQualification": "not-qualified",
+    "stableReleaseQualification": "not-qualified",
+    "offHostQualification": "not-qualified",
+    "platformExpansion": "deferred"
+  },
+  "authority": {
+    "kind": "qualification-composition",
+    "contract": "framework/core/data-protection/kungfu-data-protection.contract.json",
+    "rule": "The qualification receipt proves only the declared source, artifact, campaign, and review closure. Work, Fact, Episode, Cut, Product Release Cut, receipt, schema, interpreter, and Exit Bundle owners remain authoritative.",
+    "observerRule": "A gate, receipt, report, UI, cache, worktree, or test runner never becomes semantic history authority."
+  },
+  "entrypointMatrix": [
+    {"id": "gui", "surface": "GUI All Work, Projects, Agent Work Lab, Update, and History", "authorityRoute": "owner-domain receipt through Core status/actions", "proof": "scripts/check-exit-history-surfaces.test.mjs"},
+    {"id": "tui", "surface": "TUI All Work, Projects, Run Agent, and History", "authorityRoute": "owner-domain receipt through Core status/actions", "proof": "scripts/check-exit-history-surfaces.test.mjs"},
+    {"id": "cli", "surface": "kungfu project, run, agent, update, and exit history", "authorityRoute": "typed owner command and receipt", "proof": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json"},
+    {"id": "native-agent", "surface": "native Agent UI and native provider run", "authorityRoute": "Work/Profile action followed by native Fact/Episode admission", "proof": "framework/core/data-protection/work-agent-history.contract.json"},
+    {"id": "managed-agent", "surface": "managed Codex, Claude, and OpenCode runs", "authorityRoute": "the same Work/Profile and Fact/Episode authority as native runs", "proof": "framework/agent-session/kungfu-agent-session.contract.json"},
+    {"id": "skill-kfd", "surface": "Skill Envelope and KFD APIs", "authorityRoute": "typed Core action geometry; Skill and KFD are transports", "proof": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"},
+    {"id": "project-cut-dogfood", "surface": "Project Cut, Assignment, and Dogfood projections", "authorityRoute": "native Profile, Fact, Episode, and Work owner receipts", "proof": "framework/core/data-protection/project-cut-dogfood-history.contract.json"},
+    {"id": "shifu", "surface": "Shifu build, qualification, and protected delivery", "authorityRoute": "source and artifact evidence only; build logs are excluded", "proof": "package.json"},
+    {"id": "project-cut", "surface": "Project Cut settlement and publication", "authorityRoute": "project.cut/v1 roots and owner receipts", "proof": "framework/work/project-cut/README.md"},
+    {"id": "product-release-cut", "surface": "Product Release Cut and Cut Transition", "authorityRoute": "exact release, platform slice, transition, and manifest roots", "proof": "framework/core/data-protection/product-release-cut-portability.contract.json"},
+    {"id": "update-release", "surface": "update, release selection, activation, and rollback", "authorityRoute": "verified Product Release Cut transition; cache and SemVer are not authority", "proof": "product/upgrade/kungfu-product-release-cut.contract.json"},
+    {"id": "exit-bundle", "surface": "history status, verify, full/thin export, import, and rebuild", "authorityRoute": "Exit Bundle composes exact descriptors and delegates verification to member owners", "proof": "framework/core/exit/kungfu-exit-bundle.contract.json"}
+  ],
+  "campaigns": {
+    "corpus": "tests/fixtures/durable-history-qualification/campaigns.json",
+    "required": ["clean-full-import", "thin-import-explicit-loss", "predecessor-version-migration", "interrupted-write", "interrupted-import", "interrupted-upgrade", "cache-deletion", "worktree-and-ui-session-loss", "qualified-rollback", "unknown-required-member", "gc-with-retained-recovery-root"],
+    "homePolicy": "disposable-only",
+    "warmStateRule": "Every recovery campaign starts from retained authority or exported bytes and must not require a warm cache, original worktree, or original UI session.",
+    "failureRule": "A campaign either reconstructs the declared identities and relationships under exact roots or refuses before mutation with the expected diagnostic."
+  },
+  "receipt": {
+    "schema": "kungfu.durable-history-qualification.receipt/v1",
+    "rootProtocol": "sha256-kungfu-durable-history-qualification-receipt-canonical-json-v1",
+    "requiredBindings": ["sourceRevision", "sourceSetRoot", "nativeArtifactRoot", "schemaRoot", "interpreterRoot", "contractRoot", "entrypointMatrixRoot", "bundleContractRoot", "migrationContractRoot", "campaignCorpusRoot", "campaignResultRoot", "executionRoot", "assessmentRoot", "boundedClaimRoot", "reviewRoot"],
+    "sourceClosure": [
+      "framework/core/data-protection/kungfu-data-protection.contract.json",
+      "framework/core/data-protection/durable-history-qualification.contract.json",
+      "framework/core/data-protection/work-agent-history.contract.json",
+      "framework/core/data-protection/project-cut-dogfood-history.contract.json",
+      "framework/core/data-protection/product-release-cut-portability.contract.json",
+      "product/contracts/project-work-agent.contract.json",
+      "framework/agent-session/kungfu-agent-session.contract.json",
+      "framework/work/project-cut/README.md",
+      "framework/core/exit/kungfu-exit-bundle.contract.json",
+      "product/upgrade/kungfu-product-release-cut.contract.json",
+      "docs/qualification/project-cut-product-loop.md",
+      "docs/evolution/stages/10-product-release-cut-updater.md",
+      "docs/adr/KF-ADR-019fbee3-68b1-7154-a6d2-860b9506dccd.md",
+      "framework/core/data-protection/README.md",
+      "tests/fixtures/durable-history-qualification/campaigns.json",
+      "scripts/check-durable-history-qualification.test.mjs",
+      "scripts/durable-history-qualification.mjs",
+      "scripts/source-acceptance.mjs",
+      "package.json"
+    ],
+    "privacyExclusions": ["credentials and provider authentication state", "hidden reasoning and raw private prompts", "full transcripts and unbounded terminal bytes", "real user home paths and unrelated files"]
+  },
+  "independentReview": {
+    "required": true,
+    "mustVerify": ["authority-separation", "privacy-exclusions", "migration-correctness", "original-exit-signals-remain-activity-only", "no-warm-cache-dependency", "no-original-ui-session-dependency"],
+    "terminalRule": "The review must bind the exact protected head and find the bounded claim fit before native close and seal."
+  },
+  "boundedClaim": {
+    "status": "source-qualified",
+    "statement": "At the exact source revision and native artifact roots in the receipt, the declared disposable campaigns prove software continuity, verifiable full export/import, explicit thin loss, supported copy-forward migration, bounded rollback, and fail-closed recovery across the declared entrypoint routes.",
+    "supportedScope": "exact-source and exact-artifact local functional qualification",
+    "supportWindow": "only declared readers and migration edges; no arbitrary-future or unsupported downgrade promise",
+    "doesNotPromote": ["installed product", "stable or public release", "physical-media durability", "off-host backup", "all-platform behavior"]
+  },
+  "deferred": [
+    {"id": "long-duration-soak", "status": "deferred", "reason": "Bounded deterministic qualification does not substitute for extended runtime observation."},
+    {"id": "off-host-backup-restore", "status": "deferred", "reason": "A local export/import does not prove an independent failure-domain copy."},
+    {"id": "platform-expansion", "status": "deferred", "reason": "Each packaged platform needs exact artifact execution and retained evidence."}
+  ],
+  "qualification": {
+    "gate": "./shifu check:durable-history-qualification",
+    "test": "scripts/check-durable-history-qualification.test.mjs",
+    "receiptCommand": "node scripts/durable-history-qualification.mjs --json"
+  }
+}

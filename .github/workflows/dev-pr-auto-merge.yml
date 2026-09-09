@@ -48,6 +48,11 @@ on:
         required: false
         type: string
         default: ""
+      native-roots-json:
+        description: Handoff compatibility only; native roots are rebuilt from exact source evidence
+        required: false
+        type: string
+        default: ""
       initiative-root:
         description: Handoff compatibility only; rebuilt from the exact source descriptor
         required: false
@@ -352,7 +357,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad
+          ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -373,6 +378,17 @@ jobs:
         shell: bash
         # shifu-entry-contract: allow bootstrapping the separately checked-out exact Buildchain runtime
         run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Install protected Work consumer dependencies
+        if: >-
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        shell: bash
+        # Project Cut executes from the protected checkout and resolves only
+        # the production workspace dependencies declared by @kungfu-tech/work. Keep the
+        # Warrant consumer independent of candidate or developer node_modules.
+        # shifu-entry-contract: allow protected Work dependency bootstrap before the candidate launcher is trusted
+        run: corepack pnpm install --filter '@kungfu-tech/work...' --prod --frozen-lockfile --ignore-scripts
 
       - name: Verify exact source qualification run
         if: >-
@@ -432,6 +448,14 @@ jobs:
           run-id: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
           github-token: ${{ github.token }}
 
+      - name: Install declared proof bootstrap workspace packages
+        if: >-
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow offline workspace package installation before the full toolchain is runnable
+          node scripts/install-proof-bootstrap-packages.mjs
       - name: Project Buildchain Warrant inputs
         id: contract
         if: >-
@@ -591,7 +615,7 @@ jobs:
           qualification_output=.buildchain/dev-delivery-input/project-cut-qualification.log
           proof=.buildchain/dev-delivery-input/project-cut-proof.json
 
-          test "$GITHUB_REPOSITORY" = "$(jq -r '.head.repo.full_name' "$pull_request")"
+          test "$GITHUB_REPOSITORY" = "$(jq -r '.base.repo.full_name' "$pull_request")"
           test "$TARGET_BRANCH" = "$(jq -r '.base.ref' "$pull_request")"
           test "$EXPECTED_HEAD" = "$(jq -r '.head.sha' "$pull_request")"
           current_base="$(git rev-parse 'HEAD^{commit}')"
@@ -663,12 +687,12 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    # Keep admission, native-check landing, and runtime checkout on one exact
-    # Buildchain SHA. A bootstrap upgrade must use a fresh source-run retry
+    # Keep admission, native-check landing, and runtime checkout on the same
+    # governed Buildchain v4 channel. An upgrade must use a fresh source-run retry
     # budget; it must not reuse an already-consumed CheckRun attempt.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad
+    uses: kungfu-systems/buildchain/.github/workflows/public-ops-dev-auto-merge.yml@v4-alpha
     with:
-      buildchain-ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad
+      buildchain-ref: v4-alpha
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -703,7 +727,10 @@ jobs:
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
       delivery-priority: ${{ needs.delivery-contract.outputs.priority || 'ordinary' }}
-      warrant-lease-seconds: 5400
+      # The qualified Warrant must remain live across the bounded 120-minute
+      # source retry plus the protected merge-group qualification.  A 90-minute
+      # lease expires deterministically between those two fail-closed stages.
+      warrant-lease-seconds: 14400
       required-status-checks: |-
         Candidate source acceptance / check
       queue-admission-context: Queue admission lease
@@ -820,12 +847,14 @@ jobs:
             --arg repository "$GITHUB_REPOSITORY" \
             --arg branch "$TARGET_BRANCH" \
             --arg head "$EXPECTED_HEAD" \
-            '.head.repo.full_name == $repository
+             '.base.repo.full_name == $repository
+             and (.head.repo.full_name | type == "string" and length > 0)
              and .head.sha == $head
              and .base.ref == $branch
              and .state == "open"' \
             "$live_pr" >/dev/null
 
+          source_head_repository="$(jq -er '.head.repo.full_name' "$live_pr")"
           native_root="$(jq -er '.warrant.nativeProofRoot' "$warrant")"
           qualification_root="$(jq -er '.receiptRoot' "$warrant")"
           state_root="$(jq -er '.after.stateRoot' "$warrant")"
@@ -834,14 +863,14 @@ jobs:
           source_run_prior="$evidence/source-workflow-run-prior.json"
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$source_run_prior"
           jq -e \
-            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceHeadRepository "$source_head_repository" \
             --arg head "$EXPECTED_HEAD" \
             --argjson sourceRun "$SOURCE_RUN_ID" \
             '.id == $sourceRun
              and .name == "Core affected native"
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
-             and .head_repository.full_name == $repository
+             and .head_repository.full_name == $sourceHeadRepository
              and .head_sha == $head
              and .status == "completed"
              and (.conclusion == "failure" or .conclusion == "success")
@@ -912,7 +941,7 @@ jobs:
           fi
 
           jq -e \
-            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceHeadRepository "$source_head_repository" \
             --arg head "$EXPECTED_HEAD" \
             --argjson sourceRun "$SOURCE_RUN_ID" \
             --argjson expectedAttempt "$expected_attempt" \
@@ -920,7 +949,7 @@ jobs:
              and .name == "Core affected native"
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
-             and .head_repository.full_name == $repository
+             and .head_repository.full_name == $sourceHeadRepository
              and .head_sha == $head
              and .run_attempt == $expectedAttempt
              and .status == "completed"
@@ -1026,9 +1055,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad
+    uses: kungfu-systems/buildchain/.github/workflows/public-ops-dev-auto-merge.yml@v4-alpha
     with:
-      buildchain-ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad
+      buildchain-ref: v4-alpha
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -1063,7 +1092,9 @@ jobs:
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
       delivery-priority: ${{ needs.delivery-contract.outputs.priority || 'ordinary' }}
-      warrant-lease-seconds: 5400
+      # Preserve the same exact-candidate lease window when the deferred
+      # landing call consumes the already-qualified Warrant.
+      warrant-lease-seconds: 14400
       required-status-checks: |-
         Candidate source acceptance / check
       queue-admission-context: Queue admission lease

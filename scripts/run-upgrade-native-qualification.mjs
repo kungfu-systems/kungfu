@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { sha256File } from '../product/scripts/compatibility.mjs';
+import { sha256File } from '@kungfu-tech/product-kungfu/tooling/compatibility';
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,
@@ -163,8 +163,7 @@ export function verifyWindows(root, manifest) {
   const installer = artifactPath(root, desktop);
   const executable = findExactlyOne(
     path.join(root, 'product', 'dist', 'desktop'),
-    (target, entry) =>
-      entry.isFile() && path.basename(target) === 'Kungfu Episodes.exe',
+    (target, entry) => entry.isFile() && path.basename(target) === 'Kungfu.exe',
     'packaged Windows application',
   );
   for (const [label, target] of [

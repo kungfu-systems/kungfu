@@ -73,13 +73,14 @@ function assertMessageRegistry(contract) {
 export function checkUpgradeContract(root = ROOT) {
   const contractPath = path.join(
     root,
-    'framework',
+    'product',
     'upgrade',
     'kungfu-upgrade.contract.json',
   );
   const registryPath = path.join(
     root,
     'framework',
+    'spec',
     'contract',
     'kungfu-contracts.registry.json',
   );
@@ -113,7 +114,7 @@ export function checkUpgradeContract(root = ROOT) {
     throw new Error(
       'upgrade contract is not welded into the contract registry',
     );
-  if (entry.source !== 'framework/upgrade/kungfu-upgrade.contract.json')
+  if (entry.source !== 'product/upgrade/kungfu-upgrade.contract.json')
     throw new Error('upgrade registry source path drifted');
 
   assertUnique(

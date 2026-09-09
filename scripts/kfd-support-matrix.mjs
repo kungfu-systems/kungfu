@@ -241,9 +241,9 @@ function validateMatrix(
   }
   const kfd6Precursor = kfd6.precursorEvidence;
   const expectedKfd6PrecursorSurfaces = [
-    'framework/work-design-advisor/work-design-advisor.contract.json',
-    'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
-    'framework/project-cut/README.md',
+    'framework/work/work-design-advisor/work-design-advisor.contract.json',
+    'framework/work/work-design-policy-replay/work-design-policy-replay.contract.json',
+    'framework/work/project-cut/README.md',
   ];
   const expectedKfd6MissingGates = [
     'plural genesis methods and declared budgets',
@@ -316,9 +316,9 @@ function validateMatrix(
   );
   if (
     kfd5SurfaceListRoot !==
-      'sha256:997e161669402b0e6944397a8f017337b3834dd12bc06e214275cc8ebbaab7a8' ||
+      'sha256:709a309ca5b6d5caae718d9d2f39742d37fa951f03a3e458d38266a7749f1a75' ||
     kfd5EvidenceListRoot !==
-      'sha256:b6ea1bdc1dd7af92a25c5bc9004e85eab6386f4225becb196159f8af6509bcf5'
+      'sha256:fc7d24cc5272f8d6393353b59010c63bc66f83194d2006ec5d65186d0c82e19e'
   ) {
     fail('KFD-5 Primitive Management evidence drifted');
   }

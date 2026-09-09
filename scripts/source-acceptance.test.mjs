@@ -793,7 +793,7 @@ test('source plan covers representative source-only checks', () => {
     (step) => step.label === 'agent-first canonical policy',
   );
   assert.deepEqual(canonicalPolicy.args, [
-    'developer/sdk/src/sdk.js',
+    fileURLToPath(import.meta.resolve('@kungfu-tech/sdk')),
     'contract',
     'policy',
     '--check',
@@ -803,7 +803,7 @@ test('source plan covers representative source-only checks', () => {
     (step) => step.label === 'agent-first contract audit',
   );
   assert.deepEqual(contractAudit.args, [
-    'developer/sdk/src/sdk.js',
+    fileURLToPath(import.meta.resolve('@kungfu-tech/sdk')),
     'contract',
     'audit',
     '--json',
@@ -1153,47 +1153,15 @@ test('source plan cannot enter build, compiler, artifact, or release lifecycles'
   );
 });
 
-test('reusable workflow is bound to source mode and the pinned stable runtime', () => {
+test('reusable workflow is bound to source mode and the governed v4 Alpha runtime', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/source-acceptance.yml'),
     'utf8',
   );
   assert.match(workflow, /mode: source/);
-  assert.match(workflow, /check\.yml@9e904de2c85dbea7c799780ee166510b3336d812/);
-  assert.match(workflow, /buildchain-ref: v3/);
+  assert.match(workflow, /public-build-check\.yml@v4-alpha/);
+  assert.match(workflow, /buildchain-ref: v4-alpha/);
   assert.doesNotMatch(workflow, /self-hosted/);
-});
-
-test('manual package build is welded to the reviewed Phase B consumer', () => {
-  const workflow = fs.readFileSync(
-    path.join(ROOT, '.github/workflows/build.yml'),
-    'utf8',
-  );
-  assert.match(workflow, /run-kungfu-phase-b:\n\s+description:/);
-  assert.match(
-    workflow,
-    /prepare_kungfu_phase_b_package\.py[\s\S]+--build-images-ref "v1\.2\.4-alpha\.30"[\s\S]+--build-images-sha "3056c23e70b83f5bb63062f04027a93e79039e4b"/,
-  );
-  assert.match(
-    workflow,
-    /uses: kungfu-systems\/build-images\/\.github\/workflows\/comparator-kungfu-package-smoke\.yml@3056c23e70b83f5bb63062f04027a93e79039e4b # v1\.2\.4-alpha\.30/,
-  );
-  assert.match(
-    workflow,
-    /package_artifact_name: \$\{\{ needs\.phase-b-package\.outputs\.artifact-name \}\}/,
-  );
-  assert.match(workflow, /retention-days: 30/);
-});
-
-test('the native membrane matrix is a promotion gate, not a dev PR gate', () => {
-  const workflow = fs.readFileSync(
-    path.join(ROOT, '.github/workflows/embedding-membrane-spike.yml'),
-    'utf8',
-  );
-  const branchBlock = workflow.match(/branches:\n((?:\s+- .+\n)+)/)?.[1] || '';
-  assert.match(branchBlock, /alpha\/v\*\/v\*/);
-  assert.match(branchBlock, /release\/v\*\/v\*/);
-  assert.doesNotMatch(branchBlock, /dev\/v\*\/v\*/);
 });
 
 test('documentation lint excludes the checked-out Buildchain runtime', async () => {

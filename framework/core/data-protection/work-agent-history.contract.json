@@ -1,0 +1,166 @@
+{
+  "schema": "kungfu.work-agent-history-continuity.contract/v1",
+  "id": "kungfu-work-agent-history-continuity",
+  "version": 1,
+  "status": "source-qualified",
+  "parentContract": {
+    "path": "framework/core/data-protection/kungfu-data-protection.contract.json",
+    "id": "kungfu-durable-history-data-protection",
+    "version": 1
+  },
+  "authority": {
+    "kind": "projection-and-routing-contract",
+    "semanticOwner": "kungfu.work-control Profile over native Fact and Episode authority",
+    "activityOwner": "agent-session observer plane",
+    "rule": "Entrypoints may project owner identities, roots, receipts, next actions, and failures but never admit, complete, erase, or reinterpret Work history themselves.",
+    "forbiddenAuthorities": [
+      "WorkConsole registry",
+      "provider process exit",
+      "provider self-report",
+      "GUI or TUI state",
+      "terminal transcript",
+      "provider-private session store"
+    ]
+  },
+  "canonicalProjection": {
+    "schema": "kungfu.work-agent-history.projection/v1",
+    "activityState": "session-activity-only",
+    "protectedState": "protected-history-admitted",
+    "requiredFields": [
+      "schema",
+      "state",
+      "entrypoint",
+      "workRefRoot",
+      "semanticAdmissionReceiptRoot",
+      "processExitSettlesWork",
+      "selfReportSettlesWork",
+      "nextAction",
+      "authority"
+    ],
+    "activityRules": {
+      "semanticAdmissionReceiptRoot": null,
+      "processExitSettlesWork": false,
+      "selfReportSettlesWork": false,
+      "nextAction": "independent-assessment-required",
+      "recoverability": "SessionAttempt metadata may be retained or rebuilt, but its loss cannot alter owner-domain history."
+    },
+    "protectedRules": {
+      "semanticAdmissionReceiptSchema": "kungfu.data-protection.admission-receipt/v1",
+      "ownerReceiptRequired": true,
+      "ownerIdentityAndRootRequired": true,
+      "recoveryWithoutOriginalUi": true,
+      "projectionRebuildable": true
+    }
+  },
+  "entrypoints": [
+    {
+      "id": "gui",
+      "surface": "Kungfu GUI and external Agent UI",
+      "adapter": "Core API capability",
+      "semanticRoute": "profile-kfd-action-episode"
+    },
+    {
+      "id": "tui",
+      "surface": "Kungfu TUI",
+      "adapter": "Core API capability",
+      "semanticRoute": "profile-kfd-action-episode"
+    },
+    {
+      "id": "cli",
+      "surface": "kungfu run and kungfu work",
+      "adapter": "Core Python CLI",
+      "semanticRoute": "profile-kfd-action-episode"
+    },
+    {
+      "id": "native-agent-ui",
+      "surface": "provider native interactive UI",
+      "adapter": "AgentSessionCapsule or declared native adapter",
+      "semanticRoute": "profile-kfd-action-episode"
+    },
+    {
+      "id": "managed-run",
+      "surface": "managed Agent run",
+      "adapter": "kungfu.agent.run_agent",
+      "semanticRoute": "profile-kfd-action-episode"
+    },
+    {
+      "id": "skill-envelope",
+      "surface": "Skill Envelope",
+      "adapter": "Core WorkRef and owner receipt",
+      "semanticRoute": "profile-kfd-action-episode"
+    },
+    {
+      "id": "kfd",
+      "surface": "KFD action",
+      "adapter": "typed KFD API",
+      "semanticRoute": "profile-kfd-action-episode"
+    }
+  ],
+  "workConsoleBoundary": {
+    "schema": "kungfu.work-console-history-boundary/v1",
+    "classification": "observer-projection",
+    "retainedData": [
+      "generic WorkRef binding",
+      "WorkConsole identity",
+      "SessionAttempt lifecycle",
+      "metadata-only plans and receipts"
+    ],
+    "semanticAdmission": null,
+    "lossRule": "Registry loss may remove session convenience only; it cannot complete, erase, or reinterpret owner-domain Work history.",
+    "transcriptAuthority": false
+  },
+  "migration": {
+    "defaultMode": "read-exact-or-dry-run-copy-forward",
+    "sourceRetention": "retain source identity, roots, and bytes through verified postflight",
+    "inPlaceReinterpretation": false,
+    "unknownRequiredMember": "refuse-before-write",
+    "qualificationHome": "disposable-only",
+    "realUserHomeMutation": false,
+    "receiptRequiredForCopyForward": true
+  },
+  "privacy": {
+    "retainedForProtection": [
+      "owner semantic identities and roots",
+      "typed owner receipts",
+      "required schema and interpreter roots",
+      "explicit loss and omission records"
+    ],
+    "excluded": [
+      "credentials",
+      "provider authentication state",
+      "hidden reasoning",
+      "raw private prompts",
+      "full transcripts",
+      "unbounded terminal bytes",
+      "provider-private session stores"
+    ]
+  },
+  "failureSemantics": {
+    "providerExit": "preserve original exit code and classify activity only",
+    "interruption": "preserve interrupted or timed-out signal and leave Work unsettled",
+    "registryLoss": "rebuild or start a new SessionAttempt without changing Work",
+    "unknownHistory": "fail closed before mutation",
+    "unsupportedMigration": "retain source and emit no successor admission"
+  },
+  "qualification": {
+    "gate": "./shifu check:work-agent-history-continuity",
+    "test": "scripts/check-work-agent-history-continuity.test.mjs",
+    "nativeMigrationTests": [
+      "framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_authority_bundle_restores_clean_home_exactly",
+      "framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_authority_import_preflights_all_operations_before_writing",
+      "framework/core/tests/python/_agent_work_state_role_cases.py::test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation"
+    ],
+    "requiredSurfaces": [
+      "source",
+      "api",
+      "cli",
+      "tui",
+      "gui",
+      "kfd",
+      "native-run",
+      "managed-run",
+      "interruption",
+      "migration"
+    ]
+  }
+}

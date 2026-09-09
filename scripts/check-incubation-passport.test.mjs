@@ -98,7 +98,10 @@ test('repository baseline lifecycle fails closed for an impossible clock date', 
 test('admitted native receipt rejects stale and incomplete evidence', () => {
   const registry = JSON.parse(
     fs.readFileSync(
-      path.join(ROOT, 'framework/incubation/incubation-passport.registry.json'),
+      path.join(
+        ROOT,
+        'framework/spec/incubation/incubation-passport.registry.json',
+      ),
       'utf8',
     ),
   );

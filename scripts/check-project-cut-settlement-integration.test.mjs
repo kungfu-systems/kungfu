@@ -8,16 +8,13 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import {
-  canonicalJson,
-  semanticRoot,
-} from '../framework/project-cut/index.mjs';
+import { canonicalJson, semanticRoot } from '@kungfu-tech/work/project-cut';
 import {
   observeSettlementCommit,
   prepareSettlement,
   reconcileCommit,
   verifySettlement,
-} from '../framework/project-cut/src/settlement.mjs';
+} from '@kungfu-tech/work/project-cut/settlement';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURE = path.join(
@@ -30,6 +27,7 @@ const FIXTURE = path.join(
 const PUBLIC_EPISODE_FIXTURE = path.join(
   ROOT,
   'framework',
+  'work',
   'project-cut',
   'fixtures',
   'public-runtime-episode',
@@ -37,6 +35,7 @@ const PUBLIC_EPISODE_FIXTURE = path.join(
 const CLI = path.join(
   ROOT,
   'framework',
+  'work',
   'project-cut',
   'bin',
   'project-cut.mjs',

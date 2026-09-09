@@ -18,10 +18,10 @@ The sources of authority remain:
   the current distinction between the Fact-Episode Ontology and the three
   Action Geometry Primitives;
 - [KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c](../adr/KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md) and
-  [`kungfu-fact-cut-kernel.contract.json`](../../framework/fact/kungfu-fact-cut-kernel.contract.json)
+  [`kungfu-fact-cut-kernel.contract.json`](../../framework/core/fact/kungfu-fact-cut-kernel.contract.json)
   for the accepted domain-neutral Fact object, version, relation, Cut, ref,
   CAS, receipt, ownership, and failure contract;
-- [`kungfu-agent-work-state.contract.json`](../../framework/agent-work/kungfu-agent-work-state.contract.json)
+- [`kungfu-agent-work-state.contract.json`](../../framework/work/agent-work/kungfu-agent-work-state.contract.json)
   for current machine definitions, implementation mappings, invalid
   inferences, and qualification status;
 - [KF-ADR-019f86da-4f90-791c-9b90-4888cca36327](../adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md) and its follow-up
@@ -177,7 +177,7 @@ one Agent Work Domain Profile:
 - `kungfu agent work inspect` requests immutable bodies explicitly, so the
   default generic query stays metadata-only and product-neutral.
 
-The matching action and receipt schemas live under `framework/agent-work/`.
+The matching action and receipt schemas live under `framework/work/agent-work/`.
 They are the transitional combined-v1 implementation, not a second storage
 stack or a KFD normative definition. [KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b](../adr/KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b.md) requires future machine
 discovery to expose an exact `actionGeometryRoot`, `domainProfileRoot`, and

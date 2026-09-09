@@ -126,7 +126,7 @@ test('Capsule node-pty resolution includes the signed desktop app layout', () =>
   const bundleDirectory = path.join(
     path.sep,
     'Applications',
-    'Kungfu Episodes.app',
+    'Kungfu.app',
     'Contents',
     'Resources',
     'tui',

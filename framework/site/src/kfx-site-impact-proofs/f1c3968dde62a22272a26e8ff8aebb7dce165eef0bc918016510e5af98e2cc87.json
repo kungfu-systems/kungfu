@@ -1,0 +1,168 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "a72a5a1417e92e7076ce912a744f757b03330ba0",
+  "changeRoot": "sha256:bd662b75efc8e7963cdb1b9aa0deb43e43653de1ee2c790141ba4c235aa7118a",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:19eb21ca4dafba7bd51532cf3e242953bb589f556ef9bfd5d3579543abfdf9c5",
+      "contentRoot": "sha256:3f6b61c19a42909aa4194c65952157368224d0f61d8c99b00a04ae15761ed271",
+      "path": ".buildchain-version",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:11be85ad7f163a224c95f4143ae64e927a5c7a1fa0c1c210afed435624073dcc",
+      "contentRoot": "sha256:8331c74be8d3094946215509d966db2019f6ac5416c55b0aa2981fab8628f387",
+      "path": ".buildchain/alpha-contract-lock.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2551677b04ac241ea5a1c1869bb9879b6fb3efb485785bd7916ff20f596be1ee",
+      "contentRoot": "sha256:0fb2c4146ba274abf593f71b8bf236ec349fe0daa8feaa551cb232143e6e9edd",
+      "path": ".buildchain/buildchain.toml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3dc34ce3d4405859d9d5eae87c82ef320133cef4a7fd2d9d8701d618802dfdf2",
+      "contentRoot": "sha256:1418a678942ae6fd144c568fcae1a9917f0d703f3957dc1cca23021ddec0e713",
+      "path": ".buildchain/contract-lock.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:497cc34c59ada9373cf6ed44466866b42234e93ee02e3d30ba7123c991380148",
+      "contentRoot": "sha256:6d7a64dd5c81cd6aee3ca6987c808263bf93783a7460d5b528031f10f3be05f1",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a04d4333b2027741da1134de764ca01e265594ea203ecaff6949a0681cb3f2b6",
+      "contentRoot": "sha256:80ce9388932594759920085965bf2ce2974b07872d365bc96a5385abdebaa1f0",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:711268b6a8a9560b3bf20a536e2909b55fa41485e2397672ec35b432580b4d4f",
+      "contentRoot": "sha256:e842998314eefcc8930a50091dabc168e5a1ccd82d8a3048d54d091438bf722b",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:333a00bc6b5c15f223bc77c6005b47cd2b09afc91c30c9144b85cdb22887d4fd",
+      "contentRoot": "sha256:a7300b19fb9d6697f32593b166c8d8613fdebcb08ab9feea6aa982ae25dfc5d0",
+      "path": ".github/workflows/build.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4a0fa5bbef7f2a99d8ead90f2ae74597103449b6934bf5b6a3858e7a6538443f",
+      "contentRoot": "sha256:65f84048f897b611d4b5def7365fe1aaca7f2487bdb15c85f2917b9f3c315ea2",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c99b83a292399168ea423bbc184314115a0bcd70ae4621e4f79ee11e9a18b9ab",
+      "contentRoot": "sha256:b84bd4ad7d158db6196699c4d3664007c3429d86c6c9563de15277461ac61984",
+      "path": ".xinfa/product-atlas-bundle.json",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:a2f276a54dd067d559bc75022a8109e400191fc616650097fdcedf6a3373aba0",
+      "path": "developer/maintainability/waivers/2026-09-09-buildchain-v4-config-lock-closure.v3.json",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:497cc34c59ada9373cf6ed44466866b42234e93ee02e3d30ba7123c991380148",
+      "contentRoot": "sha256:6d7a64dd5c81cd6aee3ca6987c808263bf93783a7460d5b528031f10f3be05f1",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:711268b6a8a9560b3bf20a536e2909b55fa41485e2397672ec35b432580b4d4f",
+      "contentRoot": "sha256:e842998314eefcc8930a50091dabc168e5a1ccd82d8a3048d54d091438bf722b",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e2ac2bc07193561bf7037e74d5d0d48374badf6803d3c40f6167d772ba1b22d3",
+      "contentRoot": "sha256:1288520f55aff0f3d6377b7b9511dac48197f0fa70172844514d64120ea6e1b9",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e45963b950a3de56a4e47185516ec01c5dac044cfb2656b389074dcbf11d8571",
+      "contentRoot": "sha256:fe60352d2e75539d3f7b1e0afe87824b4f639dd28b4b58da8d47c3dcae71bbd2",
+      "path": "docs/architecture/adr-map.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f497fb61edad52f726851749486b2672e5924e531d961c872a25f5cded964b2d",
+      "contentRoot": "sha256:46a7c2686832acb4ff3b27ef71ccfa4b0d2f656e646f82f80ebe2d8278f24cc5",
+      "path": "docs/architecture/adr-map.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e31d4aa13db93aab7c7cdc8f56abe34ee8a629d318e5518dcc9fe6acf3ec0d79",
+      "contentRoot": "sha256:6158f89276f574bc010d6d79ae211eb1218d95fdb89266a41ccf6e057b00514b",
+      "path": "extensions/work-control/profile.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8d34cbbdb6453335adc50d9160ff0c919fd9b78f018ab782415826ef306cde4b",
+      "contentRoot": "sha256:0f8d3068eabc122ae448fce547d97e2e10d07603a6c03829336916a20c549ec8",
+      "path": "extensions/work-control/qualification/work-profile-conformance.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c79e37a392535990ae9fba13da7284249b1aea2a8913ab43558196536d8e31c3",
+      "contentRoot": "sha256:1156f212d2fb593e2a961cdd4ec4ee07fea5fe3383bca20993983dc393dd3610",
+      "path": "framework/work/work-profile-conformance/authority-manifest.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:fe32bad39464badc2db3c0028cbe36f44ddd8ac31ade991dc7950f2b59c1070f",
+      "contentRoot": "sha256:846f1e1df086f6b75b49495a415b6fe12aeb49aebde8a7d4669d190522734716",
+      "path": "framework/work/work-profile-conformance/qualification/negative-witnesses.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d429771dfff4f3476e6159086c076a8a36103d0b5b86eba2405e16a34d47d517",
+      "contentRoot": "sha256:60bd0ee45894188d35c9ff1527b9fa9e53dec65b178f70f78f15a49a4849f49d",
+      "path": "framework/work/work-profile-conformance/qualification/reference-scenarios.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dd483321767e2a692ecf5fc484af49ae3931c7109fb49f913e121d729cd28f60",
+      "contentRoot": "sha256:0f3a62af49eb151e654269c1790c92bbab7414140ae6767a2acbe5e501a8a605",
+      "path": "package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8121dd2285db8a7a0ba233c98ddabe8f97d806870dfb0f51862db1aecb7409c8",
+      "contentRoot": "sha256:c447ac861dcdf691c0fa54f08a8d73afe6c75aff589b9c6b1d0fbc3d80162060",
+      "path": "pnpm-lock.yaml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:700153fd8181de8b0bb2509a0912b30b022d9a6c57852e4766846caaa72f9d7a",
+      "contentRoot": "sha256:a4414bb7693717c3dccc4ba035b5dd710e053fcc9a5e7f91f73a8d86c8273c8e",
+      "path": "scripts/buildchain-install.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b031dcad7bd0b783376ba936c74f678c9f9cca11f9bc8e2f1c35d106e5036cc1",
+      "contentRoot": "sha256:a2b4c2fa9424300085b6684ae4bab158137179074ea4e5fa029a92ab8b5bbfd8",
+      "path": "scripts/check-shifu-cache-contract.test.mjs",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "The formal Alpha workflow adopts the published Buildchain v4 project configuration contract. Tool pins, contract locks, generated conformance material and ADR regression references change; public Kungfu CLI and Site Bundle contracts, package identities and documentation endpoints remain unchanged.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:f1c3968dde62a22272a26e8ff8aebb7dce165eef0bc918016510e5af98e2cc87"
+}

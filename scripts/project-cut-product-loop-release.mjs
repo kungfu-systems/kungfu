@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 
 const CONTRACT_PATH =
-  'framework/work-loop/project-cut-product-loop.release-contract.json';
+  'framework/work/work-loop/project-cut-product-loop.release-contract.json';
 const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/u;
 
