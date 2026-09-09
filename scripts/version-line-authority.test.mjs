@@ -140,6 +140,7 @@ test('historical authority declarations reject malformed maps and paths', () => 
     null,
     1,
     { 'sha256:bad': '../outside.json' },
+    { [`sha256:${'0'.repeat(64)}`]: 'product/version-line/history/other.json' },
   ]) {
     const authority = structuredClone(readAuthority());
     authority.historicalAuthorities = historicalAuthorities;
@@ -148,6 +149,18 @@ test('historical authority declarations reject malformed maps and paths', () => 
       /historical version-line/u,
     );
   }
+});
+
+test('authority admission rejects invalid schema, status and repository', () => {
+  for (const field of ['schema', 'status', 'repository']) {
+    const authority = structuredClone(readAuthority());
+    authority[field] = 'invalid';
+    assert.throws(
+      () => validateAuthority(authority),
+      /not active or admitted/u,
+    );
+  }
+  assert.throws(() => validateAuthority(null), /not active or admitted/u);
 });
 
 test('formal native release lanes are hosted while diagnostic aliases remain self-hosted', () => {

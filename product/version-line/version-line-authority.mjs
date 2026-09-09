@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -59,13 +60,14 @@ function expand(template, line) {
 }
 
 export function validateAuthority(authority) {
-  if (
-    authority?.schema !== 'kungfu.version-line-authority/v1' ||
-    authority.status !== 'active' ||
-    authority.repository !== 'kungfu-systems/kungfu'
-  ) {
-    throw new Error('version-line authority is not active or admitted');
-  }
+  const admissionError = 'version-line authority is not active or admitted';
+  assert.equal(
+    authority?.schema,
+    'kungfu.version-line-authority/v1',
+    admissionError,
+  );
+  assert.equal(authority.status, 'active', admissionError);
+  assert.equal(authority.repository, 'kungfu-systems/kungfu', admissionError);
   const templates = authority.branchTemplates || {};
   for (const key of [
     'dev',
@@ -100,23 +102,21 @@ export function validateAuthority(authority) {
   if (!ids.has(authority.activeLine)) {
     throw new Error('activeLine does not identify a declared line');
   }
-  if (
-    authority.historicalAuthorities !== undefined &&
-    (!authority.historicalAuthorities ||
-      typeof authority.historicalAuthorities !== 'object' ||
-      Array.isArray(authority.historicalAuthorities))
-  ) {
-    throw new Error('historical version-line authorities must be an object');
-  }
-  for (const [root, file] of Object.entries(
-    authority.historicalAuthorities || {},
-  )) {
-    if (
-      !/^sha256:[0-9a-f]{64}$/u.test(root) ||
-      file !== `product/version-line/history/${root.slice(7)}.json`
-    ) {
-      throw new Error('historical version-line authority reference is invalid');
-    }
+  const { historicalAuthorities = {} } = authority;
+  assert.equal(
+    Object.prototype.toString.call(historicalAuthorities),
+    '[object Object]',
+    'historical version-line authorities must be an object',
+  );
+  for (const [root, file] of Object.entries(historicalAuthorities)) {
+    const referenceError =
+      'historical version-line authority reference is invalid';
+    assert.match(root, /^sha256:[0-9a-f]{64}$/u, referenceError);
+    assert.equal(
+      file,
+      `product/version-line/history/${root.slice(7)}.json`,
+      referenceError,
+    );
   }
   const aliases = authority.runnerRouting?.compatibilityAliases;
   if (

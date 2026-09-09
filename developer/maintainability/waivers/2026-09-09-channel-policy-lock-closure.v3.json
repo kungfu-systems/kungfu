@@ -1,0 +1,39 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:7c33dad8f0d2bab4fac3c4b6135cfc0f37053cbad0a80138d458c2c4e9caf53e",
+  "issue_kind": "grandfathered-file-grew",
+  "paths_or_scope": [
+    "pnpm-lock.yaml"
+  ],
+  "budget_classes": [
+    "declarative-schema-or-table:declarative"
+  ],
+  "baseline_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10143,
+      "contentRoot": "sha256:e0b1c89fd08dce937aca85194b9621787958b6d7021e70cba297cbe947822ef0"
+    }
+  ],
+  "current_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10364,
+      "contentRoot": "sha256:c447ac861dcdf691c0fa54f08a8d73afe6c75aff589b9c6b1d0fbc3d80162060"
+    }
+  ],
+  "allowed_delta": 221,
+  "owner": "kungfu/repository-contract",
+  "responsibility_boundary": "Carry forward the unchanged generated pnpm dependency closure while repairing channel promotion policy and version-line evidence bindings.",
+  "cohesion_rationale": "The lockfile is byte-identical to protected dev ea65506025443a1a14c690d8253bdfa4507456eb. The exact issue, measurements and allowed delta are unchanged. A distinct request is necessary because waiver applicability binds the current candidate author. Protected independent review, required checks and queue delivery remain the authorization boundary; the prior request and frozen baseline remain intact.",
+  "rejected_split_alternatives": "Splitting the workspace lockfile or manually deleting still-referenced dependency snapshots would break frozen installation and reproducibility.",
+  "affected_tests_and_qualification": "./shifu check:source; workflow and version-line regressions; Candidate source acceptance / check; protected independent review; Delivery Warrant and merge_group as required by the selected delivery class.",
+  "requested_by": "keren.dong+cx@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-09-09-kungfu-channel-merge-policy"
+}

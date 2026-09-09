@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -243,17 +244,20 @@ function validateStaticProjections(root, authority, line, projection) {
     baseline,
     root,
   );
-  if (
-    baseline.authorityClassification !== 'historical-measurement' ||
-    !deriveProjection(baselineAuthority).lines.some(
+  const baselineError =
+    'dev latency baseline is not root-bound historical evidence';
+  assert.equal(
+    baseline.authorityClassification,
+    'historical-measurement',
+    baselineError,
+  );
+  assert.equal(baseline.branch, line.branches.dev, baselineError);
+  assert.ok(
+    deriveProjection(baselineAuthority).lines.some(
       ({ branches }) => branches.dev === line.branches.dev,
-    ) ||
-    baseline.branch !== line.branches.dev
-  ) {
-    throw new Error(
-      'dev latency baseline is not root-bound historical evidence',
-    );
-  }
+    ),
+    baselineError,
+  );
   const continuation = readJson(
     root,
     'docs/qualification/stable-release-continuation.contract.json',
@@ -263,14 +267,19 @@ function validateStaticProjections(root, authority, line, projection) {
     continuation,
     root,
   );
-  if (
-    continuation.authorityClassification !== 'immutable-qualified-rehearsal' ||
-    !deriveProjection(continuationAuthority).lines.some(
+  const continuationError =
+    'stable continuation is not classified immutable evidence';
+  assert.equal(
+    continuation.authorityClassification,
+    'immutable-qualified-rehearsal',
+    continuationError,
+  );
+  assert.ok(
+    deriveProjection(continuationAuthority).lines.some(
       ({ branches }) => branches.stable === line.branches.stable,
-    )
-  ) {
-    throw new Error('stable continuation is not classified immutable evidence');
-  }
+    ),
+    continuationError,
+  );
   validateWorkflowProjections(root, projection);
 }
 
