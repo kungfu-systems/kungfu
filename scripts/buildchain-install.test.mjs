@@ -6,6 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import {
+  getLifecycleStage,
+  loadBuildchainConfig,
+} from '@kungfu-tech/buildchain';
 import { parse as parseYaml } from 'yaml';
 
 import {
@@ -60,6 +64,51 @@ test('v4 build and source callers grant their reusable workflow permissions', ()
     }
   }
   assert.deepEqual([...covered].sort(), Object.keys(contracts).sort());
+});
+
+test('Alpha TOML preserves product qualification and sealed artifact requirements', () => {
+  const loaded = loadBuildchainConfig(repositoryRoot);
+  const build = loaded.config.build;
+  assert.equal(build.environment, 'kungfu-hosted');
+  assert.equal(build.timeout_minutes, 180);
+  assert.equal(build.fail_fast, true);
+  assert.equal(build.tools.rust, '1.96.0');
+  assert.deepEqual(getLifecycleStage(loaded, 'install').commands, [
+    'node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs',
+  ]);
+  assert.deepEqual(getLifecycleStage(loaded, 'build').commands, [
+    'node scripts/run-shifu-lifecycle.mjs buildchain-build',
+  ]);
+  assert.deepEqual(getLifecycleStage(loaded, 'verify').commands, [
+    'node scripts/run-shifu-lifecycle.mjs cache-apply alpha:qualify',
+  ]);
+  assert.equal(build.artifacts.release_candidate, true);
+  assert.equal(build.artifacts.min_files, 2);
+  assert.equal(build.artifacts.min_total_bytes, 1);
+  assert.deepEqual(build.artifacts.paths, [
+    'product/release',
+    'product/dist/cli/kungfu-cli-linux-x64',
+  ]);
+  assert.deepEqual(build.artifacts.required_paths, [
+    'product/release/qualification/layer-qualification-summary.json',
+    'product/release/qualification/platform-qualification-manifest.json',
+  ]);
+  assert.deepEqual(build.transport_smoke, {
+    scenario_path: '.buildchain/auditable-demo-transport-smoke.json',
+    artifact_root: '.',
+  });
+  assert.deepEqual(build.attestation, {
+    subject_path: 'product/release/cli/kungfu-cli-linux-x64.tar.gz',
+    platform: 'linux-x64',
+  });
+  assert.equal(loaded.config.signing.artifacts.length, 2);
+  assert.ok(
+    loaded.config.signing.artifacts.every((artifact) => artifact.required),
+  );
+  assert.match(
+    getLifecycleStage(loaded, 'signing-finalization').commands.join('\n'),
+    /verify-cli-surface-qualification[\s\S]*upgrade-manifest\.mjs finalize-macos-release-artifacts/u,
+  );
 });
 
 test('source install provisions only build-free tools from wheels', () => {
@@ -336,7 +385,7 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', 
   assert.equal(lock.buildchain.ref, governedBuildchainRef);
   assert.match(lock.buildchain.resolvedSha, /^[0-9a-f]{40}$/u);
   assert.match(buildWorkflow, /\.build-engine\.yml@v4-alpha/u);
-  assert.match(buildWorkflow, /buildchain-ref: v4-alpha/u);
+  assert.equal(parseYaml(buildWorkflow).jobs.build.with, undefined);
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',

@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -478,7 +479,7 @@ test('qualified Assignment Core rejects producer metadata impersonation', async 
   );
 });
 
-test('Build delegates cache policy while retaining the Windows compiler-cache input', () => {
+test('Build delegates required Windows compiler cache to the selected runtime environment', () => {
   const profilePath = path.join(
     ROOT,
     'docs/shifu/qualification-portable-off.cache-profile.json',
@@ -519,7 +520,27 @@ test('Build delegates cache policy while retaining the Windows compiler-cache in
     .createHash('sha256')
     .update(sccacheProfileText)
     .digest('hex');
-  assert.equal(buildWorkflow.split(`sha256:${sccacheDigest}`).length - 1, 1);
+  const runtimeRoot = path.dirname(
+    createRequire(import.meta.url).resolve(
+      '@kungfu-tech/buildchain/package.json',
+    ),
+  );
+  const environments = JSON.parse(
+    fs.readFileSync(
+      path.join(runtimeRoot, 'architecture/build-environments.json'),
+      'utf8',
+    ),
+  );
+  const cache = environments.profiles['kungfu-hosted'].cache;
+  assert.equal(
+    cache.profile_ref,
+    'docs/shifu/windows-alpha-sccache.cache-profile.json',
+  );
+  assert.equal(cache.profile_digest, `sha256:${sccacheDigest}`);
+  assert.equal(cache.provider, 'sccache');
+  assert.equal(cache.required, true);
+  assert.deepEqual(JSON.parse(cache.platforms_json), ['windows-x64']);
+  assert.equal(buildWorkflow.split(`sha256:${sccacheDigest}`).length - 1, 0);
 
   const linuxArm64ProfilePath = path.join(
     ROOT,
