@@ -628,8 +628,8 @@ export function planFromChanged(
     'scripts/affected-native-proof.mjs',
     '.github/workflows/affected-native-cache-promote.yml',
     '.github/workflows/affected-native-pr.yml',
-    'framework/release/qualified-assignment-core-artifact.mjs',
-    'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+    'product/release/qualified-assignment-core-artifact.mjs',
+    'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
     'product/scripts/verify-cli-surface-qualification.mjs',
     'scripts/check-shifu-cache-contract.mjs',
     'docs/shifu/artifact-contract.json',
@@ -1723,8 +1723,8 @@ function selfTestGroup6(context) {
   expect('authority dependency change expands globally', () => {
     for (const file of [
       'framework/core/architecture/layers.json',
-      'framework/release/qualified-assignment-core-artifact.mjs',
-      'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+      'product/release/qualified-assignment-core-artifact.mjs',
+      'framework/work/assignment-capture/qualified-assignment-core-consumer.mjs',
       'scripts/check-shifu-cache-contract.mjs',
       'docs/shifu/artifact-contract.json',
       'docs/shifu/cache-contract.json',

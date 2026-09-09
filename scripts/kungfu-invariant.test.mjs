@@ -34,9 +34,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const Ajv2020 = optionalAjv2020();
 const readJson = (relative) =>
   JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
-const registry = readJson('framework/invariant/kungfu-invariant.registry.json');
+const registry = readJson(
+  'framework/spec/invariant/kungfu-invariant.registry.json',
+);
 const contract = readJson(
-  'framework/invariant/kungfu-invariant-system.contract.json',
+  'framework/spec/invariant/kungfu-invariant-system.contract.json',
 );
 
 test('fixture binary discovery resolves executables through PATH', () => {
@@ -98,7 +100,7 @@ function releaseOptions(overrides = {}) {
   return {
     releaseArtifacts: [
       {
-        name: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+        name: 'kungfu-cli-darwin-arm64.tar.gz',
         digest:
           'sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3',
       },
@@ -234,7 +236,7 @@ test('Fact characterization fixtures use an explicit cross-platform encoding', (
   const source = fs.readFileSync(
     path.join(
       ROOT,
-      'framework/core/tests/python/test_fact_kernel_characterization.py',
+      'framework/core/tests/python/_fact_kernel_characterization_support.py',
     ),
     'utf8',
   );
@@ -473,7 +475,7 @@ test('Exit migration release claims bind exact installed witnesses and fail clos
   const wrongPlatform = evaluateExitMigrationReleaseClaims({
     releaseArtifacts: [
       {
-        name: 'kungfu-episodes-cli-linux-x64.tar.gz',
+        name: 'kungfu-cli-linux-x64.tar.gz',
         digest:
           'sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3',
       },
@@ -603,7 +605,7 @@ test('successor gate rejects silent semantic change and requires model/refinemen
 test('schemas reject unknown verdicts and tampered receipt roots', () => {
   if (Ajv2020) {
     const schema = readJson(
-      'framework/invariant/schema/invariant-evidence-v1.schema.json',
+      'framework/spec/invariant/schema/invariant-evidence-v1.schema.json',
     );
     const validate = new Ajv2020({
       strict: false,

@@ -11,11 +11,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PROFILE = 'fact-durable-admission/current-hardware-candidate-v1';
-const CONTRACT = 'framework/fact/kungfu-fact-cut-kernel.contract.json';
+const CONTRACT = 'framework/core/fact/kungfu-fact-cut-kernel.contract.json';
 const TEST = 'framework/core/tests/python/test_fact_kernel_characterization.py';
 const SOURCE_PATHS = [
   CONTRACT,
-  'framework/fact/kungfu-fact-root-canonical-v2.json',
+  'framework/core/fact/kungfu-fact-root-canonical-v2.json',
   'framework/core/architecture/TARGETS.cmake',
   'framework/core/src/libkungfu/include/kungfu/runtime/storage/fact_kernel.h',
   'framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp',
@@ -33,8 +33,8 @@ const SOURCE_PATHS = [
   'framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp',
   'framework/core/src/libkungfu/src/runtime/storage/fact_state.cpp',
   TEST,
-  'framework/contract/kungfu-agent-first-canonical-policy.json',
-  'framework/contract/kungfu-contracts.registry.json',
+  'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
+  'framework/spec/contract/kungfu-contracts.registry.json',
   'package.json',
   'scripts/check-fact-durable-admission.test.mjs',
   'scripts/run-durability-contract-tests.mjs',

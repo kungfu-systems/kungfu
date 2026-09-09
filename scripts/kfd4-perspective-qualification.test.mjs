@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   KFD4_QUALIFICATION_PATH,
   validateKfd4PerspectiveQualification,
-} from '../framework/core/tests/qualification/kfd4-perspective.mjs';
+} from '@kungfu-tech/core/testing/qualification/kfd4-perspective';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = JSON.parse(

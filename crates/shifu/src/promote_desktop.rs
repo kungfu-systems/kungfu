@@ -206,6 +206,63 @@ pub(super) fn retain_previous_installed_receipt(
         .map_err(|error| format!("cannot retain rollback Product receipt: {error}"))
 }
 
+pub(super) fn retain_renamed_desktop_at(
+    current: &str,
+    installed: &Path,
+    backup: &Path,
+) -> Result<PathBuf, String> {
+    if receipt_value(current, "KUNGFU_INSTALLED_KIND") != "app" {
+        return Err("pending desktop promotion has no retained rollback payload".to_string());
+    }
+    let previous = PathBuf::from(receipt_value(current, "KUNGFU_INSTALLED_ARTIFACT"));
+    let expected = receipt_value(current, "KUNGFU_INSTALLED_DIGEST");
+    if previous.as_os_str().is_empty() || previous == installed || expected.len() != 64 {
+        return Err("pending desktop promotion has no renamed Product rollback source".to_string());
+    }
+    let previous_exists = previous.exists();
+    let backup_exists = backup.exists();
+    if previous_exists && backup_exists {
+        return Err("renamed Product rollback source and retained payload both exist".to_string());
+    }
+    if !backup_exists {
+        if !previous_exists || artifact_sha256(&previous)? != expected {
+            return Err(
+                "renamed Product rollback source differs from its exact receipt".to_string(),
+            );
+        }
+        fs::rename(&previous, backup)
+            .map_err(|error| format!("cannot retain renamed Product rollback payload: {error}"))?;
+    }
+    if artifact_sha256(backup)? != expected {
+        return Err(
+            "retained renamed Product rollback payload differs from its receipt".to_string(),
+        );
+    }
+    Ok(backup.to_path_buf())
+}
+
+fn retain_renamed_desktop(pending: &mut PendingTransaction) -> Result<(), String> {
+    if !pending.desktop_backup_path.is_empty() {
+        return Ok(());
+    }
+    let current = fs::read_to_string(installed_receipt_path())
+        .map_err(|error| format!("cannot read installed Product receipt: {error}"))?;
+    let installed = PathBuf::from(&pending.installed_path);
+    let parent = installed
+        .parent()
+        .ok_or_else(|| "pending installed Product has no parent directory".to_string())?;
+    let name = installed
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "pending installed Product has no desktop name".to_string())?;
+    let backup = retained_backup_path(parent, name);
+    pending.desktop_backup_path = retain_renamed_desktop_at(&current, &installed, &backup)?
+        .display()
+        .to_string();
+    write_pending_transaction(pending);
+    Ok(())
+}
+
 #[cfg(test)]
 pub(super) fn retain_previous_installed_receipt_at(
     installed_path: &Path,
@@ -730,6 +787,11 @@ pub(super) fn resume_pending_transaction(entries: &[BuildEntry], check: bool) {
     if selected.receipt_root != pending.native_receipt_root {
         util::die("native selection receipt does not match the pending promotion receipt");
     }
+    retain_renamed_desktop(&mut pending).unwrap_or_else(|error| {
+        util::die(&format!(
+            "{error}; exact promotion transaction remains pending"
+        ))
+    });
     finish_pending_transaction(entries, entry, &pending, &updater)
 }
 
@@ -743,6 +805,32 @@ pub(super) fn exact_receipt_updater(receipt: &str) -> Result<PathBuf, String> {
         return Err("installed Product native updater differs from its exact receipt".to_string());
     }
     Ok(updater)
+}
+
+pub(super) fn rebind_exact_app_receipt(
+    receipt: &str,
+    app: &Path,
+) -> Result<(String, PathBuf), String> {
+    if receipt_value(receipt, "KUNGFU_INSTALLED_KIND") != "app"
+        || artifact_sha256(app)? != receipt_value(receipt, "KUNGFU_INSTALLED_DIGEST")
+    {
+        return Err("retained App differs from its exact receipt".to_string());
+    }
+    let updater = app.join("Contents/Resources/kungfu/kungfu");
+    let expected = receipt_value(receipt, "KUNGFU_INSTALLED_NATIVE_UPDATER_DIGEST");
+    if !updater.is_file() || expected.len() != 64 || artifact_sha256(&updater)? != expected {
+        return Err("retained App native updater differs from its exact receipt".to_string());
+    }
+    let rebound = set_receipt_value(
+        &set_receipt_value(
+            receipt,
+            "KUNGFU_INSTALLED_ARTIFACT",
+            &app.display().to_string(),
+        ),
+        "KUNGFU_INSTALLED_NATIVE_UPDATER",
+        &updater.display().to_string(),
+    );
+    Ok((rebound, updater))
 }
 
 pub(super) fn resume_retained_rollback(pending: &mut PendingTransaction) -> ! {
@@ -792,7 +880,15 @@ pub(super) fn resume_retained_rollback(pending: &mut PendingTransaction) -> ! {
             util::die(&format!("cannot retain desktop rollback state: {error}"))
         });
     }
-    let updater = exact_receipt_updater(&target_receipt).unwrap_or_else(|error| util::die(&error));
+    let (target_receipt, updater) =
+        if receipt_value(&target_receipt, "KUNGFU_INSTALLED_KIND") == "app" {
+            rebind_exact_app_receipt(&target_receipt, Path::new(&pending.installed_path))
+                .unwrap_or_else(|error| util::die(&error))
+        } else {
+            let updater =
+                exact_receipt_updater(&target_receipt).unwrap_or_else(|error| util::die(&error));
+            (target_receipt, updater)
+        };
     if pending.state == "native-rollback-pending" {
         let selected =
             native_update::selected_release_cut(&updater).unwrap_or_else(|error| util::die(&error));
@@ -862,7 +958,14 @@ pub(super) fn resume_retained_rollback(pending: &mut PendingTransaction) -> ! {
     ] {
         restored = set_receipt_value(&restored, key, &value);
     }
-    write_installed_receipt_at(&rollback_receipt_path(), &current_receipt).unwrap_or_else(
+    let reverse_receipt = if receipt_value(&current_receipt, "KUNGFU_INSTALLED_KIND") == "app" {
+        rebind_exact_app_receipt(&current_receipt, Path::new(&pending.desktop_backup_path))
+            .unwrap_or_else(|error| util::die(&error))
+            .0
+    } else {
+        current_receipt
+    };
+    write_installed_receipt_at(&rollback_receipt_path(), &reverse_receipt).unwrap_or_else(
         |error| {
             util::die(&format!(
                 "cannot retain current Product for reverse rollback: {error}"

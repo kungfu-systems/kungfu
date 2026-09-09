@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
+import { readElectronBuilderProjection } from '@kungfu-tech/workspaces/developer/maintainability/semantic-amplification';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {
@@ -47,13 +47,13 @@ import {
 import { buildCliUpgradeManifest } from './upgrade-manifest.mjs';
 
 const require = createRequire(import.meta.url);
-const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');
-const sdkPackage = require('../../developer/sdk/package.json');
-const agentHubKfdLock = require('../../tests/qualification/agent-hub-20/kfd-lock.json');
+const workDashboardPackage = require('@kungfu-tech/kfx-view-work-dashboard/kungfu.kfx.json');
+const sdkPackage = require('@kungfu-tech/sdk/package.json');
+const agentHubKfdLock = require('@kungfu-tech/workspaces/testing/agent-hub-kfd-lock');
 const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
-} = require('../../framework/gui/scripts/before-pack.cjs');
+} = require('@kungfu-tech/gui/tooling/before-pack');
 
 test('reference-only KFX suites stay outside product assembly', () => {
   const packageNames = listKfxPackages().map((pkg) => pkg.name);
@@ -244,20 +244,11 @@ test('CLI authoring runtime resolves the exact Agent Hub KFD package', () => {
   }
 });
 
-test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
-  assert.equal(
-    cliArchiveBase('darwin-arm64'),
-    'kungfu-episodes-cli-darwin-arm64',
-  );
-  assert.equal(cliArchiveBase('linux-x64'), 'kungfu-episodes-cli-linux-x64');
-  assert.equal(
-    cliArchiveBase('linux-arm64'),
-    'kungfu-episodes-cli-linux-arm64',
-  );
-  assert.equal(
-    cliArchiveBase('windows-x64'),
-    'kungfu-episodes-cli-windows-x64',
-  );
+test('CLI product archive name uses the Kungfu product prefix', () => {
+  assert.equal(cliArchiveBase('darwin-arm64'), 'kungfu-cli-darwin-arm64');
+  assert.equal(cliArchiveBase('linux-x64'), 'kungfu-cli-linux-x64');
+  assert.equal(cliArchiveBase('linux-arm64'), 'kungfu-cli-linux-arm64');
+  assert.equal(cliArchiveBase('windows-x64'), 'kungfu-cli-windows-x64');
 });
 
 test('CLI product emits exact standalone demo metadata beside the launcher', (t) => {
@@ -621,20 +612,13 @@ test('product staging excludes every Python bytecode form', () => {
 
 test('installed CLI launcher uses cmd.exe explicitly on Windows', () => {
   assert.deepEqual(
-    installedKungfuInvocation('C:\\Kungfu Episodes\\kungfu.cmd', ['--help'], {
+    installedKungfuInvocation('C:\\Kungfu\\kungfu.cmd', ['--help'], {
       platform: 'win32',
       comspec: 'C:\\Windows\\System32\\cmd.exe',
     }),
     {
       command: 'C:\\Windows\\System32\\cmd.exe',
-      args: [
-        '/d',
-        '/s',
-        '/c',
-        'call',
-        'C:\\Kungfu Episodes\\kungfu.cmd',
-        '--help',
-      ],
+      args: ['/d', '/s', '/c', 'call', 'C:\\Kungfu\\kungfu.cmd', '--help'],
     },
   );
   assert.deepEqual(
@@ -649,9 +633,9 @@ test('installed CLI surface runner uses the Windows launcher invocation', () => 
   let observed;
   const result = runInstalledKungfuCommand(
     {
-      cli: 'C:\\Kungfu Episodes\\kungfu.cmd',
+      cli: 'C:\\Kungfu\\kungfu.cmd',
       args: ['--help-json'],
-      cwd: 'C:\\Kungfu Episodes',
+      cwd: 'C:\\Kungfu',
       env: { KUNGFU_HOME: 'C:\\Kungfu Home' },
     },
     {
@@ -666,16 +650,9 @@ test('installed CLI surface runner uses the Windows launcher invocation', () => 
   assert.equal(result.status, 0);
   assert.deepEqual(observed, {
     command: 'C:\\Windows\\System32\\cmd.exe',
-    args: [
-      '/d',
-      '/s',
-      '/c',
-      'call',
-      'C:\\Kungfu Episodes\\kungfu.cmd',
-      '--help-json',
-    ],
+    args: ['/d', '/s', '/c', 'call', 'C:\\Kungfu\\kungfu.cmd', '--help-json'],
     options: {
-      cwd: 'C:\\Kungfu Episodes',
+      cwd: 'C:\\Kungfu',
       env: { KUNGFU_HOME: 'C:\\Kungfu Home' },
       encoding: 'utf8',
       maxBuffer: 32 * 1024 * 1024,
@@ -912,8 +889,7 @@ test('product observability ignores errors from sibling components', () => {
 
 test('electron before-pack uses a file URL only on Windows', () => {
   const entryPath = new URL(
-    '../../framework/gui/scripts/gen-system-profile-kfd3.mjs',
-    import.meta.url,
+    import.meta.resolve('@kungfu-tech/gui/tooling/gen-system-profile-kfd3'),
   ).pathname;
   assert.equal(toEsmEntrypointSpecifier(entryPath, 'linux'), entryPath);
   assert.equal(toEsmEntrypointSpecifier(entryPath, 'darwin'), entryPath);
@@ -926,8 +902,7 @@ test('electron before-pack uses a file URL only on Windows', () => {
 
 test('electron before-pack imports its ESM entrypoint through eval', () => {
   const entryPath = new URL(
-    '../../framework/gui/scripts/gen-system-profile-kfd3.mjs',
-    import.meta.url,
+    import.meta.resolve('@kungfu-tech/gui/tooling/gen-system-profile-kfd3'),
   ).pathname;
   const specifier = toEsmEntrypointSpecifier(entryPath);
   assert.deepEqual(esmEntrypointArgs(entryPath), [
@@ -1001,8 +976,7 @@ test('desktop product declares prerelease update metadata without implicit publi
   assert.equal(config.generateUpdatesFilesForAllChannels, true);
   const launcher = fs.readFileSync(
     new URL(
-      '../../framework/gui/scripts/run-electron-builder.mjs',
-      import.meta.url,
+      import.meta.resolve('@kungfu-tech/gui/tooling/run-electron-builder'),
     ),
     'utf8',
   );
@@ -1021,19 +995,16 @@ test('desktop updater artifact selection is exact per platform', () => {
     desktopUpdaterArtifact(
       [
         'latest-mac.yml',
-        'Kungfu Episodes-4.0.0-arm64.zip.blockmap',
-        'Kungfu Episodes-4.0.0-arm64.zip',
+        'Kungfu-4.0.0-arm64.zip.blockmap',
+        'Kungfu-4.0.0-arm64.zip',
       ],
       'darwin',
     ),
-    'Kungfu Episodes-4.0.0-arm64.zip',
+    'Kungfu-4.0.0-arm64.zip',
   );
   assert.equal(
-    desktopUpdaterArtifact(
-      ['latest.yml', 'Kungfu Episodes Setup.exe'],
-      'win32',
-    ),
-    'Kungfu Episodes Setup.exe',
+    desktopUpdaterArtifact(['latest.yml', 'Kungfu Setup.exe'], 'win32'),
+    'Kungfu Setup.exe',
   );
   assert.throws(
     () => desktopUpdaterArtifact(['one.zip', 'two.zip'], 'darwin'),
@@ -1043,7 +1014,7 @@ test('desktop updater artifact selection is exact per platform', () => {
 
 test('installed SDK resolves the packaged KFX contract beside its resources', () => {
   const sdk = fs.readFileSync(
-    new URL('../../developer/sdk/src/sdk-shared.js', import.meta.url),
+    new URL(import.meta.resolve('@kungfu-tech/sdk/sdk-shared')),
     'utf8',
   );
   assert.match(

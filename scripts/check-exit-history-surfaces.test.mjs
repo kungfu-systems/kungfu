@@ -10,7 +10,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 
-const contract = readJson('framework/exit/kungfu-exit-bundle.contract.json');
+const contract = readJson(
+  'framework/core/exit/kungfu-exit-bundle.contract.json',
+);
 const catalog = readJson(
   'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
 );

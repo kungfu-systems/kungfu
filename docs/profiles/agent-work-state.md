@@ -19,7 +19,7 @@ three artifacts separate:
 
 The machine-readable profile, evidence schema, and Release Passport binding
 rules live in
-[`kungfu-agent-work-state.contract.json`](../../framework/agent-work/kungfu-agent-work-state.contract.json).
+[`kungfu-agent-work-state.contract.json`](../../framework/work/agent-work/kungfu-agent-work-state.contract.json).
 Kungfu qualification owns the benchmark semantics. Buildchain may bind the
 exact artifact, copy, fixture, versions, reset method, oracle, raw report,
 projection, limitations, and review; it may not create or strengthen the
@@ -46,12 +46,12 @@ ontology questions and three action questions:
 
 Machine authority is intentionally split:
 
-- [`action-geometry.contract.json`](../../framework/action/action-geometry.contract.json)
+- [`action-geometry.contract.json`](../../framework/work/action/action-geometry.contract.json)
   owns the cross-domain responsibility separation and invariants;
-- [`kungfu-agent-work-domain-profile.contract.json`](../../framework/agent-work/kungfu-agent-work-domain-profile.contract.json)
+- [`kungfu-agent-work-domain-profile.contract.json`](../../framework/work/agent-work/kungfu-agent-work-domain-profile.contract.json)
   owns Agent Work role schemas, lifecycle, validation, presentation, and
   evidence/success policy; and
-- [`kungfu-agent-work-state.contract.json`](../../framework/agent-work/kungfu-agent-work-state.contract.json)
+- [`kungfu-agent-work-state.contract.json`](../../framework/work/agent-work/kungfu-agent-work-state.contract.json)
   retains the existing work-state and qualification surface.
 
 All three are reached through the same KFD-1 registry. This page is their human
@@ -163,7 +163,7 @@ handoff reveal the additional roots required by their consequence.
 The contract embeds the transitional combined-v1 Domain Profile object schema
 and publishes executable
 positive and negative examples under
-[`framework/agent-work/fixtures`](../../framework/agent-work/fixtures/).
+[`framework/work/agent-work/fixtures`](../../framework/work/agent-work/fixtures/).
 One paired example preserves the same context payload and candidate action
 while changing only the Warrant boundary; one action is valid and the other is
 denied. That is a concrete proof that context alone cannot recover intent,
@@ -202,7 +202,7 @@ use `kungfu.kfd7.profile-action/v1`, receipts continue to use
 Fact and Episode remain ontology bindings, while Pursuit, Atlas, and Warrant
 are Action Geometry mappings. Product transition names remain an outer-ring
 vocabulary and map to KFD-7's closed action geometry in
-[`kungfu-kfd-7-action-contract.json`](../../framework/agent-work/kungfu-kfd-7-action-contract.json).
+[`kungfu-kfd-7-action-contract.json`](../../framework/work/agent-work/kungfu-kfd-7-action-contract.json).
 These existing names retain their original compatibility meaning.
 
 Newly persisted role bodies use per-role `/v2` schemas and bind the exact
@@ -248,7 +248,7 @@ generic Warrant maturity, and release binding remain explicit debt. Inspect the
 machine contract and retained report rather than inferring P17 from this prose.
 
 The retained KFD-7 release-gate declaration is
-[`kungfu-kfd-7-release-gate.json`](../../framework/agent-work/kungfu-kfd-7-release-gate.json).
+[`kungfu-kfd-7-release-gate.json`](../../framework/work/agent-work/kungfu-kfd-7-release-gate.json).
 Buildchain verifies its frozen action contract, positive and negative runtime
 reports, packaged contract surface, and required experiment inventory. The
 current result is deliberately `warning`: export/import, backend migration,

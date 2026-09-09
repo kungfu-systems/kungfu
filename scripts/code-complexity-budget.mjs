@@ -17,7 +17,7 @@ import {
   protectedBaselineIssues,
   validWaiverFor,
   waiverIssues,
-} from '../framework/maintainability/complexity-governance.mjs';
+} from '../developer/maintainability/complexity-governance.mjs';
 import {
   baselineBytes,
   baselineChangedPaths,
@@ -30,11 +30,14 @@ import {
   language,
   lineCount,
   ownerFor,
-} from '../framework/maintainability/source-analysis-kernel.mjs';
+} from '../developer/maintainability/source-analysis-kernel.mjs';
 import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const POLICY_PATH = 'framework/maintainability/code-complexity-policy.json';
+const POLICY_PATH = 'developer/maintainability/code-complexity-policy.json';
+const LEGACY_POLICY_PATHS = [
+  'framework/maintainability/code-complexity-policy.json',
+];
 const RETIRED_COMPLEXITY_SIGNING_MARKERS = [
   ['ed25519-6688', '12bf28659460'],
   ['ed25519-9ff2', '1f6e6f64c985'],
@@ -56,10 +59,10 @@ const RETIRED_COMPLEXITY_SIGNING_FIELDS = [
   ['authorization', '_root'],
 ].map((parts) => parts.join(''));
 const COMPLEXITY_GOVERNANCE_PATHS = [
-  'framework/maintainability/baseline-transitions/',
-  'framework/maintainability/code-complexity-policy.json',
-  'framework/maintainability/complexity-governance.mjs',
-  'framework/maintainability/waivers/',
+  'developer/maintainability/baseline-transitions/',
+  'developer/maintainability/code-complexity-policy.json',
+  'developer/maintainability/complexity-governance.mjs',
+  'developer/maintainability/waivers/',
   'scripts/code-complexity-budget.mjs',
   'scripts/code-complexity-budget.test.mjs',
 ];
@@ -70,6 +73,16 @@ function readJson(relative) {
 
 function readJsonAt(ref, relative) {
   return JSON.parse(String(git(['show', `${ref}:${relative}`])));
+}
+
+function readProtectedPolicy(ref) {
+  for (const relative of [POLICY_PATH, ...LEGACY_POLICY_PATHS]) {
+    const result = gitResult(['show', `${ref}:${relative}`]);
+    if (result.status === 0) return JSON.parse(String(result.stdout));
+  }
+  throw new Error(
+    `no complexity policy exists at ${[POLICY_PATH, ...LEGACY_POLICY_PATHS].join(', ')}`,
+  );
 }
 
 export function protectedBaselineCandidates(
@@ -600,7 +613,7 @@ export function composeRenameEvidence(statusLines) {
 }
 
 function currentRenameMap(policy) {
-  const result = gitResult(
+  const committed = gitResult(
     [
       'log',
       '--reverse',
@@ -613,8 +626,21 @@ function currentRenameMap(policy) {
     ],
     { maxBuffer: 16 * 1024 * 1024 },
   );
-  if (result.status !== 0) return new Map();
-  return composeRenameEvidence(result.stdout);
+  if (committed.status !== 0) return new Map();
+  const working = gitResult([
+    'diff',
+    '--name-status',
+    '--find-renames=50%',
+    'HEAD',
+    '--',
+  ]);
+  return composeRenameEvidence(
+    `${committed.stdout}\n${successfulGitOutput(working)}`,
+  );
+}
+
+function successfulGitOutput(result) {
+  return result.status === 0 ? result.stdout : '';
 }
 
 function checkCurrent(policy, layers, baseline, ownership = []) {
@@ -709,7 +735,7 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
   const blocking = [];
   if (policy.baselineGovernance) {
     try {
-      const protectedPolicy = readJsonAt(protectedRef, POLICY_PATH);
+      const protectedPolicy = readProtectedPolicy(protectedRef);
       const protectedBaseline = readJsonAt(
         protectedRef,
         protectedPolicy.baselinePath,
@@ -820,7 +846,7 @@ function main() {
   const policy = readJson(POLICY_PATH);
   const layers = readJson('framework/core/architecture/layers.json');
   const ownership = readJson(
-    'framework/maintainability/abstraction-integrity.manifest.json',
+    'developer/maintainability/abstraction-integrity.manifest.json',
   ).ownership;
   if (options.calibrate) {
     const baseline = buildBaseline(policy, layers, ownership);

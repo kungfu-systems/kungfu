@@ -7034,7 +7034,7 @@
       },
       "revision": "sha256:e36c39b12647b2a6a02ffb12f62115efd52bb024f14c81804940e14b6036ef22",
       "source": {
-        "path": "framework/episode-admission/README.md",
+        "path": "framework/core/episode-admission/README.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -7054,7 +7054,7 @@
       },
       "revision": "sha256:0659996384943d6950a2e48ade15902d80c22b4364116d422bc09af65d88b03d",
       "source": {
-        "path": "framework/episode-provider/README.md",
+        "path": "framework/work/episode-provider/README.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -7094,7 +7094,7 @@
       },
       "revision": "sha256:edd6fa441f64d2d20a394a2a267ab7839e309c2e6ed576ea773195244378cc8d",
       "source": {
-        "path": "framework/invariant/README.md",
+        "path": "framework/spec/invariant/README.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -7114,7 +7114,7 @@
       },
       "revision": "sha256:1017663dfb1b169b708d66feb1de951e0d7eba5e8cfdc2e7391d959f0eed710a",
       "source": {
-        "path": "framework/project-cut/README.md",
+        "path": "framework/work/project-cut/README.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -7724,7 +7724,7 @@
       },
       "revision": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee",
       "source": {
-        "path": "framework/project-cut/project-cut.contract.json",
+        "path": "framework/work/project-cut/project-cut.contract.json",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -8136,14 +8136,14 @@
         "framework/core/tests/qualification/episode/README.md",
         "framework/core/tests/qualification/kfd-agent-runtime/README.md",
         "framework/core/tests/qualification/runtime-activation/README.md",
-        "framework/episode-admission/README.md",
-        "framework/episode-provider/README.md",
+        "framework/core/episode-admission/README.md",
+        "framework/work/episode-provider/README.md",
         "framework/gui/docs/shell-and-kfx.md",
         "framework/gui/src/main/runtime-recovery.ts",
         "framework/gui/src/main/upgrade-message.ts",
-        "framework/invariant/README.md",
-        "framework/project-cut/README.md",
-        "framework/project-cut/project-cut.contract.json",
+        "framework/spec/invariant/README.md",
+        "framework/work/project-cut/README.md",
+        "framework/work/project-cut/project-cut.contract.json",
         "framework/sdk/README.md",
         "framework/skill/README.md",
         "framework/skill/fixtures/minimal/SKILL.md",
@@ -9633,7 +9633,7 @@
     {
       "audience": "agent",
       "entrypoints": [
-        "framework/project-cut/README.md"
+        "framework/work/project-cut/README.md"
       ],
       "id": "kungfu-mission-agent-agent",
       "nodes": [
@@ -9685,7 +9685,7 @@
     {
       "audience": "human",
       "entrypoints": [
-        "framework/project-cut/README.md"
+        "framework/work/project-cut/README.md"
       ],
       "id": "kungfu-mission-agent-human",
       "nodes": [

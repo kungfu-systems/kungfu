@@ -77,6 +77,13 @@
       "declaration": "framework/core/src/python/kungfu/rewind/rewind_events.fbs",
       "derived_schema": "framework/core/src/python/kungfu/rewind/rewind_events.bfbs",
       "projection_route": "flatbuffers-bfbs"
+    },
+    {
+      "identity": "flatbuffers.reflection.schema",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/python/kungfu/rewind/reflection.fbs",
+      "derived_schema": "framework/core/src/python/kungfu/rewind/reflection.bfbs",
+      "projection_route": "flatbuffers-bfbs"
     }
   ],
   "non_authorities": [

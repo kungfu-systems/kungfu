@@ -7,7 +7,8 @@
   "type": "module",
   "exports": {
     ".": "./index.mjs",
-    "./runtime": "./runtime.mjs"
+    "./runtime": "./runtime.mjs",
+    "./qualification/run": "./qualification/run.mjs"
   },
   "files": [
     "index.mjs",
@@ -15,7 +16,8 @@
     "README.md",
     "quickstart/episode.c",
     "quickstart/episode.mjs",
-    "quickstart/episode.py"
+    "quickstart/episode.py",
+    "qualification/run.mjs"
   ],
   "scripts": {
     "test": "node --test tests/*.test.mjs"

@@ -1,0 +1,12 @@
+{
+  "schema": "kungfu.code-complexity-baseline-transition/v2",
+  "expected_old_measurement_root": "sha256:ecb8e5d519a0512291927271d2047d4bf2e43cedf040accdadcc268c54a689a2",
+  "expected_old_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "new_measurement_root": "sha256:4f2589f808ca92e743846eeb27d2ce503cceb73105a51c5354cb26dd2cd66eae",
+  "new_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "changed_measurements": 0,
+  "aggregate_line_delta": 0,
+  "requested_by": "keren.dong@kungfu.link",
+  "reason": "Move framework-owned source roots under their explicit Spec, Core, Work, Developer, and Product package owners without changing the protected complexity measurements.",
+  "retirement_or_decomposition_ref": "2026-09-04-kungfu-framework-owner-convergence-r2"
+}

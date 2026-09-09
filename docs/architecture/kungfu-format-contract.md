@@ -16,11 +16,11 @@ verification commands.
 
 | Surface | Current status | Authority | Verification |
 | --- | --- | --- | --- |
-| workspace and fallback root selection | implemented configuration contract | [Configuration](../guides/config.md) and [`kungfu-config.contract.json`](../../framework/config/kungfu-config.contract.json) | `kungfu config path --json` |
+| workspace and fallback root selection | implemented configuration contract | [Configuration](../guides/config.md) and [`kungfu-config.contract.json`](../../framework/core/config/kungfu-config.contract.json) | `kungfu config path --json` |
 | workspace `.kungfu/` layout v1 and persistence classes | accepted decision; implementation staged | [Freeze workspace `.kungfu` home layout v1](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md) and the [typed C++ layout projection](../../framework/core/src/libkungfu/src/runtime/storage/layout.cpp) | `kungfu storage layout --json` and `kungfu storage layout --verify --json` |
 | journal wire epoch used by layout v1 | declared and reader-enforced; implementation staged with the layout decision | [`layout_fingerprint.h`](../../framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h) and the [retained fixture](../../framework/core/src/libyijinjing/tests/fixtures/journal-wire-v1.json) | native build and journal mmap tests |
-| retained cross-version byte corpus | qualified v2; append-only releases and all seven compatibility axes | [`portable-format-vectors`](../../framework/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
-| pre-stable v4 alpha baseline | `4.0.0-alpha.2` content-rooted successor; `alpha.1` retained immutably and incompatible in-place mutation rejected | [`v4-alpha/index.json`](../../framework/format/compatibility/v4-alpha/index.json) | `./shifu check:portable-format-authority` |
+| retained cross-version byte corpus | qualified v2; append-only releases and all seven compatibility axes | [`portable-format-vectors`](../../framework/spec/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
+| pre-stable v4 alpha baseline | `4.0.0-alpha.2` content-rooted successor; `alpha.1` retained immutably and incompatible in-place mutation rejected | [`v4-alpha/index.json`](../../framework/spec/format/compatibility/v4-alpha/index.json) | `./shifu check:portable-format-authority` |
 | Fact and Episode meaning | current public semantic authority | [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md), [Episode Object Model](../concepts/episode-object-model.md), and [Event Model](event-model.md) | source and qualification gates named by those documents |
 | portable spec bundle manifest | generated and content-root qualified; standalone status remains pre-release | [`@kungfu-tech/spec`](../../framework/spec/README.md), its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json), and [generated authority](../../framework/spec/generated/authority.json) | deterministic generation, full schema/root verification, clean install, and layer-format qualification |
 
@@ -41,7 +41,7 @@ version.
 The accepted
 [portable-format authority decision](../adr/KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429.md)
 and its
-[machine composition contract](../../framework/format/kungfu-portable-format-authority.contract.json)
+[machine composition contract](../../framework/spec/format/kungfu-portable-format-authority.contract.json)
 now define how the existing authorities relate. The contract keeps Fact,
 Episode, journal, manifest, payload-schema, package, content-root, layout, and
 Spec Bundle identities and version axes separate. It is a routing and
@@ -49,7 +49,7 @@ compatibility-ownership authority, not a mega-schema or a replacement for any
 component contract.
 
 The required-reader contract and the explicit
-[migration-and-repair protocol](../../framework/format/kungfu-format-migration.contract.json)
+[migration-and-repair protocol](../../framework/spec/format/kungfu-format-migration.contract.json)
 are executable. Compatibility is a tuple over journal epoch, workspace layout,
 record and payload schemas, root protocols, bundle manifest, and capabilities;
 package semver is not a substitute. Supported changes run only as explicit

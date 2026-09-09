@@ -3,13 +3,13 @@
   "generatedFrom": {
     "authority": "append-only canonical Era and Stage records plus non-authoritative Era Candidate revisions under docs/evolution",
     "semanticGraphAuthority": "Xinfa Atlas; this projection never creates current runtime authority",
-    "sourceRoot": "sha256:a092fe1ebcccf95ec482163c69260dd48a2452168808c30ae38fd406bdf35292"
+    "sourceRoot": "sha256:e964fb11547909708aa11acf704041f9742b49273be3e56b817bbc238b520b0d"
   },
   "summary": {
     "eras": 5,
-    "stages": 12,
-    "evidence": 40,
-    "authoritySubjects": 11,
+    "stages": 13,
+    "evidence": 43,
+    "authoritySubjects": 12,
     "eraCandidates": 0,
     "unresolvedEraCandidates": 0
   },
@@ -1071,6 +1071,137 @@
       ],
       "supersedes": [],
       "file": "docs/evolution/stages/12-project-compatibility-zero-residue.md"
+    },
+    {
+      "schema": "kungfu.evolution-stage/v1",
+      "id": "framework-package-owner-convergence",
+      "era": "work-control-dogfood",
+      "sequence": 13,
+      "title": "Framework package owner convergence",
+      "status": "open",
+      "evolutionImpact": "opens",
+      "period": {
+        "start": "2026-09-04",
+        "end": "ongoing"
+      },
+      "buildsOn": [
+        "project-compatibility-zero-residue"
+      ],
+      "pressure": "Framework mixed public npm packages with dozens of ownerless contract, internal-library, product, and repository-tool roots, so directory placement did not communicate distribution or semantic authority.",
+      "priorLimitation": "Consumers depended on paths spread across 57 immediate framework directories; 46 of those roots had no package identity, while Work protocols, native state, portable declarations, products, and developer tooling shared one flat namespace.",
+      "localCapability": "Spec, Core, and Work now provide explicit package owners for portable declarations, native execution and persistence, and Work lifecycle semantics; product and developer concerns live outside the framework package boundary.",
+      "compression": "Forty-six source-only framework roots converge into three semantic package owners or their product and developer homes, leaving framework as an npm-package-only boundary.",
+      "authorityTransitions": [
+        {
+          "subject": "framework-package-ownership",
+          "before": "a flat framework tree mixing npm packages with ownerless source roots",
+          "after": "an npm-package-only framework boundary owned by Spec, Core, Work, and existing runtime packages",
+          "authorityRefs": [
+            "framework/layout.manifest.json",
+            "framework/README.md",
+            "framework/work/README.md"
+          ]
+        },
+        {
+          "subject": "continuation-boundary",
+          "before": "Project Cut plus Xinfa Atlas and qualified continuation",
+          "after": "Project Cut plus Xinfa Atlas and qualified continuation under the Work package owner",
+          "authorityRefs": [
+            "framework/work/project-cut/README.md",
+            "docs/guides/xinfa-agent-context.md"
+          ]
+        },
+        {
+          "subject": "product-release-identity",
+          "before": "one immutable Product Release Cut with exact platform slices",
+          "after": "one immutable Product Release Cut with exact platform slices under the product owner",
+          "authorityRefs": [
+            "product/upgrade/kungfu-product-release-cut.contract.json",
+            "docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md"
+          ]
+        },
+        {
+          "subject": "product-update-movement",
+          "before": "explicit Cut Transition with lineage, compatibility, migration, rollback, trust, and evidence",
+          "after": "product-owned Cut Transition with lineage, compatibility, migration, rollback, trust, and evidence",
+          "authorityRefs": [
+            "product/upgrade/kungfu-product-release-cut.contract.json",
+            "product/upgrade/kungfu-upgrade.contract.json"
+          ]
+        },
+        {
+          "subject": "temporal-relation-proof",
+          "before": "canonical Fact-bound predicates and explicit bounded path receipts evaluated at one exact Cut",
+          "after": "Core-owned canonical Fact predicates and bounded path receipts evaluated at one exact Cut",
+          "authorityRefs": [
+            "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
+            "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+            "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md"
+          ]
+        },
+        {
+          "subject": "work-authority",
+          "before": "native Initiative, Assignment, Work Design, and Work Control without project-specific compatibility",
+          "after": "native Initiative, Assignment, Work Design, and Work Control under one Work package boundary",
+          "authorityRefs": [
+            "docs/profiles/work-control.md",
+            "framework/work/assignment-runtime/assignment-runtime.contract.json",
+            "framework/work/README.md"
+          ]
+        }
+      ],
+      "retiredSurfaces": [
+        "source-only immediate framework roots",
+        "framework-local product directories",
+        "framework-local repository-tool directories"
+      ],
+      "unlockedCapabilities": [
+        "package-level ownership inspection",
+        "zero source-only framework enforcement",
+        "clean installed Work protocol consumption"
+      ],
+      "downstreamConsumers": [
+        "Kungfu runtime packages",
+        "Work Control",
+        "Project Cut",
+        "release tooling",
+        "repository maintainers"
+      ],
+      "evidence": [
+        {
+          "kind": "document",
+          "ref": "framework/layout.manifest.json",
+          "label": "Package-only framework layout contract"
+        },
+        {
+          "kind": "document",
+          "ref": "framework/work/README.md",
+          "label": "Work package authority boundary"
+        },
+        {
+          "kind": "document",
+          "ref": "product/release/npm-package-registry.json",
+          "label": "Exact npm release inventory"
+        }
+      ],
+      "readerRoute": {
+        "intent": "Understand which package owns portable declarations, native state, and Work protocols after framework convergence",
+        "start": "framework/README.md",
+        "deepen": [
+          "framework/spec/README.md",
+          "framework/work/README.md",
+          "framework/core/package.json"
+        ]
+      },
+      "amends": [
+        "project-cut-xinfa-continuation",
+        "initiative-assignment-portable-work",
+        "product-release-cut-updater-convergence",
+        "temporal-relation-proof",
+        "project-compatibility-zero-residue"
+      ],
+      "supersedes": [],
+      "file": "docs/evolution/stages/13-framework-package-owner-convergence.md"
     }
   ],
   "eraCandidates": [],
@@ -1095,10 +1226,10 @@
     },
     {
       "subject": "continuation-boundary",
-      "authority": "Project Cut plus Xinfa Atlas and qualified continuation",
-      "sinceStage": "project-cut-xinfa-continuation",
+      "authority": "Project Cut plus Xinfa Atlas and qualified continuation under the Work package owner",
+      "sinceStage": "framework-package-owner-convergence",
       "authorityRefs": [
-        "framework/project-cut/README.md",
+        "framework/work/project-cut/README.md",
         "docs/guides/xinfa-agent-context.md"
       ]
     },
@@ -1121,6 +1252,16 @@
       ]
     },
     {
+      "subject": "framework-package-ownership",
+      "authority": "an npm-package-only framework boundary owned by Spec, Core, Work, and existing runtime packages",
+      "sinceStage": "framework-package-owner-convergence",
+      "authorityRefs": [
+        "framework/layout.manifest.json",
+        "framework/README.md",
+        "framework/work/README.md"
+      ]
+    },
+    {
       "subject": "local-product-installation",
       "authority": "Shifu selects one same-slot KFD-3 product bundle and native Core owns CLI install, selection, and rollback",
       "sinceStage": "product-release-cut-updater-convergence",
@@ -1140,39 +1281,40 @@
     },
     {
       "subject": "product-release-identity",
-      "authority": "one immutable Product Release Cut with exact platform slices",
-      "sinceStage": "product-release-cut-updater-convergence",
+      "authority": "one immutable Product Release Cut with exact platform slices under the product owner",
+      "sinceStage": "framework-package-owner-convergence",
       "authorityRefs": [
-        "framework/upgrade/kungfu-product-release-cut.contract.json",
+        "product/upgrade/kungfu-product-release-cut.contract.json",
         "docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md"
       ]
     },
     {
       "subject": "product-update-movement",
-      "authority": "explicit Cut Transition with lineage, compatibility, migration, rollback, trust, and evidence",
-      "sinceStage": "product-release-cut-updater-convergence",
+      "authority": "product-owned Cut Transition with lineage, compatibility, migration, rollback, trust, and evidence",
+      "sinceStage": "framework-package-owner-convergence",
       "authorityRefs": [
-        "framework/upgrade/kungfu-product-release-cut.contract.json",
-        "framework/upgrade/kungfu-upgrade.contract.json"
+        "product/upgrade/kungfu-product-release-cut.contract.json",
+        "product/upgrade/kungfu-upgrade.contract.json"
       ]
     },
     {
       "subject": "temporal-relation-proof",
-      "authority": "canonical Fact-bound predicates and explicit bounded path receipts evaluated at one exact Cut",
-      "sinceStage": "temporal-relation-proof",
+      "authority": "Core-owned canonical Fact predicates and bounded path receipts evaluated at one exact Cut",
+      "sinceStage": "framework-package-owner-convergence",
       "authorityRefs": [
-        "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
         "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
         "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md"
       ]
     },
     {
       "subject": "work-authority",
-      "authority": "native Initiative, Assignment, Work Design, and Work Control without project-specific compatibility",
-      "sinceStage": "project-compatibility-zero-residue",
+      "authority": "native Initiative, Assignment, Work Design, and Work Control under one Work package boundary",
+      "sinceStage": "framework-package-owner-convergence",
       "authorityRefs": [
         "docs/profiles/work-control.md",
-        "framework/assignment-runtime/assignment-runtime.contract.json"
+        "framework/work/assignment-runtime/assignment-runtime.contract.json",
+        "framework/work/README.md"
       ]
     }
   ]

@@ -32,7 +32,7 @@ const digestDocument = (value) =>
 
 test('retained Fact durable admission evidence is exact and fail closed', () => {
   const contract = readJson(
-    'framework/fact/kungfu-fact-cut-kernel.contract.json',
+    'framework/core/fact/kungfu-fact-cut-kernel.contract.json',
   );
   const report = readJson(REPORT);
   assert.equal(
@@ -118,7 +118,7 @@ test('retained Fact durable admission evidence is exact and fail closed', () => 
 
 test('native capability and fault suite project the machine contract', () => {
   const contract = readJson(
-    'framework/fact/kungfu-fact-cut-kernel.contract.json',
+    'framework/core/fact/kungfu-fact-cut-kernel.contract.json',
   );
   const capabilitySource = read(
     'framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp',
@@ -130,7 +130,7 @@ test('native capability and fault suite project the machine contract', () => {
     'framework/core/src/libyijinjing/src/io/durability.cpp',
   ).toString();
   const characterization = read(
-    'framework/core/tests/python/test_fact_kernel_characterization.py',
+    'framework/core/tests/python/_fact_kernel_durability_cases.py',
   ).toString();
   assert.match(capabilitySource, new RegExp(contract.durableAdmission.profile));
   assert.match(capabilitySource, /"default_enabled", true/u);

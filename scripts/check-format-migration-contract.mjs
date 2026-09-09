@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const CONTRACT_PATH =
-  'framework/format/kungfu-format-migration.contract.json';
+  'framework/spec/format/kungfu-format-migration.contract.json';
 const SHA256_ROOT = /^sha256:[0-9a-f]{64}$/u;
 
 /** @param {unknown} value */

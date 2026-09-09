@@ -5,7 +5,7 @@ adr_id: KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1363]
-qualification_refs: [framework/incubation/incubation-passport.contract.json, framework/incubation/incubation-passport.registry.json, framework/incubation/incubation-passport.baseline.json, framework/incubation/schema/incubation-passport-contract-v1.schema.json, framework/incubation/schema/incubation-passport-registry-v1.schema.json, scripts/check-incubation-passport.mjs, scripts/check-incubation-passport.test.mjs, tests/fixtures/incubation-passport/cases.json, docs/architecture/incubation-passport-governance.md, docs/architecture/work-events-schema-ownership-migration.md]
+qualification_refs: [framework/spec/incubation/incubation-passport.contract.json, framework/spec/incubation/incubation-passport.registry.json, framework/spec/incubation/incubation-passport.baseline.json, framework/spec/incubation/schema/incubation-passport-contract-v1.schema.json, framework/spec/incubation/schema/incubation-passport-registry-v1.schema.json, scripts/check-incubation-passport.mjs, scripts/check-incubation-passport.test.mjs, tests/fixtures/incubation-passport/cases.json, docs/architecture/incubation-passport-governance.md, docs/architecture/work-events-schema-ownership-migration.md]
 review_state: self-reviewed
 sensitivity: public
 sources: [architecture-decisions, local-files, user-consensus]

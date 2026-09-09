@@ -3,7 +3,7 @@
 This page explains how a KFX moves from inert package bytes to an authorized
 runtime. It complements [`extensions.md`](extensions.md), which explains how to
 author a package. The machine authority is
-[`kungfu-kfx.contract.json`](../../config/kungfu-kfx.contract.json) and its
+[`kungfu-kfx.contract.json`](../../framework/kfx/kungfu-kfx.contract.json) and its
 Core implementation under `framework/core/src/libkungfu/src/runtime/kfx/`.
 
 ## One authorization equation
@@ -141,8 +141,21 @@ admission evidence.
 ## See also
 
 - [`extensions.md`](extensions.md)
-- [KFX native registry and authority contract](../../config/kungfu-kfx.contract.json)
+- [KFX native registry and authority contract](../../framework/kfx/kungfu-kfx.contract.json)
 - [KFX identity-neutral terminal qualification](../qualification/kfx-identity-neutral-terminal.md)
 - [KFX authority decision](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
 - [KFX trust boundary](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)
 - [Uniform capability surface](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)
+
+
+## npm module boundaries inside a checkout
+
+Workspace placement does not grant access to another package's implementation.
+A KFX, API, or reference host declares each consumed package and uses its public
+`exports`. Build entrypoints and tests follow the same rule. Source aliases and
+relative paths into sibling packages are rejected by the repository boundary
+check. See [framework package consumption](../../framework/README.md).
+
+An npm export controls module visibility. It grants no runtime capability,
+admission, activation, or Warrant authority; those still follow the authorization
+equation above.

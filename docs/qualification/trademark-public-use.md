@@ -37,7 +37,7 @@ release, a verified unavailable state, and rejected partial or stale evidence,
 then names both the proof and its non-claims.
 
 The repository-owned release requirements live in
-[`kungfu-trademark-public-use.contract.json`](../../framework/release/kungfu-trademark-public-use.contract.json).
+[`kungfu-trademark-public-use.contract.json`](../../product/release/kungfu-trademark-public-use.contract.json).
 Source acceptance runs `scripts/check-trademark-public-use.mjs` and its negative
 fixtures. The governing decision is
 [KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md).
@@ -49,9 +49,9 @@ The assembled Rust front door and the Python compatibility path now render
 line, and **Kungfu UNGFU™ · Never Guess. Facts Unfold.** is the second. Readers
 that need only the version continue to consume the first non-empty line.
 
-The packaged desktop app sets a native About panel for **Kungfu Episodes** with
+The packaged desktop app sets a native About panel for **Kungfu** with
 **Kungfu UNGFU™** as its secondary signature and **Never Guess. Facts Unfold.**
-as its credits line. Kungfu Episodes remains the application name.
+as its credits line. Kungfu is the application name.
 
 These source-implemented surfaces are not release evidence by themselves. The
 static contract keeps a preparation-state baseline; the synthesized public
@@ -81,7 +81,7 @@ not replace the product name.
 ## Release evidence bundle
 
 The reviewed evidence shape is
-[`kungfu-ungfu-release-evidence.schema.json`](../../framework/release/kungfu-ungfu-release-evidence.schema.json).
+[`kungfu-ungfu-release-evidence.schema.json`](../../product/release/kungfu-ungfu-release-evidence.schema.json).
 It deliberately keeps three layers separate:
 
 1. the filing-oriented public acquisition/product specimen pair;
@@ -90,7 +90,7 @@ It deliberately keeps three layers separate:
    acquisition or product evidence.
 
 The committed
-[`kungfu-ungfu-release-evidence.candidate.json`](../../framework/release/kungfu-ungfu-release-evidence.candidate.json)
+[`kungfu-ungfu-release-evidence.candidate.json`](../../product/release/kungfu-ungfu-release-evidence.candidate.json)
 is only a preparation file. It contains no public acquisition, product, Class 9
 record, use claim, date claim, or legal conclusion. Generate another
 preparation file with:

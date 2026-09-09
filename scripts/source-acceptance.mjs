@@ -39,7 +39,6 @@ const TYPED_PYTHON_ROOTS = [
 const isWin = process.platform === 'win32';
 
 /** @typedef {{label: string, command: string, args: string[], cwd?: string, env?: NodeJS.ProcessEnv}} Command */
-
 const SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
 export function readSourceAcceptanceGit(
@@ -572,7 +571,7 @@ export function sourceAcceptancePlan(
   const deleted = new Set(deletedFiles);
   const materialFiles = files.filter((file) => !deleted.has(file));
   const settlementPublicationPresent = fs.existsSync(
-    path.join(ROOT, 'framework/project-cut/publication.contract.json'),
+    path.join(ROOT, 'framework/work/project-cut/publication.contract.json'),
   );
   const coldReadOnlySourceAcceptance =
     process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1';
@@ -585,7 +584,7 @@ export function sourceAcceptancePlan(
       : [
           [
             'Shifu Production Graph contract',
-            'framework/production-graph/check.mjs',
+            'developer/production-graph/check.mjs',
           ],
         ]),
     [
@@ -621,6 +620,10 @@ export function sourceAcceptancePlan(
     ['npm Release package registry', 'scripts/check-npm-package-registry.mjs'],
     ['framework layout boundary', 'scripts/check-framework-layout.mjs'],
     [
+      'npm package consumption boundaries',
+      'scripts/check-package-boundaries.mjs',
+    ],
+    [
       'component distribution boundary',
       'scripts/check-npm-package-registry.mjs',
       '--component-distribution',
@@ -646,17 +649,21 @@ export function sourceAcceptancePlan(
     ],
     [
       'core architecture contract',
-      'framework/core/architecture/check-layers.mjs',
+      fileURLToPath(
+        import.meta.resolve('@kungfu-tech/core/architecture/check-layers'),
+      ),
     ],
     [
       'core architecture negative fixtures',
-      'framework/core/architecture/check-layers.mjs',
+      fileURLToPath(
+        import.meta.resolve('@kungfu-tech/core/architecture/check-layers'),
+      ),
       '--self-test',
     ],
     ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
     [
       'changed-code function-risk ratchet and advisory projection',
-      'framework/maintainability/function-risk-ratchet.mjs',
+      'developer/maintainability/function-risk-ratchet.mjs',
       '--base',
       evidenceBaseCommit,
     ],
@@ -670,25 +677,37 @@ export function sourceAcceptancePlan(
         ]),
     [
       'semantic amplification and task graph',
-      'framework/maintainability/semantic-amplification.mjs',
+      'developer/maintainability/semantic-amplification.mjs',
       '--check',
     ],
     [
       'core architecture query and health contract',
-      'framework/core/architecture/query-health.mjs',
+      fileURLToPath(
+        import.meta.resolve('@kungfu-tech/core/architecture/query-health'),
+      ),
     ],
     [
       'core architecture query negative and navigation fixtures',
-      'framework/core/architecture/query-health.mjs',
+      fileURLToPath(
+        import.meta.resolve('@kungfu-tech/core/architecture/query-health'),
+      ),
       '--self-test',
     ],
     [
       'core build capability contract',
-      'framework/core/architecture/check-build-capabilities.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/core/architecture/check-build-capabilities',
+        ),
+      ),
     ],
     [
       'core build capability negative fixtures',
-      'framework/core/architecture/check-build-capabilities.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/core/architecture/check-build-capabilities',
+        ),
+      ),
       '--self-test',
     ],
     [
@@ -711,13 +730,15 @@ export function sourceAcceptancePlan(
     ['CLI catalog parity', 'scripts/check-cli-catalog-parity.mjs'],
     [
       'KFX Site Bundle impact dispositions',
-      'framework/site/tooling/check-kfx-site-impact.mjs',
+      fileURLToPath(
+        import.meta.resolve('@kungfu-tech/site/tooling/check-kfx-site-impact'),
+      ),
       ...(evidenceBaseCommit ? ['--base', evidenceBaseCommit] : []),
       ...files.flatMap((file) => ['--changed-file', file]),
     ],
     [
       'deprecation lifecycle authority',
-      'framework/deprecation/deprecation-lifecycle.mjs',
+      'developer/deprecation/deprecation-lifecycle.mjs',
       '--as-of',
       '2026-08-28',
     ],
@@ -725,7 +746,7 @@ export function sourceAcceptancePlan(
       ? [
           [
             'changed deprecation surface enrollment',
-            'framework/deprecation/deprecation-lifecycle.mjs',
+            'developer/deprecation/deprecation-lifecycle.mjs',
             '--as-of',
             '2026-08-28',
             ...files.flatMap((file) => ['--changed-file', file]),
@@ -740,19 +761,35 @@ export function sourceAcceptancePlan(
     ['Project Cut history contract', 'scripts/check-project-cut-history.mjs'],
     [
       'Work history selector contract',
-      'framework/work-history-selector/tooling/check-work-history-selector.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/work/work-history-selector/tooling/check-work-history-selector',
+        ),
+      ),
     ],
     [
       'Work design advisor contract',
-      'framework/work-design-advisor/tooling/check-work-design-advisor.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/work/work-design-advisor/tooling/check-work-design-advisor',
+        ),
+      ),
     ],
     [
       'Work design policy replay contract',
-      'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/work/work-design-policy-replay/tooling/check-work-design-policy-replay',
+        ),
+      ),
     ],
     [
       'Work design work-design contract',
-      'framework/work-design-preflight/tooling/check-work-design-preflight.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/work/work-design-preflight/tooling/check-work-design-preflight',
+        ),
+      ),
     ],
     [
       'Project Cut composition contract',
@@ -762,7 +799,9 @@ export function sourceAcceptancePlan(
       ? [
           [
             'Project Cut settlement publication contract',
-            'framework/project-cut/bin/project-cut.mjs',
+            fileURLToPath(
+              import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
+            ),
             'publication-contract-check',
             '--json',
           ],
@@ -791,7 +830,11 @@ export function sourceAcceptancePlan(
     ],
     [
       'Work Profile conformance gate',
-      'framework/work-profile-conformance/work-profile-conformance.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/work/work-profile-conformance/work-profile-conformance',
+        ),
+      ),
       '--check',
       '--json',
     ],
@@ -800,7 +843,7 @@ export function sourceAcceptancePlan(
       : [
           [
             'agent-first canonical policy',
-            'developer/sdk/src/sdk.js',
+            fileURLToPath(import.meta.resolve('@kungfu-tech/sdk')),
             'contract',
             'policy',
             '--check',
@@ -808,7 +851,7 @@ export function sourceAcceptancePlan(
           ],
           [
             'agent-first contract audit',
-            'developer/sdk/src/sdk.js',
+            fileURLToPath(import.meta.resolve('@kungfu-tech/sdk')),
             'contract',
             'audit',
             '--json',
@@ -816,18 +859,20 @@ export function sourceAcceptancePlan(
         ]),
     [
       'KFD-4 perspective qualification',
-      'framework/core/tests/qualification/kfd4-perspective.mjs',
-    ],
-    [
-      'release publication control plane',
-      'framework/release/publication-control-plane.mjs',
-      'check',
-    ],
-    [
-      'version-line authority',
-      'framework/version-line/check-version-line-authority.mjs',
+      fileURLToPath(
+        import.meta.resolve(
+          '@kungfu-tech/core/testing/qualification/kfd4-perspective',
+        ),
+      ),
     ],
     ['KFD support matrix', 'scripts/kfd-support-matrix.mjs', '--check'],
+    [
+      'SDK package platform fixtures',
+      '--test',
+      fileURLToPath(
+        import.meta.resolve('@kungfu-tech/storage/testing/package-platforms'),
+      ),
+    ],
     [
       'Darwin x64 retirement policy',
       'scripts/platform-command.mjs',
@@ -842,11 +887,6 @@ export function sourceAcceptancePlan(
       'KFD candidate evidence fixtures',
       '--test',
       'scripts/kfd-candidate-evidence.test.mjs',
-    ],
-    [
-      'SDK package platform fixtures',
-      '--test',
-      'framework/storage/package-platforms.test.mjs',
     ],
     [
       'KFD-4 perspective qualification negative fixtures',
@@ -916,6 +956,7 @@ export function sourceAcceptancePlan(
               'scripts/source-acceptance.test.mjs',
               'scripts/platform-command.test.mjs',
               'product/scripts/dist.test.mjs',
+              'framework/gui/scripts/electron-builder-config.test.mjs',
               'product/scripts/finalize-macos-release-artifacts.test.mjs',
               'product/scripts/dist-cli-executable-layout.test.mjs',
               'product/scripts/installed-kungfu/index.test.mjs',
@@ -923,10 +964,10 @@ export function sourceAcceptancePlan(
               'scripts/kungfu-workflow-authority.test.mjs',
               'scripts/code-complexity-budget.test.mjs',
               'scripts/check-code-complexity.test.mjs',
-              'framework/report-projection/authority.test.mjs',
-              'framework/maintainability/function-risk.test.mjs',
-              'framework/maintainability/semantic-amplification.test.mjs',
-              'framework/maintainability/terminal-evidence-matrix.test.mjs',
+              'developer/report-projection/authority.test.mjs',
+              'developer/maintainability/function-risk.test.mjs',
+              'developer/maintainability/semantic-amplification.test.mjs',
+              'developer/maintainability/terminal-evidence-matrix.test.mjs',
               ...(coldReadOnlySourceAcceptance
                 ? []
                 : ['scripts/readonly-agent-bootstrap.test.mjs']),
@@ -935,7 +976,7 @@ export function sourceAcceptancePlan(
               'scripts/check-shifu-cache-contract.test.mjs',
               ...(coldReadOnlySourceAcceptance
                 ? []
-                : ['framework/production-graph/check.test.mjs']),
+                : ['developer/production-graph/check.test.mjs']),
               'scripts/check-health-diagnostics-contract.test.mjs',
               'scripts/shifu-cache-runtime.test.mjs',
               'scripts/shifu-conan-hit-evidence.test.mjs',
@@ -949,14 +990,11 @@ export function sourceAcceptancePlan(
               'scripts/shifu-documentation-consumers.test.mjs',
               'scripts/kungfu-xinfa-consumer.test.mjs',
               'scripts/check-kungfu-gate-catalog.test.mjs',
-              'scripts/linux-arm64-alpha-qualification-workflow.test.mjs',
+              'scripts/gate-measurement-history.test.mjs',
               'scripts/affected-native-proof.test.mjs',
+              'scripts/affected-native-proof-bootstrap.test.mjs',
               'scripts/affected-native-semantic-source.test.mjs',
               'scripts/qualified-assignment-core-artifact.test.mjs',
-              'scripts/assemble-kungfu-publication-gate.test.mjs',
-              'scripts/verify-kungfu-release-admission.test.mjs',
-              'scripts/release-publication-control-plane.test.mjs',
-              'scripts/version-line-authority.test.mjs',
               'crates/xinfa/tooling/check-boundary.test.mjs',
               'scripts/check-schema-authority.test.mjs',
               'scripts/check-incubation-passport.test.mjs',
@@ -970,13 +1008,14 @@ export function sourceAcceptancePlan(
               'scripts/check-npm-package-registry.test.mjs',
               'scripts/npm-release-inventory.test.mjs',
               'scripts/check-framework-layout.test.mjs',
+              'scripts/check-package-boundaries.test.mjs',
               'scripts/check-upgrade-contract.test.mjs',
               'scripts/probe-cpp-cmake-contract.test.mjs',
               'scripts/check-upgrade-qualification.test.mjs',
               'scripts/check-agent-session-contract.test.mjs',
               'scripts/check-cli-catalog-parity.test.mjs',
               'scripts/check-kfx-site-impact.test.mjs',
-              'framework/deprecation/deprecation-surface-discovery.test.mjs',
+              'developer/deprecation/deprecation-surface-discovery.test.mjs',
               'scripts/check-fact-cut-kernel-contract.test.mjs',
               'scripts/check-temporal-relation-contract.test.mjs',
               'scripts/check-release-provenance-object.test.mjs',
@@ -993,7 +1032,7 @@ export function sourceAcceptancePlan(
               'scripts/check-layered-api-encoding-boundary.test.mjs',
               'scripts/check-work-lifecycle-native.test.mjs',
               'scripts/check-work-lifecycle-operation-matrix.test.mjs',
-              'framework/work-profile-conformance/work-profile-conformance.test.mjs',
+              'framework/work/work-profile-conformance/work-profile-conformance.test.mjs',
               'scripts/check-project-work-agent-product.test.mjs',
               'scripts/registry-envelope.test.mjs',
               'scripts/check-kfd-agent-runtime-boundary.mjs',
@@ -1012,7 +1051,7 @@ export function sourceAcceptancePlan(
                 : []),
               'scripts/project-cut-merge-queue-admission.test.mjs',
               'scripts/check-workspace-continuation.test.mjs',
-              'framework/assignment-capture/assignment-capture.test.mjs',
+              'framework/work/assignment-capture/assignment-capture.test.mjs',
               'scripts/run-continuity-pilot.test.mjs',
               'scripts/check-episode-admission-contract.test.mjs',
               'framework/agent-session/tests/capsule-host.test.mjs',

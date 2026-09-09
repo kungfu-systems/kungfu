@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-export const PRODUCT_NAME = 'Kungfu Episodes';
+export const PRODUCT_NAME = 'Kungfu';
 export const SECONDARY_SOURCE_SIGNATURE = 'Kungfu UNGFU™';
 export const SOURCE_PRINCIPLE = 'Never Guess. Facts Unfold.';
 

@@ -11,14 +11,16 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '@kungfu-tech/work/episode-provider';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/index.mjs';
-import {
+} from '@kungfu-tech/work/project-cut';
+import * as publicationBoundary from '@kungfu-tech/work/project-cut/publication';
+
+const {
   advanceSettlementPublication,
   checkSettlementPublicationContract,
   classifySettlementPublicationTrigger,
@@ -27,7 +29,7 @@ import {
   planSettlementPublication,
   reconcileSettlementPublication,
   verifySettlementPublication,
-} from '../framework/project-cut/src/publication.mjs';
+} = publicationBoundary;
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -37,12 +39,27 @@ const PROJECT_CUT_FIXTURE = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
     ),
     'utf8',
   ),
 );
-const CLI = path.join(REPO_ROOT, 'framework/project-cut/bin/project-cut.mjs');
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
+);
+
+test('publication boundary exposes only the stable operations', () => {
+  assert.deepEqual(Object.keys(publicationBoundary), [
+    'advanceSettlementPublication',
+    'checkSettlementPublicationContract',
+    'classifySettlementPublicationTrigger',
+    'inspectSettlementPublication',
+    'materializeSettlementPublication',
+    'planSettlementPublication',
+    'reconcileSettlementPublication',
+    'verifySettlementPublication',
+  ]);
+});
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();

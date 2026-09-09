@@ -168,7 +168,7 @@ try {
 
   process.env.KUNGFU_DIR = bindingDir;
   const require = createRequire(import.meta.url);
-  const kungfu = require('../framework/core/lib/kungfu.js')();
+  const kungfu = require('@kungfu-tech/core/kungfu')();
   const nodeStatus = kungfu.projectionCandidateStatusTyped({
     data_root: restartRoot,
     stream_id: 71n,

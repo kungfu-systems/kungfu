@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { READONLY_SOURCE_COMMANDS } from './shifu-readonly-entry.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const INVENTORY = 'framework/maintainability/readonly-source-routes.json';
+const INVENTORY = 'developer/maintainability/readonly-source-routes.json';
 const REQUIRED_AGENT_DISCOVERY = [
   'kungfu agent brief',
   'kungfu agent runtime list --json',

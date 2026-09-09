@@ -8,8 +8,8 @@
 // TS type-stripping) and python3.
 import { spawn } from 'node:child_process';
 
-import { createCapabilityHost } from '../../../framework/api/src/capability/sandbox.ts';
-import { serveSubprocessCapabilities } from '../../../framework/api/src/capability/subprocess.ts';
+import { createCapabilityHost } from '@kungfu-tech/api/capability/sandbox';
+import { serveSubprocessCapabilities } from '@kungfu-tech/api/capability/subprocess';
 
 const caps = {
   rewind: { runs: () => ['run-A', 'run-B'] },

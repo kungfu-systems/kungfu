@@ -47,7 +47,8 @@ function fixture(t) {
   const manifest = {
     schema: 'kungfu.framework-layout-manifest/v1',
     frameworkRoot: 'framework',
-    releaseRegistry: 'framework/release/npm-package-registry.json',
+    releaseRegistry: 'product/release/npm-package-registry.json',
+    sourceOnlyPolicy: 'allow-source-only',
     entries: [
       {
         path: 'framework/alpha',
@@ -75,6 +76,18 @@ function fixture(t) {
   };
   return { root, manifest };
 }
+
+test('can forbid every source-only root at the framework boundary', (t) => {
+  const { root, manifest } = fixture(t);
+  manifest.sourceOnlyPolicy = 'forbid-source-only';
+  const result = validateFrameworkLayout({
+    root,
+    manifest,
+    releaseRegistry: RELEASE_REGISTRY,
+  });
+  assert.equal(result.ok, false);
+  assert.ok(codes(result).includes('source-only-forbidden'));
+});
 
 function codes(result) {
   return result.issues.map((entry) => entry.code);
@@ -294,11 +307,23 @@ test('the repository matches its framework layout manifest', () => {
     manifest.entries
       .filter((entry) => entry.boundaryReview === 'complete')
       .map((entry) => entry.path),
-    [
-      'framework/action',
-      'framework/assignment-runtime',
-      'framework/evidence',
-      'framework/project-cut',
-    ],
+    [],
   );
+});
+
+test('npm framework dependencies come from manifests after package-name migration', (t) => {
+  const { root } = fixture(t);
+  const manifest = path.join(root, 'framework/alpha/package.json');
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+  pkg.devDependencies = { '@kungfu-tech/beta': 'workspace:*' };
+  fs.writeFileSync(manifest, JSON.stringify(pkg));
+  fs.writeFileSync(
+    path.join(root, 'framework/beta/package.json'),
+    JSON.stringify({ name: '@kungfu-tech/beta' }),
+  );
+  assert.deepEqual(discoverFrameworkDependencies({ root }), {
+    'framework/alpha': ['framework/beta'],
+    'framework/beta': [],
+    'framework/release': [],
+  });
 });

@@ -73,7 +73,7 @@
     ]
   },
   "canonicalRootCorpus": {
-    "registry": "framework/fact/kungfu-fact-root-canonical-v2.json",
+    "registry": "framework/core/fact/kungfu-fact-root-canonical-v2.json",
     "positiveAndNegativeVectors": "tests/fixtures/fact-root-canonical/v2"
   },
   "compatibility": {

@@ -11,7 +11,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const contract = readJson(
-  'framework/data-protection/kungfu-data-protection.contract.json',
+  'framework/core/data-protection/kungfu-data-protection.contract.json',
 );
 const fixtures = readJson('tests/fixtures/data-protection-contract/cases.json');
 
@@ -347,7 +347,7 @@ test('positive and adversarial fixtures pin exact success and refusal diagnostic
 });
 
 test('human contract states the same authority and non-claim boundaries', () => {
-  const guide = read('framework/data-protection/README.md');
+  const guide = read('framework/core/data-protection/README.md');
   assert.match(
     guide,
     /semantic history only after the owning domain has accepted it/u,

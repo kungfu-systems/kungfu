@@ -1,0 +1,124 @@
+{
+  "schema": "kungfu.fact-root-canonical.contract/v2",
+  "id": "kungfu-fact-root-canonical",
+  "status": "portable-independently-implemented",
+  "standard": "KFD-1",
+  "protocol": {
+    "id": "kungfu.fact-root.canonical/v2",
+    "magicHex": "4b465232",
+    "root": "sha256 of the complete canonical byte preimage, rendered as sha256:<64-lower-hex>",
+    "libraryIndependent": true,
+    "storageIndependent": true,
+    "normalization": "Unicode scalar sequences are preserved exactly; NFC and NFD are distinct logical text values.",
+    "compatibility": "sha256-length-framed-fields-v1 remains a legacy reader protocol and is never reinterpreted as v2."
+  },
+  "typeTags": {
+    "null": "00",
+    "false": "01",
+    "true": "02",
+    "u64": "10",
+    "i64": "11",
+    "f64": "12",
+    "text": "20",
+    "bytes": "21",
+    "array": "30",
+    "set": "31",
+    "map": "32",
+    "record": "40"
+  },
+  "framing": {
+    "countAndLength": "unsigned 64-bit big-endian",
+    "u64": "eight-byte unsigned big-endian, logical input transported as canonical decimal text",
+    "i64": "eight-byte two's-complement big-endian, logical input transported as canonical decimal text",
+    "f64": "eight-byte IEEE-754 binary64 big-endian; +0 and -0 remain distinct; NaN and infinities are rejected",
+    "text": "valid shortest-form UTF-8 scalar bytes, prefixed by byte length; surrogates and malformed UTF-8 are rejected",
+    "bytes": "raw bytes prefixed by byte length",
+    "array": "item count followed by canonical items in declared order",
+    "set": "item count followed by canonical items sorted by unsigned bytewise preimage; equal preimages are rejected",
+    "map": "entry count followed by text-key/value pairs sorted by the complete encoded text key; equal keys are rejected",
+    "record": "encoded schema text, field count, then fields sorted by unsigned 64-bit field id; each field is id then typed value"
+  },
+  "valueSemantics": {
+    "nullVersusAbsent": "null is a value; absent is not encodable. A schema alone decides whether a field may be omitted or has an identity default.",
+    "unknownFields": "rejected before root generation",
+    "defaults": "no implicit identity defaults; a future default changes the Root-bound schema id",
+    "mapKeys": "text only",
+    "integerTransport": "JSON numbers are not the normative integer model and must not carry Root-bound u64 or i64 values",
+    "floatTransport": "the conformance IR carries exact binary64 bits, not decimal JSON spelling",
+    "unicodeEscapes": "escape spelling is transport-only; decoded scalar sequence is identity",
+    "schemaEvolution": "any field-set, field-type, identity-default, encoding, or meaning change requires a new schema id and new Root",
+    "nonIdentityFields": "must be excluded by a closed schema before encoding and never added as unknown fields"
+  },
+  "schemaRegistry": {
+    "authority": "this machine contract owns schema field ids, order, names and optionality",
+    "projectionPolicy": "C++ and Python keep independent ordered projections; the conformance gate requires exact equality with this registry",
+    "requiredByDefault": true,
+    "unknownSchema": "rejected",
+    "unknownField": "rejected",
+    "missingRequiredField": "rejected",
+    "evolution": "any field add, delete, reorder, rename or optionality change requires a new schema id and protocol qualification"
+  },
+  "schemas": [
+    {"id": "kungfu.fact.object/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "objectId"}, {"id": 3, "name": "objectType"}, {"id": 4, "name": "createdByReceiptRoot"}]},
+    {"id": "kungfu.fact.version/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "objectId"}, {"id": 3, "name": "bodyRoot"}, {"id": 4, "name": "schemaRoot"}, {"id": 5, "name": "parentVersionRoots"}, {"id": 6, "name": "declarationRoots"}, {"id": 7, "name": "admissionRoots"}]},
+    {"id": "kungfu.fact.relation-endpoint/v2", "fields": [{"id": 1, "name": "kind"}, {"id": 2, "name": "id"}, {"id": 3, "name": "mappingReceiptRoot", "optional": true}]},
+    {"id": "kungfu.fact.relation-add/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "relationId"}, {"id": 3, "name": "relationType"}, {"id": 4, "name": "source"}, {"id": 5, "name": "target"}, {"id": 6, "name": "attributesRoot"}, {"id": 7, "name": "admissionRoots"}]},
+    {"id": "kungfu.fact.relation-revoke/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "relationRoot"}, {"id": 3, "name": "reasonRoot"}]},
+    {"id": "kungfu.fact.cut/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "parentCutRoots"}, {"id": 3, "name": "objectVersions"}, {"id": 4, "name": "activeRelationRoots"}, {"id": 5, "name": "declarationRoots"}, {"id": 6, "name": "admissionRoots"}, {"id": 7, "name": "episodeFrontier"}, {"id": 8, "name": "omissionRoots"}, {"id": 9, "name": "conflictRoots"}]},
+    {"id": "kungfu.fact.ref-transition/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "transitionId"}, {"id": 3, "name": "refName"}, {"id": 4, "name": "expectedOldCutRoot"}, {"id": 5, "name": "expectedOldRevision"}, {"id": 6, "name": "newCutRoot"}, {"id": 7, "name": "kind"}, {"id": 8, "name": "reasonRoot"}]},
+    {"id": "kungfu.fact.operation-receipt/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "operationId"}, {"id": 3, "name": "operation"}, {"id": 4, "name": "status"}, {"id": 5, "name": "failureCode"}, {"id": 6, "name": "recordRoot"}, {"id": 7, "name": "priorCutRoot"}, {"id": 8, "name": "currentCutRoot"}, {"id": 9, "name": "priorRevision"}, {"id": 10, "name": "currentRevision"}]},
+    {"id": "kungfu.fact.operation-request/v2", "fields": [{"id": 1, "name": "action"}, {"id": 2, "name": "arguments"}]},
+    {"id": "kungfu.fact.root-set/v2", "fields": [{"id": 1, "name": "domain"}, {"id": 2, "name": "roots"}]},
+    {"id": "kungfu.fact.authority-bundle/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "capabilities"}, {"id": 3, "name": "inventory"}, {"id": 4, "name": "bodyRoots"}]},
+    {"id": "kungfu.fact.temporal-predicate/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "predicateId"}, {"id": 3, "name": "operations"}, {"id": 4, "name": "direction"}, {"id": 5, "name": "pathPolicy"}, {"id": 6, "name": "cyclePolicy"}, {"id": 7, "name": "authorityRoot"}]},
+    {"id": "kungfu.fact.temporal-relation/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "relationId"}, {"id": 3, "name": "predicateRoot"}, {"id": 4, "name": "sourceRoot"}, {"id": 5, "name": "targetRoot"}, {"id": 6, "name": "validFromCutRoot"}, {"id": 7, "name": "scopeRoot"}, {"id": 8, "name": "authorityRoot"}, {"id": 9, "name": "admissionRoots"}]},
+    {"id": "kungfu.fact.temporal-supersession/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "priorRelationRoot"}, {"id": 3, "name": "successorRelationRoot"}, {"id": 4, "name": "effectiveCutRoot"}, {"id": 5, "name": "reasonRoot"}, {"id": 6, "name": "authorityRoot"}, {"id": 7, "name": "admissionRoots"}]},
+    {"id": "kungfu.fact.temporal-revocation/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "relationRoot"}, {"id": 3, "name": "effectiveCutRoot"}, {"id": 4, "name": "reasonRoot"}, {"id": 5, "name": "authorityRoot"}, {"id": 6, "name": "admissionRoots"}]},
+    {"id": "kungfu.fact.temporal-authority-proof/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "proofId"}, {"id": 3, "name": "subjectAuthorityRoot"}, {"id": 4, "name": "governingAuthorityRoot"}, {"id": 5, "name": "operations"}, {"id": 6, "name": "validFromCutRoot"}, {"id": 7, "name": "revokedAtCutRoot"}, {"id": 8, "name": "admissionRoots"}]},
+    {"id": "kungfu.fact.provenance-object/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "objectId"}, {"id": 3, "name": "subjectRoot"}, {"id": 4, "name": "materialRoots"}, {"id": 5, "name": "relationRoots"}, {"id": 6, "name": "cutRoot"}, {"id": 7, "name": "authorityRoot"}, {"id": 8, "name": "admissionRoots"}]},
+    {"id": "kungfu.fact.temporal-path-query/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "queryId"}, {"id": 3, "name": "operation"}, {"id": 4, "name": "predicateRoot"}, {"id": 5, "name": "sourceRoot"}, {"id": 6, "name": "targetRoot"}, {"id": 7, "name": "cutRoot"}, {"id": 8, "name": "relationPathRoots"}, {"id": 9, "name": "requiredAuthorityRoot"}, {"id": 10, "name": "maxDepth"}]},
+    {"id": "kungfu.fact.temporal-path-receipt/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "queryRoot"}, {"id": 3, "name": "status"}, {"id": 4, "name": "failureCode"}, {"id": 5, "name": "cutRoot"}, {"id": 6, "name": "relationPathRoots"}, {"id": 7, "name": "authorityProofRoots"}, {"id": 8, "name": "omissionRoots"}]},
+    {"id": "kungfu.fact.root-mapping-receipt/v1", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "legacyProtocol"}, {"id": 3, "name": "legacyRoot"}, {"id": 4, "name": "successorProtocol"}, {"id": 5, "name": "successorRoot"}, {"id": 6, "name": "admissionRoot"}]}
+  ],
+  "orderingRules": {
+    "rootSets": "KFR2 set order over the complete encoded root text; duplicate roots reject",
+    "objectVersions": "KFR2 set order over a two-item record tuple; duplicate objectId rejects at schema admission even when versionRoot differs",
+    "episodeFrontier": "KFR2 set order over the complete episodeId/sealedContentRoot/acceptedManifestFrameUid tuple; equal tuples and duplicate episodeId reject"
+  },
+  "operationRequests": {
+    "policy": "closed mutation request schemas; no extension field is admitted at the top level or in declared nested members",
+    "identityBoundary": "every admitted request field is either consumed by the action or rejected before requestRoot generation",
+    "scope": "Fact mutation requests only; query, capability, portability and canonical-root edges keep their own contracts",
+    "actions": [
+      {"id": "object-put", "fields": ["action", "object_id", "object_type", "created_by_receipt_root"]},
+      {"id": "version-put", "fields": ["action", "object_id", "body", "schema_root", "parent_version_roots", "declaration_roots", "admission_roots"], "optional": ["parent_version_roots"]},
+      {"id": "relation-add", "fields": ["action", "relation_id", "relation_type", "source", "target", "attributes_root", "admission_roots"]},
+      {"id": "relation-revoke", "fields": ["action", "relation_root", "reason_root"]},
+      {"id": "cut-put", "fields": ["action", "parent_cut_roots", "object_versions", "active_relation_roots", "declaration_roots", "admission_roots", "episode_frontier", "omission_roots", "conflict_roots"], "optional": ["parent_cut_roots", "object_versions", "active_relation_roots", "declaration_roots", "admission_roots", "episode_frontier", "omission_roots", "conflict_roots"]},
+      {"id": "ref-cas", "fields": ["action", "transition_id", "ref_name", "expected_old_cut_root", "expected_old_revision", "new_cut_root", "kind", "reason_root", "durability"], "optional": ["durability"]}
+    ],
+    "nested": [
+      {"id": "relation-endpoint", "fields": ["kind", "id", "mapping_receipt_root"], "conditional": "mapping_receipt_root is required only for external-identity-with-mapping-receipt and forbidden otherwise"},
+      {"id": "object-version", "fields": ["object_id", "version_root"]},
+      {"id": "episode-frontier", "fields": ["episode_id", "sealed_content_root", "accepted_manifest_frame_uid"]}
+    ]
+  },
+  "migration": {
+    "legacyProtocol": "sha256-length-framed-fields-v1",
+    "legacyRead": "required",
+    "legacyRewrite": "forbidden",
+    "writerDefault": "kungfu.fact-root.canonical/v2",
+    "writerAuthority": "framework/core/fact/kungfu-fact-writer-authority-v2.json",
+    "recordSchemaVersion": 2,
+    "downgradeWrite": "fail-closed",
+    "continuity": ["stable Fact object identity", "explicit successor relation", "kungfu.fact.root-mapping-receipt/v1"],
+    "mappingReceipt": "binds both protocol labels, both roots, and the exact admission root; it never claims equal bytes or reinterprets the legacy root"
+  },
+  "conformance": {
+    "corpus": "tests/fixtures/fact-root-canonical/vectors.json",
+    "gate": "scripts/check-fact-root-canonical.test.mjs",
+    "implementations": ["libkungfu-cpp", "independent-python"],
+    "comparison": ["acceptance-or-stable-failure-code", "canonical-bytes-hex", "sha256-root"],
+    "dependencyDriftRule": "source and release acceptance must rerun the corpus after JSON, Unicode, hash, compiler, standard-library, or serialization dependency changes"
+  }
+}

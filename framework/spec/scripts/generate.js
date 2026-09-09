@@ -16,12 +16,12 @@ const generatedRoot = path.join(pkgRoot, 'generated');
 const sourcePaths = {
   specMeta: 'framework/spec/spec.meta.json',
   composition:
-    'framework/format/kungfu-portable-format-authority.contract.json',
-  reader: 'framework/format/kungfu-required-reader.contract.json',
-  migration: 'framework/format/kungfu-format-migration.contract.json',
+    'framework/spec/format/kungfu-portable-format-authority.contract.json',
+  reader: 'framework/spec/format/kungfu-required-reader.contract.json',
+  migration: 'framework/spec/format/kungfu-format-migration.contract.json',
   vectorIndex:
-    'framework/format/conformance/portable-format-vectors/index.json',
-  baselineIndex: 'framework/format/compatibility/v4-alpha/index.json',
+    'framework/spec/format/conformance/portable-format-vectors/index.json',
+  baselineIndex: 'framework/spec/format/compatibility/v4-alpha/index.json',
 };
 
 /** @param {unknown} value @returns {any} */

@@ -972,8 +972,7 @@ test('the durable Core registry migrates view-owned v1 data without presentation
 test('Terminal persistence contains presentation references but no Console authority', async () => {
   const source = await readFile(
     new URL(
-      '../../../extensions/terminal/src/view/persistence.ts',
-      import.meta.url,
+      import.meta.resolve('@kungfu-tech/kfx-view-terminal/view/persistence'),
     ),
     'utf8',
   );
@@ -987,7 +986,7 @@ test('Terminal persistence contains presentation references but no Console autho
 
 test('Terminal WorkRef launch remains Profile-neutral and rejects partial identity', async () => {
   const source = await readFile(
-    new URL('../../../extensions/terminal/src/view/index.tsx', import.meta.url),
+    new URL(import.meta.resolve('@kungfu-tech/kfx-view-terminal/view/index')),
     'utf8',
   );
   assert.match(

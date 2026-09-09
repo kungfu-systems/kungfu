@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-MAP_PATH = ROOT / "framework/maintainability/agent-python-responsibility-map.json"
+MAP_PATH = ROOT / "developer/maintainability/agent-python-responsibility-map.json"
 EXPECTED_TARGETS = {
     "framework/core/src/python/kungfu/agent/resources.py",
     "framework/core/src/python/kungfu/agent/run_agent.py",
@@ -29,14 +29,14 @@ import {
   readJson,
   trackedCurrentFiles,
   trackedFilesAt,
-} from './framework/maintainability/source-analysis-kernel.mjs';
-import { analyzeTransition } from './framework/maintainability/function-risk.mjs';
+} from './developer/maintainability/source-analysis-kernel.mjs';
+import { analyzeTransition } from './developer/maintainability/function-risk.mjs';
 
 const request = JSON.parse(fs.readFileSync(0, 'utf8'));
-const policy = readJson('framework/maintainability/function-risk-policy.json');
+const policy = readJson('developer/maintainability/function-risk-policy.json');
 const layers = readJson('framework/core/architecture/layers.json');
 const ownership = readJson(
-  'framework/maintainability/abstraction-integrity.manifest.json',
+  'developer/maintainability/abstraction-integrity.manifest.json',
 ).ownership;
 const riskBaseline = functionSnapshot(
   trackedFilesAt(policy.baselineRef),

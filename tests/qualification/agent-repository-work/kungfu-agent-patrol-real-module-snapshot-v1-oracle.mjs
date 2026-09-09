@@ -195,7 +195,7 @@ function visibleSuite(workspace, fixture) {
 
 function hiddenSuite(workspace) {
   const classifyUrl = pathToFileURL(
-    path.join(workspace, 'framework/agent-patrol/classify.mjs'),
+    path.join(workspace, 'developer/agent-patrol/classify.mjs'),
   ).href;
   const source = `
 import assert from 'node:assert/strict';

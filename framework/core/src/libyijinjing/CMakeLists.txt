@@ -83,7 +83,7 @@ if(YIJINJING_BUILD_TESTS)
   target_compile_features(yijinjing_mmap_tests PRIVATE cxx_std_20)
   target_compile_definitions(yijinjing_mmap_tests PRIVATE
     YIJINJING_RETAINED_WIRE_V1_FIXTURE="${PROJECT_SOURCE_DIR}/tests/fixtures/journal-wire-v1.json"
-    YIJINJING_PORTABLE_FORMAT_VECTOR_RELEASE="${PROJECT_SOURCE_DIR}/../../../format/conformance/portable-format-vectors/v1/release.json")
+    YIJINJING_PORTABLE_FORMAT_VECTOR_RELEASE="${PROJECT_SOURCE_DIR}/../../../spec/format/conformance/portable-format-vectors/v1/release.json")
   add_test(NAME yijinjing_mmap_tests COMMAND yijinjing_mmap_tests)
 
   add_executable(yijinjing_writer_memory_safety_tests tests/writer_memory_safety_tests.cpp)

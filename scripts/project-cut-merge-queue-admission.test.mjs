@@ -13,8 +13,8 @@ import {
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/index.mjs';
-import { sourceProjectionAtCommit } from '../framework/project-cut/src/settlement.mjs';
+} from '@kungfu-tech/work/project-cut';
+import { sourceProjectionAtCommit } from '@kungfu-tech/work/project-cut/settlement';
 import {
   admitFamilyQueueLease,
   createFamilyQueueLease,
@@ -33,7 +33,7 @@ const FIXTURE = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
     ),
     'utf8',
   ),

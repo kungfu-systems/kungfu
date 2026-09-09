@@ -178,16 +178,17 @@
         "local-files",
         "user-decision"
       ],
-      "last_reviewed": "2026-07-27",
+      "last_reviewed": "2026-09-05",
       "period": "2026-07-28",
       "theme": "kfx-extension-authoring",
       "confidence": "high",
       "evidence_grade": "B",
       "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
+        "model_family": "GPT-6",
         "product": "Codex",
-        "generated_at": "2026-07-28",
-        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+        "generated_at": "2026-09-05",
+        "visible_context": "Package-consumption section verified against repository manifests and local tests; existing document scope retained",
+        "invisible_context_boundary": "No unseen runtime state or public release evidence claimed"
       }
     },
     "docs/architecture/fact-episode-action-runtime.md": {
@@ -330,16 +331,17 @@
         "local-files",
         "user-decision"
       ],
-      "last_reviewed": "2026-07-28",
+      "last_reviewed": "2026-09-05",
       "period": "2026-07-28",
       "theme": "kfx-identity-neutral-authority",
       "confidence": "high",
       "evidence_grade": "B",
       "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
+        "model_family": "GPT-6",
         "product": "Codex",
-        "generated_at": "2026-07-28",
-        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+        "generated_at": "2026-09-05",
+        "visible_context": "Package-consumption section verified against repository manifests and local tests; existing document scope retained",
+        "invisible_context_boundary": "No unseen runtime state or public release evidence claimed"
       }
     },
     "docs/architecture/kungfu-format-contract.md": {
@@ -1351,28 +1353,6 @@
         "invisible_context_boundary": "provider internals, hidden model checkpoints, private session stores, pending agent-121 real-snapshot execution, and generalized product claims are not claimed"
       }
     },
-    "docs/qualification/alpha-local-publication-debug.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "qualification-runbook",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "executable-probe",
-        "local-files"
-      ],
-      "period": "2026-08-08",
-      "theme": "alpha-local-publication-debug",
-      "confidence": "high",
-      "evidence_grade": "A",
-      "last_reviewed": "2026-08-08",
-      "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-08-08",
-        "invisible_context_boundary": "Credential archive contents, provider secrets, external publication state, hidden model checkpoints, and runtime parameters are not claimed"
-      }
-    },
     "docs/qualification/continuity-pilot.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -1732,23 +1712,6 @@
       "doc_type": "documentation-section",
       "review_state": "self-reviewed",
       "sensitivity": "public"
-    },
-    "docs/qualification/gates/release-admission.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "design-reference",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files",
-        "user-consensus"
-      ],
-      "period": "ongoing",
-      "theme": "sealed-release-admission",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-08-15"
     },
     "docs/qualification/gates/release-and-promotion.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -2439,6 +2402,27 @@
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
         "generated_at": "2026-07-25",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
+    "framework/spec/invariant/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "2026-07-20",
+      "theme": "invariant-verification-system",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-09-04",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
         "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
       }
     },

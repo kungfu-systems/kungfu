@@ -12,6 +12,8 @@ from pathlib import Path
 
 import click
 
+from kungfu import host
+
 from kungfu.cli.commands._skill.base import (
     _default_skill_audit_log,
     _extra_paths,
@@ -47,7 +49,7 @@ def _repo_root():
 
 
 def _node_context_script():
-    return _repo_root() / "framework" / "skill" / "scripts" / "context.mjs"
+    return host.node_package_entry("@kungfu-tech/skill/tooling/context")
 
 
 def _write_envelope_file(envelope):
@@ -72,7 +74,7 @@ def _write_node_envelope_file(ctx, paths, source, profile, agent):
     if not node:
         raise SkillError("node manager requested, but node is not available on PATH")
     script = _node_context_script()
-    if not script.exists():
+    if not script:
         raise SkillError(
             "node manager script is not available in this runtime; "
             "pass --skill-context-file from a GUI/Node manager instead"

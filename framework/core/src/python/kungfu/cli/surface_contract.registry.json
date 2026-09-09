@@ -110,7 +110,7 @@
   ],
   "linkedAuthorities": {
     "click": "kungfu.cli.commands.kfc",
-    "actionTopology": "framework/action/cli-topology.contract.json",
+    "actionTopology": "framework/work/action/cli-topology.contract.json",
     "agentCatalog": "kungfu.agent/commands.json",
     "kfd3Registry": "kungfu.agent/kfd3_api.registry.json"
   },

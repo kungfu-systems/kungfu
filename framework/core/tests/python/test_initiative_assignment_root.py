@@ -21,7 +21,7 @@ CORPUS = json.loads(
 CONTRACT = json.loads(
     (
         Path(__file__).parents[4]
-        / "framework/initiative-assignment/kungfu-initiative-assignment-root-v1.json"
+        / "framework/work/initiative-assignment/kungfu-initiative-assignment-root-v1.json"
     ).read_text(encoding="utf-8")
 )
 ACCEPTED = {row["id"]: row for row in CORPUS["accepted"]}

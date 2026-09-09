@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH =
-  'framework/data-protection/durable-history-qualification.contract.json';
+  'framework/core/data-protection/durable-history-qualification.contract.json';
 const NODE_TESTS = [
   'scripts/check-durable-history-qualification.test.mjs',
   'scripts/check-data-protection-contract.test.mjs',
@@ -27,7 +27,7 @@ const PYTHON_TESTS = [
   'framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_authority_bundle_restores_clean_home_exactly',
   'framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_authority_import_preflights_all_operations_before_writing',
   'framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_backend_switch_and_rollback_preserve_five_role_identity',
-  'framework/core/tests/python/test_agent_work_state_contract.py::test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation',
+  'framework/core/tests/python/_agent_work_state_role_cases.py::test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation',
   'framework/core/tests/python/test_product_release_history.py',
   'framework/core/tests/python/test_work_control_profile.py::test_native_initiative_bundle_roundtrip',
   'framework/core/tests/python/test_episode_manifest_fsck.py::test_consistent_seal_passes_fsck',
@@ -131,10 +131,10 @@ export function buildReceipt({
       contractRoot: digestDocument(contract),
       entrypointMatrixRoot: digestDocument(contract.entrypointMatrix),
       bundleContractRoot: sourceRoot(
-        'framework/exit/kungfu-exit-bundle.contract.json',
+        'framework/core/exit/kungfu-exit-bundle.contract.json',
       ),
       migrationContractRoot: sourceRoot(
-        'framework/upgrade/kungfu-product-release-cut.contract.json',
+        'product/upgrade/kungfu-product-release-cut.contract.json',
       ),
       campaignCorpusRoot: digestDocument(corpus),
       campaignResultRoot: digestDocument(campaignResults),

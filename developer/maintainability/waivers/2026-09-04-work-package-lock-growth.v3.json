@@ -1,0 +1,39 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:3d379b04901d9569d73db3743db2da94f800813ee0f128ebaad71f868420f090",
+  "issue_kind": "grandfathered-file-grew",
+  "paths_or_scope": [
+    "pnpm-lock.yaml"
+  ],
+  "budget_classes": [
+    "declarative-schema-or-table:declarative"
+  ],
+  "baseline_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10143,
+      "contentRoot": "sha256:e0b1c89fd08dce937aca85194b9621787958b6d7021e70cba297cbe947822ef0"
+    }
+  ],
+  "current_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10233,
+      "contentRoot": "sha256:1aa938a3071a9709d400c9e2cc4518a070605a8881518a3c3a8f73a5d1997ed9"
+    }
+  ],
+  "allowed_delta": 90,
+  "owner": "kungfu/repository-contract",
+  "responsibility_boundary": "The pnpm lockfile is the generated dependency-closure authority for the public npm workspace inventory; this waiver extends that exact closure only for the new @kungfu-tech/work package.",
+  "cohesion_rationale": "The nine added lines are the deterministic workspace importer for Work and its existing Spec and Ajv dependencies; splitting or hand-editing the generated lockfile would weaken reproducibility.",
+  "rejected_split_alternatives": "A separate lockfile or an undeclared workspace package would break the monorepo package boundary and frozen installation contract.",
+  "affected_tests_and_qualification": "./shifu check:framework-layout; ./shifu test:work-package; ./shifu qualify:work-package; ./shifu check:npm-package-registry; ./shifu check:source; Candidate source acceptance / check; Delivery Warrant; merge_group.",
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-09-04-kungfu-framework-owner-convergence-r2"
+}

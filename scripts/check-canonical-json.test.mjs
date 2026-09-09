@@ -10,7 +10,7 @@ import test from 'node:test';
 const ROOT = process.cwd();
 const contract = JSON.parse(
   fs.readFileSync(
-    path.join(ROOT, 'framework/action/action-canonical-json-v1.json'),
+    path.join(ROOT, 'framework/work/action/action-canonical-json-v1.json'),
     'utf8',
   ),
 );
@@ -24,7 +24,7 @@ const corpus = JSON.parse(
 test('canonical JSON contract names each distinct identity protocol', () => {
   assert.equal(
     corpus.contract,
-    'framework/action/action-canonical-json-v1.json',
+    'framework/work/action/action-canonical-json-v1.json',
   );
   assert.deepEqual(
     contract.protocols.map((profile) => profile.id),

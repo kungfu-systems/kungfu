@@ -12,7 +12,7 @@ import {
 } from './check-portable-format-vectors.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CORPUS = 'framework/format/conformance/portable-format-vectors';
+const CORPUS = 'framework/spec/format/conformance/portable-format-vectors';
 
 test('verifies the complete retained real-byte corpus', () => {
   const result = checkPortableFormatVectors();
@@ -24,16 +24,22 @@ test('verifies the complete retained real-byte corpus', () => {
 test('reports the exact vector id when retained bytes drift', () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-vectors-'));
   try {
-    fs.mkdirSync(path.join(temp, 'framework/format/conformance'), {
+    fs.mkdirSync(path.join(temp, 'framework/spec/format/conformance'), {
       recursive: true,
     });
     fs.cpSync(path.join(ROOT, CORPUS), path.join(temp, CORPUS), {
       recursive: true,
     });
-    fs.mkdirSync(path.join(temp, 'framework/format'), { recursive: true });
+    fs.mkdirSync(path.join(temp, 'framework/spec/format'), { recursive: true });
     fs.copyFileSync(
-      path.join(ROOT, 'framework/format/kungfu-format-migration.contract.json'),
-      path.join(temp, 'framework/format/kungfu-format-migration.contract.json'),
+      path.join(
+        ROOT,
+        'framework/spec/format/kungfu-format-migration.contract.json',
+      ),
+      path.join(
+        temp,
+        'framework/spec/format/kungfu-format-migration.contract.json',
+      ),
     );
     const target = path.join(
       temp,

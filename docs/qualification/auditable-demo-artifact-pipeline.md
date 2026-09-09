@@ -66,7 +66,7 @@ explicit media refreshes remain strict. There is no product-specific adapter,
 trigger-plan compiler, Passport writer, renderer wrapper, or README updater.
 
 The Linux build artifact contains the exact standalone distribution at
-`product/dist/cli/kungfu-episodes-cli-linux-x64/`. The latter includes the
+`product/dist/cli/kungfu-cli-linux-x64/`. The latter includes the
 launcher and `auditable-demo-binary.json`, which binds the launcher SHA-256,
 platform id, metadata contract, and an empty runtime-dependency set. Capture
 therefore runs the product binary produced by the same workflow run instead of

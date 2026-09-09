@@ -5,11 +5,11 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import process from 'node:process';
 
-import { AgentSessionCapsuleHost } from '../../../../agent-session/src/capsule-host.mjs';
+import { AgentSessionCapsuleHost } from '@kungfu-tech/agent-session';
 import {
   AgentSessionCapsulePeerTransport,
   InMemoryJournalNoticePort,
-} from '../../../../agent-session/src/peer-transport.mjs';
+} from '@kungfu-tech/agent-session/peer-transport';
 
 const PROFILE_ROOT = `sha256:${'b'.repeat(64)}`;
 

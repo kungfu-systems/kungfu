@@ -11,33 +11,35 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
+} from '@kungfu-tech/work/episode-provider';
 import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
-} from '../framework/project-cut/index.mjs';
+} from '@kungfu-tech/work/project-cut';
 import {
   checkNativeLoopQualificationContract,
   sealNativeLoopQualification,
   verifyNativeLoopQualification,
-} from '../framework/project-cut/src/native-loop-qualification.mjs';
+} from '@kungfu-tech/work/project-cut/native-loop-qualification';
 import {
   materializeSettlementPublication,
   planSettlementPublication,
-} from '../framework/project-cut/src/publication.mjs';
+} from '@kungfu-tech/work/project-cut/publication';
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-const CLI = path.join(REPO_ROOT, 'framework/project-cut/bin/project-cut.mjs');
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
+);
 const PROJECT_CUT_FIXTURE = JSON.parse(
   fs.readFileSync(
     path.join(
       REPO_ROOT,
-      'framework/project-cut/fixtures/golden/project-cut-v1.json',
+      'framework/work/project-cut/fixtures/golden/project-cut-v1.json',
     ),
     'utf8',
   ),

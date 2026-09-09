@@ -45,10 +45,8 @@ const ROOT_FILES = {
     'docs/qualification/alpha-release-latency.contract.json',
     'docs/qualification/alpha-ruleset.contract.json',
     'docs/qualification/gates/execution-profiles.json',
-    'docs/release-promotion-rehearsal.contract.json',
     'scripts/alpha-promotion-preflight.mjs',
     '.github/actions/require-alpha-preflight/alpha-macos-overflow.mjs',
-    'scripts/alpha-publication-tail-plan.mjs',
     'scripts/alpha-cache-evidence.mjs',
     'scripts/alpha-release-timeline.mjs',
     'scripts/alpha-release-history.mjs',
@@ -261,7 +259,7 @@ export function inspectAuditableDemoFastSentinel({
   requirePattern(
     issues,
     workflow,
-    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
+    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-cli-linux-x64/u,
     'build artifact no longer retains the exact standalone demo distribution',
   );
   requirePattern(

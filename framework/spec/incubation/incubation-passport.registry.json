@@ -1,0 +1,656 @@
+{
+  "schema": "kungfu.incubation-passport.registry/v1",
+  "contract": "framework/spec/incubation/incubation-passport.contract.json",
+  "passports": [
+    {
+  "id": "kungfu.fact-root-canonical-v2",
+  "subject": "KFR2 canonical Fact Root protocol",
+  "subjectKind": "identity-protocol",
+  "primitiveDeclarations": [
+    {
+      "id": "episode",
+      "name": "Episode",
+      "layer": "substrates",
+      "classification": {
+        "family": "semantic-substrate",
+        "kind": "causal-experience",
+        "layer": "substrates"
+      },
+      "lifecycle": {
+        "state": "active",
+        "successor": null
+      },
+      "admissionThreshold": {
+        "independentDurableSemantics": true,
+        "crossDomainOrRuntimeRelevance": "claimed",
+        "boundaryParticipation": "persistent-fact",
+        "deletionRationale": "Removing Episode removes the causal experience boundary used across runtime and agent work.",
+        "substitutionRationale": "An unordered event collection cannot substitute for an Episode.",
+        "compressionRationale": "Episode cannot be compressed into Fact because causal continuity is an independent invariant."
+      },
+      "relations": [
+        {
+          "kind": "composes",
+          "target": "fact",
+          "layerBoundary": "causal-substrate-to-semantic-substrate",
+          "authorityRef": "framework/core/episode/kungfu-episode-invariants.contract.json"
+        }
+      ],
+      "authorityRef": "framework/core/episode/kungfu-episode-invariants.contract.json",
+      "artifacts": [],
+      "languageEvidence": {
+        "cpp": [
+          "framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp"
+        ],
+        "python": [
+          "framework/core/src/python/kungfu/storage/episode_control.py"
+        ],
+        "node": [],
+        "rust": []
+      },
+      "promotionEvidence": {
+        "contract": [
+          "framework/core/episode/kungfu-episode-invariants.contract.json"
+        ],
+        "vectors": [],
+        "invariants": [
+          "framework/spec/invariant/kungfu-invariant.registry.json"
+        ],
+        "dogfoodReceipts": []
+      },
+      "nonClaims": [
+        "Candidate does not claim four-language parity or stable promotion."
+      ]
+    },
+    {
+      "id": "fact",
+          "name": "Fact",
+          "layer": "substrates",
+          "classification": {
+            "family": "semantic-substrate",
+            "kind": "persistent-fact",
+            "layer": "substrates"
+          },
+          "lifecycle": {
+            "state": "active",
+            "successor": null
+          },
+          "admissionThreshold": {
+            "independentDurableSemantics": true,
+            "crossDomainOrRuntimeRelevance": "claimed",
+            "boundaryParticipation": "persistent-fact",
+            "deletionRationale": "Removing Fact removes the durable assertion substrate shared by storage and domain projections.",
+            "substitutionRationale": "A local record or event cannot substitute for content-addressed Fact identity.",
+            "compressionRationale": "Fact cannot be compressed into Cut because identity and perspective are distinct responsibilities."
+          },
+          "relations": [],
+          "authorityRef": "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
+          "artifacts": [],
+          "languageEvidence": {
+            "cpp": [
+              "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp"
+            ],
+            "python": [
+              "framework/core/src/python/kungfu/storage/fact_root_canonical.py"
+            ],
+            "node": [],
+            "rust": []
+          },
+          "languageProofs": {
+            "cpp": [
+              "tests/fixtures/fact-root-canonical/vectors.json"
+            ],
+            "python": [
+              "tests/fixtures/fact-root-canonical/vectors.json"
+            ]
+          },
+          "promotionEvidence": {
+            "contract": [
+              "framework/core/fact/kungfu-fact-cut-kernel.contract.json"
+            ],
+            "vectors": [
+              "tests/fixtures/fact-root-canonical/vectors.json"
+            ],
+            "invariants": [
+              "framework/spec/invariant/kungfu-invariant.registry.json"
+            ],
+            "dogfoodReceipts": []
+          },
+          "nonClaims": [
+            "Candidate does not claim Node or Rust conformance or a retained dogfood receipt."
+          ]
+        },
+        {
+          "id": "cut",
+          "name": "Cut",
+          "layer": "coordinates",
+          "classification": {
+            "family": "coordinate",
+            "kind": "perspective-coordinate",
+            "layer": "coordinates"
+          },
+          "lifecycle": {
+            "state": "active",
+            "successor": null
+          },
+          "admissionThreshold": {
+            "independentDurableSemantics": true,
+            "crossDomainOrRuntimeRelevance": "claimed",
+            "boundaryParticipation": "persistent-fact",
+            "deletionRationale": "Removing Cut removes the exact perspective boundary required to interpret Facts.",
+            "substitutionRationale": "A timestamp cannot substitute for a Root-bound causal perspective.",
+            "compressionRationale": "Cut cannot be compressed into Fact because coordinates and assertions have separate identities."
+          },
+          "relations": [
+            {
+              "kind": "binds",
+              "target": "fact",
+              "layerBoundary": "coordinate-to-semantic-substrate",
+              "authorityRef": "framework/core/fact/kungfu-fact-cut-kernel.contract.json"
+            }
+          ],
+          "authorityRef": "framework/core/fact/kungfu-fact-cut-kernel.contract.json",
+          "artifacts": [],
+          "languageEvidence": {
+            "cpp": [
+              "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp"
+            ],
+            "python": [
+              "framework/core/src/python/kungfu/cli/commands/cut.py"
+            ],
+            "node": [],
+            "rust": []
+          },
+          "promotionEvidence": {
+            "contract": [
+              "framework/core/fact/kungfu-fact-cut-kernel.contract.json"
+            ],
+            "vectors": [],
+            "invariants": [
+              "framework/spec/invariant/kungfu-invariant.registry.json"
+            ],
+            "dogfoodReceipts": []
+          },
+          "nonClaims": [
+            "Experimental support does not establish four-language identity conformance."
+          ]
+        },
+        {
+          "id": "receipt",
+          "name": "Receipt",
+          "layer": "evidence",
+          "classification": {
+            "family": "ontology-binding",
+            "kind": "execution-evidence",
+            "layer": "evidence"
+          },
+          "lifecycle": {
+            "state": "active",
+            "successor": null
+          },
+          "admissionThreshold": {
+            "independentDurableSemantics": true,
+            "crossDomainOrRuntimeRelevance": "claimed",
+            "boundaryParticipation": "persistent-fact",
+            "deletionRationale": "Removing Receipt removes the durable boundary between requested and evidenced action.",
+            "substitutionRationale": "Logs cannot substitute for typed, rooted execution evidence.",
+            "compressionRationale": "Receipt cannot be compressed into Fact because it binds execution accountability."
+          },
+          "relations": [
+            {
+              "kind": "depends-on",
+              "target": "fact",
+              "layerBoundary": "evidence-to-semantic-substrate",
+              "authorityRef": "framework/work/action/action.contract.json"
+            }
+          ],
+          "authorityRef": "framework/work/action/action.contract.json",
+          "artifacts": [],
+          "languageEvidence": {
+            "cpp": [
+              "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp"
+            ],
+            "python": [],
+            "node": [],
+            "rust": []
+          },
+          "promotionEvidence": {
+            "contract": [
+              "framework/work/action/action.contract.json"
+            ],
+            "vectors": [],
+            "invariants": [],
+            "dogfoodReceipts": []
+          },
+          "nonClaims": [
+            "Receipt is inventoried without claiming one universal receipt schema or cross-language proof."
+          ]
+        }
+      ],
+      "anchor": {
+        "type": "git",
+        "authorityRef": "framework/core/fact/kungfu-fact-root-canonical-v2.json"
+      },
+      "destinedAuthority": {
+        "layer": "fact-kernel",
+        "owner": "libkungfu native Fact protocol",
+        "admissionAssignment": null
+      },
+      "incubation": {
+        "state": "admitted",
+        "implementationPaths": [
+          "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+          "framework/core/src/python/kungfu/storage/fact_root_canonical.py"
+        ],
+        "startedOn": "2026-07-19",
+        "deadline": null,
+        "admissionTrigger": "Two independent implementations replay one committed vector corpus.",
+        "currentBoundary": "The protocol is admitted; this passport records the positive reference shape without changing KFR2 bytes or Roots."
+      },
+      "schemaOwnership": {
+        "class": "none",
+        "registryRef": null,
+        "identity": null,
+        "rationale": "The protocol specifies a canonical Root preimage rather than a persistent structured fact schema."
+      },
+      "persistence": {
+        "policy": "git-canonical-bytes",
+        "byteAuthority": "framework/core/fact/kungfu-fact-root-canonical-v2.json",
+        "scriptLayerRole": "Tests and adapters replay the native protocol; they do not redefine its bytes."
+      },
+      "identityProtocol": {
+        "mintsRoots": true,
+        "protocolId": "KFR2",
+        "implementations": [
+          {
+            "language": "cpp",
+            "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp"
+          },
+          {
+            "language": "python",
+            "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py"
+          }
+        ],
+        "vectors": [
+          "tests/fixtures/fact-root-canonical/vectors.json"
+        ],
+        "goldenFixturePolicy": "Every supported implementation must reproduce every committed Root exactly."
+      }
+    },
+    {
+      "id": "kungfu.rewind-events-schema",
+      "subject": "Rewind event FlatBuffers schema",
+      "subjectKind": "schema",
+      "primitiveDeclarations": [],
+      "anchor": {
+        "type": "git",
+        "authorityRef": "framework/core/src/python/kungfu/rewind/rewind_events.fbs"
+      },
+      "destinedAuthority": {
+        "layer": "Rewind native Domain Profile",
+        "owner": "future native Rewind service",
+        "admissionAssignment": "future:kungfu-rewind-native-admission"
+      },
+      "incubation": {
+        "state": "incubating",
+        "implementationPaths": [
+          "framework/core/src/python/kungfu/rewind/rewind_events.fbs",
+          "framework/core/src/python/kungfu/rewind/rewind_events.bfbs"
+        ],
+        "startedOn": "2026-07-23",
+        "deadline": null,
+        "admissionTrigger": "The schema moves byte-identically with a qualified native Rewind owner.",
+        "currentBoundary": "Registered in place; no existing event byte, Root, reader, or journal coordinate changes."
+      },
+      "schemaOwnership": {
+        "class": "flatbuffers",
+        "registryRef": "framework/core/schema-authority.json",
+        "identity": "kungfu.rewind.events",
+        "rationale": "The existing schema-authority entry remains authoritative during incubation."
+      },
+      "persistence": {
+        "policy": "git-canonical-bytes",
+        "byteAuthority": "framework/core/src/python/kungfu/rewind/rewind_events.fbs",
+        "scriptLayerRole": "Scripts may consume and project the registered schema but cannot mint a competing byte format."
+      },
+      "identityProtocol": {
+        "mintsRoots": false,
+        "protocolId": null,
+        "implementations": [],
+        "vectors": [],
+        "goldenFixturePolicy": "Not applicable until this schema participates in a Root preimage protocol."
+      }
+    },
+    {
+      "id": "kungfu.work-control-l3",
+      "subject": "Initiative and Assignment L3 Domain Profile incubation runtime",
+      "subjectKind": "domain-profile",
+      "primitiveDeclarations": [
+        {
+          "id": "action-geometry",
+          "name": "Action Geometry",
+          "layer": "action-model",
+          "classification": {
+            "family": "ontology-binding",
+            "kind": "action-model",
+            "layer": "action-model"
+          },
+          "lifecycle": {
+            "state": "active",
+            "successor": null
+          },
+          "admissionThreshold": {
+            "independentDurableSemantics": true,
+            "crossDomainOrRuntimeRelevance": "claimed",
+            "boundaryParticipation": "responsibility",
+            "deletionRationale": "Removing Action Geometry removes the shared model for intent, authority, evidence, and execution.",
+            "substitutionRationale": "Atlas, Pursuit, and Warrant are bindings and cannot substitute for the geometry.",
+            "compressionRationale": "Action Geometry cannot be compressed into one role without fusing distinct responsibilities."
+          },
+          "relations": [],
+          "authorityRef": "framework/work/action/action-geometry.contract.json",
+          "artifacts": [],
+          "languageEvidence": {
+            "cpp": [
+              "framework/core/src/libkungfu/src/runtime/action/action_geometry.cpp"
+            ],
+            "python": [
+              "framework/core/src/python/kungfu/agent/action_geometry.py"
+            ],
+            "node": [],
+            "rust": []
+          },
+          "promotionEvidence": {
+            "contract": [
+              "framework/work/action/action-geometry.contract.json"
+            ],
+            "vectors": [
+              "framework/core/src/libkungfu/tests/fixtures/action-geometry/capabilities.json"
+            ],
+            "invariants": [],
+            "dogfoodReceipts": []
+          },
+          "nonClaims": [
+            "Experimental bindings do not claim full primitive conformance."
+          ]
+        },
+        {
+          "id": "initiative",
+          "name": "Initiative",
+          "layer": "agent-work",
+          "classification": {
+            "family": "responsibility-role",
+            "kind": "intent-continuity",
+            "layer": "agent-work"
+          },
+          "lifecycle": {
+            "state": "active",
+            "successor": null
+          },
+          "admissionThreshold": {
+            "independentDurableSemantics": true,
+            "crossDomainOrRuntimeRelevance": "claimed",
+            "boundaryParticipation": "responsibility",
+            "deletionRationale": "Removing Initiative removes durable intent continuity above individual Assignments.",
+            "substitutionRationale": "Assignment cannot substitute for Initiative because bounded execution is not durable intent.",
+            "compressionRationale": "Initiative remains distinct from Action Geometry as a responsibility-bearing role."
+          },
+          "relations": [
+            {
+              "kind": "binds",
+              "target": "action-geometry",
+              "layerBoundary": "responsibility-role-to-ontology-binding",
+              "authorityRef": "extensions/work-control/contracts/world.json"
+            }
+          ],
+          "authorityRef": "extensions/work-control/contracts/world.json",
+          "artifacts": [],
+          "languageEvidence": {
+            "cpp": [],
+            "python": [
+              "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
+            ],
+            "node": [],
+            "rust": []
+          },
+          "promotionEvidence": {
+            "contract": [
+              "extensions/work-control/contracts/world.json"
+            ],
+            "vectors": [],
+            "invariants": [],
+            "dogfoodReceipts": []
+          },
+          "nonClaims": [
+            "L3 Python ownership is not native or four-language admission."
+          ]
+        },
+        {
+          "id": "assignment",
+          "name": "Assignment",
+          "layer": "agent-work",
+          "classification": {
+            "family": "responsibility-role",
+            "kind": "bounded-work-authority",
+            "layer": "agent-work"
+          },
+          "lifecycle": {
+            "state": "active",
+            "successor": null
+          },
+          "admissionThreshold": {
+            "independentDurableSemantics": true,
+            "crossDomainOrRuntimeRelevance": "claimed",
+            "boundaryParticipation": "responsibility",
+            "deletionRationale": "Removing Assignment removes the bounded authority and accountability envelope for Work.",
+            "substitutionRationale": "Initiative cannot substitute for Assignment because intent does not grant execution authority.",
+            "compressionRationale": "Assignment remains distinct from Action Geometry as a concrete responsibility-bearing role."
+          },
+          "relations": [
+            {
+              "kind": "depends-on",
+              "target": "initiative",
+              "layerBoundary": "bounded-responsibility-to-intent-responsibility",
+              "authorityRef": "extensions/work-control/contracts/world.json"
+            },
+            {
+              "kind": "binds",
+              "target": "action-geometry",
+              "layerBoundary": "responsibility-role-to-ontology-binding",
+              "authorityRef": "extensions/work-control/contracts/world.json"
+            }
+          ],
+          "authorityRef": "extensions/work-control/contracts/world.json",
+          "artifacts": [],
+          "languageEvidence": {
+            "cpp": [],
+            "python": [
+              "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
+            ],
+            "node": [],
+            "rust": []
+          },
+          "promotionEvidence": {
+            "contract": [
+              "extensions/work-control/contracts/world.json"
+            ],
+            "vectors": [],
+            "invariants": [],
+            "dogfoodReceipts": []
+          },
+          "nonClaims": [
+            "L3 Python ownership is not native or four-language admission."
+          ]
+        },
+    {
+      "id": "domain-profile",
+          "name": "Domain Profile",
+          "layer": "action-model",
+          "classification": {
+            "family": "domain-projection",
+            "kind": "domain-action-projection",
+            "layer": "action-model"
+          },
+          "lifecycle": {
+            "state": "active",
+            "successor": null
+          },
+          "admissionThreshold": {
+            "independentDurableSemantics": true,
+            "crossDomainOrRuntimeRelevance": "claimed",
+            "boundaryParticipation": "both",
+            "deletionRationale": "Removing Domain Profile removes the governed binding from domain facts to action semantics.",
+            "substitutionRationale": "An ordinary command group cannot substitute for a rooted Domain Profile.",
+            "compressionRationale": "Domain Profile cannot be compressed into Action Geometry because projection and ontology are separate."
+          },
+          "relations": [
+            {
+              "kind": "projects",
+              "target": "action-geometry",
+              "layerBoundary": "domain-projection-to-ontology-binding",
+              "authorityRef": "framework/work/profile/kungfu-domain-profile-authoring.contract.json"
+            }
+          ],
+          "authorityRef": "framework/work/profile/kungfu-domain-profile-authoring.contract.json",
+          "artifacts": [],
+          "languageEvidence": {
+            "cpp": [
+              "framework/core/src/libkungfu/src/runtime/action/domain_profile.cpp"
+            ],
+            "python": [
+              "framework/core/src/python/kungfu/agent/domain_profile.py"
+            ],
+            "node": [],
+            "rust": []
+          },
+          "promotionEvidence": {
+            "contract": [
+              "framework/work/profile/kungfu-domain-profile-authoring.contract.json"
+            ],
+            "vectors": [],
+            "invariants": [],
+            "dogfoodReceipts": []
+          },
+      "nonClaims": [
+        "Authoring support is not proof that every Domain Profile is admitted."
+      ]
+    },
+    {
+      "id": "work",
+      "name": "Work",
+      "layer": "agent-work",
+      "classification": {
+        "family": "domain-projection",
+        "kind": "agent-work-state",
+        "layer": "agent-work"
+      },
+      "lifecycle": {
+        "state": "active",
+        "successor": null
+      },
+      "admissionThreshold": {
+        "independentDurableSemantics": true,
+        "crossDomainOrRuntimeRelevance": "claimed",
+        "boundaryParticipation": "both",
+        "deletionRationale": "Removing Work removes the durable unit that binds agent responsibility to progress.",
+        "substitutionRationale": "A process or task label cannot substitute for rooted Work state.",
+        "compressionRationale": "Work cannot be compressed into Episode because responsibility and causal experience remain distinct."
+      },
+      "relations": [
+        {
+          "kind": "depends-on",
+          "target": "episode",
+          "layerBoundary": "domain-projection-to-causal-substrate",
+          "authorityRef": "extensions/work-control/contracts/world.json"
+        }
+      ],
+      "authorityRef": "extensions/work-control/contracts/world.json",
+      "artifacts": [],
+      "languageEvidence": {
+        "cpp": [],
+        "python": [
+          "extensions/work-control/work-control-actions/domain/work_control.py",
+          "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+          "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
+          "framework/core/src/python/kungfu/assignment_orchestration.py"
+        ],
+        "node": [],
+        "rust": []
+      },
+      "promotionEvidence": {
+        "contract": [
+          "extensions/work-control/contracts/world.json"
+        ],
+        "vectors": [],
+        "invariants": [],
+        "dogfoodReceipts": []
+      },
+      "nonClaims": [
+        "Canonical Profile actions are not native or four-language admission."
+      ]
+    }
+      ],
+      "anchor": {
+        "type": "runtime",
+        "authorityRef": "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
+      },
+      "destinedAuthority": {
+        "layer": "L5 native runtime",
+        "owner": "native journal service plus Initiative/Assignment Domain Profile",
+        "admissionAssignment": "2026-08-16-kungfu-initiative-assignment-l5-root-admission"
+      },
+      "incubation": {
+        "state": "admitted",
+        "implementationPaths": [
+          "extensions/work-control/work-control-actions/domain/work_control.py",
+          "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+          "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
+          "extensions/work-control/contracts/world.json",
+          "framework/work/action/action-canonical-json-v1.json",
+          "framework/core/src/python/kungfu/canonical_json.py",
+          "framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp",
+          "framework/work/initiative-assignment/kungfu-initiative-assignment-root-v1.json",
+          "tests/fixtures/initiative-assignment-root/vectors.json",
+          "framework/core/src/python/kungfu/initiative_family/canonical.py",
+          "framework/core/src/libkungfu/include/kungfu/initiative_assignment_api.h",
+          "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
+          "framework/core/src/libkungfu/src/runtime/profile/initiative_assignment_service.cpp"
+        ],
+        "startedOn": "2026-07-21",
+        "deadline": null,
+        "admissionTrigger": "The reusable L5 admission harness proves a native service, versioned C ABI, journal replay, and exact shared Root vectors.",
+        "currentBoundary": "The Python Domain Profile remains the admitted L3 rules, validation, fold, and projection writer and is not a persistence authority. The L5 native service owns additive Initiative/Assignment Root admission through its versioned C ABI and native journal restart/replay receipt. Retained legacy evidence keeps its original bytes, protocol selection, and Roots without migration, recalculation, or aliasing."
+      },
+      "schemaOwnership": {
+        "class": "profile-contract-world",
+        "registryRef": "extensions/work-control/contracts/world.json",
+        "identity": "kungfu.initiative-assignment",
+        "rationale": "The versioned contract world owns Initiative and Assignment fact surfaces; schema-authority.json remains reserved for Hana and FlatBuffers owners."
+      },
+      "persistence": {
+        "policy": "native-journal-only",
+        "byteAuthority": "libyijinjing journal frames written through the Work Control adapter",
+        "scriptLayerRole": "Python owns Domain Profile rules, validation, folds, and projections, never durable byte identity."
+      },
+      "identityProtocol": {
+        "mintsRoots": true,
+        "protocolId": "kungfu.initiative-assignment.root/v1",
+        "implementations": [
+          {
+            "language": "python",
+            "path": "framework/core/src/python/kungfu/initiative_family/canonical.py"
+          },
+          {
+            "language": "c++",
+            "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
+          }
+        ],
+        "vectors": [
+          "tests/fixtures/initiative-assignment-root/vectors.json"
+        ],
+        "admissionReceipt": "framework/spec/incubation/fixtures/work-control-l3-admission.json",
+        "goldenFixturePolicy": "The admitted Python and C++ implementations reproduce the shared exact-Root vectors. The protected native replay receipt binds the exact source, Assignment, material bytes, platform proof, and retained historical no-rewrite evidence."
+      }
+    }
+  ]
+}

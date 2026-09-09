@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { buildCodexAppServerSchemaManifest } from '../../../scripts/generate-codex-app-server-schema-manifest.mjs';
+import { buildCodexAppServerSchemaManifest } from '@kungfu-tech/workspaces/tooling/generate-codex-app-server-schema-manifest';
 import {
   createCodexAppServerContractGate,
   loadCodexAppServerContract,

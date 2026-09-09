@@ -3,7 +3,7 @@
 The Hub Starter is currently a **concept-only** installed-product contract. It
 defines what a future one-command Docker experience must preserve before Kungfu
 creates a Compose bundle or publishes an image. The machine authority is
-[`framework/hub-starter/kungfu-hub-starter-docker.contract.json`](../../framework/hub-starter/kungfu-hub-starter-docker.contract.json),
+[`product/hub-starter/kungfu-hub-starter-docker.contract.json`](../../product/hub-starter/kungfu-hub-starter-docker.contract.json),
 and the decision is
 [KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md).
 

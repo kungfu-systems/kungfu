@@ -1,0 +1,70 @@
+{
+  "schema": "kungfu.portable-format-v4-alpha-release/v1",
+  "releaseId": "4.0.0-alpha.2",
+  "formatLine": "v4-alpha",
+  "previousReleaseRoot": "sha256:c9addc577a3eb2396d4cc007f18a09abcdfc74dbae6e2de37326fac5af64520f",
+  "compatibilityTuple": {
+    "journalEpoch": "kungfu.journal.container/e3b24c8d",
+    "workspaceLayout": "kungfu.workspace.episode-layout/v1",
+    "recordSchemas": {
+      "episodeManifest": "kungfu.episode.manifest/v1",
+      "manifestCatalog": "kungfu.storage.manifest-catalog/v1",
+      "factCut": "kungfu.fact-cut-kernel.contract/v1"
+    },
+    "payloadSchemas": {
+      "closedKernel": "hana-pod-owned/v1",
+      "openDomain": "flatbuffers-single-schema-owner/v1"
+    },
+    "rootProtocols": {
+      "factRoot": "kungfu.fact-root.canonical/v2",
+      "opaqueBytes": "sha256:opaque-bytes/v1"
+    },
+    "bundleManifest": "libkungfu:spec:manifest:1",
+    "capabilities": [
+      "preservation",
+      "inspection",
+      "structural-verification",
+      "semantic-verification",
+      "canonical-fold",
+      "admission",
+      "execution"
+    ]
+  },
+  "sourceBindings": [
+    {
+      "path": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+      "root": "sha256:d6be3712e8f3a191024d3742120927e12186dd1a5ca6a7b8c72f95498512c975",
+      "axis": "composition"
+    },
+    {
+      "path": "framework/spec/format/kungfu-required-reader.contract.json",
+      "root": "sha256:ead20b4326409b708dba138aeb79b2f4e3b5c1c58c83dfd57a790aebf19ac25d",
+      "axis": "requiredReader"
+    },
+    {
+      "path": "framework/spec/format/kungfu-format-migration.contract.json",
+      "root": "sha256:141f9477875682175b015dadd32852f69765c52aa196221f344878092c60492b",
+      "axis": "migrationRepair"
+    },
+    {
+      "path": "framework/spec/format/conformance/portable-format-vectors/index.json",
+      "root": "sha256:c675ea10be9691fe610bc0c229217c4e9cd68fcc8ef05b8b75a6d9a81a3ec8fd",
+      "axis": "retainedConformance"
+    }
+  ],
+  "changesFromPrevious": [
+    {
+      "path": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+      "axis": "composition",
+      "previousRoot": "sha256:935ebf826adf19e31a6362380c06405b59b94fcbb2df66063d205571243a7eff",
+      "nextRoot": "sha256:d6be3712e8f3a191024d3742120927e12186dd1a5ca6a7b8c72f95498512c975",
+      "reason": "replace the removed first-party authority manifest with the identity-neutral KFX package declaration contract",
+      "compatibility": "no compatibility-tuple axis changes; old identity-derived runtime authorization is refused"
+    }
+  ],
+  "stability": {
+    "status": "pre-stable-alpha-baseline",
+    "incompatibleMutationRule": "append a successor release with explicit changed source roots and migration or refusal semantics; never rewrite this release",
+    "stableV4Claimed": false
+  }
+}

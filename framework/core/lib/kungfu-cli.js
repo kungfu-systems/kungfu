@@ -1,29 +1,31 @@
 #!/usr/bin/env node
 
 const fs = require('node:fs');
+const { createRequire } = require('node:module');
 const path = require('node:path');
 const executable = require('./executable');
 const shell = require('./shell');
 
 /**
- * Resolve the built TUI beside this source checkout without weakening the
+ * Resolve the installed TUI package's public bundle without weakening the
  * packaged Product contract. Installed launchers keep supplying their exact
- * KUNGFU_TUI_ENTRY; this fallback exists only when the sibling source bundle
+ * KUNGFU_TUI_ENTRY; this fallback exists only when the dependency's bundle
  * is actually present.
  * @param {string} [coreLibDir]
  * @param {(candidate: string) => boolean} [exists]
  * @returns {string | undefined}
  */
 function resolveSourceTuiEntry(coreLibDir = __dirname, exists = fs.existsSync) {
-  const candidate = path.resolve(
-    coreLibDir,
-    '..',
-    '..',
-    'tui',
-    'dist',
-    'tui.mjs',
-  );
-  return exists(candidate) ? candidate : undefined;
+  try {
+    const resolveFromCore = createRequire(
+      path.resolve(coreLibDir, 'kungfu-cli.js'),
+    );
+    return [resolveFromCore.resolve('@kungfu-tech/tui/bundle')].find(exists);
+  } catch {
+    // A missing or unavailable optional source bundle leaves the installed
+    // Product's explicit KUNGFU_TUI_ENTRY in control.
+    return undefined;
+  }
 }
 
 /**

@@ -12,32 +12,28 @@ import { fileURLToPath } from 'node:url';
 import {
   buildGitEpisodeSegment,
   sealGitEpisode,
-} from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
-import {
-  canonicalJson,
-  semanticRoot,
-} from '../framework/project-cut/index.mjs';
-import {
+} from '@kungfu-tech/work/episode-provider';
+import { canonicalJson, semanticRoot } from '@kungfu-tech/work/project-cut';
+import * as settlementApi from '@kungfu-tech/work/project-cut/settlement';
+
+const {
   abandonSettlement,
   inspectSettlement,
   observeSettlementCommit,
   prepareSettlement,
   reconcileCommit,
-  reconcileIncludesBytes,
   verifySettlement,
-} from '../framework/project-cut/src/settlement.mjs';
+} = settlementApi;
 
 const EPISODE_ROOT = `sha256:${'a'.repeat(64)}`;
 const PROJECT_ROOT = `sha256:${'5'.repeat(64)}`;
 const CONTEXT_PACK_ROOT = `sha256:${'6'.repeat(64)}`;
 const SCHEMA_ROOT = `sha256:${'7'.repeat(64)}`;
-const HOOK = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../framework/project-cut/hooks/project-cut-hook.mjs',
+const HOOK = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/hook'),
 );
-const CLI = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../framework/project-cut/bin/project-cut.mjs',
+const CLI = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/work/project-cut/cli'),
 );
 const SHIFU = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -51,7 +47,7 @@ const SOURCE_PROJECTION_POLICY = JSON.parse(
   fs.readFileSync(
     path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
-      '../framework/project-cut/default-source-projection-policy.json',
+      '../framework/work/project-cut/default-source-projection-policy.json',
     ),
     'utf8',
   ),
@@ -66,25 +62,17 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${canonicalJson(value)}\n`);
 }
 
-test('reconcile skips excluded baseline bytes while retaining protocol evidence', () => {
-  assert.equal(
-    reconcileIncludesBytes(
-      SOURCE_PROJECTION_POLICY,
-      '.xinfa/baselines/sha256/example/atlas.json',
-    ),
-    false,
-  );
-  assert.equal(
-    reconcileIncludesBytes(
-      SOURCE_PROJECTION_POLICY,
-      '.kungfu/project-cuts/sha256/aa/example/manifest.json',
-    ),
-    true,
-  );
-  assert.equal(
-    reconcileIncludesBytes(SOURCE_PROJECTION_POLICY, 'src/app.txt'),
-    true,
-  );
+test('settlement entrypoint exposes only the stable repository API', () => {
+  assert.deepEqual(Object.keys(settlementApi).sort(), [
+    'abandonSettlement',
+    'inspectSettlement',
+    'observeSettlementCommit',
+    'prepareSettlement',
+    'reconcileCommit',
+    'sourceProjectionAtCommit',
+    'sourceProjectionAtTree',
+    'verifySettlement',
+  ]);
 });
 
 function bundle(id = 7) {
@@ -508,6 +496,9 @@ test('baseline material stays out of Git and missing material fails visibly', (t
     execute: true,
   });
   assert.equal(published.ok, true);
+  const reconciled = reconcileCommit(root, 'HEAD');
+  assert.equal(reconciled.ok, true, JSON.stringify(reconciled.diagnostics));
+  assert.equal(reconciled.cuts[0].cutRoot, applied.cut.cutRoot);
 
   fs.rmSync(path.join(root, materialPath));
   const missing = observeSettlementCommit(root, applied.statePath, 'HEAD');

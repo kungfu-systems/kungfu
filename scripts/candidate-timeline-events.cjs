@@ -25,7 +25,7 @@ const DEV_CHANNEL_GOVERNED_FILES = [
   '.github/alpha-attention-operations.json',
   'docs/qualification/gates/README.md',
   'docs/shifu/artifact-contract.json',
-  'framework/maintainability/code-complexity-policy.json',
+  'developer/maintainability/code-complexity-policy.json',
 ];
 
 /** @param {string} value */

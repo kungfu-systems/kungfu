@@ -1,0 +1,151 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "4d9903dad830c02b7141a2e679ed7010eb1f138b",
+  "changeRoot": "sha256:fd4614c3f64d07f9a3e1c19df8857ea78040aa13db69c197bca42af04542f7a1",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:c52cc5b5ca1bc16bdd2773a974089e354392608243dc9f56956f9d469ee47f3c",
+      "contentRoot": "sha256:c8cf9723696c16fc3fc60ef0dea452b70793ae28c866bc2f3595605fe12bf96d",
+      "path": ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f1c8713be33ddff0b544c900122cfaca65cb29c65decf21289cd826d396548e1",
+      "contentRoot": "sha256:a3465ed0206145464a4ca713b8063a501d708e10c77ace3ba08217e8261675d2",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1f56759b312fb3383d83b1087674df714fe1d240fa77d75e34468daf70fbc048",
+      "contentRoot": "sha256:59a314b34228d902ff0967d7a69583d0ca14022e221931dc83d22999a424ceaa",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b240fc6bd34556f58a224b90863217ac6c210cc03193a0afc3abf753eb9bcfc3",
+      "contentRoot": "sha256:513066f7ac65fc6fa9efeb0a76a02bce15d7fffb32790d431b78fbad833196c2",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b880993bbf55f9d603831d092b42fcedf8f7f1a4efc7eac09bb0739ae417746f",
+      "contentRoot": "sha256:923c549926b10c36c24b9c1681a23f2e0b9777ca8fc57b7b2ebe5b16c79d7cc3",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:19ef104993eefe5e499a712fc139522b1571e7ea1b760bcdff7bf1648b567c00",
+      "contentRoot": "sha256:460b70e537669f1a9c49cfde9b4871743e64e3aa0611571f9920725e446b8e24",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:cd8d4cc8621b025b0049e25514982420753e795f3ceee742330433a037578633",
+      "contentRoot": "sha256:3488c96702736f63437b9102977004989e5cb9886200c30648a45610fb32c913",
+      "path": ".xinfa/product-atlas-bundle.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a7a10d4b6bf9cef652d5e3bedd094ab68a7572cc6e3e66d6a53812c4c7894a3b",
+      "contentRoot": "sha256:d3e7247976dc70d0ae864f6d70488089c630d682adf025ee03e76a2d184d2b55",
+      "path": "config/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c52cc5b5ca1bc16bdd2773a974089e354392608243dc9f56956f9d469ee47f3c",
+      "contentRoot": "sha256:c8cf9723696c16fc3fc60ef0dea452b70793ae28c866bc2f3595605fe12bf96d",
+      "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f1c8713be33ddff0b544c900122cfaca65cb29c65decf21289cd826d396548e1",
+      "contentRoot": "sha256:a3465ed0206145464a4ca713b8063a501d708e10c77ace3ba08217e8261675d2",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1f56759b312fb3383d83b1087674df714fe1d240fa77d75e34468daf70fbc048",
+      "contentRoot": "sha256:59a314b34228d902ff0967d7a69583d0ca14022e221931dc83d22999a424ceaa",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b880993bbf55f9d603831d092b42fcedf8f7f1a4efc7eac09bb0739ae417746f",
+      "contentRoot": "sha256:923c549926b10c36c24b9c1681a23f2e0b9777ca8fc57b7b2ebe5b16c79d7cc3",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1a10fdbea1680b389cc92a00737c58a5026a290cb0adb1315eeec78d4fafe073",
+      "contentRoot": "sha256:2a48b4c9fea200224e2c88a21a5e6bf55e99a47df7ffeece7b93f901cc47c144",
+      "path": "docs/adr/KF-ADR-019f9f04-f8bd-7002-a702-1b9f66827ec0.md",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:77fd1b6240a6f9ed0f6730687682e6ff91b1ebde265834712e1b5a898519f711",
+      "path": "extensions/dogfood/dogfood-actions/domain/_dogfood_policy.py",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:5fc91c765474687c79118202b497bf860c762479ddbc47051876138c31bccab5",
+      "path": "extensions/dogfood/dogfood-actions/domain/_dogfood_query.py",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:9ffa0b308c87b4f0ca09e250f1bb9655d72bf4591dd2b7cb202824b3227086fa",
+      "path": "extensions/dogfood/dogfood-actions/domain/_dogfood_records.py",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:fcba68d3aa6069605b1d16077b947d74203d81f8fc639d25d52783c27c814427",
+      "contentRoot": "sha256:b3b6b912505814e7ce48405fcb1f65299586ef65ff9309a2b33186ee66ca7894",
+      "path": "extensions/dogfood/dogfood-actions/domain/dogfood.py",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:29ddba7e7eb6aa0cd64feb5c574c34d05f5b67ac0af1f9e8a20ae2b81920e409",
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assessment_claims.py",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:99455279cfff94a7cb7c17443f89ed7d95acd263886d651d89278f52da35b7fb",
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assessment_profile.py",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:033019f7056f07ef75f02afa2738e1ad26984f0b4f6dd83be228f54392255dd0",
+      "path": "extensions/work-control/work-control-actions/domain/_work_control_assessment_review.py",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:42a2413213f6cf7945a2075021c36a40de9aa23a71f75b3edf3466d726d5db7b",
+      "contentRoot": "sha256:5ad40568edef4dca66d0ea2f77c6ac67742a6f52106c35b6bc6a7b5f11536ca9",
+      "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:199fcfeae220bf9a93bf7e4ecbada2c43e3806db9cea8a667d1e01f42aca756b",
+      "contentRoot": "sha256:48b98a46a0c13b86c2b03706637193535dad27348fd969bcaaaf8559887ace6d",
+      "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a7a10d4b6bf9cef652d5e3bedd094ab68a7572cc6e3e66d6a53812c4c7894a3b",
+      "contentRoot": "sha256:d3e7247976dc70d0ae864f6d70488089c630d682adf025ee03e76a2d184d2b55",
+      "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Phase 9 decomposes Dogfood and Work Control assessment responsibilities behind compatibility facades without changing public names, persistence formats, CLI behavior, or cross-language contracts; the ADR binds pull request 3685 as implementation evidence.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:dd6e95a318edb4a84346189e3c62ed7d2fa60cb14aebd8c5ea6230eaa1d0d1e1"
+}

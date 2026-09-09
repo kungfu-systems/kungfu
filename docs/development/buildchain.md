@@ -251,4 +251,4 @@ retained report is non-qualifying. An ordinary patch with no comparative claim
 does not rerun the full comparison merely for Buildchain admission. See the
 [release and promotion gate](../qualification/gates/release-and-promotion.md#continuity-claim-evidence-boundary)
 and the machine contract at
-`framework/agent-work/kungfu-agent-work-state.contract.json`.
+`framework/work/agent-work/kungfu-agent-work-state.contract.json`.

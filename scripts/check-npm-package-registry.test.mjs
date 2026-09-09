@@ -15,12 +15,12 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = JSON.parse(
   fs.readFileSync(
-    path.join(root, 'framework/release/npm-package-registry.json'),
+    path.join(root, 'product/release/npm-package-registry.json'),
     'utf8',
   ),
 );
 
-test('accepts the exact 33-package Release inventory', () => {
+test('accepts the exact 34-package Release inventory', () => {
   assert.deepEqual(collectNpmRegistryIssues({ root, registry: source }), []);
 });
 

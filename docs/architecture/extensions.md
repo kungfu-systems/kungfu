@@ -282,3 +282,18 @@ this page when their v4 path lands, not before.
 
 All run in `verify --full` (fixture stage); a red fixture means this page
 overclaims.
+
+
+## Consume other workspace packages
+
+Install the checkout dependencies with `./shifu sync` before developing an
+extension. Declare each package in the appropriate dependency section, then use
+its package name and public subpath. For example, use `@kungfu-tech/kfx` for view
+types and `@kungfu-tech/api/capability` for the capability surface. Do not map
+those names to another package's `src` directory in `tsconfig` or a bundler.
+
+Package owners expose explicit testing and tooling entries when another package
+needs them. Metadata consumers use the public `package.json` entry. These npm
+module entries do not replace the KFX facet declarations in `kungfu.kfx.json`.
+Run `./shifu check:package-boundaries` to verify dependency declarations, exports,
+and cross-package paths.

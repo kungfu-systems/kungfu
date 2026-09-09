@@ -30,7 +30,7 @@ last_reviewed: 2026-07-14
   [KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1](KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md), and
   [KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb](KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md)
 - Contract:
-  [kungfu-runtime.contract.json](../../framework/runtime/kungfu-runtime.contract.json)
+  [kungfu-runtime.contract.json](../../framework/core/runtime/kungfu-runtime.contract.json)
 - Fixtures:
   [runtime-contract-topology-neutral](../../tests/fixtures/runtime-contract-topology-neutral)
 

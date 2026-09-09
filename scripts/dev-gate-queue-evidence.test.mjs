@@ -7,7 +7,7 @@ import {
   postMergeAdvisoryEvidence,
   summarizeMergeQueueDelivery,
   summarizePostMergeAdvisory,
-} from '../framework/dev-delivery/dev-gate-queue-evidence.mjs';
+} from '../developer/dev-delivery/dev-gate-queue-evidence.mjs';
 import {
   candidateTimelineInput,
   mergeQueueEvidence,

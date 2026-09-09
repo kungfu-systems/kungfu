@@ -10,7 +10,7 @@ source-only Python invocation as installed-product evidence.
 The command under test was:
 
 ```text
-product/dist/desktop/mac-arm64/Kungfu Episodes.app/Contents/Resources/kungfu/kungfu
+product/dist/desktop/mac-arm64/Kungfu.app/Contents/Resources/kungfu/kungfu
 ```
 
 `./shifu product gui build` completed the signed directory Product build and

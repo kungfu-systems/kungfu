@@ -14,7 +14,13 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT = JSON.parse(
   fs.readFileSync(
-    path.join(ROOT, 'framework', 'runtime', 'kungfu-runtime.contract.json'),
+    path.join(
+      ROOT,
+      'framework',
+      'core',
+      'runtime',
+      'kungfu-runtime.contract.json',
+    ),
     'utf8',
   ),
 );
@@ -29,7 +35,7 @@ test('runtime contract accepts positive fixtures and rejects all safety failures
   const result = await checkRuntimeContract(ROOT);
   assert.equal(
     result.contract,
-    'framework/runtime/kungfu-runtime.contract.json',
+    'framework/core/runtime/kungfu-runtime.contract.json',
   );
   assert.equal(result.validFixtures, 5);
   assert.equal(result.rejectedFixtures, 7);

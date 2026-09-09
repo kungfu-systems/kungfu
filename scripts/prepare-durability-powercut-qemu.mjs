@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-import { createPowerCutPlan } from '../framework/core/tests/qualification/durability/powercut_plan.mjs';
+import { createPowerCutPlan } from '@kungfu-tech/core/testing/qualification/durability/powercut_plan';
 import { command, parseOptions } from './run-durability-powercut-qemu.mjs';
 
 const CONFIRMATION = 'disposable-powercut-prepare-v1';

@@ -11,9 +11,13 @@ import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
-const contract = readJson('framework/exit/kungfu-exit-bundle.contract.json');
+const contract = readJson(
+  'framework/core/exit/kungfu-exit-bundle.contract.json',
+);
 const fixtures = readJson('tests/fixtures/exit-bundle-contract/cases.json');
-const registry = readJson('framework/contract/kungfu-contracts.registry.json');
+const registry = readJson(
+  'framework/spec/contract/kungfu-contracts.registry.json',
+);
 const exitQualification = readJson(
   'docs/qualification/evidence/exit-clean-runtime/520a61af87/report.json',
 );
@@ -21,7 +25,7 @@ const providerQualification = readJson(
   'docs/qualification/evidence/provider-migration-product/bb6f4a42c1/report.json',
 );
 const canonicalPolicy = readJson(
-  'framework/contract/kungfu-agent-first-canonical-policy.json',
+  'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
 );
 const Ajv2020 = optionalAjv2020();
 
@@ -255,7 +259,10 @@ test('registers one packaged KFD-1 Exit Bundle contract', () => {
     (candidate) => candidate.surface === 'exit-bundle',
   );
   assert.ok(entry);
-  assert.equal(entry.source, 'framework/exit/kungfu-exit-bundle.contract.json');
+  assert.equal(
+    entry.source,
+    'framework/core/exit/kungfu-exit-bundle.contract.json',
+  );
   assert.equal(entry.weldedSurface, 'exit-bundle-contract');
   assert.equal(entry.contractSchemaRoot, schemaRoot(contract.contractSchema));
   assert.deepEqual(entry.extraArtifacts, [
@@ -276,7 +283,7 @@ test('registers one packaged KFD-1 Exit Bundle contract', () => {
   assert.equal(contract.status.releaseQualification, 'not-qualified');
   const sourceRoot = `sha256:${crypto
     .createHash('sha256')
-    .update(read('framework/exit/kungfu-exit-bundle.contract.json'))
+    .update(read('framework/core/exit/kungfu-exit-bundle.contract.json'))
     .digest('hex')}`;
   const policyEntry = canonicalPolicy.surfaces.find(
     (candidate) => candidate.surface === 'exit-bundle',

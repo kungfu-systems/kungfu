@@ -16,10 +16,10 @@ import {
 
 const ROOT = repositoryRoot(import.meta.url);
 const MATRIX_PATH =
-  'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json';
+  'framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json';
 const GENERATOR_PATH = 'scripts/generate-work-lifecycle-sdk.mjs';
 const NATIVE_CONTRACT_PATH =
-  'framework/work-lifecycle/work-lifecycle-native.contract.json';
+  'framework/work/work-lifecycle/work-lifecycle-native.contract.json';
 const matrix = loadJson(ROOT, MATRIX_PATH);
 const semanticOwnerRules = matrix.authorityMembrane.semanticOwnerRules;
 const nativeState = {

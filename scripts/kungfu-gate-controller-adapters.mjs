@@ -101,7 +101,7 @@ function uniqueIdentities(bindings) {
 }
 
 const BUILDCHAIN_BUILD_WORKFLOW =
-  /^kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@\S+$/u;
+  /^kungfu-systems\/buildchain\/\.github\/workflows\/\.build(?:-engine)?\.yml@\S+$/u;
 
 function controllerFact(workflow, job, source, adapter, actual, jobNode) {
   return {

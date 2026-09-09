@@ -12,7 +12,7 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH = path.join(
   ROOT,
-  'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
+  'framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
 );
 const DOC_PATH = path.join(
   ROOT,
@@ -20,7 +20,7 @@ const DOC_PATH = path.join(
 );
 const POLICY_SOURCE_PATH = path.join(
   ROOT,
-  'framework/contract/kungfu-agent-first-canonical-policy.json',
+  'framework/spec/contract/kungfu-agent-first-canonical-policy.json',
 );
 const POLICY_ARTIFACT_PATH = path.join(
   ROOT,
@@ -51,11 +51,11 @@ export function renderWorkLifecycleOperationMatrix(contract) {
   return `# Cross-language native authority membrane
 
 This document is a generated projection of
-[\`kungfu-work-lifecycle-operation-matrix.contract.json\`](../../framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json).
+[\`kungfu-work-lifecycle-operation-matrix.contract.json\`](../../framework/work/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json).
 Do not edit the table by hand. Cut semantics come from
-[\`work-lifecycle.contract.json\`](../../framework/project-cut/work-lifecycle.contract.json),
+[\`work-lifecycle.contract.json\`](../../framework/work/project-cut/work-lifecycle.contract.json),
 Episode semantics come from
-[\`native-operation-catalog.contract.json\`](../../framework/episode/native-operation-catalog.contract.json),
+[\`native-operation-catalog.contract.json\`](../../framework/core/episode/native-operation-catalog.contract.json),
 and the matrix retains their routing, parity, and availability metadata. Run
 the matrix materializer before rerendering this document.
 

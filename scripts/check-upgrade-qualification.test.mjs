@@ -25,7 +25,7 @@ const CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
       ROOT,
-      'framework/upgrade/kungfu-upgrade-qualification.contract.json',
+      'product/upgrade/kungfu-upgrade-qualification.contract.json',
     ),
     'utf8',
   ),
@@ -266,7 +266,7 @@ test('Windows Alpha native evidence accepts exact unsigned PE bytes', () => {
       'product',
       'dist',
       'desktop',
-      'Kungfu Episodes.exe',
+      'Kungfu.exe',
     );
     fs.mkdirSync(path.dirname(installer), { recursive: true });
     fs.mkdirSync(path.dirname(executable), { recursive: true });

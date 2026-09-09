@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import type {
   AgentWorkLabEvent,
@@ -10,11 +11,11 @@ import type {
 import {
   AGENT_WORK_LAB_SUITE,
   agentWorkLabRecommendation,
-} from '../../../extensions/agent-work-lab/experience/src/index.js';
+} from '@kungfu-tech/kfx-agent-work-lab-experience';
 import {
   projectInventoryWorkRows,
   resolveSelectedProjectWorkRow,
-} from '../../../extensions/work-dashboard/src/view/index';
+} from '@kungfu-tech/kfx-view-work-dashboard/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -28,7 +29,13 @@ import {
   agentWorkLabPlaybackLines,
   agentWorkLabSessionStories,
 } from './renderer/src/agent-work-lab';
+import {
+  deferredAgentWorkStartup,
+  shouldBootRuntimeForInitialSurface,
+} from './renderer/src/product-navigation/index';
 import { openRendererProjects } from './renderer/src/projects-panel/index';
+
+const require = createRequire(import.meta.url);
 
 const qualifiedReport = {
   status: 'qualified',
@@ -103,6 +110,16 @@ test('the shell falls back to Agent Work Lab when no KFX is admitted', () => {
       false,
     ),
     [{ error: 'bundle syntax error' }],
+  );
+});
+
+test('the default All Work surface boots Core while deferred surfaces stay read-only', () => {
+  assert.equal(shouldBootRuntimeForInitialSurface('work'), true);
+  assert.equal(shouldBootRuntimeForInitialSurface('projects'), false);
+  assert.equal(shouldBootRuntimeForInitialSurface('onboarding'), false);
+  assert.equal(
+    deferredAgentWorkStartup('work', '/runtime').writeOccurred,
+    false,
   );
 });
 
@@ -348,11 +365,13 @@ test('the GUI shell uses the shared startup surface policy', () => {
     'utf8',
   );
 
-  assert.match(source, /agentWorkLabStartupSurface\(startup\)/);
-  assert.match(source, /startupSurface === 'work-graph'/);
   assert.match(
     source,
-    /const initialCoreWorkOpen =\s*!initialProjectsOpen && !agentFirst\.initialOpen/u,
+    /const initialSurface = agentFirst\.initialOpen[\s\S]*const initialCoreWorkOpen = initialSurface === 'work'/,
+  );
+  assert.match(
+    source,
+    /shouldBootRuntimeForInitialSurface\(initialSurface\)[\s\S]*\? bootRuntime\(\)/,
   );
   assert.match(
     source,
@@ -369,7 +388,7 @@ test('the GUI shell uses the shared startup surface policy', () => {
   );
   assert.match(
     source,
-    /shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
+    /const startupSurface = capability\.agentWorkLabStartupSurface\(startup\)[\s\S]*shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
   );
   assert.match(navigationSource, /shouldShowKungfuOnboarding/);
   assert.match(navigationSource, /AgentFirstOnboardingPanel/);
@@ -395,14 +414,11 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
     'utf8',
   );
   const work = readFileSync(
-    new URL(
-      '../../../extensions/work-dashboard/src/view/index.tsx',
-      import.meta.url,
-    ),
+    require.resolve('@kungfu-tech/kfx-view-work-dashboard/view/index'),
     'utf8',
   );
   const runSurface = readFileSync(
-    new URL('../../kfx/src/project-work-run.tsx', import.meta.url),
+    require.resolve('@kungfu-tech/kfx/project-work-run'),
     'utf8',
   );
 

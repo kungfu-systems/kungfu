@@ -81,6 +81,7 @@ const fixture = JSON.parse(
       path.dirname(fileURLToPath(import.meta.url)),
       '..',
       'framework',
+      'work',
       'work-design-preflight',
       'fixtures',
       'installed-preflight-request.json',

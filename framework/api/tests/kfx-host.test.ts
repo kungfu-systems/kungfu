@@ -3,12 +3,12 @@ import test from 'node:test';
 import {
   projectGuiKfxControl,
   projectGuiKfxExperienceFlow,
-} from '../../gui/src/main/sandbox-host.ts';
-import { authorizeSessionWindowLaunch } from '../../gui/src/main/session-windows.ts';
+} from '@kungfu-tech/gui/main/sandbox-host';
+import { authorizeSessionWindowLaunch } from '@kungfu-tech/gui/main/session-windows';
 import {
   projectTuiKfxControl,
   projectTuiKfxExperienceFlow,
-} from '../../tui/src/kfx-host.ts';
+} from '@kungfu-tech/tui/kfx-host';
 import {
   type KfxControlStatus,
   type KfxExperienceFlowDescriptor,

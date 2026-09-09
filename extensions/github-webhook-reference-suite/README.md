@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: unreviewed
-last_reviewed: 2026-08-10
-ai_provenance: GPT-5 via Codex on 2026-08-10; based on installed-product and repository qualification evidence visible to this task; hidden model checkpoints and unobserved platform results are not claimed
+last_reviewed: 2026-09-05
+ai_provenance: GPT-6 via Codex on 2026-09-05; based on installed-product and repository qualification evidence visible to this task; hidden model checkpoints and unobserved platform results are not claimed
 ---
 
 # GitHub Webhook KFX reference suite
@@ -95,3 +95,16 @@ packages. Removal deletes the managed install path while retaining a dormant
 append-only lifecycle record. For a real canary, the tool removes the webhook,
 HTTP API, Lambda, IAM role, and exact log group and fails unless the absence
 checks pass. It retains only a redacted rooted receipt.
+
+
+## Workspace package consumption
+
+The suite declares its member dependencies and runs their qualification through
+`@kungfu-tech/kfx-github-webhook-ingress/test/qualify` and
+`@kungfu-tech/kfx-github-dogfood-bridge/test/qualify`. Each member exports its own
+qualification entry and package metadata; the suite does not load files through
+a sibling directory path.
+
+Run `./shifu sync` before repository qualification. This module boundary keeps
+member tests composable through npm resolution. It does not activate the bridge,
+grant runtime capabilities, or establish publication or deployment evidence.

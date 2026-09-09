@@ -27,7 +27,7 @@ test('accepts the repository portable format authority composition', () => {
 
 test('fails closed when a referenced authority disappears', () => {
   const changed = structuredClone(contract);
-  changed.authorities[0].source = 'framework/fact/missing-authority.json';
+  changed.authorities[0].source = 'framework/core/fact/missing-authority.json';
   assert.ok(
     validatePortableFormatAuthority(changed, { root: ROOT }).some((issue) =>
       issue.includes('source is missing'),

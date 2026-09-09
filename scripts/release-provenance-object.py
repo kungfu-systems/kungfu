@@ -373,14 +373,14 @@ def main(argv: list[str] | None = None) -> int:
                 rollback_contract=_json_file(
                     str(
                         root
-                        / "framework/release/kungfu-temporal-release-rollback.contract.json"
+                        / "product/release/kungfu-temporal-release-rollback.contract.json"
                     ),
                     {},
                 ),
                 admission_contract=_json_file(
                     str(
                         root
-                        / "framework/release/kungfu-temporal-release-admission.contract.json"
+                        / "product/release/kungfu-temporal-release-admission.contract.json"
                     ),
                     {},
                 ),
@@ -393,8 +393,7 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 release_provenance_contract=_json_file(
                     str(
-                        root
-                        / "framework/release/kungfu-release-provenance.contract.json"
+                        root / "product/release/kungfu-release-provenance.contract.json"
                     ),
                     {},
                 ),

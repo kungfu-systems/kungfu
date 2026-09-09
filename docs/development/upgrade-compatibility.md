@@ -2,7 +2,7 @@
 
 This reference describes the pre-release
 `kungfu.product-upgrade.contract/v1`. The machine authority is
-[`kungfu-upgrade.contract.json`](../../framework/upgrade/kungfu-upgrade.contract.json);
+[`kungfu-upgrade.contract.json`](../../product/upgrade/kungfu-upgrade.contract.json);
 [KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7](../adr/KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7.md)
 owns the architectural decision. The [upgrade guide](../guides/upgrading.md) owns
 operator procedure.
@@ -193,7 +193,7 @@ proof by themselves. Publication admission also consumes a separate
 source commit, product version, platform, architecture, runtime and frontend
 surfaces, artifact digest, exact byte size, and signing-evidence reference.
 The machine requirements live in the
-[`kungfu.product-upgrade.qualification-contract/v1`](../../framework/upgrade/kungfu-upgrade-qualification.contract.json)
+[`kungfu.product-upgrade.qualification-contract/v1`](../../product/upgrade/kungfu-upgrade-qualification.contract.json)
 contract.
 
 Every retained artifact row carries an Ed25519 public key and detached signature

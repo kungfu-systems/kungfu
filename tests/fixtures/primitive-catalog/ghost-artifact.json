@@ -1,12 +1,12 @@
 {
   "managedFiles": [
-    "framework/primitive/contracts/known.contract.json",
-    "framework/primitive/contracts/ghost.contract.json"
+    "framework/spec/primitive/contracts/known.contract.json",
+    "framework/spec/primitive/contracts/ghost.contract.json"
   ],
   "declaredArtifacts": [
-    "framework/primitive/contracts/known.contract.json"
+    "framework/spec/primitive/contracts/known.contract.json"
   ],
   "expectedGhosts": [
-    "framework/primitive/contracts/ghost.contract.json"
+    "framework/spec/primitive/contracts/ghost.contract.json"
   ]
 }

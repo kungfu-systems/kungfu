@@ -8,7 +8,7 @@ import { validateReadonlyRouteInventory } from './check-readonly-source-routes.m
 
 const inventory = JSON.parse(
   fs.readFileSync(
-    'framework/maintainability/readonly-source-routes.json',
+    'developer/maintainability/readonly-source-routes.json',
     'utf8',
   ),
 );

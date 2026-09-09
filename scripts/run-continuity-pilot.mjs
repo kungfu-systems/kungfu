@@ -12,11 +12,11 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH = path.join(
   ROOT,
-  'framework/agent-work/kungfu-continuity-pilot.contract.json',
+  'framework/work/agent-work/kungfu-continuity-pilot.contract.json',
 );
 const FIXTURE_PATH = path.join(
   ROOT,
-  'framework/agent-work/fixtures/continuity-pilot-v1.json',
+  'framework/work/agent-work/fixtures/continuity-pilot-v1.json',
 );
 
 function canonical(value) {

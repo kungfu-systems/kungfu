@@ -47,6 +47,7 @@ function completeFixture(root) {
     'site',
     'skill',
     'tui',
+    'work',
   ])
     write(root, 'linux', `kungfu-tech-${packageName}-4.0.0-alpha.1.tgz`);
   for (const platform of ['darwin-arm64', 'linux-x64', 'win32-x64']) {
@@ -56,15 +57,15 @@ function completeFixture(root) {
     write(root, platform, 'kungfu-sdk-4.0.0-alpha.1.crate', 'same-crate');
   }
   write(root, 'linux-arm64', 'kungfu-tech-core-linux-arm64-4.0.0-alpha.1.tgz');
-  write(root, 'darwin', 'kungfu-episodes-cli-darwin-arm64.tar.gz');
-  write(root, 'linux', 'kungfu-episodes-cli-linux-x64.tar.gz');
-  write(root, 'win32', 'kungfu-episodes-cli-windows-x64.zip');
-  write(root, 'darwin', 'Kungfu Episodes-4.0.0-alpha.1-arm64.dmg');
-  write(root, 'linux', 'Kungfu Episodes-4.0.0-alpha.1-x86_64.AppImage');
-  write(root, 'win32', 'Kungfu Episodes Setup 4.0.0-alpha.1.exe');
+  write(root, 'darwin', 'kungfu-cli-darwin-arm64.tar.gz');
+  write(root, 'linux', 'kungfu-cli-linux-x64.tar.gz');
+  write(root, 'win32', 'kungfu-cli-windows-x64.zip');
+  write(root, 'darwin', 'Kungfu-4.0.0-alpha.1-arm64.dmg');
+  write(root, 'linux', 'Kungfu-4.0.0-alpha.1-x86_64.AppImage');
+  write(root, 'win32', 'Kungfu Setup 4.0.0-alpha.1.exe');
 }
 
-test('collects the exact 43-file cross-platform publication set', () => {
+test('collects the exact 44-file cross-platform publication set', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-publish-test-'));
   try {
     const input = path.join(root, 'input');
@@ -79,7 +80,12 @@ test('collects the exact 43-file cross-platform publication set', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(output, 'manifest.json'), 'utf8'),
     );
-    assert.equal(manifest.artifacts.length, 43);
+    assert.equal(manifest.artifacts.length, 44);
+    assert.ok(
+      manifest.artifacts.some(
+        ({ name }) => name === 'kungfu-tech-work-4.0.0-alpha.1.tgz',
+      ),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -102,3 +108,30 @@ test('rejects a platform package basename with divergent bytes', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+for (const retiredName of [
+  'Kungfu Episodes-4.0.0-alpha.1-arm64.dmg',
+  'Kungfu Episodes-4.0.0-alpha.1-x86_64.AppImage',
+  'Kungfu Episodes Setup 4.0.0-alpha.1.exe',
+  'kungfu-episodes-cli-darwin-arm64.tar.gz',
+  'kungfu-episodes-cli-windows-x64.zip',
+  'kungfu-episodes-cli-darwin-arm64.qualification.json',
+]) {
+  test(`rejects retired product artifact ${retiredName}`, () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-publish-test-'));
+    try {
+      const input = path.join(root, 'input');
+      completeFixture(input);
+      write(input, 'retired', retiredName);
+      const result = spawnSync(
+        process.execPath,
+        [RUNNER, '--input', input, '--output', path.join(root, 'output')],
+        { encoding: 'utf8' },
+      );
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /retired product artifact name/u);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+}

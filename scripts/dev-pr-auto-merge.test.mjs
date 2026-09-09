@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNativeUnderWarrant } from '../framework/dev-delivery/native-under-warrant.mjs';
+import { runNativeUnderWarrant } from '../developer/dev-delivery/native-under-warrant.mjs';
 
 const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
@@ -17,9 +17,9 @@ const steadyStateDogfoodFixturePath =
 
 test('Dev auto-merge admits only explicitly ready reviewed source-bound PRs', () => {
   const reusableRef = workflow.match(
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/public-ops-dev-auto-merge\.yml@(v4-alpha)/u,
   )?.[1];
-  assert.equal(reusableRef, '3553236e52ba9daa0b83422aec269d14a6bc65ad');
+  assert.equal(reusableRef, 'v4-alpha');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
@@ -169,6 +169,10 @@ test('Core source qualification emits one exact Warrant bootstrap wake', () => {
     sourceWorkflow,
     /test "\$protected_base" = "\$GITHUB_BASE_REF"/u,
   );
+  assert.match(
+    sourceWorkflow,
+    /source_repository="\$\(jq -er '\.pull_request\.head\.repo\.full_name' "\$GITHUB_EVENT_PATH"\)"[\s\S]*if \[ "\$source_repository" != "\$GITHUB_REPOSITORY" \]; then[\s\S]*protected workflow_run bootstrap[\s\S]*exit 0/u,
+  );
   assert.doesNotMatch(
     sourceWorkflow,
     /test "\$protected_base" = "\$GITHUB_REF_NAME"/u,
@@ -191,6 +195,7 @@ test('active Warrant handoff inputs are accepted without becoming source authori
   for (const name of [
     'target-branch',
     'assignment-root',
+    'native-roots-json',
     'initiative-root',
     'source-identity-root',
     'source-patch-root',
@@ -241,6 +246,15 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
     /native-command: >-[\s\S]*KUNGFU_FNM_DIST_MIRROR=\$\{\{ vars\.KUNGFU_FNM_DIST_MIRROR \}\}[\s\S]*KUNGFU_FNM_SHA256=\$\{\{ vars\.KUNGFU_FNM_SHA256 \}\}[\s\S]*dev-delivery:native-under-warrant/u,
   );
   assert.match(workflow, /native-heartbeat-seconds: 300/u);
+  const warrantLeaseSeconds = [
+    ...workflow.matchAll(/warrant-lease-seconds: (\d+)/gu),
+  ].map((match) => Number(match[1]));
+  assert.deepEqual(
+    warrantLeaseSeconds,
+    [14400, 14400],
+    'qualification and landing must both preserve a lease that covers the bounded source retry and merge-group qualification',
+  );
+  assert.doesNotMatch(workflow, /warrant-lease-seconds: 5400/u);
   assert.match(
     workflow,
     /native-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.native-proof-json \}\}/u,
@@ -308,8 +322,21 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     bridge,
-    /\.head\.repo\.full_name == \$repository[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
+    /\.base\.repo\.full_name == \$repository[\s\S]*\.head\.repo\.full_name \| type == "string" and length > 0[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
   );
+  assert.match(
+    bridge,
+    /source_head_repository="\$\(jq -er '\.head\.repo\.full_name' "\$live_pr"\)"/u,
+  );
+  assert.equal(
+    (
+      bridge.match(
+        /\.head_repository\.full_name == \$sourceHeadRepository/gu,
+      ) || []
+    ).length,
+    2,
+  );
+  assert.doesNotMatch(bridge, /\.head_repository\.full_name == \$repository/u);
   assert.match(
     bridge,
     /check_name=affected-native%20%2F%20linux&filter=latest&per_page=100/u,
@@ -369,10 +396,24 @@ test('Qualified native proof re-runs the exact failed source jobs before landing
   );
   assert.match(
     landing,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@3553236e52ba9daa0b83422aec269d14a6bc65ad/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/public-ops-dev-auto-merge\.yml@v4-alpha/u,
   );
   assert.match(landing, /queue-admission-context: Queue admission lease/u);
   assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
+});
+
+test('source workflow repository follows the exact live PR head repository', () => {
+  const qualifies = (liveHeadRepository, sourceRunRepository) =>
+    typeof liveHeadRepository === 'string' &&
+    liveHeadRepository.length > 0 &&
+    sourceRunRepository === liveHeadRepository;
+
+  assert.equal(
+    qualifies('kungfu-systems/kungfu', 'kungfu-systems/kungfu'),
+    true,
+  );
+  assert.equal(qualifies('dongkeren/kungfu', 'dongkeren/kungfu'), true);
+  assert.equal(qualifies('dongkeren/kungfu', 'kungfu-systems/kungfu'), false);
 });
 
 test('Dev delivery fails closed to fenced native execution without a v3 receipt', () => {
@@ -395,13 +436,17 @@ test('Dev delivery fails closed to fenced native execution without a v3 receipt'
 });
 
 test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {
+  const projectCut = workflow.slice(
+    workflow.indexOf('      - name: Produce exact Project Cut replay proof'),
+    workflow.indexOf('  admission:\n'),
+  );
   assert.match(
     workflow,
     /Check out protected consumer adapter[\s\S]*fetch-depth: 0/u,
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 3553236e52ba9daa0b83422aec269d14a6bc65ad/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f/u,
   );
   assert.match(
     workflow,
@@ -418,6 +463,14 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   assert.match(
     workflow,
     /project-cut-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.project-cut-proof-json \}\}/u,
+  );
+  assert.match(
+    projectCut,
+    /test "\$GITHUB_REPOSITORY" = "\$\(jq -r '\.base\.repo\.full_name' "\$pull_request"\)"/u,
+  );
+  assert.doesNotMatch(
+    projectCut,
+    /test "\$GITHUB_REPOSITORY" = "\$\(jq -r '\.head\.repo\.full_name' "\$pull_request"\)"/u,
   );
   assert.match(
     workflow,
@@ -529,7 +582,7 @@ test('two-phase native adapter fails closed on a native shard failure', async (t
 
 test('native Warrant worker remains credentialless', () => {
   const nativeWorker = fs.readFileSync(
-    'framework/dev-delivery/native-under-warrant.mjs',
+    'developer/dev-delivery/native-under-warrant.mjs',
     'utf8',
   );
   assert.doesNotMatch(
@@ -557,6 +610,13 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
     const relativeEnd = remainder.search(/\n {2}[a-z][a-z0-9_]*:\n/u);
     const end = relativeEnd === -1 ? undefined : start + 3 + relativeEnd;
     const body = sourceWorkflow.slice(start, end);
+    assert.match(body, /runs-on: ubuntu-(?:22|24)\.04/u);
+    assert.match(body, /contents: read/u);
+    assert.doesNotMatch(body, /contents: write|(?:GH_TOKEN|GITHUB_TOKEN):/u);
+    assert.match(
+      body,
+      /uses: actions\/checkout@[^\n]+\n\s+with:\n(?:\s+fetch-depth: 0\n)?\s+persist-credentials: false/u,
+    );
     assert.match(body, /- warrant_admission/u);
     assert.match(body, /needs\.warrant_admission\.result == 'success'/u);
     assert.match(
@@ -619,7 +679,7 @@ test('the completed migration has no bootstrap bypass around Warrant admission',
   assert.match(sourceWorkflow, /Check out exact Buildchain Warrant runtime/u);
   assert.match(
     sourceWorkflow,
-    /ref: 98a4e38bd8423569e500dbbcad3667842171ab8f/u,
+    /ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f/u,
   );
   assert.doesNotMatch(
     sourceWorkflow,
@@ -632,10 +692,16 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
-  assert.match(action, /ref: cd8318d57b0506493114afcc63b9aacef741d3c4/u);
+  assert.match(action, /ref: ad2699ab8f09c031c3a6d668830bb302752c5a7f/u);
   assert.match(
     action,
-    /test "\$\(git rev-parse HEAD\)" = cd8318d57b0506493114afcc63b9aacef741d3c4/u,
+    /BUILDCHAIN_CREDENTIAL_ANCESTRY_BOUNDARY: github-actions-runner-worker\/v1/u,
+  );
+  assert.doesNotMatch(action, /(?:GH_TOKEN|GITHUB_TOKEN):/u);
+  assert.match(action, /persist-credentials: false/u);
+  assert.match(
+    action,
+    /test "\$\(git rev-parse HEAD\)" = ad2699ab8f09c031c3a6d668830bb302752c5a7f/u,
   );
   assert.match(
     action,

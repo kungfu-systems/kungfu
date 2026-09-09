@@ -11,35 +11,35 @@
   "treeRoot": "sha256:1acb5053fd6cdcb8fcd17be1ee21e6de1823758a172cb8a5bfddd07dbe56fb38",
   "files": [
     {
-      "path": "framework/agent-patrol/classify.mjs",
+      "path": "developer/agent-patrol/classify.mjs",
       "mode": "100644",
       "bytes": 9358,
       "lines": 270,
       "root": "sha256:7f20094b88599db43036cfb6d177ba570cecf57ecfde1def3ac05db88e303188"
     },
     {
-      "path": "framework/agent-patrol/dogfood-capture.mjs",
+      "path": "developer/agent-patrol/dogfood-capture.mjs",
       "mode": "100644",
       "bytes": 4280,
       "lines": 137,
       "root": "sha256:daf2dd225bb268a42cc0e25ac190bfe4ae370e3bf0a2d4d0d1c3067287361b71"
     },
     {
-      "path": "framework/agent-patrol/select.mjs",
+      "path": "developer/agent-patrol/select.mjs",
       "mode": "100644",
       "bytes": 5756,
       "lines": 176,
       "root": "sha256:35fc6cd2614fdd602a00c384ee3c692bb9190af3128e63bd97511266514266b9"
     },
     {
-      "path": "framework/agent-repository-work/report.mjs",
+      "path": "framework/work/agent-repository-work/report.mjs",
       "mode": "100644",
       "bytes": 28421,
       "lines": 832,
       "root": "sha256:efbab2b60a79a328ab826004bb21e158b9a561c98d96d7509fae73351edc3d7d"
     },
     {
-      "path": "framework/dogfood/native-finding-capture.mjs",
+      "path": "developer/dogfood/native-finding-capture.mjs",
       "mode": "100644",
       "bytes": 13120,
       "lines": 419,
@@ -75,7 +75,7 @@
     }
   ],
   "mutation": {
-    "path": "framework/agent-patrol/classify.mjs",
+    "path": "developer/agent-patrol/classify.mjs",
     "id": "disable-large-number-normalization",
     "from": ".replace(/\\b\\d{6,}\\b/gu, '<number>')",
     "to": ".replace(/\\b\\d{60,}\\b/gu, '<number>')",

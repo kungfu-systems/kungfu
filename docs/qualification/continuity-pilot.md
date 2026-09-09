@@ -84,4 +84,4 @@ review boundary. That future run is the place to evaluate FO10 or publish a
 comparative outcome; this pilot deliberately does neither.
 
 The machine contract is
-[`kungfu-continuity-pilot.contract.json`](../../framework/agent-work/kungfu-continuity-pilot.contract.json).
+[`kungfu-continuity-pilot.contract.json`](../../framework/work/agent-work/kungfu-continuity-pilot.contract.json).

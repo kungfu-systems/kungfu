@@ -1,7 +1,7 @@
 # Fact durable admission qualification
 
 The normative source is
-[`kungfu-fact-cut-kernel.contract.json`](../../framework/fact/kungfu-fact-cut-kernel.contract.json),
+[`kungfu-fact-cut-kernel.contract.json`](../../framework/core/fact/kungfu-fact-cut-kernel.contract.json),
 under `durableAdmission`. The active profile is
 `fact-durable-admission/release-provenance-v1`. It is default-enabled only for
 `ref-cas` names under `release-provenance/` and is production eligible only for

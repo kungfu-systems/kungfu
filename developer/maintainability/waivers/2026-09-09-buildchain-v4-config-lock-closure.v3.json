@@ -1,0 +1,39 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v3",
+  "issue_root": "sha256:7c33dad8f0d2bab4fac3c4b6135cfc0f37053cbad0a80138d458c2c4e9caf53e",
+  "issue_kind": "grandfathered-file-grew",
+  "paths_or_scope": [
+    "pnpm-lock.yaml"
+  ],
+  "budget_classes": [
+    "declarative-schema-or-table:declarative"
+  ],
+  "baseline_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10143,
+      "contentRoot": "sha256:e0b1c89fd08dce937aca85194b9621787958b6d7021e70cba297cbe947822ef0"
+    }
+  ],
+  "current_measurement": [
+    {
+      "path": "pnpm-lock.yaml",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 10364,
+      "contentRoot": "sha256:c447ac861dcdf691c0fa54f08a8d73afe6c75aff589b9c6b1d0fbc3d80162060"
+    }
+  ],
+  "allowed_delta": 221,
+  "owner": "kungfu/repository-contract",
+  "responsibility_boundary": "Generated pnpm dependency closure for the current published Buildchain v4 configuration interface; all workspace ownership and unrelated pinned dependencies remain unchanged.",
+  "cohesion_rationale": "The generated frozen lock grows by 10 lines from protected dev a72a5a1417e92e7076ce912a744f757b03330ba0 when root Buildchain and Alpha aliases select published 4.0.10-alpha.0 and the Stable alias selects 4.0.9. Existing workspace consumers retain their earlier pins. This request binds only the measured lock content and requires protected independent review; it does not alter or replace any prior waiver approval.",
+  "rejected_split_alternatives": "Splitting the workspace lockfile or manually deleting still-referenced dependency snapshots would break frozen installation and reproducibility.",
+  "affected_tests_and_qualification": "./shifu sync; ./shifu check:source; exact Alpha build-plan and reusable input checks; Candidate source acceptance / check; Delivery Warrant; merge_group.",
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "2026-09-09-kungfu-buildchain-v4-config-interface"
+}

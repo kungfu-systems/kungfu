@@ -46,8 +46,8 @@
     "root_protocol": "sha256:opaque-bytes/v1",
     "sources": [
       {
-        "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:382655b514b0d5a0e60dcc70d70e7356ab5a3c752e6130055638b9dda23541f4"
+        "path": "framework/spec/format/kungfu-portable-format-authority.contract.json",
+        "root": "sha256:ffe4cdaeaf748b086b68ac43c5c7bbe32e0b97a46566f5dc328b605ecd9867e3"
       },
       {
         "path": "framework/spec/spec.meta.json",
@@ -59,19 +59,19 @@
     "migrationProtocol": {
       "id": "kungfu-format-migration",
       "rule": "Compatibility is evaluated per protocol axis; supported cold-path edges create receipt-bound successor identities, while downgrade and unsupported edges fail before authority changes.",
-      "source": "framework/format/kungfu-format-migration.contract.json"
+      "source": "framework/spec/format/kungfu-format-migration.contract.json"
     },
     "requiredReader": {
       "id": "kungfu-required-reader",
       "rule": "Unknown well-formed bytes may be preserved or inspected under a bounded profile, but canonical fold, admission, and execution require complete compatible semantics.",
-      "source": "framework/format/kungfu-required-reader.contract.json"
+      "source": "framework/spec/format/kungfu-required-reader.contract.json"
     },
     "retainedConformanceCorpus": {
       "id": "kungfu-portable-format-vectors",
       "release": "v2",
       "releaseRoot": "sha256:bd03705e65b8df296329e65753a577d5d4aee34a929e5e889ba20c95f9b3463d",
       "rule": "Released real-byte vectors are content-rooted and append-only; native and independent readers must reproduce the declared outcomes without rewriting retained bytes.",
-      "source": "framework/format/conformance/portable-format-vectors/index.json"
+      "source": "framework/spec/format/conformance/portable-format-vectors/index.json"
     }
   },
   "schema": "kungfu.spec.generated-authority/v1",
@@ -117,7 +117,7 @@
     {
       "changesWhen": "authority membership, precedence, or domain ownership changes",
       "id": "composition-contract-version",
-      "owner": "framework/format"
+      "owner": "framework/spec/format"
     },
     {
       "changesWhen": "workspace path or persistence classification changes incompatibly",

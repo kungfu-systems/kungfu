@@ -21,7 +21,7 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REGISTRY_PATH = path.join(
   ROOT,
-  'framework',
+  'product',
   'release',
   'npm-package-registry.json',
 );

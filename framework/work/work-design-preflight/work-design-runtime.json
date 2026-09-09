@@ -1,0 +1,23 @@
+{
+  "schema": "kungfu.work-design.runtime-closure/v1",
+  "entrypoint": "work/work-design-preflight/tooling/work-design-preflight.mjs",
+  "files": [
+    "work/project-cut/index.mjs",
+    "work/project-cut/src/json-scanner.mjs",
+    "work/project-cut/src/project-cut.mjs",
+    "work/work-design-advisor/src/work-design-advisor.mjs",
+    "work/work-design-preflight/src/work-design-preflight.mjs",
+    "work/work-design-preflight/tooling/work-design-preflight.mjs",
+    "work/work-history-selector/src/work-history-selector.mjs"
+  ],
+  "packageDependencies": [
+    {
+      "name": "@kungfu-tech/spec",
+      "source": "spec",
+      "files": [
+        "package.json",
+        "format/project-cut-canonical-json.mjs"
+      ]
+    }
+  ]
+}
