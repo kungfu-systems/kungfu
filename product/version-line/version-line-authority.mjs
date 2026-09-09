@@ -100,6 +100,24 @@ export function validateAuthority(authority) {
   if (!ids.has(authority.activeLine)) {
     throw new Error('activeLine does not identify a declared line');
   }
+  if (
+    authority.historicalAuthorities !== undefined &&
+    (!authority.historicalAuthorities ||
+      typeof authority.historicalAuthorities !== 'object' ||
+      Array.isArray(authority.historicalAuthorities))
+  ) {
+    throw new Error('historical version-line authorities must be an object');
+  }
+  for (const [root, file] of Object.entries(
+    authority.historicalAuthorities || {},
+  )) {
+    if (
+      !/^sha256:[0-9a-f]{64}$/u.test(root) ||
+      file !== `product/version-line/history/${root.slice(7)}.json`
+    ) {
+      throw new Error('historical version-line authority reference is invalid');
+    }
+  }
   const aliases = authority.runnerRouting?.compatibilityAliases;
   if (
     authority.runnerRouting?.policy !== 'capability-first-cross-version' ||
@@ -154,6 +172,24 @@ export function validateAuthority(authority) {
 
 export function readAuthority(file = AUTHORITY_PATH) {
   return validateAuthority(JSON.parse(fs.readFileSync(file, 'utf8')));
+}
+
+export function historicalEvidenceAuthority(authority, evidence, root = ROOT) {
+  validateAuthority(authority);
+  const expected = evidence.versionLineAuthorityRoot;
+  if (expected === authority.authorityRoot) return authority;
+  const relative = authority.historicalAuthorities?.[expected];
+  if (!relative)
+    throw new Error('historical evidence authority is not retained');
+  const file = fs.realpathSync(path.join(root, relative));
+  if (!file.startsWith(`${fs.realpathSync(root)}${path.sep}`)) {
+    throw new Error('historical version-line authority escapes the checkout');
+  }
+  const retained = readAuthority(file);
+  if (retained.authorityRoot !== expected) {
+    throw new Error('historical evidence authority root mismatch');
+  }
+  return retained;
 }
 
 export function deriveLine(authority, line) {
@@ -266,9 +302,12 @@ export function latencyBaselineForDevBranch(branch, root = ROOT) {
   const baseline = JSON.parse(
     fs.readFileSync(path.join(root, line.latencyBaseline), 'utf8'),
   );
+  const historical = historicalEvidenceAuthority(authority, baseline, root);
   if (
     baseline.authorityClassification !== 'historical-measurement' ||
-    baseline.versionLineAuthorityRoot !== authority.authorityRoot ||
+    !deriveProjection(historical).lines.some(
+      ({ branches }) => branches.dev === branch,
+    ) ||
     baseline.branch !== branch
   )
     throw new Error(`latency baseline authority drift for ${branch}`);

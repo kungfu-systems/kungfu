@@ -115,6 +115,6 @@ jobs:
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
       reactivation-authorized: ${{ github.event_name == 'workflow_dispatch' && inputs.create-pull-request && inputs.reactivation-authorized }}
       auto-merge: true
-      merge-method: rebase
+      merge-method: merge
     secrets:
       promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

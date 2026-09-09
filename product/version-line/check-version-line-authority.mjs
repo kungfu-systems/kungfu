@@ -12,6 +12,7 @@ import {
   activeProjection,
   checkProjections,
   deriveProjection,
+  historicalEvidenceAuthority,
   readAuthority,
   validateAuthority,
 } from './version-line-authority.mjs';
@@ -154,13 +155,11 @@ function requireContains(text, fragment, label) {
 
 function validateWorkflowProjections(root, projection) {
   const nativeMatrix = projection.runnerRouting.matrices.native;
-  const native = JSON.stringify(nativeMatrix);
   const devPatrol = JSON.stringify(
     nativeMatrix.filter(({ id }) => id !== 'linux-arm64'),
   );
   const line = projection.lines.find(({ id }) => id === projection.activeLine);
   if (!line) throw new Error('active line projection is missing');
-  const nativePreset = `kungfu-v${line.major}-native`;
   const build = fs.readFileSync(
     path.join(root, '.github/workflows/build.yml'),
     'utf8',
@@ -173,17 +172,27 @@ function validateWorkflowProjections(root, projection) {
     path.join(root, '.github/workflows/dev-verify-patrol.yml'),
     'utf8',
   );
+  const policy = fs.readFileSync(
+    path.join(root, '.buildchain/buildchain.toml'),
+    'utf8',
+  );
   requireContains(
     build,
-    `inputs.platforms-json || '${native}'`,
-    'build matrix',
+    '.build-engine.yml@v4-alpha',
+    'Buildchain v4 build entry',
   );
-  requireContains(build, 'runner-preset: custom', 'build runner preset');
+  requireContains(policy, 'environment = "kungfu-hosted"', 'build environment');
   requireContains(
     release,
-    `runner-preset: ${nativePreset}`,
-    'release runner preset',
+    'node scripts/publish-alpha-run.mjs',
+    'qualified candidate publication',
   );
+  requireContains(
+    release,
+    'github.event.pull_request.head.sha',
+    'release candidate source',
+  );
+  requireContains(release, '--status success', 'successful candidate Build');
   requireContains(patrol, devPatrol, 'dev patrol matrix');
   requireContains(patrol, 'runner-preset: custom', 'dev patrol runner preset');
   const stable = fs.readFileSync(
@@ -229,9 +238,16 @@ function validateStaticProjections(root, authority, line, projection) {
     root,
     'framework/core/architecture/dev-gate-latency-baseline.json',
   );
+  const baselineAuthority = historicalEvidenceAuthority(
+    authority,
+    baseline,
+    root,
+  );
   if (
     baseline.authorityClassification !== 'historical-measurement' ||
-    baseline.versionLineAuthorityRoot !== authority.authorityRoot ||
+    !deriveProjection(baselineAuthority).lines.some(
+      ({ branches }) => branches.dev === line.branches.dev,
+    ) ||
     baseline.branch !== line.branches.dev
   ) {
     throw new Error(
@@ -242,21 +258,18 @@ function validateStaticProjections(root, authority, line, projection) {
     root,
     'docs/qualification/stable-release-continuation.contract.json',
   );
-  if (
-    continuation.authorityClassification !== 'immutable-qualified-rehearsal' ||
-    continuation.versionLineAuthorityRoot !== authority.authorityRoot
-  ) {
-    throw new Error('stable continuation is not classified immutable evidence');
-  }
-  const targets = Object.fromEntries(
-    registry.rulesetContracts.map(({ channel, target }) => [channel, target]),
+  const continuationAuthority = historicalEvidenceAuthority(
+    authority,
+    continuation,
+    root,
   );
   if (
-    targets.alpha !== `refs/heads/${line.branches.alpha}` ||
-    targets.stable !== `refs/heads/${line.branches.stable}` ||
-    targets.major !== `refs/heads/${line.branches.majorPublicationGate}`
+    continuation.authorityClassification !== 'immutable-qualified-rehearsal' ||
+    !deriveProjection(continuationAuthority).lines.some(
+      ({ branches }) => branches.stable === line.branches.stable,
+    )
   ) {
-    throw new Error('publication ruleset target drift');
+    throw new Error('stable continuation is not classified immutable evidence');
   }
   validateWorkflowProjections(root, projection);
 }

@@ -102,16 +102,17 @@
       "docs/qualification/alpha-ruleset.contract.json",
       "docs/qualification/gates/workflow-bindings.json",
       "docs/qualification/stable-ruleset.contract.json",
-      "product/version-line/version-line-authority.json",
-      "product/version-line/version-line-projections.json"
+      "framework/release/publication-surfaces.json",
+      "framework/version-line/version-line-authority.json",
+      "framework/version-line/version-line-projections.json"
     ],
     "historicalEvidencePaths": [
       ".github/community-health-baseline.json",
       "developer/sdk/kfd/upstream-aggregate.json",
       "docs/qualification/stable-release-continuation.contract.json",
       "framework/core/architecture/dev-gate-latency-baseline.json",
-      "framework/core/exit/kungfu-exit-bundle.contract.json",
-      "developer/maintainability/terminal-evidence-matrix.json"
+      "framework/exit/kungfu-exit-bundle.contract.json",
+      "framework/maintainability/terminal-evidence-matrix.json"
     ],
     "immutableEvidencePrefixes": [
       ".buildchain/runtime/kfd-product-gates/evidence/",
@@ -121,12 +122,8 @@
       ".kungfu/runtime/storage/payloads/",
       ".xinfa/baselines/",
       "docs/qualification/evidence/",
-      "developer/maintainability/waivers/retired/",
-      "product/version-line/history/"
+      "framework/maintainability/waivers/retired/"
     ]
   },
-  "historicalAuthorities": {
-    "sha256:055ff5f28e0eae5a10b0f70c2f2b96d010006e45fef47e2708aef615adbbaa15": "product/version-line/history/055ff5f28e0eae5a10b0f70c2f2b96d010006e45fef47e2708aef615adbbaa15.json"
-  },
-  "authorityRoot": "sha256:4a5def1f24e4b955e20c8c7b7af3039c61de2300a014e41dd30eee330dc116dd"
+  "authorityRoot": "sha256:055ff5f28e0eae5a10b0f70c2f2b96d010006e45fef47e2708aef615adbbaa15"
 }

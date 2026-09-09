@@ -20,12 +20,12 @@ const continuation = JSON.parse(
 );
 const { line: activeLine } = activeProjection();
 
-test('Stable Patrol is an exact-pinned Buildchain caller with a protected target', () => {
-  const reusableRef = workflow.match(
-    /uses: kungfu-systems\/buildchain\/.github\/workflows\/stable-candidate-patrol\.yml@([0-9a-f]{40})/u,
-  )?.[1];
-  assert.equal(reusableRef, '978520e86134683f66b607bc70c2d18f623e2410');
-  assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
+test('Stable Patrol uses the governed Buildchain v4 Alpha channel with a protected target', () => {
+  assert.match(
+    workflow,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/public-ops-stable-candidate-patrol\.yml@v4-alpha/u,
+  );
+  assert.match(workflow, /buildchain-ref: v4-alpha/u);
   assert.match(
     workflow,
     /target-branch: \$\{\{ needs\.resolve-version-line\.outputs\.stable-branch \}\}/u,
@@ -42,7 +42,7 @@ test('Stable Patrol is an exact-pinned Buildchain caller with a protected target
   assert.match(workflow, /release-now: \$\{\{ inputs\.release-now \}\}/u);
   assert.match(workflow, /auto-approve: false/u);
   assert.match(workflow, /auto-merge: true/u);
-  assert.match(workflow, /merge-method: rebase/u);
+  assert.match(workflow, /merge-method: merge/u);
   assert.match(
     workflow,
     /dry-run: \$\{\{ github\.event_name == 'workflow_dispatch' && !inputs\.create-pull-request \}\}/u,

@@ -6,10 +6,6 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 const ROOT = process.cwd();
-const BUILDCHAIN_DEV_VERIFY_RUNTIME =
-  '916fc84d488ae6f5af271a67487e79ecb47b9ae2';
-const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
-  '58e48d73ae7fef0dd06ae02baf6d090e4da5487d';
 
 function workflow(name) {
   return fs.readFileSync(path.join(ROOT, '.github/workflows', name), 'utf8');
@@ -43,18 +39,22 @@ test('Dev Patrol is exact-source dispatch-only behind the qualification controll
   assert.ok(source.includes(String.raw`"runner":"[\"windows-2022\"]"`));
   assert.doesNotMatch(source, /gate-environment-json:[\s\S]*"CC":"gcc-14"/u);
   assert.doesNotMatch(source, /kungfu-build-v4-(?:linux|macos|windows)/u);
-  const reusableRef = source.match(
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.gate-profile\.yml@([0-9a-f]{40})/u,
-  )?.[1];
-  assert.equal(reusableRef, BUILDCHAIN_DEV_VERIFY_RUNTIME);
+  assert.match(
+    source,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build-gate-profile\.yml@v4-alpha/u,
+  );
 });
 
 test('qualification patrol coalesces the latest Dev SHA behind release priority', () => {
   const source = workflow('dev-qualification-patrol.yml');
-  const reusableRef = source.match(
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-qualification-patrol\.yml@([0-9a-f]{40})/u,
-  )?.[1];
-  assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
+  assert.match(
+    source,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/public-ops-dev-qualification-patrol\.yml@v4-alpha/u,
+  );
+  assert.match(
+    source,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v4-alpha' \}\}/u,
+  );
   assert.match(source, /workflow_run:/u);
   assert.match(source, /Alpha promotion preflight/u);
   assert.match(source, /Dev Verify Patrol/u);
@@ -79,17 +79,13 @@ test('qualification patrol coalesces the latest Dev SHA behind release priority'
 
 test('candidate patrol is a thin Buildchain caller with exact channel and evidence inputs', () => {
   const source = workflow('dev-alpha-candidate-patrol.yml');
-  const reusableRef = source.match(
-    /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
-  )?.[1];
-  assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
-  assert.equal(reusableRef, BUILDCHAIN_TIMEOUT_SAFE_RUNTIME);
   assert.match(
     source,
-    new RegExp(
-      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${reusableRef}' \\}\\}`,
-      'u',
-    ),
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/public-ops-alpha-candidate-patrol\.yml@v4-alpha/u,
+  );
+  assert.match(
+    source,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v4-alpha' \}\}/u,
   );
   assert.match(
     source,
@@ -135,7 +131,7 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /promotion-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
   assert.match(source, /auto-merge: true/u);
-  assert.match(source, /merge-method: rebase/u);
+  assert.match(source, /merge-method: merge/u);
   assert.match(source, /name: Verify durable provenance Fact authority/u);
   assert.match(source, /\.\/shifu check:durable-provenance-authority/u);
   assert.doesNotMatch(

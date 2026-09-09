@@ -51,7 +51,7 @@ jobs:
       release-now: ${{ inputs.release-now }}
       auto-approve: false
       auto-merge: true
-      merge-method: rebase
+      merge-method: merge
       # Scheduled patrols may create the protected source-lock PR. Manual
       # dispatch remains evidence-only unless the operator explicitly enables
       # PR creation; neither path publishes before that PR is reviewed/merged.

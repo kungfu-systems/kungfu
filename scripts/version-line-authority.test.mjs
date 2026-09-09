@@ -15,6 +15,8 @@ import {
 import {
   deriveProjection,
   digest,
+  historicalEvidenceAuthority,
+  latencyBaselineForDevBranch,
   readAuthority,
   renderedProjections,
   rulesetContract,
@@ -77,6 +79,74 @@ test('synthetic v5 and v6 lines require data only and derive exact runtime objec
 test('generator reproduces every declared checked-in projection byte-for-byte', () => {
   for (const [file, expected] of renderedProjections()) {
     assert.equal(fs.readFileSync(file, 'utf8'), expected, file);
+  }
+});
+
+test('relocated authority retains historical measurement and rehearsal bytes under their original root', () => {
+  const authority = readAuthority();
+  for (const file of [
+    'framework/core/architecture/dev-gate-latency-baseline.json',
+    'docs/qualification/stable-release-continuation.contract.json',
+  ]) {
+    const evidence = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const retained = historicalEvidenceAuthority(authority, evidence);
+    assert.equal(retained.authorityRoot, evidence.versionLineAuthorityRoot);
+    assert.notEqual(retained.authorityRoot, authority.authorityRoot);
+  }
+  assert.equal(
+    latencyBaselineForDevBranch('dev/v4/v4.0').verdict,
+    'fails-target',
+  );
+  assert.throws(
+    () =>
+      historicalEvidenceAuthority(authority, {
+        versionLineAuthorityRoot: `sha256:${'0'.repeat(64)}`,
+      }),
+    /not retained/u,
+  );
+});
+
+test('retained authority rejects content drift and checkout escape', (t) => {
+  const authority = readAuthority();
+  const [root, relative] = Object.entries(authority.historicalAuthorities)[0];
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-version-history-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const checkout = path.join(temporary, 'checkout');
+  const target = path.join(checkout, relative);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const retained = JSON.parse(fs.readFileSync(relative, 'utf8'));
+  retained.runnerRouting.compatibilityBoundary.rationale += ' changed';
+  fs.writeFileSync(target, JSON.stringify(retained));
+  const evidence = { versionLineAuthorityRoot: root };
+  assert.throws(
+    () => historicalEvidenceAuthority(authority, evidence, checkout),
+    /root mismatch/u,
+  );
+  fs.unlinkSync(target);
+  const outside = path.join(temporary, 'outside.json');
+  fs.copyFileSync(relative, outside);
+  fs.symlinkSync(outside, target);
+  assert.throws(
+    () => historicalEvidenceAuthority(authority, evidence, checkout),
+    /escapes/u,
+  );
+});
+
+test('historical authority declarations reject malformed maps and paths', () => {
+  for (const historicalAuthorities of [
+    [],
+    null,
+    1,
+    { 'sha256:bad': '../outside.json' },
+  ]) {
+    const authority = structuredClone(readAuthority());
+    authority.historicalAuthorities = historicalAuthorities;
+    assert.throws(
+      () => validateAuthority(authority),
+      /historical version-line/u,
+    );
   }
 });
 
