@@ -69,7 +69,7 @@ dev = [
     "pytest>=9.0.3,<10.0.0",
     # 以下为历史 Pipfile/poetry 种子(kungfu 包代码无 import;保守保留在 dev,
     # 待各自消费者证伪后再逐批退役):
-    "wcmatch~=10.0.0",
+    "wcmatch~=11.2.0",
     # Numeric
     "numpy~=2.1.0",
     "pandas~=2.2.0",
